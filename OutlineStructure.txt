@@ -1,0 +1,21 @@
+Canonical World Coordinate Convention:
+ - Unity World Space, with XZ horizontal and Y vertical
+ - 1 Unity unit = 1 meter
+Exact Chunk Address Type:
+ - (chunkX, chunkZ)
+ - No vertical chunking for now
+Exact World Space Area that Chunk Coodinate (0, 0) covers:
+ - [0, chunkSize) in X, [0, chunkSize) in Z
+ - By extension, (x, z) covers: [x * chunkSize, (x + 1) * chunkSize), [z * chunkSize, (z + 1) * chunkSize)
+What Formula Maps World Position to Chunk Coordinates:
+ - (Floor(worldPositionX/chunkSize), Floor(worldPositionZ/chunkSize)) = Chunk Coordinate
+Exact Boundary Rules:
+ - A point cannot belong to more than one chunk, due to half-open interval design
+ - When objects physically span over more than one chunk, one point is considered in which chunk loads it (answered next)
+What Point Determines Chunk Ownership for an Object:
+ - Pivot of GameObject
+Chunk Size:
+ - 128 meters
+ - Fixed (cannot be modified in video settings)
+
+
