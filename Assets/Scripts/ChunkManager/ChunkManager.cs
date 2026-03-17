@@ -7,7 +7,10 @@ public class ChunkManager
     private int chunkSize;
     private Transform viewer;
     private Transform chunkParent;
-    private Dictionary<ChunkCoord, Chunk> loadedChunks = new();
+
+    private Dictionary<ChunkCoord, ChunkRecord> chunkRecords = new();
+    private Dictionary<ChunkCoord, ChunkRuntime> loadedChunks = new();
+
     private HashSet<ChunkCoord> visibleLastUpdate = new();
     private HashSet<ChunkCoord> visibleThisUpdate = new();
 
@@ -46,23 +49,22 @@ public class ChunkManager
 
                 ChunkCoord coord = new ChunkCoord(viewerCoord.x + x, viewerCoord.z + z);
                 visibleThisUpdate.Add(coord);
-                if (!loadedChunks.TryGetValue(coord, out Chunk chunk))
+
+                ChunkRecord record = GetOrCreateChunkRecord(coord);
+                ChunkRuntime runtime = GetOrCreateChunkRuntime(record);
+
+                if (!runtime.IsVisible)
                 {
-                    chunk = new Chunk(coord, chunkSize, chunkParent);
-                    loadedChunks.Add(coord, chunk);
-                }
-                if (!chunk.IsVisible())
-                {
-                    chunk.SetVisible(true);
+                    runtime.SetVisible(true);
                 }
             }
         }
 
         foreach (ChunkCoord coord in visibleLastUpdate)
         {
-            if (!visibleThisUpdate.Contains(coord))
+            if (!visibleThisUpdate.Contains(coord) && loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
             {
-                loadedChunks[coord].SetVisible(false);
+                runtime.SetVisible(false);
             }
         }
 
@@ -70,4 +72,26 @@ public class ChunkManager
         visibleLastUpdate = visibleThisUpdate;
         visibleThisUpdate = temp;
     }
+
+    private ChunkRecord GetOrCreateChunkRecord(ChunkCoord coord)
+    {
+        if (!chunkRecords.TryGetValue(coord, out ChunkRecord record))
+        {
+            record = new ChunkRecord(coord);
+            chunkRecords.Add(coord, record);
+        }
+        return record;
+    }
+    private ChunkRuntime GetOrCreateChunkRuntime(ChunkRecord record)
+    {
+        ChunkCoord coord = record.ChunkCoord;
+
+        if (!loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
+        {
+            runtime = new ChunkRuntime(record, chunkSize, chunkParent);
+            loadedChunks.Add(coord, runtime);
+        }
+        return runtime;
+    }
+
 }
