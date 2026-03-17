@@ -7,12 +7,17 @@ public class WorldManager : MonoBehaviour
     [SerializeField] int chunkSize = 128;
     [SerializeField] Transform viewer;
     [SerializeField] Transform chunkParent;
+    [SerializeField] float sampleScale = 10f;
+    [SerializeField] int octaves = 3;
+    [SerializeField] float persistence = 0.5f;
+    [SerializeField] float lacunarity = 2f;
 
     private ChunkManager chunkManager;
 
     void Awake()
     {
-        chunkManager = new ChunkManager(viewDistance, chunkSize, viewer, chunkParent);
+        chunkManager = new ChunkManager(viewDistance, chunkSize, worldSeed, viewer, chunkParent, sampleScale,
+        octaves, persistence, lacunarity);
     }
 
     void Start()

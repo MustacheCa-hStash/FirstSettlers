@@ -6,6 +6,9 @@ public class ChunkRuntime
     private GameObject root;
     private bool visible;
 
+    private Renderer renderer;
+    private Material runtimeMaterial;
+
     public ChunkRecord ChunkRecord => chunkRecord;
     public GameObject Root => root;
     public bool IsVisible => visible;
@@ -23,14 +26,38 @@ public class ChunkRuntime
         root.transform.localScale = new Vector3(chunkSize / 10f, 1f, chunkSize / 10f);
         root.transform.parent = parent;
 
-        Renderer renderer = root.GetComponent<Renderer>();
-        float hue = Mathf.Abs((chunkCoord.x * 73856093 ^ chunkCoord.z * 19349663)) % 1000 / 1000f;
-        Color color = Color.HSVToRGB(hue, 0.6f, 0.9f);
-        renderer.material.color = color;
+        renderer = root.GetComponent<Renderer>();
+        runtimeMaterial = new Material(renderer.sharedMaterial);
+        renderer.material = runtimeMaterial;
 
+        ApplyHeightMapPreview(chunkRecord);
         SetVisible(false);
-
         chunkRecord.SetActiveRuntime(this);
+    }
+
+    private void ApplyHeightMapPreview(ChunkRecord chunkRecord)
+    {
+        float[,] heightMap = chunkRecord.HeightMap;
+        
+        int width = heightMap.GetLength(0);
+        int height = heightMap.GetLength(1);
+
+        Texture2D texture = new Texture2D(width, height);
+        texture.filterMode = FilterMode.Point;
+        texture.wrapMode = TextureWrapMode.Clamp;
+
+        Color[] colorMap = new Color[width * height];
+        for (int x = 0; x < width; x++)
+        {
+            for (int z = 0; z < height; z++)
+            {
+                colorMap[z * width + x] = Color.Lerp(Color.black, Color.white, heightMap[x, z]);
+            }
+        }
+        texture.SetPixels(colorMap);
+        texture.Apply();
+
+        runtimeMaterial.mainTexture = texture;
     }
 
     public void SetVisible(bool visible)

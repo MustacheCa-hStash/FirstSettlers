@@ -5,8 +5,13 @@ public class ChunkManager
 {
     private int viewDistance;
     private int chunkSize;
+    private int seed;
     private Transform viewer;
     private Transform chunkParent;
+    private float sampleScale;
+    private int octaves;
+    private float persistence;
+    private float lacunarity;
 
     private Dictionary<ChunkCoord, ChunkRecord> chunkRecords = new();
     private Dictionary<ChunkCoord, ChunkRuntime> loadedChunks = new();
@@ -14,12 +19,18 @@ public class ChunkManager
     private HashSet<ChunkCoord> visibleLastUpdate = new();
     private HashSet<ChunkCoord> visibleThisUpdate = new();
 
-    public ChunkManager(int viewDistance, int chunkSize, Transform viewer, Transform chunkParent)
+    public ChunkManager(int viewDistance, int chunkSize, int seed, Transform viewer, Transform chunkParent, float sampleScale,
+        int octaves, float persistence, float lacunarity)
     {
         this.viewDistance = viewDistance;
         this.chunkSize = chunkSize;
+        this.seed = seed;
         this.viewer = viewer;
         this.chunkParent = chunkParent;
+        this.sampleScale = sampleScale;
+        this.octaves = octaves;
+        this.persistence = persistence;
+        this.lacunarity = lacunarity;
     }
 
     public ChunkCoord GetViewerChunkCoord()
@@ -51,6 +62,14 @@ public class ChunkManager
                 visibleThisUpdate.Add(coord);
 
                 ChunkRecord record = GetOrCreateChunkRecord(coord);
+
+                if (!record.HasHeightMap)
+                {
+                    float[,] map = TerrainGenerator.GenerateTerrainHeightMap(chunkSize, seed, sampleScale, 
+                        octaves, persistence, lacunarity, coord);
+                    record.SetHeightMap(map);
+                }
+
                 ChunkRuntime runtime = GetOrCreateChunkRuntime(record);
 
                 if (!runtime.IsVisible)
