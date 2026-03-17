@@ -12,6 +12,8 @@ public class ChunkManager
     private int octaves;
     private float persistence;
     private float lacunarity;
+    private float meshHeightMultiplier;
+    private Material baseMaterial;
 
     private Dictionary<ChunkCoord, ChunkRecord> chunkRecords = new();
     private Dictionary<ChunkCoord, ChunkRuntime> loadedChunks = new();
@@ -20,7 +22,7 @@ public class ChunkManager
     private HashSet<ChunkCoord> visibleThisUpdate = new();
 
     public ChunkManager(int viewDistance, int chunkSize, int seed, Transform viewer, Transform chunkParent, float sampleScale,
-        int octaves, float persistence, float lacunarity)
+        int octaves, float persistence, float lacunarity, float meshHeightMultiplier, Material baseMaterial)
     {
         this.viewDistance = viewDistance;
         this.chunkSize = chunkSize;
@@ -31,6 +33,8 @@ public class ChunkManager
         this.octaves = octaves;
         this.persistence = persistence;
         this.lacunarity = lacunarity;
+        this.baseMaterial = baseMaterial;
+        this.meshHeightMultiplier = meshHeightMultiplier;
     }
 
     public ChunkCoord GetViewerChunkCoord()
@@ -107,7 +111,7 @@ public class ChunkManager
 
         if (!loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
         {
-            runtime = new ChunkRuntime(record, chunkSize, chunkParent);
+            runtime = new ChunkRuntime(record, chunkSize, chunkParent, meshHeightMultiplier, baseMaterial);
             loadedChunks.Add(coord, runtime);
         }
         return runtime;
