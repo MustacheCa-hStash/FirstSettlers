@@ -3,7 +3,7 @@ using UnityEngine;
 public static class TerrainGenerator
 {
     public static float[,] GenerateTerrainHeightMap(int chunkSize, int seed, float sampleScale, int octaves, float persistence, 
-        float lacunarity, ChunkCoord chunkCoord)
+        float lacunarity, AnimationCurve heightCurve, ChunkCoord chunkCoord)
     {
         float[,] terrainHeightMap = new float[chunkSize + 1, chunkSize + 1];
         System.Random prng = new System.Random(seed);
@@ -53,13 +53,46 @@ public static class TerrainGenerator
 
         for (int x = 0; x < chunkSize + 1; x++)
         {
-            for (int y = 0; y < chunkSize + 1; y++)
+            for (int z = 0; z < chunkSize + 1; z++)
             {
-                float normalizedHeight = (terrainHeightMap[x, y] + maxPossibleHeight) / (2f * maxPossibleHeight);
-                terrainHeightMap[x, y] = Mathf.Clamp01(normalizedHeight);
+                float normalizedHeight01 = NormalizeHeight01(terrainHeightMap[x, z], maxPossibleHeight);
+                terrainHeightMap[x, z] = ApplyHeightPipeline(normalizedHeight01, heightCurve);
             }
         }
 
         return terrainHeightMap;
+    }
+
+    private static float NormalizeHeight01(float rawHeight, float maxPossibleHeight)
+    {
+        float normalizedHeight = (rawHeight +  maxPossibleHeight) / (2f * maxPossibleHeight);
+        return Mathf.Clamp01(normalizedHeight);
+    }
+
+    private static float ApplyHeightPipeline(float normalizedHeight, AnimationCurve heightCurve)
+    {
+        float height = ApplyWaterFlattening(normalizedHeight);
+        height = ApplyHeightCurve01(height, heightCurve);
+        return height;
+    }
+    private static float ApplyWaterFlattening(float normalizedHeight)
+    {
+        float waterLevel = 0.2f;
+        float shoreBlend = 0.03f;
+
+        float height = normalizedHeight;
+
+        if (height < waterLevel)
+        {
+            float t = Mathf.InverseLerp(waterLevel - shoreBlend, waterLevel, height);
+            height = Mathf.Lerp(waterLevel, height, t);
+        }
+
+        return height;
+    }
+
+    private static float ApplyHeightCurve01(float height, AnimationCurve heightCurve)
+    {
+        return Mathf.Clamp01(heightCurve.Evaluate(height));
     }
 }

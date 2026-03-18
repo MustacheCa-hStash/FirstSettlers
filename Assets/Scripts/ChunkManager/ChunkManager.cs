@@ -13,6 +13,7 @@ public class ChunkManager
     private float persistence;
     private float lacunarity;
     private float meshHeightMultiplier;
+    private AnimationCurve heightCurve;
     private Material baseMaterial;
 
     private Dictionary<ChunkCoord, ChunkRecord> chunkRecords = new();
@@ -22,7 +23,7 @@ public class ChunkManager
     private HashSet<ChunkCoord> visibleThisUpdate = new();
 
     public ChunkManager(int viewDistance, int chunkSize, int seed, Transform viewer, Transform chunkParent, float sampleScale,
-        int octaves, float persistence, float lacunarity, float meshHeightMultiplier, Material baseMaterial)
+        int octaves, float persistence, float lacunarity, float meshHeightMultiplier, AnimationCurve heightCurve, Material baseMaterial)
     {
         this.viewDistance = viewDistance;
         this.chunkSize = chunkSize;
@@ -35,6 +36,7 @@ public class ChunkManager
         this.lacunarity = lacunarity;
         this.baseMaterial = baseMaterial;
         this.meshHeightMultiplier = meshHeightMultiplier;
+        this.heightCurve = heightCurve;
     }
 
     public ChunkCoord GetViewerChunkCoord()
@@ -70,7 +72,7 @@ public class ChunkManager
                 if (!record.HasHeightMap)
                 {
                     float[,] map = TerrainGenerator.GenerateTerrainHeightMap(chunkSize, seed, sampleScale, 
-                        octaves, persistence, lacunarity, coord);
+                        octaves, persistence, lacunarity, heightCurve, coord);
                     record.SetHeightMap(map);
                 }
 
