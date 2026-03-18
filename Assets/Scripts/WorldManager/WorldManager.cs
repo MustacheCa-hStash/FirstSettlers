@@ -25,11 +25,11 @@ public class WorldManager : MonoBehaviour
 
     void Start()
     {
-        chunkManager.UpdateVisibleChunks();
+        chunkManager.UpdateActiveChunks();
     }
 
     void Update()
     {
-        chunkManager.UpdateVisibleChunks();
+        chunkManager.UpdateActiveChunks();
     }
 }

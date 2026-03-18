@@ -19,8 +19,8 @@ public class ChunkManager
     private Dictionary<ChunkCoord, ChunkRecord> chunkRecords = new();
     private Dictionary<ChunkCoord, ChunkRuntime> loadedChunks = new();
 
-    private HashSet<ChunkCoord> visibleLastUpdate = new();
-    private HashSet<ChunkCoord> visibleThisUpdate = new();
+    private HashSet<ChunkCoord> activeLastUpdate = new();
+    private HashSet<ChunkCoord> activeThisUpdate = new();
 
     public ChunkManager(int viewDistance, int chunkSize, int seed, Transform viewer, Transform chunkParent, float sampleScale,
         int octaves, float persistence, float lacunarity, float meshHeightMultiplier, AnimationCurve heightCurve, Material baseMaterial)
@@ -43,16 +43,13 @@ public class ChunkManager
     {
         int cx = Mathf.FloorToInt(viewer.position.x / chunkSize);
         int cz = Mathf.FloorToInt(viewer.position.z / chunkSize);
-
         ChunkCoord viewerChunk = new ChunkCoord(cx, cz);
-        Debug.Log($"Viewer Chunk: {viewerChunk.x}, {viewerChunk.z}");
-
         return viewerChunk;
     }
 
-    public void UpdateVisibleChunks()
+    public void UpdateActiveChunks()
     {
-        visibleThisUpdate.Clear();
+        activeThisUpdate.Clear();
 
         ChunkCoord viewerCoord = GetViewerChunkCoord();
 
@@ -64,19 +61,25 @@ public class ChunkManager
                 int sqrViewRadius = viewDistance * viewDistance;
                 if (sqrDistance > sqrViewRadius) continue;
 
-                ChunkCoord coord = new ChunkCoord(viewerCoord.x + x, viewerCoord.z + z);
-                visibleThisUpdate.Add(coord);
-
-                ChunkRecord record = GetOrCreateChunkRecord(coord);
+                ChunkCoord targetCoord = new ChunkCoord(viewerCoord.x + x, viewerCoord.z + z);
+                activeThisUpdate.Add(targetCoord);
+                ChunkRecord record = GetOrCreateChunkRecord(targetCoord);
 
                 if (!record.HasHeightMap)
                 {
                     float[,] map = TerrainGenerator.GenerateTerrainHeightMap(chunkSize, seed, sampleScale, 
-                        octaves, persistence, lacunarity, heightCurve, coord);
+                        octaves, persistence, lacunarity, heightCurve, targetCoord);
                     record.SetHeightMap(map);
                 }
 
+                int lod = ChunkRingLODPolicy.GetLOD(viewerCoord, targetCoord);
                 ChunkRuntime runtime = GetOrCreateChunkRuntime(record);
+
+                if (!runtime.IsShowingLOD(lod))
+                {
+                    Mesh mesh = GetOrCreateLODMesh(record, lod);
+                    runtime.SetMesh(mesh, lod);
+                }
 
                 if (!runtime.IsVisible)
                 {
@@ -85,17 +88,24 @@ public class ChunkManager
             }
         }
 
-        foreach (ChunkCoord coord in visibleLastUpdate)
+        foreach (ChunkCoord coord in activeLastUpdate)
         {
-            if (!visibleThisUpdate.Contains(coord) && loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
+            if (!activeThisUpdate.Contains(coord))
             {
-                runtime.SetVisible(false);
+                if (loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
+                {
+                    runtime.DestroyRuntime();
+                    loadedChunks.Remove(coord);
+                }
+
+                if (chunkRecords.TryGetValue(coord, out ChunkRecord record))
+                    record.ClearLODMeshes();
             }
         }
 
-        var temp = visibleLastUpdate;
-        visibleLastUpdate = visibleThisUpdate;
-        visibleThisUpdate = temp;
+        var temp = activeLastUpdate;
+        activeLastUpdate = activeThisUpdate;
+        activeThisUpdate = temp;
     }
 
     private ChunkRecord GetOrCreateChunkRecord(ChunkCoord coord)
@@ -113,10 +123,30 @@ public class ChunkManager
 
         if (!loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
         {
-            runtime = new ChunkRuntime(record, chunkSize, chunkParent, meshHeightMultiplier, baseMaterial);
+            runtime = new ChunkRuntime(record, chunkSize, chunkParent, baseMaterial);
             loadedChunks.Add(coord, runtime);
         }
         return runtime;
     }
+
+    private Mesh GetOrCreateLODMesh(ChunkRecord chunkRecord, int lod)
+    {
+        if (chunkRecord.TryGetLODMesh(lod, out Mesh mesh))
+            return mesh;
+
+        int stepIncrement = 1 << lod;
+        MeshData meshData = MeshGenerator.GenerateTerrainMesh(
+            chunkRecord.HeightMap,
+            meshHeightMultiplier,
+            stepIncrement
+        );
+
+        mesh = meshData.CreateMesh();
+        chunkRecord.StoreLODMesh(lod, mesh);
+
+        return mesh;
+    }
+
+
 
 }
