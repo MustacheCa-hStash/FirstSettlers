@@ -40,6 +40,9 @@ public class ChunkRuntime
 
     public void SetMesh(Mesh mesh, int lod)
     {
+        if (meshFilter.sharedMesh == mesh && currentLOD == lod)
+            return;
+
         meshFilter.sharedMesh = mesh;
         currentLOD = lod;
     }
@@ -63,7 +66,26 @@ public class ChunkRuntime
     public void DestroyRuntime()
     {
         chunkRecord.ClearActiveRuntime(this);
-        Object.Destroy(root);
+
+        ClearMesh();
+        visible = false;
+
+        if (runtimeMaterial != null)
+        {
+            Object.Destroy(runtimeMaterial);
+            runtimeMaterial = null;
+        }
+
+        if (root != null)
+        {
+            Object.Destroy(root);
+            root = null;
+        }
+
+        meshFilter = null;
+        meshRenderer = null;
+        chunkRecord = null;
+        currentLOD = -1;
     }
 
 }

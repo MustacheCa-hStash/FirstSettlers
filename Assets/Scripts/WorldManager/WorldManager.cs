@@ -12,7 +12,6 @@ public class WorldManager : MonoBehaviour
     [SerializeField] float persistence = 0.5f;
     [SerializeField] float lacunarity = 2f;
     [SerializeField] float meshHeightMultiplier = 10f;
-    [SerializeField] AnimationCurve heightCurve;
     [SerializeField] Material baseMaterial;
 
     private ChunkManager chunkManager;
@@ -20,7 +19,7 @@ public class WorldManager : MonoBehaviour
     void Awake()
     {
         chunkManager = new ChunkManager(viewDistance, chunkSize, worldSeed, viewer, chunkParent, sampleScale,
-        octaves, persistence, lacunarity, meshHeightMultiplier, heightCurve, baseMaterial);
+        octaves, persistence, lacunarity, meshHeightMultiplier, baseMaterial);
     }
 
     void Start()

@@ -13,7 +13,6 @@ public class ChunkManager
     private float persistence;
     private float lacunarity;
     private float meshHeightMultiplier;
-    private AnimationCurve heightCurve;
     private Material baseMaterial;
 
     private Dictionary<ChunkCoord, ChunkRecord> chunkRecords = new();
@@ -22,8 +21,10 @@ public class ChunkManager
     private HashSet<ChunkCoord> activeLastUpdate = new();
     private HashSet<ChunkCoord> activeThisUpdate = new();
 
+    private TerrainRequestManager terrainRequestManager;
+
     public ChunkManager(int viewDistance, int chunkSize, int seed, Transform viewer, Transform chunkParent, float sampleScale,
-        int octaves, float persistence, float lacunarity, float meshHeightMultiplier, AnimationCurve heightCurve, Material baseMaterial)
+        int octaves, float persistence, float lacunarity, float meshHeightMultiplier, Material baseMaterial)
     {
         this.viewDistance = viewDistance;
         this.chunkSize = chunkSize;
@@ -34,21 +35,23 @@ public class ChunkManager
         this.octaves = octaves;
         this.persistence = persistence;
         this.lacunarity = lacunarity;
-        this.baseMaterial = baseMaterial;
         this.meshHeightMultiplier = meshHeightMultiplier;
-        this.heightCurve = heightCurve;
+        this.baseMaterial = baseMaterial;
+
+        terrainRequestManager = new TerrainRequestManager();
     }
 
     public ChunkCoord GetViewerChunkCoord()
     {
         int cx = Mathf.FloorToInt(viewer.position.x / chunkSize);
         int cz = Mathf.FloorToInt(viewer.position.z / chunkSize);
-        ChunkCoord viewerChunk = new ChunkCoord(cx, cz);
-        return viewerChunk;
+        return new ChunkCoord(cx, cz);
     }
 
     public void UpdateActiveChunks()
     {
+        ProcessCompletedRequests();
+
         activeThisUpdate.Clear();
 
         ChunkCoord viewerCoord = GetViewerChunkCoord();
@@ -63,23 +66,15 @@ public class ChunkManager
 
                 ChunkCoord targetCoord = new ChunkCoord(viewerCoord.x + x, viewerCoord.z + z);
                 activeThisUpdate.Add(targetCoord);
+
                 ChunkRecord record = GetOrCreateChunkRecord(targetCoord);
-
-                if (!record.HasHeightMap)
-                {
-                    float[,] map = TerrainGenerator.GenerateTerrainHeightMap(chunkSize, seed, sampleScale, 
-                        octaves, persistence, lacunarity, heightCurve, targetCoord);
-                    record.SetHeightMap(map);
-                }
-
-                int lod = ChunkRingLODPolicy.GetLOD(viewerCoord, targetCoord);
                 ChunkRuntime runtime = GetOrCreateChunkRuntime(record);
 
-                if (!runtime.IsShowingLOD(lod))
-                {
-                    Mesh mesh = GetOrCreateLODMesh(record, lod);
-                    runtime.SetMesh(mesh, lod);
-                }
+                int lod = ChunkRingLODPolicy.GetLOD(viewerCoord, targetCoord);
+
+                EnsureHeightMapRequested(record);
+                EnsureLODMeshRequested(record, lod);
+                TryApplyLODMesh(record, runtime, lod);
 
                 if (!runtime.IsVisible)
                 {
@@ -129,24 +124,80 @@ public class ChunkManager
         return runtime;
     }
 
-    private Mesh GetOrCreateLODMesh(ChunkRecord chunkRecord, int lod)
+    private void EnsureHeightMapRequested(ChunkRecord record)
     {
-        if (chunkRecord.TryGetLODMesh(lod, out Mesh mesh))
-            return mesh;
+        if (record.HasHeightMap)
+            return;
+
+        if (record.IsHeightMapRequestInFlight)
+            return;
+
+        int requestVersion = record.BeginHeightMapRequest();
+
+        terrainRequestManager.RequestHeightMap(
+            record.ChunkCoord,
+            requestVersion,
+            chunkSize,
+            seed,
+            sampleScale,
+            octaves,
+            persistence,
+            lacunarity
+        );
+    }
+    private void EnsureLODMeshRequested(ChunkRecord record, int lod)
+    {
+        if (!record.HasHeightMap)
+            return;
+
+        if (record.TryGetLODMesh(lod, out _))
+            return;
+
+        if (record.IsMeshRequestInFlight(lod))
+            return;
 
         int stepIncrement = 1 << lod;
-        MeshData meshData = MeshGenerator.GenerateTerrainMesh(
-            chunkRecord.HeightMap,
+        int requestVersion = record.BeginMeshRequest(lod);
+
+        terrainRequestManager.RequestLODMesh(
+            record.ChunkCoord,
+            lod,
+            requestVersion,
+            record.HeightMap,
             meshHeightMultiplier,
             stepIncrement
         );
-
-        mesh = meshData.CreateMesh();
-        chunkRecord.StoreLODMesh(lod, mesh);
-
-        return mesh;
     }
 
+    private void TryApplyLODMesh(ChunkRecord record, ChunkRuntime runtime, int lod)
+    {
+        if (!record.TryGetLODMesh(lod, out Mesh mesh))
+            return;
 
+        if (!runtime.IsShowingLOD(lod))
+            runtime.SetMesh(mesh, lod);
+    }
+
+    private void ProcessCompletedRequests()
+    {
+        while (terrainRequestManager.TryDequeueHeightMapResult(out HeightMapRequestResult mapResult))
+        {
+            if (!chunkRecords.TryGetValue(mapResult.ChunkCoord, out ChunkRecord record))
+                continue;
+
+            record.TryCompleteHeightMapRequest(mapResult.RequestVersion, mapResult.HeightMap);
+        }
+
+        while (terrainRequestManager.TryDequeueMeshResult(out MeshRequestResult meshResult))
+        {
+            if (!chunkRecords.TryGetValue(meshResult.ChunkCoord, out ChunkRecord record))
+                continue;
+
+            Mesh mesh = meshResult.MeshData.CreateMesh();
+
+            if (!record.TryCompleteMeshRequest(meshResult.LOD, meshResult.RequestVersion, mesh))
+                continue;
+        }
+    }
 
 }

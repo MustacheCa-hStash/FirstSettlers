@@ -3,7 +3,7 @@ using UnityEngine;
 public static class TerrainGenerator
 {
     public static float[,] GenerateTerrainHeightMap(int chunkSize, int seed, float sampleScale, int octaves, float persistence, 
-        float lacunarity, AnimationCurve heightCurve, ChunkCoord chunkCoord)
+        float lacunarity, ChunkCoord chunkCoord)
     {
         float[,] terrainHeightMap = new float[chunkSize + 1, chunkSize + 1];
         System.Random prng = new System.Random(seed);
@@ -56,7 +56,7 @@ public static class TerrainGenerator
             for (int z = 0; z < chunkSize + 1; z++)
             {
                 float normalizedHeight01 = NormalizeHeight01(terrainHeightMap[x, z], maxPossibleHeight);
-                terrainHeightMap[x, z] = ApplyHeightPipeline(normalizedHeight01, heightCurve);
+                terrainHeightMap[x, z] = ApplyHeightPipeline(normalizedHeight01);
             }
         }
 
@@ -69,10 +69,9 @@ public static class TerrainGenerator
         return Mathf.Clamp01(normalizedHeight);
     }
 
-    private static float ApplyHeightPipeline(float normalizedHeight, AnimationCurve heightCurve)
+    private static float ApplyHeightPipeline(float normalizedHeight)
     {
         float height = ApplyWaterFlattening(normalizedHeight);
-        height = ApplyHeightCurve01(height, heightCurve);
         return height;
     }
     private static float ApplyWaterFlattening(float normalizedHeight)
@@ -91,8 +90,4 @@ public static class TerrainGenerator
         return height;
     }
 
-    private static float ApplyHeightCurve01(float height, AnimationCurve heightCurve)
-    {
-        return Mathf.Clamp01(heightCurve.Evaluate(height));
-    }
 }

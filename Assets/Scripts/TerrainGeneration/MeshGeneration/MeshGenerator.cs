@@ -55,7 +55,7 @@ public class MeshData
     public int[] triangles;
     public Color[] colors;
 
-    int triangleIndex;
+    private int triangleIndex;
 
     public MeshData(int meshWidth, int meshHeight)
     {
