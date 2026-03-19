@@ -12,6 +12,7 @@ public class ChunkManager
     private int octaves;
     private float persistence;
     private float lacunarity;
+    private float erosionStrength;
     private float meshHeightMultiplier;
     private Material baseMaterial;
 
@@ -24,7 +25,7 @@ public class ChunkManager
     private TerrainRequestManager terrainRequestManager;
 
     public ChunkManager(int viewDistance, int chunkSize, int seed, Transform viewer, Transform chunkParent, float sampleScale,
-        int octaves, float persistence, float lacunarity, float meshHeightMultiplier, Material baseMaterial)
+        int octaves, float persistence, float lacunarity, float erosionStrength, float meshHeightMultiplier, Material baseMaterial)
     {
         this.viewDistance = viewDistance;
         this.chunkSize = chunkSize;
@@ -35,6 +36,7 @@ public class ChunkManager
         this.octaves = octaves;
         this.persistence = persistence;
         this.lacunarity = lacunarity;
+        this.erosionStrength = erosionStrength;
         this.meshHeightMultiplier = meshHeightMultiplier;
         this.baseMaterial = baseMaterial;
 
@@ -142,7 +144,8 @@ public class ChunkManager
             sampleScale,
             octaves,
             persistence,
-            lacunarity
+            lacunarity,
+            erosionStrength
         );
     }
 

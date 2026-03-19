@@ -17,12 +17,13 @@ public class TerrainRequestManager
         float sampleScale,
         int octaves,
         float persistence,
-        float lacunarity)
+        float lacunarity,
+        float erosionStrength)
     {
         ThreadPool.QueueUserWorkItem(_ =>
         {
             float[,] rawHeightMap = HeightMapGenerator.GenerateTerrainHeightMap(chunkSize, seed, sampleScale, octaves, 
-                persistence, lacunarity, chunkCoord);
+                persistence, lacunarity, erosionStrength, chunkCoord).HeightMap;
             float[,] moistureMap = ClimateGenerator.GenerateTerrainMoistureMap(chunkSize, seed, sampleScale, octaves,
                 persistence, lacunarity, chunkCoord);
             float[,] temperatureMap = ClimateGenerator.GenerateTerrainTemperatureMap(chunkSize, seed, sampleScale, octaves,

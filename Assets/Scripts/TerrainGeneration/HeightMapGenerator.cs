@@ -1,27 +1,15 @@
-using UnityEditor.Callbacks;
 using UnityEngine;
 
 public static class HeightMapGenerator
 {
-    public static float[,] GenerateTerrainHeightMap(int chunkSize, int seed, float sampleScale, int octaves, float persistence, 
-        float lacunarity, ChunkCoord chunkCoord)
+    public static HeightFieldResult GenerateTerrainHeightMap(int chunkSize, int seed, float sampleScale, int octaves, 
+        float persistence, float lacunarity, float erosionStrength, ChunkCoord chunkCoord)
     {
-        float[,] terrainHeightMap = new float[chunkSize + 1, chunkSize + 1];
-        System.Random prng = new System.Random(seed);
-        Vector2[] octaveOffsets = new Vector2[octaves];
+        int width = chunkSize + 1;
+        int height = chunkSize + 1;
 
-        float maxPossibleHeight = 0;
-        float amplitude = 1;
-
-        for (int i = 0; i < octaves; i++)
-        {
-            float offsetX = prng.Next(-100000, 100000);
-            float offsetY = prng.Next(-100000, 100000);
-            octaveOffsets[i] = new Vector2(offsetX, offsetY);
-
-            maxPossibleHeight += amplitude;
-            amplitude *= persistence;
-        }
+        float[,] rawSynthesizedHeightMap = new float[width, height];
+        float[,] finalHeightMap = new float[width, height];
 
         if (sampleScale <= 0f)
             sampleScale = 0.0001f;
@@ -29,75 +17,79 @@ public static class HeightMapGenerator
         if (lacunarity < 1f)
             lacunarity = 1f;
 
-        for (int x = 0; x < chunkSize + 1; x++)
+        Vector2[] octaveOffsets = GenerateOctaveOffsets(seed, octaves);
+
+        float minRawHeight = float.PositiveInfinity;
+        float maxRawHeight = float.NegativeInfinity;
+
+        // Stage A:
+        // Derivative-aware terrain synthesis.
+        for (int x = 0; x < width; x++)
         {
-            for (int z = 0; z < chunkSize + 1; z++)
+            for (int z = 0; z < height; z++)
             {
-                amplitude = 1;
-                float frequency = 1;
-                float noiseHeight = 0;
+                float worldX = chunkCoord.x * chunkSize + x;
+                float worldZ = chunkCoord.z * chunkSize + z;
 
-                for (int o = 0; o < octaves; o++)
-                {
-                    float sampleX = (chunkCoord.x * chunkSize + x + octaveOffsets[o].x) / sampleScale * frequency;
-                    float sampleZ = (chunkCoord.z * chunkSize + z + octaveOffsets[o].y) / sampleScale * frequency;
-                    float perlinValue = Mathf.PerlinNoise(sampleX, sampleZ) * 2 - 1;
+                float sampleX = worldX / sampleScale;
+                float sampleZ = worldZ / sampleScale;
 
-                    noiseHeight += perlinValue * amplitude;
-                    amplitude *= persistence;
-                    frequency *= lacunarity;
-                }
+                NoiseSample2D synthesized = DerivativeFbm2D.Sample(
+                    sampleX,
+                    sampleZ,
+                    seed,
+                    octaves,
+                    persistence,
+                    lacunarity,
+                    erosionStrength,
+                    octaveOffsets
+                );
 
-                terrainHeightMap[x, z] = noiseHeight;
+                float rawHeight = synthesized.Value;
+                rawSynthesizedHeightMap[x, z] = rawHeight;
+
+                if (rawHeight < minRawHeight)
+                    minRawHeight = rawHeight;
+
+                if (rawHeight > maxRawHeight)
+                    maxRawHeight = rawHeight;
             }
         }
 
-        for (int x = 0; x < chunkSize + 1; x++)
+        // Stage B:
+        // Normalize chunk-local raw synthesis result and apply your shaping pipeline.
+        float maxPossibleHeight = 0f;
+        float amplitude = 1f;
+
+        for (int i = 0; i < octaves; i++)
         {
-            for (int z = 0; z < chunkSize + 1; z++)
-            {
-                float normalizedHeight01 = NormalizeHeight01(terrainHeightMap[x, z], maxPossibleHeight);
-                terrainHeightMap[x, z] = ApplyHeightPipeline(normalizedHeight01);
-            }
+            maxPossibleHeight += amplitude;
+            amplitude *= persistence;
         }
-
-        return terrainHeightMap;
-    }
-
-    public static float[,] ApplyBiomeHeightModifiers(float[,] rawHeightMap, BiomeType[,] biomeMap)
-    {
-        int width = rawHeightMap.GetLength(0);
-        float[,] postProcessedHeight = new float[width, width];
 
         for (int x = 0; x < width; x++)
         {
-            for (int z = 0; z < width; z++)
+            for (int z = 0; z < height; z++)
             {
-                postProcessedHeight[x, z] = GetPostProcessedHeightFromBiomeType(rawHeightMap[x, z], biomeMap[x, z]);
+                float normalizedHeight01 =
+                    (rawSynthesizedHeightMap[x, z] + maxPossibleHeight)
+                    / (2f * maxPossibleHeight);
+
+                finalHeightMap[x, z] = ApplyHeightPipeline(normalizedHeight01);
             }
         }
 
-        return postProcessedHeight;
+        // Stage C:
+        // Compute final terrain gradients from the final terrain surface.
+        ComputeFinalGradients(finalHeightMap, out float[,] gradientXMap, out float[,] gradientZMap);
+
+        return new HeightFieldResult(finalHeightMap, gradientXMap, gradientZMap);
     }
 
-    private static float GetPostProcessedHeightFromBiomeType(float rawHeight, BiomeType biomeType)
+    //DO NOT MODIFY, WILL MESS UP FINAL GRADIENTS
+    public static float[,] ApplyBiomeHeightModifiers(float[,] rawHeightMap, BiomeType[,] biomeMap)
     {
-        float postProcessedHeight = rawHeight;
-
-        if (biomeType == BiomeType.Rock)
-        {
-            float influence = Mathf.SmoothStep(0f, 1f, rawHeight);
-            float extraHeight = influence * influence * 0.4f;
-            postProcessedHeight = Mathf.Clamp01(rawHeight + extraHeight);
-        }
-
-        return postProcessedHeight;
-    }
-
-    private static float NormalizeHeight01(float rawHeight, float maxPossibleHeight)
-    {
-        float normalizedHeight = (rawHeight +  maxPossibleHeight) / (2f * maxPossibleHeight);
-        return Mathf.Clamp01(normalizedHeight);
+        return rawHeightMap;
     }
 
     private static float ApplyHeightPipeline(float normalizedHeight)
@@ -121,4 +113,57 @@ public static class HeightMapGenerator
         return height;
     }
 
+    private static Vector2[] GenerateOctaveOffsets(int seed, int octaves)
+    {
+        Vector2[] octaveOffsets = new Vector2[octaves];
+        System.Random prng = new System.Random(seed);
+
+        for (int i = 0; i < octaves; i++)
+        {
+            float offsetX = prng.Next(-100000, 100000);
+            float offsetZ = prng.Next(-100000, 100000);
+            octaveOffsets[i] = new Vector2(offsetX, offsetZ);
+        }
+
+        return octaveOffsets;
+    }
+
+    private static void ComputeFinalGradients(float[,] finalHeightMap, out float[,] gradientXMap, out float[,] gradientZMap)
+    {
+        int width = finalHeightMap.GetLength(0);
+        int height = finalHeightMap.GetLength(1);
+
+        gradientXMap = new float[width, height];
+        gradientZMap = new float[width, height];
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int z = 0; z < height; z++)
+            {
+                float left = finalHeightMap[Mathf.Max(x - 1, 0), z];
+                float right = finalHeightMap[Mathf.Min(x + 1, width - 1), z];
+                float down = finalHeightMap[x, Mathf.Max(z - 1, 0)];
+                float up = finalHeightMap[x, Mathf.Min(z + 1, height - 1)];
+
+                float dx;
+                if (x == 0)
+                    dx = right - finalHeightMap[x, z];
+                else if (x == width - 1)
+                    dx = finalHeightMap[x, z] - left;
+                else
+                    dx = (right - left) * 0.5f;
+
+                float dz;
+                if (z == 0)
+                    dz = up - finalHeightMap[x, z];
+                else if (z == height - 1)
+                    dz = finalHeightMap[x, z] - down;
+                else
+                    dz = (up - down) * 0.5f;
+
+                gradientXMap[x, z] = dx;
+                gradientZMap[x, z] = dz;
+            }
+        }
+    }
 }
