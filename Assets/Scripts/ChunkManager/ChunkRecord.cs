@@ -1,7 +1,4 @@
-using JetBrains.Annotations;
-using Mono.Cecil.Cil;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class ChunkRecord
@@ -9,11 +6,14 @@ public class ChunkRecord
     private ChunkCoord chunkCoord;
     private ChunkRuntime activeRuntime;
     private float[,] heightMap;
+    private float[,] moistureMap;
+    private float[,] temperatureMap;
+    private BiomeType[,] biomeMap;
 
     private Dictionary<int, Mesh> LODMeshes = new Dictionary<int, Mesh>();
 
-    private bool heightMapRequestInFlight;
-    private int heightMapRequestVersion;
+    private bool terrainDataRequestInFlight;
+    private int terrainDataRequestVersion;
 
     private Dictionary<int, int> meshRequestVersionsByLOD = new Dictionary<int, int>();
     private HashSet<int> meshRequestsInFlight = new HashSet<int>();
@@ -21,10 +21,17 @@ public class ChunkRecord
     public ChunkCoord ChunkCoord => chunkCoord;
     public ChunkRuntime ActiveRuntime => activeRuntime;
     public bool IsLoaded => activeRuntime != null;
-    public bool HasHeightMap => heightMap != null;
+    public bool HasTerrainData =>
+        heightMap != null &&
+        moistureMap != null &&
+        temperatureMap != null &&
+        biomeMap != null;
     public float[,] HeightMap => heightMap;
-    public bool IsHeightMapRequestInFlight => heightMapRequestInFlight;
-    public int HeightMapRequestVersion => heightMapRequestVersion;
+    public float[,] MoistureMap => moistureMap;
+    public float[,] TemperatureMap => temperatureMap;
+    public BiomeType[,] BiomeMap => biomeMap;
+    public bool IsTerrainDataRequestInFlight => terrainDataRequestInFlight;
+    public int TerrainDataRequestVersion => terrainDataRequestVersion;
 
     public ChunkRecord(ChunkCoord chunkCoord)
     {
@@ -61,22 +68,27 @@ public class ChunkRecord
         this.heightMap = heightMap; 
     }
 
-    public int BeginHeightMapRequest()
+    public int BeginTerrainDataRequest()
     {
-        heightMapRequestVersion++;
-        heightMapRequestInFlight = true;
-        return heightMapRequestVersion;
+        terrainDataRequestVersion++;
+        terrainDataRequestInFlight = true;
+        return terrainDataRequestVersion;
     }
 
-    public bool TryCompleteHeightMapRequest(int requestVersion, float[,] returnedHeightMap)
+    public bool TryCompleteTerrainDataRequest(int requestVersion, float[,] returnedHeightMap,
+        float[,] returnedMoistureMap, float[,] returnedTemperatureMap, BiomeType[,] returnedBiomeMap)
     {
-        if (!heightMapRequestInFlight) 
+        if (!terrainDataRequestInFlight) 
             return false;
-        if (requestVersion != heightMapRequestVersion) 
+        if (requestVersion != terrainDataRequestVersion) 
             return false;
 
         heightMap = returnedHeightMap;
-        heightMapRequestInFlight = false;
+        moistureMap = returnedMoistureMap;
+        temperatureMap = returnedTemperatureMap;
+        biomeMap = returnedBiomeMap;
+
+        terrainDataRequestInFlight = false;
         return true;
     }
 

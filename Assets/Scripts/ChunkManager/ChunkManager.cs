@@ -72,7 +72,7 @@ public class ChunkManager
 
                 int lod = ChunkRingLODPolicy.GetLOD(viewerCoord, targetCoord);
 
-                EnsureHeightMapRequested(record);
+                EnsureTerrainDataRequested(record);
                 EnsureLODMeshRequested(record, lod);
                 TryApplyLODMesh(record, runtime, lod);
 
@@ -124,17 +124,17 @@ public class ChunkManager
         return runtime;
     }
 
-    private void EnsureHeightMapRequested(ChunkRecord record)
+    private void EnsureTerrainDataRequested(ChunkRecord record)
     {
-        if (record.HasHeightMap)
+        if (record.HasTerrainData)
             return;
 
-        if (record.IsHeightMapRequestInFlight)
+        if (record.IsTerrainDataRequestInFlight)
             return;
 
-        int requestVersion = record.BeginHeightMapRequest();
+        int requestVersion = record.BeginTerrainDataRequest();
 
-        terrainRequestManager.RequestHeightMap(
+        terrainRequestManager.RequestTerrainData(
             record.ChunkCoord,
             requestVersion,
             chunkSize,
@@ -145,9 +145,10 @@ public class ChunkManager
             lacunarity
         );
     }
+
     private void EnsureLODMeshRequested(ChunkRecord record, int lod)
     {
-        if (!record.HasHeightMap)
+        if (!record.HasTerrainData)
             return;
 
         if (record.TryGetLODMesh(lod, out _))
@@ -164,6 +165,7 @@ public class ChunkManager
             lod,
             requestVersion,
             record.HeightMap,
+            record.BiomeMap,
             meshHeightMultiplier,
             stepIncrement
         );
@@ -180,12 +182,18 @@ public class ChunkManager
 
     private void ProcessCompletedRequests()
     {
-        while (terrainRequestManager.TryDequeueHeightMapResult(out HeightMapRequestResult mapResult))
+        while (terrainRequestManager.TryDequeueTerrainDataResult(out TerrainDataRequestResult terrainResult))
         {
-            if (!chunkRecords.TryGetValue(mapResult.ChunkCoord, out ChunkRecord record))
+            if (!chunkRecords.TryGetValue(terrainResult.ChunkCoord, out ChunkRecord record))
                 continue;
 
-            record.TryCompleteHeightMapRequest(mapResult.RequestVersion, mapResult.HeightMap);
+            record.TryCompleteTerrainDataRequest(
+                terrainResult.RequestVersion,
+                terrainResult.HeightMap,
+                terrainResult.MoistureMap,
+                terrainResult.TemperatureMap,
+                terrainResult.BiomeMap
+            );
         }
 
         while (terrainRequestManager.TryDequeueMeshResult(out MeshRequestResult meshResult))
@@ -195,8 +203,7 @@ public class ChunkManager
 
             Mesh mesh = meshResult.MeshData.CreateMesh();
 
-            if (!record.TryCompleteMeshRequest(meshResult.LOD, meshResult.RequestVersion, mesh))
-                continue;
+            record.TryCompleteMeshRequest(meshResult.LOD, meshResult.RequestVersion, mesh);
         }
     }
 

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public static class TerrainGenerator
+public static class HeightMapGenerator
 {
     public static float[,] GenerateTerrainHeightMap(int chunkSize, int seed, float sampleScale, int octaves, float persistence, 
         float lacunarity, ChunkCoord chunkCoord)

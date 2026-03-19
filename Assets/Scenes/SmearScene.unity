@@ -437,7 +437,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 78
+  worldSeed: 79
   viewDistance: 10
   chunkSize: 128
   viewer: {fileID: 705461055}
@@ -447,39 +447,6 @@ MonoBehaviour:
   persistence: 0.05
   lacunarity: 10
   meshHeightMultiplier: 200
-  heightCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0.78262115
-      outSlope: 0.78262115
-      tangentMode: 34
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0.33333334
-    - serializedVersion: 3
-      time: 0.5516001
-      value: 0.4316939
-      inSlope: 1.746712
-      outSlope: 1.746712
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.09311606
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 1.2674091
-      outSlope: 1.2674091
-      tangentMode: 34
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
   baseMaterial: {fileID: 2100000, guid: a7ea6abc93329ca49ab74e81010c2eec, type: 2}
 --- !u!4 &830849844
 Transform:

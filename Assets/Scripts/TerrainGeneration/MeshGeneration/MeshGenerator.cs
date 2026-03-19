@@ -2,7 +2,7 @@ using UnityEngine;
 
 public static class MeshGenerator
 {
-    public static MeshData GenerateTerrainMesh(float[,] heightMap, float heightMultiplier, int stepIncrement)
+    public static MeshData GenerateTerrainMesh(float[,] heightMap, BiomeType[,] biomeMap, float heightMultiplier, int stepIncrement)
     {
         int width = heightMap.GetLength(0);
         int height = heightMap.GetLength(1);
@@ -20,7 +20,7 @@ public static class MeshGenerator
             {
                 meshData.vertices[vertexIndex] = new Vector3(topLeftX + x, heightMap[x, y] * heightMultiplier, bottomLeftZ + y);
                 meshData.uvs[vertexIndex] = new Vector2(x / (float)(width - 1), y / (float)(height - 1));
-                meshData.colors[vertexIndex] = GenerateColorFromHeight(heightMap[x, y]);
+                meshData.colors[vertexIndex] = GenerateColorFromBiomeType(biomeMap[x, y]);
 
                 if (x < width - 1 && y < height - 1)
                 {
@@ -36,14 +36,45 @@ public static class MeshGenerator
 
     }
 
-    private static Color GenerateColorFromHeight(float normalizedHeight) 
+    private static Color GenerateColorFromBiomeType(BiomeType biomeType)
     {
         Color color;
-        if (normalizedHeight <= 0.2f) color = new Color(0.05f, 0.25f, 0.6f);
-        else if (normalizedHeight < 0.22f) color = new Color(0.8f, 0.75f, 0.55f);
-        else if (normalizedHeight < 0.34f) color = new Color(0.25f, 0.6f, 0.25f);
-        else if (normalizedHeight < 0.7f) color = new Color(0.45f, 0.45f, 0.45f);
-        else color = new Color(1f, 1f, 1f);
+
+        switch (biomeType)
+        {
+            case BiomeType.Water:
+                color = new Color(0.05f, 0.25f, 0.6f);     // deep blue
+                break;
+
+            case BiomeType.Beach:
+                color = new Color(0.8f, 0.75f, 0.55f);     // sand
+                break;
+
+            case BiomeType.Grassland:
+                color = new Color(0.25f, 0.6f, 0.25f);     // bright green
+                break;
+
+            case BiomeType.Forest:
+                color = new Color(0.05f, 0.4f, 0.05f);     // dark green
+                break;
+
+            case BiomeType.Desert:
+                color = new Color(0.9f, 0.8f, 0.4f);       // yellow/tan
+                break;
+
+            case BiomeType.Rock:
+                color = new Color(0.45f, 0.45f, 0.45f);    // grey
+                break;
+
+            case BiomeType.Snow:
+                color = new Color(1f, 1f, 1f);             // white
+                break;
+
+            default:
+                color = Color.magenta;                     // error/debug fallback
+                break;
+        }
+
         return color;
     }
 }

@@ -3,13 +3,13 @@ using System.Threading;
 
 public class TerrainRequestManager
 {
-    private Queue<HeightMapRequestResult> completedHeightMapResults = new Queue<HeightMapRequestResult>();
+    private Queue<TerrainDataRequestResult> completedTerrainDataResults = new Queue<TerrainDataRequestResult>();
     private Queue<MeshRequestResult> completedMeshResults = new Queue<MeshRequestResult>();
 
-    private object heightMapResultsLock = new object();
+    private object terrainDataResultsLock = new object();
     private object meshResultsLock = new object();
 
-    public void RequestHeightMap(
+    public void RequestTerrainData(
         ChunkCoord chunkCoord,
         int requestVersion,
         int chunkSize,
@@ -21,25 +21,26 @@ public class TerrainRequestManager
     {
         ThreadPool.QueueUserWorkItem(_ =>
         {
-            float[,] heightMap = TerrainGenerator.GenerateTerrainHeightMap(
-                chunkSize,
-                seed,
-                sampleScale,
-                octaves,
-                persistence,
-                lacunarity,
-                chunkCoord
-            );
+            float[,] heightMap = HeightMapGenerator.GenerateTerrainHeightMap(chunkSize, seed, sampleScale, octaves, 
+                persistence, lacunarity, chunkCoord);
+            float[,] moistureMap = ClimateGenerator.GenerateTerrainMoistureMap(chunkSize, seed, sampleScale, octaves,
+                persistence, lacunarity, chunkCoord);
+            float[,] temperatureMap = ClimateGenerator.GenerateTerrainTemperatureMap(chunkSize, seed, sampleScale, octaves,
+                persistence, lacunarity, chunkCoord);
+            BiomeType[,] biomeMap = BiomeMapGenerator.GenerateBiomeMap(heightMap, moistureMap, temperatureMap);
 
-            HeightMapRequestResult result = new HeightMapRequestResult(
+            TerrainDataRequestResult result = new TerrainDataRequestResult(
                 chunkCoord,
                 requestVersion,
-                heightMap
+                heightMap,
+                moistureMap,
+                temperatureMap,
+                biomeMap
             );
 
-            lock (heightMapResultsLock)
+            lock (terrainDataResultsLock)
             {
-                completedHeightMapResults.Enqueue(result);
+                completedTerrainDataResults.Enqueue(result);
             }
         });
     }
@@ -49,6 +50,7 @@ public class TerrainRequestManager
         int lod,
         int requestVersion,
         float[,] heightMap,
+        BiomeType[,] biomeMap,
         float meshHeightMultiplier,
         int stepIncrement)
     {
@@ -56,6 +58,7 @@ public class TerrainRequestManager
         {
             MeshData meshData = MeshGenerator.GenerateTerrainMesh(
                 heightMap,
+                biomeMap,
                 meshHeightMultiplier,
                 stepIncrement
             );
@@ -74,13 +77,13 @@ public class TerrainRequestManager
         });
     }
 
-    public bool TryDequeueHeightMapResult(out HeightMapRequestResult result)
+    public bool TryDequeueTerrainDataResult(out TerrainDataRequestResult result)
     {
-        lock (heightMapResultsLock)
+        lock (terrainDataResultsLock)
         {
-            if (completedHeightMapResults.Count > 0)
+            if (completedTerrainDataResults.Count > 0)
             {
-                result = completedHeightMapResults.Dequeue();
+                result = completedTerrainDataResults.Dequeue();
                 return true;
             }
         }
