@@ -2,7 +2,8 @@ using UnityEngine;
 
 public static class MeshGenerator
 {
-    public static MeshData GenerateTerrainMesh(float[,] heightMap, BiomeType[,] biomeMap, float heightMultiplier, int stepIncrement)
+    public static MeshData GenerateTerrainMesh(float[,] heightMap, BiomeType[,] biomeMap, float heightMultiplier, 
+        int stepIncrement, float[,] mountainMaskMap)
     {
         int width = heightMap.GetLength(0);
         int height = heightMap.GetLength(1);
@@ -20,6 +21,7 @@ public static class MeshGenerator
             {
                 meshData.vertices[vertexIndex] = new Vector3(topLeftX + x, heightMap[x, y] * heightMultiplier, bottomLeftZ + y);
                 meshData.uvs[vertexIndex] = new Vector2(x / (float)(width - 1), y / (float)(height - 1));
+                //meshData.colors[vertexIndex] = GenerateMountainMaskColorMap(mountainMaskMap[x, y]);
                 meshData.colors[vertexIndex] = GenerateColorFromBiomeType(biomeMap[x, y]);
 
                 if (x < width - 1 && y < height - 1)
@@ -34,6 +36,12 @@ public static class MeshGenerator
 
         return meshData;
 
+    }
+
+    public static Color GenerateMountainMaskColorMap(float mountainMaskMap)
+    {
+        float mask = Mathf.Clamp01(mountainMaskMap);
+        return new Color(mask, mask, mask);
     }
 
     private static Color GenerateColorFromBiomeType(BiomeType biomeType)

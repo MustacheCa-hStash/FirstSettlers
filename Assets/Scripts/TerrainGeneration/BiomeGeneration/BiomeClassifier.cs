@@ -3,9 +3,9 @@
 public static class BiomeClassifier
 {
     // Height thresholds
-    private const float WaterLevel = 0.25f;
-    private const float BeachLevel = 0.3f;
-    private const float RockLevel = 0.6f;
+    private const float WaterLevel = 0.28f;
+    private const float BeachLevel = 0.32f;
+    private const float RockLevel = 0.72f;
 
     // Temperature thresholds
     private const float ColdTemp = 0.30f;

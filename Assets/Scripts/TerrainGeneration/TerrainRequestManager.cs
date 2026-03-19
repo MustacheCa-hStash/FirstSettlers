@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Threading;
+using System.Diagnostics;
+using UnityEngine;
 
 public class TerrainRequestManager
 {
@@ -9,42 +11,100 @@ public class TerrainRequestManager
     private object terrainDataResultsLock = new object();
     private object meshResultsLock = new object();
 
-    public void RequestTerrainData(
-        ChunkCoord chunkCoord,
-        int requestVersion,
-        int chunkSize,
-        int seed,
-        float sampleScale,
-        int octaves,
-        float persistence,
-        float lacunarity,
-        float erosionStrength)
+    private static int activeTerrainDataJobs;
+    private static int activeMeshJobs;
+
+    private const int MaxActiveTerrainDataJobs = 6;
+
+    public bool RequestTerrainData(
+    ChunkCoord chunkCoord,
+    int requestVersion,
+    int chunkSize,
+    int seed,
+    float sampleScale,
+    int octaves,
+    float persistence,
+    float lacunarity,
+    float erosionStrength)
     {
+        if (Interlocked.CompareExchange(ref activeTerrainDataJobs, 0, 0) >= MaxActiveTerrainDataJobs)
+            return false;
+
+        Interlocked.Increment(ref activeTerrainDataJobs);
+
         ThreadPool.QueueUserWorkItem(_ =>
         {
-            float[,] rawHeightMap = HeightMapGenerator.GenerateTerrainHeightMap(chunkSize, seed, sampleScale, octaves, 
-                persistence, lacunarity, erosionStrength, chunkCoord).HeightMap;
-            float[,] moistureMap = ClimateGenerator.GenerateTerrainMoistureMap(chunkSize, seed, sampleScale, octaves,
-                persistence, lacunarity, chunkCoord);
-            float[,] temperatureMap = ClimateGenerator.GenerateTerrainTemperatureMap(chunkSize, seed, sampleScale, octaves,
-                persistence, lacunarity, chunkCoord);
-            BiomeType[,] biomeMap = BiomeMapGenerator.GenerateBiomeMap(rawHeightMap, moistureMap, temperatureMap);
-            float[,] postProcessedHeightMap = HeightMapGenerator.ApplyBiomeHeightModifiers(rawHeightMap, biomeMap);
-
-            TerrainDataRequestResult result = new TerrainDataRequestResult(
-                chunkCoord,
-                requestVersion,
-                postProcessedHeightMap,
-                moistureMap,
-                temperatureMap,
-                biomeMap
-            );
-
-            lock (terrainDataResultsLock)
+            try
             {
-                completedTerrainDataResults.Enqueue(result);
+                HeightFieldResult heightField = HeightMapGenerator.GenerateTerrainHeightField(
+                    chunkSize,
+                    seed,
+                    sampleScale,
+                    chunkCoord
+                );
+
+                float[,] finalHeightMap = heightField.HeightMap;
+                float[,] gradientXMap = heightField.GradientXMap;
+                float[,] gradientZMap = heightField.GradientZMap;
+                float[,] mountainMaskMap = heightField.MountainMaskMap;
+
+                float[,] moistureMap = ClimateGenerator.GenerateTerrainMoistureMap(
+                    chunkSize,
+                    seed,
+                    sampleScale,
+                    octaves,
+                    persistence,
+                    lacunarity,
+                    chunkCoord
+                );
+
+                float[,] temperatureMap = ClimateGenerator.GenerateTerrainTemperatureMap(
+                    chunkSize,
+                    seed,
+                    sampleScale,
+                    octaves,
+                    persistence,
+                    lacunarity,
+                    chunkCoord
+                );
+
+                BiomeType[,] biomeMap = BiomeMapGenerator.GenerateBiomeMap(
+                    finalHeightMap,
+                    moistureMap,
+                    temperatureMap
+                );
+
+                TerrainDataRequestResult result = new TerrainDataRequestResult(
+                    chunkCoord,
+                    requestVersion,
+                    finalHeightMap,
+                    gradientXMap,
+                    gradientZMap,
+                    mountainMaskMap,
+                    moistureMap,
+                    temperatureMap,
+                    biomeMap
+                );
+
+                lock (terrainDataResultsLock)
+                {
+                    completedTerrainDataResults.Enqueue(result);
+                }
+            }
+            catch (System.Threading.ThreadAbortException)
+            {
+            }
+            catch (System.Exception ex)
+            {
+                UnityEngine.Debug.LogError($"TerrainData FAILED chunk={chunkCoord} ver={requestVersion}\n{ex}");
+            }
+            finally
+            {
+                Interlocked.Decrement(ref activeTerrainDataJobs);
             }
         });
+
+        return true;
     }
 
     public void RequestLODMesh(
@@ -54,27 +114,55 @@ public class TerrainRequestManager
         float[,] heightMap,
         BiomeType[,] biomeMap,
         float meshHeightMultiplier,
-        int stepIncrement)
+        int stepIncrement,
+        float[,] mountainMask)
     {
         ThreadPool.QueueUserWorkItem(_ =>
         {
-            MeshData meshData = MeshGenerator.GenerateTerrainMesh(
-                heightMap,
-                biomeMap,
-                meshHeightMultiplier,
-                stepIncrement
-            );
+            int currentJobs = Interlocked.Increment(ref activeMeshJobs);
+            Stopwatch timer = Stopwatch.StartNew();
 
-            MeshRequestResult result = new MeshRequestResult(
-                chunkCoord,
-                lod,
-                requestVersion,
-                meshData
-            );
-
-            lock (meshResultsLock)
+            try
             {
-                completedMeshResults.Enqueue(result);
+                MeshData meshData = MeshGenerator.GenerateTerrainMesh(
+                    heightMap,
+                    biomeMap,
+                    meshHeightMultiplier,
+                    stepIncrement,
+                    mountainMask
+                );
+
+                MeshRequestResult result = new MeshRequestResult(
+                    chunkCoord,
+                    lod,
+                    requestVersion,
+                    meshData
+                );
+
+                int queueCountAfterEnqueue;
+                lock (meshResultsLock)
+                {
+                    completedMeshResults.Enqueue(result);
+                    queueCountAfterEnqueue = completedMeshResults.Count;
+                }
+
+                timer.Stop();
+
+                UnityEngine.Debug.Log(
+                    $"Mesh DONE chunk={chunkCoord} lod={lod} ver={requestVersion} " +
+                    $"activeMeshJobs={currentJobs} total={timer.ElapsedMilliseconds}ms " +
+                    $"meshQueue={queueCountAfterEnqueue}"
+                );
+            }
+            catch (System.Exception ex)
+            {
+                UnityEngine.Debug.LogError(
+                    $"Mesh FAILED chunk={chunkCoord} lod={lod} ver={requestVersion}\n{ex}"
+                );
+            }
+            finally
+            {
+                Interlocked.Decrement(ref activeMeshJobs);
             }
         });
     }

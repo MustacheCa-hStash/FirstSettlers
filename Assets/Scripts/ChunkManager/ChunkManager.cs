@@ -95,8 +95,8 @@ public class ChunkManager
                     loadedChunks.Remove(coord);
                 }
 
-                if (chunkRecords.TryGetValue(coord, out ChunkRecord record))
-                    record.ClearLODMeshes();
+                //if (chunkRecords.TryGetValue(coord, out ChunkRecord record))
+                    //record.ClearLODMeshes();
             }
         }
 
@@ -136,7 +136,7 @@ public class ChunkManager
 
         int requestVersion = record.BeginTerrainDataRequest();
 
-        terrainRequestManager.RequestTerrainData(
+        bool submitted = terrainRequestManager.RequestTerrainData(
             record.ChunkCoord,
             requestVersion,
             chunkSize,
@@ -147,6 +147,11 @@ public class ChunkManager
             lacunarity,
             erosionStrength
         );
+
+        if (!submitted)
+        {
+            record.CancelTerrainDataRequest(requestVersion);
+        }
     }
 
     private void EnsureLODMeshRequested(ChunkRecord record, int lod)
@@ -170,7 +175,8 @@ public class ChunkManager
             record.HeightMap,
             record.BiomeMap,
             meshHeightMultiplier,
-            stepIncrement
+            stepIncrement,
+            record.MountainMaskMap
         );
     }
 
@@ -195,7 +201,8 @@ public class ChunkManager
                 terrainResult.HeightMap,
                 terrainResult.MoistureMap,
                 terrainResult.TemperatureMap,
-                terrainResult.BiomeMap
+                terrainResult.BiomeMap,
+                terrainResult.MountainMaskMap
             );
         }
 
