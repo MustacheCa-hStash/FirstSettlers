@@ -45,7 +45,6 @@ public class TerrainRequestManager
                 float[,] finalHeightMap = heightField.HeightMap;
                 float[,] gradientXMap = heightField.GradientXMap;
                 float[,] gradientZMap = heightField.GradientZMap;
-                float[,] mountainMaskMap = heightField.MountainMaskMap;
 
                 float[,] moistureMap = ClimateGenerator.GenerateTerrainMoistureMap(
                     chunkSize,
@@ -79,7 +78,6 @@ public class TerrainRequestManager
                     finalHeightMap,
                     gradientXMap,
                     gradientZMap,
-                    mountainMaskMap,
                     moistureMap,
                     temperatureMap,
                     biomeMap
@@ -113,8 +111,7 @@ public class TerrainRequestManager
         float[,] heightMap,
         BiomeType[,] biomeMap,
         float meshHeightMultiplier,
-        int stepIncrement,
-        float[,] mountainMask)
+        int stepIncrement)
     {
         ThreadPool.QueueUserWorkItem(_ =>
         {
@@ -126,8 +123,7 @@ public class TerrainRequestManager
                     heightMap,
                     biomeMap,
                     meshHeightMultiplier,
-                    stepIncrement,
-                    mountainMask
+                    stepIncrement
                 );
 
                 MeshRequestResult result = new MeshRequestResult(

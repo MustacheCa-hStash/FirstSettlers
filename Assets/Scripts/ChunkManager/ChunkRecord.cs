@@ -30,7 +30,6 @@ public class ChunkRecord
     public float[,] MoistureMap => moistureMap;
     public float[,] TemperatureMap => temperatureMap;
     public BiomeType[,] BiomeMap => biomeMap;
-    public float[,] MountainMaskMap;
     public bool IsTerrainDataRequestInFlight => terrainDataRequestInFlight;
     public int TerrainDataRequestVersion => terrainDataRequestVersion;
 
@@ -85,7 +84,7 @@ public class ChunkRecord
     }
 
     public bool TryCompleteTerrainDataRequest(int requestVersion, float[,] returnedHeightMap,
-        float[,] returnedMoistureMap, float[,] returnedTemperatureMap, BiomeType[,] returnedBiomeMap, float[,] mountainMaskMap)
+        float[,] returnedMoistureMap, float[,] returnedTemperatureMap, BiomeType[,] returnedBiomeMap)
     {
         if (!terrainDataRequestInFlight) 
             return false;
@@ -96,7 +95,6 @@ public class ChunkRecord
         moistureMap = returnedMoistureMap;
         temperatureMap = returnedTemperatureMap;
         biomeMap = returnedBiomeMap;
-        MountainMaskMap = mountainMaskMap;
 
         terrainDataRequestInFlight = false;
         return true;

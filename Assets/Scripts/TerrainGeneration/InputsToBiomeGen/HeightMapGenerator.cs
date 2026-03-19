@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UI;
 
 public static class HeightMapGenerator
 {
@@ -44,7 +43,7 @@ public static class HeightMapGenerator
                 float mountainTerrainSampleZ = worldZ / (sampleScale * 0.4f);
                 float mountainTerrain = MountainTerrainGenerator.Sample(mountainTerrainSampleX, mountainTerrainSampleZ, mountainTerrainOffsets);
 
-                float finalHeight = baseLand + mountainTerrain * mountainWeight * 10.0f;
+                float finalHeight = baseLand + mountainTerrain * mountainWeight * 15.0f;
 
                 finalHeight = ApplyHeightPipeline(finalHeight);
 
@@ -55,7 +54,7 @@ public static class HeightMapGenerator
 
         ComputeFinalGradients(finalHeightMap, out float[,] gradientXMap, out float[,] gradientZMap);
 
-        return new HeightFieldResult(finalHeightMap, gradientXMap, gradientZMap, mountainMaskMap);
+        return new HeightFieldResult(finalHeightMap, gradientXMap, gradientZMap);
     }
 
     public static float[,] ApplyBiomeHeightModifiers(float[,] rawHeightMap, BiomeType[,] biomeMap)
@@ -65,20 +64,18 @@ public static class HeightMapGenerator
 
     private static float ApplyHeightPipeline(float normalizedHeight)
     {
-        return normalizedHeight;
+        return ApplyWaterFlattening(normalizedHeight);
     }
 
     private static float ApplyWaterFlattening(float normalizedHeight)
     {
         float waterLevel = 0.2f;
-        float shoreBlend = 0.03f;
-
         float height = normalizedHeight;
 
         if (height < waterLevel)
         {
-            float t = Mathf.InverseLerp(waterLevel - shoreBlend, waterLevel, height);
-            height = Mathf.Lerp(waterLevel, height, t);
+            float depth = waterLevel - height;
+            height = waterLevel - depth * 0.35f;
         }
 
         return height;
