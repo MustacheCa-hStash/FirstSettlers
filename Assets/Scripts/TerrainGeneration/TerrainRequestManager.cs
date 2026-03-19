@@ -21,18 +21,19 @@ public class TerrainRequestManager
     {
         ThreadPool.QueueUserWorkItem(_ =>
         {
-            float[,] heightMap = HeightMapGenerator.GenerateTerrainHeightMap(chunkSize, seed, sampleScale, octaves, 
+            float[,] rawHeightMap = HeightMapGenerator.GenerateTerrainHeightMap(chunkSize, seed, sampleScale, octaves, 
                 persistence, lacunarity, chunkCoord);
             float[,] moistureMap = ClimateGenerator.GenerateTerrainMoistureMap(chunkSize, seed, sampleScale, octaves,
                 persistence, lacunarity, chunkCoord);
             float[,] temperatureMap = ClimateGenerator.GenerateTerrainTemperatureMap(chunkSize, seed, sampleScale, octaves,
                 persistence, lacunarity, chunkCoord);
-            BiomeType[,] biomeMap = BiomeMapGenerator.GenerateBiomeMap(heightMap, moistureMap, temperatureMap);
+            BiomeType[,] biomeMap = BiomeMapGenerator.GenerateBiomeMap(rawHeightMap, moistureMap, temperatureMap);
+            float[,] postProcessedHeightMap = HeightMapGenerator.ApplyBiomeHeightModifiers(rawHeightMap, biomeMap);
 
             TerrainDataRequestResult result = new TerrainDataRequestResult(
                 chunkCoord,
                 requestVersion,
-                heightMap,
+                postProcessedHeightMap,
                 moistureMap,
                 temperatureMap,
                 biomeMap

@@ -7,12 +7,12 @@ public class TerrainDataRequestResult
     public float[,] TemperatureMap { get; }
     public BiomeType[,] BiomeMap { get; }
 
-    public TerrainDataRequestResult(ChunkCoord chunkCoord, int requestVersion, float[,] heightMap, 
+    public TerrainDataRequestResult(ChunkCoord chunkCoord, int requestVersion, float[,] postProcessedHeightMap, 
         float[,] moistureMap, float[,] temperatureMap, BiomeType[,] biomeMap)
     {
         ChunkCoord = chunkCoord;
         RequestVersion = requestVersion;
-        HeightMap = heightMap;
+        HeightMap = postProcessedHeightMap;
         MoistureMap = moistureMap;
         TemperatureMap = temperatureMap;
         BiomeMap = biomeMap;

@@ -1,3 +1,4 @@
+using UnityEditor.Callbacks;
 using UnityEngine;
 
 public static class HeightMapGenerator
@@ -61,6 +62,36 @@ public static class HeightMapGenerator
         }
 
         return terrainHeightMap;
+    }
+
+    public static float[,] ApplyBiomeHeightModifiers(float[,] rawHeightMap, BiomeType[,] biomeMap)
+    {
+        int width = rawHeightMap.GetLength(0);
+        float[,] postProcessedHeight = new float[width, width];
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int z = 0; z < width; z++)
+            {
+                postProcessedHeight[x, z] = GetPostProcessedHeightFromBiomeType(rawHeightMap[x, z], biomeMap[x, z]);
+            }
+        }
+
+        return postProcessedHeight;
+    }
+
+    private static float GetPostProcessedHeightFromBiomeType(float rawHeight, BiomeType biomeType)
+    {
+        float postProcessedHeight = rawHeight;
+
+        if (biomeType == BiomeType.Rock)
+        {
+            float influence = Mathf.SmoothStep(0f, 1f, rawHeight);
+            float extraHeight = influence * influence * 0.4f;
+            postProcessedHeight = Mathf.Clamp01(rawHeight + extraHeight);
+        }
+
+        return postProcessedHeight;
     }
 
     private static float NormalizeHeight01(float rawHeight, float maxPossibleHeight)
