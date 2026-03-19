@@ -37,11 +37,14 @@ public static class HeightMapGenerator
                 float mountainMaskSampleZ = worldZ / (sampleScale * 4.0f);
                 float mountainMask = MountainMaskGenerator.Sample(mountainMaskSampleX, mountainMaskSampleZ, mountainMaskOffsets);
 
+                float gatedMask = Mathf.SmoothStep(0.12f, 0.9f, mountainMask);
+                float mountainWeight = Mathf.Pow(gatedMask, 1.8f);
+
                 float mountainTerrainSampleX = worldX / (sampleScale * 0.4f);
                 float mountainTerrainSampleZ = worldZ / (sampleScale * 0.4f);
                 float mountainTerrain = MountainTerrainGenerator.Sample(mountainTerrainSampleX, mountainTerrainSampleZ, mountainTerrainOffsets);
 
-                float finalHeight = baseLand + mountainTerrain * mountainMask * 10.0f;
+                float finalHeight = baseLand + mountainTerrain * mountainWeight * 10.0f;
 
                 finalHeight = ApplyHeightPipeline(finalHeight);
 
