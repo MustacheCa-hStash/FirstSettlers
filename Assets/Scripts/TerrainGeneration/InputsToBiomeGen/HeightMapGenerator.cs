@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 public static class HeightMapGenerator
 {
@@ -17,7 +18,9 @@ public static class HeightMapGenerator
         if (sampleScale <= 0f)
             sampleScale = 0.0001f;
 
-        Vector2[] baseLandOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 20000, 4);
+        Vector2[] baseLandOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 20000, 2);
+        Vector2[] mountainMaskOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 30000, 3);
+        Vector2[] mountainTerrainOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 40000, 4);
 
         for (int x = 0; x < width; x++)
         {
@@ -28,18 +31,22 @@ public static class HeightMapGenerator
 
                 float baseLandSampleX = worldX / (sampleScale * 1.6f);
                 float baseLandSampleZ = worldZ / (sampleScale * 1.6f);
+                float baseLand = BaseLandGenerator.Sample(baseLandSampleX, baseLandSampleZ, baseLandOffsets);
 
-                float baseLand = BaseLandGenerator.Sample(
-                    baseLandSampleX,
-                    baseLandSampleZ,
-                    seed,
-                    baseLandOffsets
-                );
+                float mountainMaskSampleX = worldX / (sampleScale * 4.0f);
+                float mountainMaskSampleZ = worldZ / (sampleScale * 4.0f);
+                float mountainMask = MountainMaskGenerator.Sample(mountainMaskSampleX, mountainMaskSampleZ, mountainMaskOffsets);
 
-                float finalHeight = ApplyHeightPipeline(baseLand);
+                float mountainTerrainSampleX = worldX / (sampleScale * 0.4f);
+                float mountainTerrainSampleZ = worldZ / (sampleScale * 0.4f);
+                float mountainTerrain = MountainTerrainGenerator.Sample(mountainTerrainSampleX, mountainTerrainSampleZ, mountainTerrainOffsets);
+
+                float finalHeight = baseLand + mountainTerrain * mountainMask * 10.0f;
+
+                finalHeight = ApplyHeightPipeline(finalHeight);
 
                 finalHeightMap[x, z] = finalHeight;
-                mountainMaskMap[x, z] = 0f;
+                mountainMaskMap[x, z] = mountainMask;
             }
         }
 

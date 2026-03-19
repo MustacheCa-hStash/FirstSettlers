@@ -6,6 +6,7 @@ public static class BiomeClassifier
     private const float WaterLevel = 0.28f;
     private const float BeachLevel = 0.32f;
     private const float RockLevel = 0.72f;
+    private const float SnowLevel = 0.95f;
 
     // Temperature thresholds
     private const float ColdTemp = 0.30f;
@@ -27,7 +28,7 @@ public static class BiomeClassifier
         // Mountains override
         if (height > RockLevel)
         {
-            if (temperature < ColdTemp)
+            if (temperature < ColdTemp && height > SnowLevel)
                 return BiomeType.Snow;
 
             return BiomeType.Rock;

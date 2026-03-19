@@ -1,15 +1,14 @@
 using System.Collections.Generic;
 using System.Threading;
-using System.Diagnostics;
 using UnityEngine;
 
 public class TerrainRequestManager
 {
-    private Queue<TerrainDataRequestResult> completedTerrainDataResults = new Queue<TerrainDataRequestResult>();
-    private Queue<MeshRequestResult> completedMeshResults = new Queue<MeshRequestResult>();
+    private readonly Queue<TerrainDataRequestResult> completedTerrainDataResults = new Queue<TerrainDataRequestResult>();
+    private readonly Queue<MeshRequestResult> completedMeshResults = new Queue<MeshRequestResult>();
 
-    private object terrainDataResultsLock = new object();
-    private object meshResultsLock = new object();
+    private readonly object terrainDataResultsLock = new object();
+    private readonly object meshResultsLock = new object();
 
     private static int activeTerrainDataJobs;
     private static int activeMeshJobs;
@@ -17,15 +16,15 @@ public class TerrainRequestManager
     private const int MaxActiveTerrainDataJobs = 6;
 
     public bool RequestTerrainData(
-    ChunkCoord chunkCoord,
-    int requestVersion,
-    int chunkSize,
-    int seed,
-    float sampleScale,
-    int octaves,
-    float persistence,
-    float lacunarity,
-    float erosionStrength)
+        ChunkCoord chunkCoord,
+        int requestVersion,
+        int chunkSize,
+        int seed,
+        float sampleScale,
+        int octaves,
+        float persistence,
+        float lacunarity,
+        float erosionStrength)
     {
         if (Interlocked.CompareExchange(ref activeTerrainDataJobs, 0, 0) >= MaxActiveTerrainDataJobs)
             return false;
@@ -91,12 +90,12 @@ public class TerrainRequestManager
                     completedTerrainDataResults.Enqueue(result);
                 }
             }
-            catch (System.Threading.ThreadAbortException)
+            catch (ThreadAbortException)
             {
             }
             catch (System.Exception ex)
             {
-                UnityEngine.Debug.LogError($"TerrainData FAILED chunk={chunkCoord} ver={requestVersion}\n{ex}");
+                Debug.LogError($"TerrainData request failed for chunk={chunkCoord}, version={requestVersion}\n{ex}");
             }
             finally
             {
@@ -119,8 +118,7 @@ public class TerrainRequestManager
     {
         ThreadPool.QueueUserWorkItem(_ =>
         {
-            int currentJobs = Interlocked.Increment(ref activeMeshJobs);
-            Stopwatch timer = Stopwatch.StartNew();
+            Interlocked.Increment(ref activeMeshJobs);
 
             try
             {
@@ -139,26 +137,14 @@ public class TerrainRequestManager
                     meshData
                 );
 
-                int queueCountAfterEnqueue;
                 lock (meshResultsLock)
                 {
                     completedMeshResults.Enqueue(result);
-                    queueCountAfterEnqueue = completedMeshResults.Count;
                 }
-
-                timer.Stop();
-
-                UnityEngine.Debug.Log(
-                    $"Mesh DONE chunk={chunkCoord} lod={lod} ver={requestVersion} " +
-                    $"activeMeshJobs={currentJobs} total={timer.ElapsedMilliseconds}ms " +
-                    $"meshQueue={queueCountAfterEnqueue}"
-                );
             }
             catch (System.Exception ex)
             {
-                UnityEngine.Debug.LogError(
-                    $"Mesh FAILED chunk={chunkCoord} lod={lod} ver={requestVersion}\n{ex}"
-                );
+                Debug.LogError($"Mesh request failed for chunk={chunkCoord}, lod={lod}, version={requestVersion}\n{ex}");
             }
             finally
             {

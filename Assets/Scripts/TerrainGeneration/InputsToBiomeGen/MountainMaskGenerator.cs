@@ -2,33 +2,20 @@ using UnityEngine;
 
 public static class MountainMaskGenerator
 {
-    public static float Sample(
-        float sampleX,
-        float sampleZ,
-        int seed)
+    const int octaves = 3;
+    const float persistence = 0.5f;
+    const float lacunarity = 2f;
+
+    static readonly float maxPossibleHeight = TerrainNoiseUtility.ComputeMaxPossibleHeight(octaves, persistence);
+    public static float Sample(float sampleX, float sampleZ, Vector2[] octaveOffsets)
     {
-        const int octaves = 3;
-        const float persistence = 0.5f;
-        const float lacunarity = 2f;
-
-        Vector2[] octaveOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 30000, octaves);
-
-        float raw = TerrainNoiseUtility.SampleBasicFbm(
-            sampleX,
-            sampleZ,
-            seed + 30000,
-            octaves,
-            persistence,
-            lacunarity,
-            octaveOffsets
-        );
-
-        float maxPossibleHeight = TerrainNoiseUtility.ComputeMaxPossibleHeight(octaves, persistence);
+        float raw = TerrainNoiseUtility.SampleBasicFbm(sampleX, sampleZ, 0, octaves, persistence, lacunarity, octaveOffsets);
         float normalized = TerrainNoiseUtility.NormalizeSymmetric01(raw, maxPossibleHeight);
 
         // Push the mask so only some broad regions become strongly mountainous.
-        float mask = Mathf.Pow(normalized, 2.2f);
-
+        float mask = Mathf.Pow(normalized, 3.0f);
+        //suppress weak mask values
+        mask = Mathf.SmoothStep(0.01f, 0.9f, mask);
         return mask;
     }
 }

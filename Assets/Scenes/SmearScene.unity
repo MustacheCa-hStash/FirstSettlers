@@ -437,8 +437,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 79
-  viewDistance: 10
+  worldSeed: 2
+  viewDistance: 20
   chunkSize: 128
   viewer: {fileID: 705461055}
   chunkParent: {fileID: 1025920260}
@@ -446,6 +446,7 @@ MonoBehaviour:
   octaves: 2
   persistence: 0.05
   lacunarity: 10
+  erosionStrength: 2
   meshHeightMultiplier: 200
   baseMaterial: {fileID: 2100000, guid: a7ea6abc93329ca49ab74e81010c2eec, type: 2}
 --- !u!4 &830849844
