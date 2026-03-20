@@ -51,8 +51,8 @@ public static class HeightMapGenerator
 
                 float finalHeight = baseLand + mountainTerrain * mountainWeight * 15.0f;
 
-                finalHeight -= riverMask * 0.1f;
                 finalHeight = ApplyHeightPipeline(finalHeight);
+                finalHeight -= riverMask * 0.1f;
 
                 finalHeightMap[x, z] = finalHeight;
                 mountainMaskMap[x, z] = mountainMask;
@@ -72,6 +72,7 @@ public static class HeightMapGenerator
 
     private static float ApplyHeightPipeline(float normalizedHeight)
     {
+
         return ApplyWaterFlattening(normalizedHeight);
     }
 

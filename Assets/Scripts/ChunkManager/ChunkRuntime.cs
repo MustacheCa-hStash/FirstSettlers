@@ -17,12 +17,16 @@ public class ChunkRuntime
     public bool IsVisible => visible;
     public int CurrentLOD => currentLOD;
 
-    public ChunkRuntime(ChunkRecord chunkRecord, int chunkSize, Transform parent, Material baseMaterial)
+    public ChunkRuntime(ChunkRecord chunkRecord, int chunkSize, float worldScale, Transform parent, Material baseMaterial)
     {
         this.chunkRecord = chunkRecord;
 
         ChunkCoord chunkCoord = chunkRecord.ChunkCoord;
-        Vector3 worldPosition = new Vector3(chunkCoord.x * chunkSize + chunkSize * 0.5f, 0f, chunkCoord.z * chunkSize + chunkSize * 0.5f);
+        Vector3 worldPosition = new Vector3(
+            (chunkCoord.x * chunkSize + chunkSize * 0.5f) * worldScale,
+            0f,
+            (chunkCoord.z * chunkSize + chunkSize * 0.5f) * worldScale
+        );
 
         root = new GameObject($"Chunk_{chunkCoord.x}_{chunkCoord.z}");
         root.transform.position = worldPosition;

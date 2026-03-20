@@ -3,7 +3,7 @@
 public static class RiverGenerator
 {
     const int octaves = 2;
-    const float persistence = 0.5f;
+    const float persistence = 0.3f;
     const float lacunarity = 2f;
 
     const float riverFalloffScale = 50f;
@@ -14,7 +14,6 @@ public static class RiverGenerator
     public static float Sample(float sampleX, float sampleZ, Vector2[] octaveOffsets)
     {
         float raw = TerrainNoiseUtility.SampleBasicFbm(sampleX, sampleZ, 0, octaves, persistence, lacunarity, octaveOffsets);
-
         float normalized = TerrainNoiseUtility.NormalizeSymmetric01(raw, maxPossibleHeight);
 
         float line = Mathf.Abs(normalized - 0.5f);

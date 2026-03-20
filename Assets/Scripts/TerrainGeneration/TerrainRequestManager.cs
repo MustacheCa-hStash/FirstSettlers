@@ -83,7 +83,7 @@ public class TerrainRequestManager
     }
 
     public void RequestLODMesh(ChunkCoord chunkCoord, int lod, int requestVersion, float[,] heightMap, 
-        BiomeType[,] biomeMap, float meshHeightMultiplier, int stepIncrement, float[,] riverMaskMap)
+        BiomeType[,] biomeMap, float meshHeightMultiplier, int stepIncrement, float worldScale, float[,] riverMaskMap)
     {
         ThreadPool.QueueUserWorkItem(_ =>
         {
@@ -92,7 +92,7 @@ public class TerrainRequestManager
             try
             {
                 MeshData meshData = MeshGenerator.GenerateTerrainMesh(heightMap, biomeMap, 
-                    meshHeightMultiplier, stepIncrement, riverMaskMap);
+                    meshHeightMultiplier, stepIncrement, worldScale, riverMaskMap);
 
                 MeshRequestResult result = new MeshRequestResult(chunkCoord, lod, requestVersion, meshData);
 

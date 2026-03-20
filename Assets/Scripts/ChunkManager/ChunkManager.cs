@@ -9,6 +9,7 @@ public class ChunkManager
     private Transform viewer;
     private Transform chunkParent;
     private float sampleScale;
+    private float worldScale;
     private int octaves;
     private float persistence;
     private float lacunarity;
@@ -24,8 +25,9 @@ public class ChunkManager
 
     private TerrainRequestManager terrainRequestManager;
 
-    public ChunkManager(int viewDistance, int chunkSize, int seed, Transform viewer, Transform chunkParent, float sampleScale,
-        int octaves, float persistence, float lacunarity, float erosionStrength, float meshHeightMultiplier, Material baseMaterial)
+    public ChunkManager(int viewDistance, int chunkSize, int seed, Transform viewer, Transform chunkParent, 
+        float sampleScale, float worldScale, int octaves, float persistence, float lacunarity, 
+        float erosionStrength, float meshHeightMultiplier, Material baseMaterial)
     {
         this.viewDistance = viewDistance;
         this.chunkSize = chunkSize;
@@ -33,6 +35,7 @@ public class ChunkManager
         this.viewer = viewer;
         this.chunkParent = chunkParent;
         this.sampleScale = sampleScale;
+        this.worldScale = worldScale;
         this.octaves = octaves;
         this.persistence = persistence;
         this.lacunarity = lacunarity;
@@ -120,7 +123,7 @@ public class ChunkManager
 
         if (!loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
         {
-            runtime = new ChunkRuntime(record, chunkSize, chunkParent, baseMaterial);
+            runtime = new ChunkRuntime(record, chunkSize, worldScale, chunkParent, baseMaterial);
             loadedChunks.Add(coord, runtime);
         }
         return runtime;
@@ -176,6 +179,7 @@ public class ChunkManager
             record.BiomeMap,
             meshHeightMultiplier,
             stepIncrement,
+            worldScale,
             record.RiverMaskMap
         );
     }
