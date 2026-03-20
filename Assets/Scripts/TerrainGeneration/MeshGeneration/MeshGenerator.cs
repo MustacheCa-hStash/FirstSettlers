@@ -1,9 +1,10 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public static class MeshGenerator
 {
-    public static MeshData GenerateTerrainMesh(float[,] heightMap, BiomeType[,] biomeMap, float heightMultiplier, 
-        int stepIncrement, float worldScale, float[,] riverMaskMap)
+    public static MeshData GenerateTerrainMesh(float[,] heightMap, BiomeType[,] biomeMap, SurfaceType[,] surfaceTypeMap,
+        WaterState[,] waterStateMap, float heightMultiplier, int stepIncrement, float worldScale, float[,] riverMaskMap)
     {
         int width = heightMap.GetLength(0);
         int height = heightMap.GetLength(1);
@@ -24,8 +25,10 @@ public static class MeshGenerator
                 heightMap[x, y] * heightMultiplier * worldScale,
                 (bottomLeftZ + y) * worldScale);
                 meshData.uvs[vertexIndex] = new Vector2(x / (float)(width - 1), y / (float)(height - 1));
-                meshData.colors[vertexIndex] = BiomeClassifier.GenerateColorFromBiomeType(biomeMap[x, y]);
+                //meshData.colors[vertexIndex] = BiomeClassifier.GenerateColorFromBiomeType(biomeMap[x, y]);
                 //meshData.colors[vertexIndex] = BiomeClassifier.GenerateDebugColorFromRiverMask(riverMaskMap[x, y]);
+                meshData.colors[vertexIndex] = SurfaceTypeClassifier.GenerateColor(surfaceTypeMap[x, y], 
+                    waterStateMap[x, y]);
 
                 if (x < width - 1 && y < height - 1)
                 {

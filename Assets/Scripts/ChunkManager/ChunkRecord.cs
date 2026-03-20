@@ -9,6 +9,8 @@ public class ChunkRecord
     private float[,] moistureMap;
     private float[,] temperatureMap;
     private BiomeType[,] biomeMap;
+    private SurfaceType[,] surfaceTypeMap;
+    private WaterState[,] waterStateMap;
     private float[,] riverMaskMap;
 
     private Dictionary<int, Mesh> LODMeshes = new Dictionary<int, Mesh>();
@@ -26,11 +28,15 @@ public class ChunkRecord
         heightMap != null &&
         moistureMap != null &&
         temperatureMap != null &&
-        biomeMap != null;
+        biomeMap != null &&
+        surfaceTypeMap != null &&
+        waterStateMap != null;
     public float[,] HeightMap => heightMap;
     public float[,] MoistureMap => moistureMap;
     public float[,] TemperatureMap => temperatureMap;
     public BiomeType[,] BiomeMap => biomeMap;
+    public SurfaceType[,] SurfaceTypeMap => surfaceTypeMap;
+    public WaterState[,] WaterStateMap => waterStateMap;
     public float[,] RiverMaskMap => riverMaskMap;
     public bool IsTerrainDataRequestInFlight => terrainDataRequestInFlight;
     public int TerrainDataRequestVersion => terrainDataRequestVersion;
@@ -86,7 +92,8 @@ public class ChunkRecord
     }
 
     public bool TryCompleteTerrainDataRequest(int requestVersion, float[,] returnedHeightMap,
-        float[,] returnedMoistureMap, float[,] returnedTemperatureMap, BiomeType[,] returnedBiomeMap, float[,] returnedRiverMaskMap)
+        float[,] returnedMoistureMap, float[,] returnedTemperatureMap, BiomeType[,] returnedBiomeMap, 
+        SurfaceType[,] returnedSurfaceTypeMap, WaterState[,] returnedWaterStateMap, float[,] returnedRiverMaskMap)
     {
         if (!terrainDataRequestInFlight) 
             return false;
@@ -97,6 +104,8 @@ public class ChunkRecord
         moistureMap = returnedMoistureMap;
         temperatureMap = returnedTemperatureMap;
         biomeMap = returnedBiomeMap;
+        surfaceTypeMap = returnedSurfaceTypeMap;
+        waterStateMap = returnedWaterStateMap;
         riverMaskMap = returnedRiverMaskMap;
 
         terrainDataRequestInFlight = false;

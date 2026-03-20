@@ -177,6 +177,8 @@ public class ChunkManager
             requestVersion,
             record.HeightMap,
             record.BiomeMap,
+            record.SurfaceTypeMap,
+            record.WaterStateMap,
             meshHeightMultiplier,
             stepIncrement,
             worldScale,
@@ -206,6 +208,8 @@ public class ChunkManager
                 terrainResult.MoistureMap,
                 terrainResult.TemperatureMap,
                 terrainResult.BiomeMap,
+                terrainResult.SurfaceTypeMap,
+                terrainResult.WaterStateMap,
                 terrainResult.RiverMaskMap
             );
         }
