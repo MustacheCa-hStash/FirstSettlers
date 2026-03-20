@@ -438,7 +438,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   worldSeed: 4
-  viewDistance: 15
+  viewDistance: 40
   chunkSize: 128
   viewer: {fileID: 705461055}
   chunkParent: {fileID: 1025920260}

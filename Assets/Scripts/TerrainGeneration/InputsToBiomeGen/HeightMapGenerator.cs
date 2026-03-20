@@ -13,6 +13,7 @@ public static class HeightMapGenerator
 
         float[,] finalHeightMap = new float[width, height];
         float[,] mountainMaskMap = new float[width, height];
+        float[,] riverMaskMap = new float[width, height];
 
         if (sampleScale <= 0f)
             sampleScale = 0.0001f;
@@ -20,6 +21,7 @@ public static class HeightMapGenerator
         Vector2[] baseLandOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 20000, 2);
         Vector2[] mountainMaskOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 30000, 3);
         Vector2[] mountainTerrainOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 40000, 4);
+        Vector2[] riverOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 50000, 2);
 
         for (int x = 0; x < width; x++)
         {
@@ -43,18 +45,24 @@ public static class HeightMapGenerator
                 float mountainTerrainSampleZ = worldZ / (sampleScale * 0.4f);
                 float mountainTerrain = MountainTerrainGenerator.Sample(mountainTerrainSampleX, mountainTerrainSampleZ, mountainTerrainOffsets);
 
+                float riverSampleX = worldX / (sampleScale * 5.0f);
+                float riverSampleZ = worldZ / (sampleScale * 5.0f);
+                float riverMask = RiverGenerator.Sample(riverSampleX, riverSampleZ, riverOffsets);
+
                 float finalHeight = baseLand + mountainTerrain * mountainWeight * 15.0f;
 
+                finalHeight -= riverMask * 0.1f;
                 finalHeight = ApplyHeightPipeline(finalHeight);
 
                 finalHeightMap[x, z] = finalHeight;
                 mountainMaskMap[x, z] = mountainMask;
+                riverMaskMap[x, z] = riverMask;
             }
         }
 
         ComputeFinalGradients(finalHeightMap, out float[,] gradientXMap, out float[,] gradientZMap, out float[,] slopeMap);
 
-        return new HeightFieldResult(finalHeightMap, gradientXMap, gradientZMap, slopeMap, mountainMaskMap);
+        return new HeightFieldResult(finalHeightMap, gradientXMap, gradientZMap, slopeMap, mountainMaskMap, riverMaskMap);
     }
 
     public static float[,] ApplyBiomeHeightModifiers(float[,] rawHeightMap, BiomeType[,] biomeMap)

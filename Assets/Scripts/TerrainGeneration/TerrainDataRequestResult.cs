@@ -9,8 +9,10 @@ public class TerrainDataRequestResult
     public float[,] TemperatureMap { get; }
     public BiomeType[,] BiomeMap { get; }
 
+    public float[,] RiverMaskMap { get; }
+
     public TerrainDataRequestResult(ChunkCoord chunkCoord, int requestVersion, float[,] heightMap, float[,] gradientXMap,
-        float[,] gradientZMap, float[,] moistureMap, float[,] temperatureMap, BiomeType[,] biomeMap)
+        float[,] gradientZMap, float[,] moistureMap, float[,] temperatureMap, BiomeType[,] biomeMap, float[,] riverMaskMap)
     {
         ChunkCoord = chunkCoord;
         RequestVersion = requestVersion;
@@ -20,5 +22,6 @@ public class TerrainDataRequestResult
         MoistureMap = moistureMap;
         TemperatureMap = temperatureMap;
         BiomeMap = biomeMap;
+        RiverMaskMap = riverMaskMap;
     }
 }

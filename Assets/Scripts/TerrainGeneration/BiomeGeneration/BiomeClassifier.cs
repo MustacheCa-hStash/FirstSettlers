@@ -18,18 +18,23 @@ public static class BiomeClassifier
 
     private const float slopeScale = 4f;
 
-    public static BiomeType Classify(float height, float moisture, float temperature, float slope, float mountainMask)
+    public static BiomeType Classify(float height, float moisture, float temperature, float slope, float mountainMask, 
+        float riverMask)
     {
         //normalize slope
         slope = Mathf.Clamp01(slope * slopeScale);
 
-        if (height < WaterLevel)
+        bool isRiver =
+        riverMask > 0.22f &&
+        height < WaterLevel + 0.3f &&
+        slope < 0.55f;
+
+        if (height < WaterLevel || isRiver)
             return BiomeType.Water;
 
         if (height < BeachLevel)
             return BiomeType.Beach;
 
-        // LOWLAND SNOW / POLAR BIOMES
         if (temperature < 0.18f)
         {
             if (moisture < 0.35f)
@@ -44,7 +49,6 @@ public static class BiomeClassifier
                 return BiomeType.Taiga;
         }
 
-        // MOUNTAIN ROCK / SNOW
         float adjustedRockLevel = RockLevel;
         adjustedRockLevel -= slope * 0.14f;
         adjustedRockLevel -= mountainMask * 0.18f;
@@ -63,11 +67,9 @@ public static class BiomeClassifier
             return BiomeType.Rock;
         }
 
-        // HOT / DRY
         if (temperature > HotTemp && moisture < DryMoisture)
             return BiomeType.Desert;
 
-        // WET
         if (moisture > WetMoisture)
             return BiomeType.Forest;
 
@@ -76,8 +78,6 @@ public static class BiomeClassifier
 
     public static Color GenerateColorFromBiomeType(BiomeType biomeType)
     {
-        Color color;
-
         switch (biomeType)
         {
             case BiomeType.Water:
@@ -110,7 +110,11 @@ public static class BiomeClassifier
             default:
                 return Color.magenta;
         }
+    }
 
-        return color;
+    public static Color GenerateDebugColorFromRiverMask(float riverMaskMap)
+    {
+        Color riverDebug = Color.Lerp(Color.black, Color.white, riverMaskMap);
+        return riverDebug;
     }
 }

@@ -47,6 +47,7 @@ public class TerrainRequestManager
                 float[,] gradientZMap = heightField.GradientZMap;
                 float[,] slopeMap = heightField.SlopeMap;
                 float[,] mountainMaskMap = heightField.MountainMaskMap;
+                float[,] riverMaskMap = heightField.RiverMaskMap;
 
                 float[,] moistureMap = ClimateGenerator.GenerateTerrainMoistureMap(chunkSize, seed, sampleScale,
                     octaves, persistence, lacunarity, chunkCoord);
@@ -55,10 +56,10 @@ public class TerrainRequestManager
                     sampleScale, octaves, persistence, lacunarity, chunkCoord);
 
                 BiomeType[,] biomeMap = BiomeMapGenerator.GenerateBiomeMap(finalHeightMap, moistureMap, 
-                    temperatureMap, slopeMap, mountainMaskMap);
+                    temperatureMap, slopeMap, mountainMaskMap, riverMaskMap);
 
                 TerrainDataRequestResult result = new TerrainDataRequestResult(chunkCoord, requestVersion, 
-                    finalHeightMap, gradientXMap, gradientZMap, moistureMap, temperatureMap, biomeMap);
+                    finalHeightMap, gradientXMap, gradientZMap, moistureMap, temperatureMap, biomeMap, riverMaskMap);
 
                 lock (terrainDataResultsLock)
                 {
@@ -82,7 +83,7 @@ public class TerrainRequestManager
     }
 
     public void RequestLODMesh(ChunkCoord chunkCoord, int lod, int requestVersion, float[,] heightMap, 
-        BiomeType[,] biomeMap, float meshHeightMultiplier, int stepIncrement)
+        BiomeType[,] biomeMap, float meshHeightMultiplier, int stepIncrement, float[,] riverMaskMap)
     {
         ThreadPool.QueueUserWorkItem(_ =>
         {
@@ -91,7 +92,7 @@ public class TerrainRequestManager
             try
             {
                 MeshData meshData = MeshGenerator.GenerateTerrainMesh(heightMap, biomeMap, 
-                    meshHeightMultiplier, stepIncrement);
+                    meshHeightMultiplier, stepIncrement, riverMaskMap);
 
                 MeshRequestResult result = new MeshRequestResult(chunkCoord, lod, requestVersion, meshData);
 

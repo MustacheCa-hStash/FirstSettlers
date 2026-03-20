@@ -3,7 +3,7 @@ using UnityEngine;
 public static class MeshGenerator
 {
     public static MeshData GenerateTerrainMesh(float[,] heightMap, BiomeType[,] biomeMap, float heightMultiplier, 
-        int stepIncrement)
+        int stepIncrement, float[,] riverMaskMap)
     {
         int width = heightMap.GetLength(0);
         int height = heightMap.GetLength(1);
@@ -22,6 +22,7 @@ public static class MeshGenerator
                 meshData.vertices[vertexIndex] = new Vector3(topLeftX + x, heightMap[x, y] * heightMultiplier, bottomLeftZ + y);
                 meshData.uvs[vertexIndex] = new Vector2(x / (float)(width - 1), y / (float)(height - 1));
                 meshData.colors[vertexIndex] = BiomeClassifier.GenerateColorFromBiomeType(biomeMap[x, y]);
+                //meshData.colors[vertexIndex] = BiomeClassifier.GenerateDebugColorFromRiverMask(riverMaskMap[x, y]);
 
                 if (x < width - 1 && y < height - 1)
                 {

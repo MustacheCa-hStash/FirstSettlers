@@ -9,6 +9,7 @@ public class ChunkRecord
     private float[,] moistureMap;
     private float[,] temperatureMap;
     private BiomeType[,] biomeMap;
+    private float[,] riverMaskMap;
 
     private Dictionary<int, Mesh> LODMeshes = new Dictionary<int, Mesh>();
 
@@ -30,6 +31,7 @@ public class ChunkRecord
     public float[,] MoistureMap => moistureMap;
     public float[,] TemperatureMap => temperatureMap;
     public BiomeType[,] BiomeMap => biomeMap;
+    public float[,] RiverMaskMap => riverMaskMap;
     public bool IsTerrainDataRequestInFlight => terrainDataRequestInFlight;
     public int TerrainDataRequestVersion => terrainDataRequestVersion;
 
@@ -84,7 +86,7 @@ public class ChunkRecord
     }
 
     public bool TryCompleteTerrainDataRequest(int requestVersion, float[,] returnedHeightMap,
-        float[,] returnedMoistureMap, float[,] returnedTemperatureMap, BiomeType[,] returnedBiomeMap)
+        float[,] returnedMoistureMap, float[,] returnedTemperatureMap, BiomeType[,] returnedBiomeMap, float[,] returnedRiverMaskMap)
     {
         if (!terrainDataRequestInFlight) 
             return false;
@@ -95,6 +97,7 @@ public class ChunkRecord
         moistureMap = returnedMoistureMap;
         temperatureMap = returnedTemperatureMap;
         biomeMap = returnedBiomeMap;
+        riverMaskMap = returnedRiverMaskMap;
 
         terrainDataRequestInFlight = false;
         return true;

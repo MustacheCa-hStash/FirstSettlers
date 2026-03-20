@@ -175,7 +175,8 @@ public class ChunkManager
             record.HeightMap,
             record.BiomeMap,
             meshHeightMultiplier,
-            stepIncrement
+            stepIncrement,
+            record.RiverMaskMap
         );
     }
 
@@ -200,7 +201,8 @@ public class ChunkManager
                 terrainResult.HeightMap,
                 terrainResult.MoistureMap,
                 terrainResult.TemperatureMap,
-                terrainResult.BiomeMap
+                terrainResult.BiomeMap,
+                terrainResult.RiverMaskMap
             );
         }
 
