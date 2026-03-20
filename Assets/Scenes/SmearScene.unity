@@ -402,7 +402,7 @@ Transform:
   m_GameObject: {fileID: 705461054}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1309.6, y: 0, z: -1001.7}
+  m_LocalPosition: {x: 648, y: 0, z: -1478}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -438,7 +438,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   worldSeed: 4
-  viewDistance: 50
+  viewDistance: 25
   chunkSize: 128
   viewer: {fileID: 705461055}
   chunkParent: {fileID: 1025920260}
@@ -449,7 +449,8 @@ MonoBehaviour:
   lacunarity: 10
   erosionStrength: 2
   meshHeightMultiplier: 200
-  baseMaterial: {fileID: 2100000, guid: a7ea6abc93329ca49ab74e81010c2eec, type: 2}
+  terrainMaterial: {fileID: 2100000, guid: a7ea6abc93329ca49ab74e81010c2eec, type: 2}
+  waterMaterial: {fileID: 2100000, guid: 14ca6caf7c7b1af4395d2aad206230ea, type: 2}
 --- !u!4 &830849844
 Transform:
   m_ObjectHideFlags: 0

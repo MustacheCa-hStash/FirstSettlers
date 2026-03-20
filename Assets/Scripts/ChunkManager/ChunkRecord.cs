@@ -13,7 +13,8 @@ public class ChunkRecord
     private WaterState[,] waterStateMap;
     private float[,] riverMaskMap;
 
-    private Dictionary<int, Mesh> LODMeshes = new Dictionary<int, Mesh>();
+    private Dictionary<int, Mesh> LODTerrainMeshes = new Dictionary<int, Mesh>();
+    private Dictionary<int, Mesh> LODWaterMeshes = new Dictionary<int, Mesh>();
 
     private bool terrainDataRequestInFlight;
     private int terrainDataRequestVersion;
@@ -46,19 +47,40 @@ public class ChunkRecord
         this.chunkCoord = chunkCoord;
     }
 
-    public bool TryGetLODMesh(int lod, out Mesh mesh)
+    public bool TryGetLODTerrainMesh(int lod, out Mesh terrainMesh)
     {
-        return LODMeshes.TryGetValue(lod, out mesh);
+        return LODTerrainMeshes.TryGetValue(lod, out terrainMesh);
     }
 
-    public void StoreLODMesh(int lod, Mesh mesh)
+    public bool TryGetLODWaterMesh(int lod, out Mesh waterMesh)
     {
-        LODMeshes[lod] = mesh;
+        return LODWaterMeshes.TryGetValue(lod, out waterMesh);
     }
 
-    public void ClearLODMeshes()
+    public void StoreLODTerrainMesh(int lod, Mesh terrainMesh)
     {
-        LODMeshes.Clear();
+        LODTerrainMeshes[lod] = terrainMesh;
+    }
+
+    public void StoreLODWaterMesh(int lod, Mesh waterMesh)
+    {
+        LODWaterMeshes[lod] = waterMesh;
+    }
+
+    public void ClearLODTerrainMeshes()
+    {
+        LODTerrainMeshes.Clear();
+    }
+
+    public void ClearLODWaterMeshes()
+    {
+        LODWaterMeshes.Clear();
+    }
+
+    public void ClearAllLODMeshes()
+    {
+        LODTerrainMeshes.Clear();
+        LODWaterMeshes.Clear();
     }
 
     public void SetActiveRuntime(ChunkRuntime activeRuntime)
@@ -69,11 +91,6 @@ public class ChunkRecord
     public void ClearActiveRuntime(ChunkRuntime runtime)
     {
         if (activeRuntime == runtime) { activeRuntime = null; }
-    }
-
-    public void SetHeightMap(float[,] heightMap)
-    {
-        this.heightMap = heightMap; 
     }
 
     public int BeginTerrainDataRequest()
@@ -129,7 +146,7 @@ public class ChunkRecord
         return nextVersion;
     }
 
-    public bool TryCompleteMeshRequest(int lod, int requestVersion, Mesh mesh)
+    public bool TryCompleteMeshRequest(int lod, int requestVersion, Mesh terrainMesh, Mesh waterMesh)
     {
         if (!meshRequestsInFlight.Contains(lod))
             return false;
@@ -140,7 +157,8 @@ public class ChunkRecord
         if (currentVersion != requestVersion)
             return false;
 
-        LODMeshes[lod] = mesh;
+        LODTerrainMeshes[lod] = terrainMesh;
+        LODWaterMeshes[lod] = waterMesh;
         meshRequestsInFlight.Remove(lod);
         return true;
     }

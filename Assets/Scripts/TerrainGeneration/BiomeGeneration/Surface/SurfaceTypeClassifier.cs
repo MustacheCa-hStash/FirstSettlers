@@ -2,8 +2,8 @@ using UnityEngine;
 
 public static class SurfaceTypeClassifier
 {
-    private const float OceanWaterLevel = 0.20f;
-    private const float BeachBand = 0.025f;
+    private const float OceanWaterLevel = TerrainWaterSettings.WaterLevel;
+    private const float BeachBand = TerrainWaterSettings.BeachLevel - TerrainWaterSettings.WaterLevel;
 
     private const float RiverBankThreshold = 0.40f;
     private const float RiverCoreThreshold = 0.65f;

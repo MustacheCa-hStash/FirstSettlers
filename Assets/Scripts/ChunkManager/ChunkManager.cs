@@ -15,7 +15,8 @@ public class ChunkManager
     private float lacunarity;
     private float erosionStrength;
     private float meshHeightMultiplier;
-    private Material baseMaterial;
+    private Material terrainMaterial;
+    private Material waterMaterial;
 
     private Dictionary<ChunkCoord, ChunkRecord> chunkRecords = new();
     private Dictionary<ChunkCoord, ChunkRuntime> loadedChunks = new();
@@ -27,7 +28,7 @@ public class ChunkManager
 
     public ChunkManager(int viewDistance, int chunkSize, int seed, Transform viewer, Transform chunkParent, 
         float sampleScale, float worldScale, int octaves, float persistence, float lacunarity, 
-        float erosionStrength, float meshHeightMultiplier, Material baseMaterial)
+        float erosionStrength, float meshHeightMultiplier, Material terrainMaterial, Material waterMaterial)
     {
         this.viewDistance = viewDistance;
         this.chunkSize = chunkSize;
@@ -41,7 +42,8 @@ public class ChunkManager
         this.lacunarity = lacunarity;
         this.erosionStrength = erosionStrength;
         this.meshHeightMultiplier = meshHeightMultiplier;
-        this.baseMaterial = baseMaterial;
+        this.terrainMaterial = terrainMaterial;
+        this.waterMaterial = waterMaterial;
 
         terrainRequestManager = new TerrainRequestManager();
     }
@@ -99,7 +101,7 @@ public class ChunkManager
                 }
 
                 //if (chunkRecords.TryGetValue(coord, out ChunkRecord record))
-                    //record.ClearLODMeshes();
+                    //record.ClearAllLODMeshes();
             }
         }
 
@@ -123,7 +125,7 @@ public class ChunkManager
 
         if (!loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
         {
-            runtime = new ChunkRuntime(record, chunkSize, worldScale, chunkParent, baseMaterial);
+            runtime = new ChunkRuntime(record, chunkSize, worldScale, chunkParent, terrainMaterial, waterMaterial);
             loadedChunks.Add(coord, runtime);
         }
         return runtime;
@@ -162,7 +164,7 @@ public class ChunkManager
         if (!record.HasTerrainData)
             return;
 
-        if (record.TryGetLODMesh(lod, out _))
+        if (record.TryGetLODTerrainMesh(lod, out _))
             return;
 
         if (record.IsMeshRequestInFlight(lod))
@@ -188,11 +190,15 @@ public class ChunkManager
 
     private void TryApplyLODMesh(ChunkRecord record, ChunkRuntime runtime, int lod)
     {
-        if (!record.TryGetLODMesh(lod, out Mesh mesh))
+        if (!record.TryGetLODTerrainMesh(lod, out Mesh terrainMesh))
             return;
 
         if (!runtime.IsShowingLOD(lod))
-            runtime.SetMesh(mesh, lod);
+        {
+            Mesh waterMesh = null;
+            record.TryGetLODWaterMesh(lod, out waterMesh);
+            runtime.SetMeshes(terrainMesh, waterMesh, lod);
+        }
     }
 
     private void ProcessCompletedRequests()
@@ -219,9 +225,10 @@ public class ChunkManager
             if (!chunkRecords.TryGetValue(meshResult.ChunkCoord, out ChunkRecord record))
                 continue;
 
-            Mesh mesh = meshResult.MeshData.CreateMesh();
+            Mesh terrainMesh = meshResult.TerrainMeshData.CreateMesh();
+            Mesh waterMesh = meshResult.WaterMeshData.CreateMesh();
 
-            record.TryCompleteMeshRequest(meshResult.LOD, meshResult.RequestVersion, mesh);
+            record.TryCompleteMeshRequest(meshResult.LOD, meshResult.RequestVersion, terrainMesh, waterMesh);
         }
     }
 

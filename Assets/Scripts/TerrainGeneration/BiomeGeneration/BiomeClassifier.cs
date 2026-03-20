@@ -3,8 +3,8 @@
 public static class BiomeClassifier
 {
     // Height thresholds
-    private const float WaterLevel = 0.24f;
-    private const float BeachLevel = 0.26f;
+    private const float WaterLevel = TerrainWaterSettings.WaterLevel;
+    private const float BeachLevel = TerrainWaterSettings.BeachLevel;
     private const float RockLevel = 0.62f;
     private const float SnowLevel = 0.93f;
 
@@ -26,7 +26,7 @@ public static class BiomeClassifier
 
         bool isRiver =
         riverMask > 0.22f &&
-        height < WaterLevel + 0.3f &&
+        height < WaterLevel + 0.05f &&
         slope < 0.55f;
 
         if (height < WaterLevel || isRiver)

@@ -2,10 +2,10 @@ using UnityEngine;
 
 public static class WaterStateClassifier
 {
-    private const float OceanWaterLevel = 0.20f;
+    private const float OceanWaterLevel = TerrainWaterSettings.WaterLevel;
 
     private const float OceanShallowBand = 0.015f;
-    private const float OceanWetBand = 0.035f;
+    private const float OceanWetBand = TerrainWaterSettings.WetBand;
 
     private const float RiverShallowThreshold = 0.40f;
     private const float RiverDeepThreshold = 0.65f;

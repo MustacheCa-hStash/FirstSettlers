@@ -98,10 +98,14 @@ public class TerrainRequestManager
 
             try
             {
-                MeshData meshData = MeshGenerator.GenerateTerrainMesh(heightMap, biomeMap, surfaceTypeMap, 
+                MeshData terrainMeshData = MeshGenerator.GenerateTerrainMesh(heightMap, biomeMap, surfaceTypeMap, 
                     waterStateMap, meshHeightMultiplier, stepIncrement, worldScale, riverMaskMap);
 
-                MeshRequestResult result = new MeshRequestResult(chunkCoord, lod, requestVersion, meshData);
+                WaterMeshData waterMeshData = WaterMeshGenerator.GenerateLakeMesh(heightMap, waterStateMap,
+                    riverMaskMap, meshHeightMultiplier, stepIncrement, worldScale);
+
+                MeshRequestResult result = new MeshRequestResult(chunkCoord, lod, requestVersion, 
+                    terrainMeshData, waterMeshData);
 
                 lock (meshResultsLock)
                 {

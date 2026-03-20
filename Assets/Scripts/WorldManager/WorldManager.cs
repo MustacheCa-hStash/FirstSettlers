@@ -14,14 +14,16 @@ public class WorldManager : MonoBehaviour
     [SerializeField] float lacunarity = 2f;
     [SerializeField] float erosionStrength = 1.0f;
     [SerializeField] float meshHeightMultiplier = 10f;
-    [SerializeField] Material baseMaterial;
+    [SerializeField] Material terrainMaterial;
+    [SerializeField] Material waterMaterial;
 
     private ChunkManager chunkManager;
 
     void Awake()
     {
         chunkManager = new ChunkManager(viewDistance, chunkSize, worldSeed, viewer, chunkParent, sampleScale,
-            worldScale, octaves, persistence, lacunarity, erosionStrength, meshHeightMultiplier, baseMaterial);
+            worldScale, octaves, persistence, lacunarity, erosionStrength, meshHeightMultiplier, terrainMaterial,
+            waterMaterial);
     }
 
     void Start()

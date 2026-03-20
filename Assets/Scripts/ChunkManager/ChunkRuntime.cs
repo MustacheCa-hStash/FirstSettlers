@@ -6,9 +6,14 @@ public class ChunkRuntime
     private GameObject root;
     private bool visible;
 
-    private MeshFilter meshFilter;
-    private MeshRenderer meshRenderer;
-    private Material runtimeMaterial;
+    private MeshFilter terrainMeshFilter;
+    private MeshRenderer terrainMeshRenderer;
+    private Material runtimeTerrainMaterial;
+
+    private GameObject waterRoot;
+    private MeshFilter waterMeshFilter;
+    private MeshRenderer waterMeshRenderer;
+    private Material runtimeWaterMaterial;
 
     private int currentLOD = -1;
 
@@ -17,7 +22,8 @@ public class ChunkRuntime
     public bool IsVisible => visible;
     public int CurrentLOD => currentLOD;
 
-    public ChunkRuntime(ChunkRecord chunkRecord, int chunkSize, float worldScale, Transform parent, Material baseMaterial)
+    public ChunkRuntime(ChunkRecord chunkRecord, int chunkSize, float worldScale, Transform parent,
+        Material terrainMaterial, Material waterMaterial)
     {
         this.chunkRecord = chunkRecord;
 
@@ -32,28 +38,64 @@ public class ChunkRuntime
         root.transform.position = worldPosition;
         root.transform.parent = parent;
 
-        meshFilter = root.AddComponent<MeshFilter>();
-        meshRenderer = root.AddComponent<MeshRenderer>();
+        terrainMeshFilter = root.AddComponent<MeshFilter>();
+        terrainMeshRenderer = root.AddComponent<MeshRenderer>();
 
-        runtimeMaterial = new Material(baseMaterial);
-        meshRenderer.material = runtimeMaterial;
+        runtimeTerrainMaterial = new Material(terrainMaterial);
+        terrainMeshRenderer.material = runtimeTerrainMaterial;
+
+        waterRoot = new GameObject("Water");
+        waterRoot.transform.SetParent(root.transform, false);
+        waterRoot.transform.localPosition = Vector3.zero;
+        waterRoot.transform.localRotation = Quaternion.identity;
+        waterRoot.transform.localScale = Vector3.one;
+
+        waterMeshFilter = waterRoot.AddComponent<MeshFilter>();
+        waterMeshRenderer = waterRoot.AddComponent<MeshRenderer>();
+
+        runtimeWaterMaterial = new Material(waterMaterial);
+        waterMeshRenderer.material = runtimeWaterMaterial;
+
+        waterRoot.SetActive(false);
 
         SetVisible(false);
         chunkRecord.SetActiveRuntime(this);
     }
 
-    public void SetMesh(Mesh mesh, int lod)
+    public void SetMeshes(Mesh terrainMesh, Mesh waterMesh, int lod)
     {
-        if (meshFilter.sharedMesh == mesh && currentLOD == lod)
-            return;
+        if (terrainMeshFilter.sharedMesh != terrainMesh)
+            terrainMeshFilter.sharedMesh = terrainMesh;
 
-        meshFilter.sharedMesh = mesh;
+        bool hasRenderableWater = waterMesh != null && waterMesh.vertexCount > 0;
+
+        if (hasRenderableWater)
+        {
+            if (waterMeshFilter.sharedMesh != waterMesh)
+                waterMeshFilter.sharedMesh = waterMesh;
+
+            if (!waterRoot.activeSelf)
+                waterRoot.SetActive(true);
+        }
+        else
+        {
+            waterMeshFilter.sharedMesh = null;
+
+            if (waterRoot.activeSelf)
+                waterRoot.SetActive(false);
+        }
+
         currentLOD = lod;
     }
 
-    public void ClearMesh()
+    public void ClearMeshes()
     {
-        meshFilter.sharedMesh = null;
+        terrainMeshFilter.sharedMesh = null;
+        waterMeshFilter.sharedMesh = null;
+
+        if (waterRoot != null)
+            waterRoot.SetActive(false);
+
         currentLOD = -1;
     }
 
@@ -71,13 +113,19 @@ public class ChunkRuntime
     {
         chunkRecord.ClearActiveRuntime(this);
 
-        ClearMesh();
+        ClearMeshes();
         visible = false;
 
-        if (runtimeMaterial != null)
+        if (runtimeTerrainMaterial != null)
         {
-            Object.Destroy(runtimeMaterial);
-            runtimeMaterial = null;
+            Object.Destroy(runtimeTerrainMaterial);
+            runtimeTerrainMaterial = null;
+        }
+
+        if (runtimeWaterMaterial != null)
+        {
+            Object.Destroy(runtimeWaterMaterial);
+            runtimeWaterMaterial = null;
         }
 
         if (root != null)
@@ -86,8 +134,11 @@ public class ChunkRuntime
             root = null;
         }
 
-        meshFilter = null;
-        meshRenderer = null;
+        waterRoot = null;
+        terrainMeshFilter = null;
+        terrainMeshRenderer = null;
+        waterMeshFilter = null;
+        waterMeshRenderer = null;
         chunkRecord = null;
         currentLOD = -1;
     }
