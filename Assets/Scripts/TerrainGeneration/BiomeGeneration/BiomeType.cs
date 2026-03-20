@@ -6,5 +6,7 @@ public enum BiomeType
     Forest,
     Desert,
     Rock,
-    Snow
+    Snow,
+    Tundra,
+    Taiga
 }

@@ -52,9 +52,9 @@ public static class HeightMapGenerator
             }
         }
 
-        ComputeFinalGradients(finalHeightMap, out float[,] gradientXMap, out float[,] gradientZMap);
+        ComputeFinalGradients(finalHeightMap, out float[,] gradientXMap, out float[,] gradientZMap, out float[,] slopeMap);
 
-        return new HeightFieldResult(finalHeightMap, gradientXMap, gradientZMap);
+        return new HeightFieldResult(finalHeightMap, gradientXMap, gradientZMap, slopeMap, mountainMaskMap);
     }
 
     public static float[,] ApplyBiomeHeightModifiers(float[,] rawHeightMap, BiomeType[,] biomeMap)
@@ -81,13 +81,14 @@ public static class HeightMapGenerator
         return height;
     }
 
-    private static void ComputeFinalGradients(float[,] finalHeightMap, out float[,] gradientXMap, out float[,] gradientZMap)
+    private static void ComputeFinalGradients(float[,] finalHeightMap, out float[,] gradientXMap, out float[,] gradientZMap, out float[,] slopeMap)
     {
         int width = finalHeightMap.GetLength(0);
         int height = finalHeightMap.GetLength(1);
 
         gradientXMap = new float[width, height];
         gradientZMap = new float[width, height];
+        slopeMap = new float[width, height];
 
         for (int x = 0; x < width; x++)
         {
@@ -116,6 +117,7 @@ public static class HeightMapGenerator
 
                 gradientXMap[x, z] = dx;
                 gradientZMap[x, z] = dz;
+                slopeMap[x, z] = Mathf.Sqrt(dx * dx + dz * dz);
             }
         }
     }

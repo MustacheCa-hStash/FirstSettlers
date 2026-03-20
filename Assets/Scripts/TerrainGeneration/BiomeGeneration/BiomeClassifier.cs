@@ -6,7 +6,7 @@ public static class BiomeClassifier
     private const float WaterLevel = 0.24f;
     private const float BeachLevel = 0.26f;
     private const float RockLevel = 0.62f;
-    private const float SnowLevel = 0.95f;
+    private const float SnowLevel = 0.93f;
 
     // Temperature thresholds
     private const float ColdTemp = 0.30f;
@@ -16,34 +16,101 @@ public static class BiomeClassifier
     private const float DryMoisture = 0.35f;
     private const float WetMoisture = 0.65f;
 
-    public static BiomeType Classify(float height, float moisture, float temperature)
+    private const float slopeScale = 4f;
+
+    public static BiomeType Classify(float height, float moisture, float temperature, float slope, float mountainMask)
     {
-        // Water & coast
+        //normalize slope
+        slope = Mathf.Clamp01(slope * slopeScale);
+
         if (height < WaterLevel)
             return BiomeType.Water;
 
         if (height < BeachLevel)
             return BiomeType.Beach;
 
-        // Mountains override
-        if (height > RockLevel)
+        // LOWLAND SNOW / POLAR BIOMES
+        if (temperature < 0.18f)
         {
-            if (temperature < ColdTemp && height > SnowLevel)
+            if (moisture < 0.35f)
+                return BiomeType.Tundra;
+
+            return BiomeType.Snow;
+        }
+
+        if (temperature < ColdTemp)
+        {
+            if (moisture > WetMoisture)
+                return BiomeType.Taiga;
+        }
+
+        // MOUNTAIN ROCK / SNOW
+        float adjustedRockLevel = RockLevel;
+        adjustedRockLevel -= slope * 0.14f;
+        adjustedRockLevel -= mountainMask * 0.18f;
+        adjustedRockLevel = Mathf.Clamp(adjustedRockLevel, 0.50f, RockLevel);
+
+        if (height > adjustedRockLevel)
+        {
+            float adjustedSnowLevel = SnowLevel;
+            adjustedSnowLevel -= mountainMask * 0.06f;
+            adjustedSnowLevel -= slope * 0.03f;
+            adjustedSnowLevel = Mathf.Clamp(adjustedSnowLevel, 0.80f, SnowLevel);
+
+            if (temperature < ColdTemp && height > adjustedSnowLevel)
                 return BiomeType.Snow;
 
             return BiomeType.Rock;
         }
 
-        // Regular land biomes
-        // Hot & dry → Desert
+        // HOT / DRY
         if (temperature > HotTemp && moisture < DryMoisture)
             return BiomeType.Desert;
 
-        // Wet → Forest
+        // WET
         if (moisture > WetMoisture)
             return BiomeType.Forest;
 
-        // Default → Grassland
         return BiomeType.Grassland;
+    }
+
+    public static Color GenerateColorFromBiomeType(BiomeType biomeType)
+    {
+        Color color;
+
+        switch (biomeType)
+        {
+            case BiomeType.Water:
+                return new Color(0.05f, 0.25f, 0.6f);     // deep ocean blue
+
+            case BiomeType.Beach:
+                return new Color(0.85f, 0.78f, 0.55f);    // sand
+
+            case BiomeType.Grassland:
+                return new Color(0.35f, 0.7f, 0.3f);      // vivid green plains
+
+            case BiomeType.Forest:
+                return new Color(0.05f, 0.45f, 0.08f);    // dense green
+
+            case BiomeType.Desert:
+                return new Color(0.92f, 0.82f, 0.45f);    // warm tan
+
+            case BiomeType.Rock:
+                return new Color(0.5f, 0.5f, 0.5f);       // neutral grey cliffs
+
+            case BiomeType.Snow:
+                return new Color(1f, 1f, 1f);             // pure white
+
+            case BiomeType.Tundra:
+                return new Color(0.6f, 0.7f, 0.6f);       // pale cold grass / moss
+
+            case BiomeType.Taiga:
+                return new Color(0.1f, 0.35f, 0.2f);      // cold conifer forest
+
+            default:
+                return Color.magenta;
+        }
+
+        return color;
     }
 }

@@ -21,7 +21,7 @@ public static class MeshGenerator
             {
                 meshData.vertices[vertexIndex] = new Vector3(topLeftX + x, heightMap[x, y] * heightMultiplier, bottomLeftZ + y);
                 meshData.uvs[vertexIndex] = new Vector2(x / (float)(width - 1), y / (float)(height - 1));
-                meshData.colors[vertexIndex] = GenerateColorFromBiomeType(biomeMap[x, y]);
+                meshData.colors[vertexIndex] = BiomeClassifier.GenerateColorFromBiomeType(biomeMap[x, y]);
 
                 if (x < width - 1 && y < height - 1)
                 {
@@ -37,47 +37,6 @@ public static class MeshGenerator
 
     }
 
-    private static Color GenerateColorFromBiomeType(BiomeType biomeType)
-    {
-        Color color;
-
-        switch (biomeType)
-        {
-            case BiomeType.Water:
-                color = new Color(0.05f, 0.25f, 0.6f);     // deep blue
-                break;
-
-            case BiomeType.Beach:
-                color = new Color(0.8f, 0.75f, 0.55f);     // sand
-                break;
-
-            case BiomeType.Grassland:
-                color = new Color(0.25f, 0.6f, 0.25f);     // bright green
-                break;
-
-            case BiomeType.Forest:
-                color = new Color(0.05f, 0.4f, 0.05f);     // dark green
-                break;
-
-            case BiomeType.Desert:
-                color = new Color(0.9f, 0.8f, 0.4f);       // yellow/tan
-                break;
-
-            case BiomeType.Rock:
-                color = new Color(0.45f, 0.45f, 0.45f);    // grey
-                break;
-
-            case BiomeType.Snow:
-                color = new Color(1f, 1f, 1f);             // white
-                break;
-
-            default:
-                color = Color.magenta;                     // error/debug fallback
-                break;
-        }
-
-        return color;
-    }
 }
 
 public class MeshData

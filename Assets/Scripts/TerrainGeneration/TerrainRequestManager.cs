@@ -45,43 +45,20 @@ public class TerrainRequestManager
                 float[,] finalHeightMap = heightField.HeightMap;
                 float[,] gradientXMap = heightField.GradientXMap;
                 float[,] gradientZMap = heightField.GradientZMap;
+                float[,] slopeMap = heightField.SlopeMap;
+                float[,] mountainMaskMap = heightField.MountainMaskMap;
 
-                float[,] moistureMap = ClimateGenerator.GenerateTerrainMoistureMap(
-                    chunkSize,
-                    seed,
-                    sampleScale,
-                    octaves,
-                    persistence,
-                    lacunarity,
-                    chunkCoord
-                );
+                float[,] moistureMap = ClimateGenerator.GenerateTerrainMoistureMap(chunkSize, seed, sampleScale,
+                    octaves, persistence, lacunarity, chunkCoord);
 
-                float[,] temperatureMap = ClimateGenerator.GenerateTerrainTemperatureMap(
-                    chunkSize,
-                    seed,
-                    sampleScale,
-                    octaves,
-                    persistence,
-                    lacunarity,
-                    chunkCoord
-                );
+                float[,] temperatureMap = ClimateGenerator.GenerateTerrainTemperatureMap(chunkSize, seed, 
+                    sampleScale, octaves, persistence, lacunarity, chunkCoord);
 
-                BiomeType[,] biomeMap = BiomeMapGenerator.GenerateBiomeMap(
-                    finalHeightMap,
-                    moistureMap,
-                    temperatureMap
-                );
+                BiomeType[,] biomeMap = BiomeMapGenerator.GenerateBiomeMap(finalHeightMap, moistureMap, 
+                    temperatureMap, slopeMap, mountainMaskMap);
 
-                TerrainDataRequestResult result = new TerrainDataRequestResult(
-                    chunkCoord,
-                    requestVersion,
-                    finalHeightMap,
-                    gradientXMap,
-                    gradientZMap,
-                    moistureMap,
-                    temperatureMap,
-                    biomeMap
-                );
+                TerrainDataRequestResult result = new TerrainDataRequestResult(chunkCoord, requestVersion, 
+                    finalHeightMap, gradientXMap, gradientZMap, moistureMap, temperatureMap, biomeMap);
 
                 lock (terrainDataResultsLock)
                 {
@@ -104,14 +81,8 @@ public class TerrainRequestManager
         return true;
     }
 
-    public void RequestLODMesh(
-        ChunkCoord chunkCoord,
-        int lod,
-        int requestVersion,
-        float[,] heightMap,
-        BiomeType[,] biomeMap,
-        float meshHeightMultiplier,
-        int stepIncrement)
+    public void RequestLODMesh(ChunkCoord chunkCoord, int lod, int requestVersion, float[,] heightMap, 
+        BiomeType[,] biomeMap, float meshHeightMultiplier, int stepIncrement)
     {
         ThreadPool.QueueUserWorkItem(_ =>
         {
@@ -119,19 +90,10 @@ public class TerrainRequestManager
 
             try
             {
-                MeshData meshData = MeshGenerator.GenerateTerrainMesh(
-                    heightMap,
-                    biomeMap,
-                    meshHeightMultiplier,
-                    stepIncrement
-                );
+                MeshData meshData = MeshGenerator.GenerateTerrainMesh(heightMap, biomeMap, 
+                    meshHeightMultiplier, stepIncrement);
 
-                MeshRequestResult result = new MeshRequestResult(
-                    chunkCoord,
-                    lod,
-                    requestVersion,
-                    meshData
-                );
+                MeshRequestResult result = new MeshRequestResult(chunkCoord, lod, requestVersion, meshData);
 
                 lock (meshResultsLock)
                 {
