@@ -8,10 +8,15 @@ public static class RiverGenerator
     private const float RiverHalfWidth = 0.005f;
     private const float BankFalloffWidth = 0.01f;
 
+    private const float WarpScale = 0.65f;
+    private const float WarpStrength = 0.5f;
+
     public static float Sample(float sampleX, float sampleZ)
     {
-        int baseCellX = Mathf.FloorToInt(sampleX / SiteCellSize);
-        int baseCellZ = Mathf.FloorToInt(sampleZ / SiteCellSize);
+        GetWarpedSample(sampleX, sampleZ, out float warpedX, out float warpedZ);
+
+        int baseCellX = Mathf.FloorToInt(warpedX / SiteCellSize);
+        int baseCellZ = Mathf.FloorToInt(warpedZ / SiteCellSize);
 
         float nearestDistSq = float.MaxValue;
         float secondDistSq = float.MaxValue;
@@ -28,8 +33,8 @@ public static class RiverGenerator
 
                 Vector2 site = GetSite(cx, cz);
 
-                float dxp = sampleX - site.x;
-                float dzp = sampleZ - site.y;
+                float dxp = warpedX - site.x;
+                float dzp = warpedZ - site.y;
                 float distSq = dxp * dxp + dzp * dzp;
 
                 if (distSq < nearestDistSq)
@@ -63,6 +68,21 @@ public static class RiverGenerator
             borderDistance);
 
         return Mathf.Clamp01(riverMask);
+    }
+
+    private static void GetWarpedSample(float sampleX, float sampleZ, out float warpedX, out float warpedZ)
+    {
+        float warpSampleX1 = sampleX * WarpScale + 17.13f;
+        float warpSampleZ1 = sampleZ * WarpScale + 41.27f;
+
+        float warpSampleX2 = sampleX * WarpScale + 73.91f;
+        float warpSampleZ2 = sampleZ * WarpScale + 12.58f;
+
+        float offsetX = (Mathf.PerlinNoise(warpSampleX1, warpSampleZ1) * 2f - 1f) * WarpStrength;
+        float offsetZ = (Mathf.PerlinNoise(warpSampleX2, warpSampleZ2) * 2f - 1f) * WarpStrength;
+
+        warpedX = sampleX + offsetX;
+        warpedZ = sampleZ + offsetZ;
     }
 
     private static Vector2 GetSite(int cellX, int cellZ)
