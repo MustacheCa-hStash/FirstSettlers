@@ -45,16 +45,16 @@ public static class HeightMapGenerator
                 float mountainTerrainSampleZ = worldZ / (sampleScale * 0.4f);
                 float mountainTerrain = MountainTerrainGenerator.Sample(mountainTerrainSampleX, mountainTerrainSampleZ, mountainTerrainOffsets);
 
-                float riverSampleX = worldX / (sampleScale * 5.0f);
-                float riverSampleZ = worldZ / (sampleScale * 5.0f);
+                float riverSampleX = worldX / (sampleScale * 1.0f);
+                float riverSampleZ = worldZ / (sampleScale * 1.0f);
                 float riverMask = RiverGenerator.Sample(riverSampleX, riverSampleZ, riverOffsets);
 
                 float finalHeight = baseLand + mountainTerrain * mountainWeight * 15.0f;
 
                 finalHeight = ApplyHeightPipeline(finalHeight);
-                finalHeight -= riverMask * 0.1f;
+                //finalHeight -= riverMask * 0.1f;
 
-                finalHeightMap[x, z] = finalHeight;
+                finalHeightMap[x, z] = 0f; // finalHeight;
                 mountainMaskMap[x, z] = mountainMask;
                 riverMaskMap[x, z] = riverMask;
             }

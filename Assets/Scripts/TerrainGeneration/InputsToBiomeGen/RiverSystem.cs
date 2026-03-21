@@ -2,28 +2,46 @@
 
 public static class RiverGenerator
 {
-    const int octaves = 2;
-    const float persistence = 0.3f;
-    const float lacunarity = 2f;
+    private const int CenterlineOctaves = 2;
+    private const float CenterlinePersistence = 0.5f;
+    private const float CenterlineLacunarity = 2f;
 
-    const float riverFalloffScale = 50f;
-    const float riverSharpness = 2.0f;
+    private const float CenterlineScale = 0.35f;
+    private const float MeanderAmplitude = 0.6f;
 
-    static readonly float maxPossibleHeight = TerrainNoiseUtility.ComputeMaxPossibleHeight(octaves, persistence);
+    private const float RiverHalfWidth = 0.015f;
+    private const float BankFalloffWidth = 0.02f;
+
+    private static readonly float maxPossibleHeight =
+        TerrainNoiseUtility.ComputeMaxPossibleHeight(CenterlineOctaves, CenterlinePersistence);
 
     public static float Sample(float sampleX, float sampleZ, Vector2[] octaveOffsets)
     {
-        float raw = TerrainNoiseUtility.SampleBasicFbm(sampleX, sampleZ, 0, octaves, persistence, lacunarity, octaveOffsets);
-        float normalized = TerrainNoiseUtility.NormalizeSymmetric01(raw, maxPossibleHeight);
+        float baseCenterX = Mathf.Round(sampleX * 0.2f) / 0.2f;
 
-        float line = Mathf.Abs(normalized - 0.5f);
+        float centerOffset = TerrainNoiseUtility.SamplePerlinFbm(
+            0f,
+            sampleZ * CenterlineScale,
+            CenterlineOctaves,
+            CenterlinePersistence,
+            CenterlineLacunarity,
+            octaveOffsets);
 
-        float mask = 1f - Mathf.Clamp01(line * riverFalloffScale);
-        mask = Mathf.Pow(mask, riverSharpness);
+        float normalizedOffset = centerOffset / maxPossibleHeight;
+        float riverCenterX = baseCenterX + normalizedOffset * MeanderAmplitude;
 
-        return mask;
+        float distanceFromCenter = Mathf.Abs(sampleX - riverCenterX);
+
+        float innerRadius = RiverHalfWidth;
+        float outerRadius = RiverHalfWidth + BankFalloffWidth;
+
+        if (distanceFromCenter <= innerRadius)
+            return 1f;
+
+        if (distanceFromCenter >= outerRadius)
+            return 0f;
+
+        float t = Mathf.InverseLerp(outerRadius, innerRadius, distanceFromCenter);
+        return Mathf.SmoothStep(0f, 1f, t);
     }
 }
-
-
-

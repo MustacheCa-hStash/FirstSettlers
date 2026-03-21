@@ -67,23 +67,23 @@ public class ChunkRuntime
         if (terrainMeshFilter.sharedMesh != terrainMesh)
             terrainMeshFilter.sharedMesh = terrainMesh;
 
-        bool hasRenderableWater = waterMesh != null && waterMesh.vertexCount > 0;
+        //bool hasRenderableWater = waterMesh != null && waterMesh.vertexCount > 0;
 
-        if (hasRenderableWater)
-        {
-            if (waterMeshFilter.sharedMesh != waterMesh)
-                waterMeshFilter.sharedMesh = waterMesh;
+        //if (hasRenderableWater)
+        //{
+        //    if (waterMeshFilter.sharedMesh != waterMesh)
+        //        waterMeshFilter.sharedMesh = waterMesh;
 
-            if (!waterRoot.activeSelf)
-                waterRoot.SetActive(true);
-        }
-        else
-        {
-            waterMeshFilter.sharedMesh = null;
-
-            if (waterRoot.activeSelf)
-                waterRoot.SetActive(false);
-        }
+        //    if (!waterRoot.activeSelf)
+        //        waterRoot.SetActive(true);
+        //}
+        //else
+        //{
+        //    waterMeshFilter.sharedMesh = null;
+        //
+        //    if (waterRoot.activeSelf)
+        //        waterRoot.SetActive(false);
+        //}
 
         currentLOD = lod;
     }

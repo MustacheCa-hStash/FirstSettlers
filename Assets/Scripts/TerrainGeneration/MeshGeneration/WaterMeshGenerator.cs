@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public static class WaterMeshGenerator
+public static class LakeMeshGenerator
 {
     private const float LakeWaterLevel = TerrainWaterSettings.WaterLevel;
     private const float WaterSurfaceOffset = 0.02f;
@@ -126,6 +126,135 @@ public static class WaterMeshGenerator
         return waterState == WaterState.Shallow || waterState == WaterState.Deep;
     }
 }
+
+public static class RiverMeshGenerator
+{
+    private const float LakeWaterLevel = TerrainWaterSettings.WaterLevel;
+    private const float WaterSurfaceOffset = 0.02f;
+    private const float RiverExclusionThreshold = 0.40f;
+
+    public static WaterMeshData GenerateRiverMesh(
+        float[,] heightMap,
+        WaterState[,] waterStateMap,
+        float[,] riverMaskMap,
+        float heightMultiplier,
+        int stepIncrement,
+        float worldScale)
+    {
+        int width = heightMap.GetLength(0);
+        int height = heightMap.GetLength(1);
+
+        float topLeftX = (width - 1) / -2f;
+        float bottomLeftZ = (height - 1) / -2f;
+
+        int waterCellCount = CountRenderableLakeCells(waterStateMap, riverMaskMap, stepIncrement);
+
+        if (waterCellCount == 0)
+            return new WaterMeshData(0);
+
+        WaterMeshData meshData = new WaterMeshData(waterCellCount);
+
+        float waterY = LakeWaterLevel * heightMultiplier * worldScale + WaterSurfaceOffset;
+
+        for (int y = 0; y < height - 1; y += stepIncrement)
+        {
+            for (int x = 0; x < width - 1; x += stepIncrement)
+            {
+                if (!IsRenderableLakeCell(waterStateMap, riverMaskMap, x, y, stepIncrement))
+                    continue;
+
+                Vector3 a = new Vector3(
+                    (topLeftX + x) * worldScale,
+                    waterY,
+                    (bottomLeftZ + y) * worldScale);
+
+                Vector3 b = new Vector3(
+                    (topLeftX + x + stepIncrement) * worldScale,
+                    waterY,
+                    (bottomLeftZ + y) * worldScale);
+
+                Vector3 c = new Vector3(
+                    (topLeftX + x) * worldScale,
+                    waterY,
+                    (bottomLeftZ + y + stepIncrement) * worldScale);
+
+                Vector3 d = new Vector3(
+                    (topLeftX + x + stepIncrement) * worldScale,
+                    waterY,
+                    (bottomLeftZ + y + stepIncrement) * worldScale);
+
+                Vector2 uvA = new Vector2(x / (float)(width - 1), y / (float)(height - 1));
+                Vector2 uvB = new Vector2((x + stepIncrement) / (float)(width - 1), y / (float)(height - 1));
+                Vector2 uvC = new Vector2(x / (float)(width - 1), (y + stepIncrement) / (float)(height - 1));
+                Vector2 uvD = new Vector2((x + stepIncrement) / (float)(width - 1), (y + stepIncrement) / (float)(height - 1));
+
+                meshData.AddQuad(a, b, c, d, uvA, uvB, uvC, uvD);
+            }
+        }
+
+        return meshData;
+    }
+
+    private static int CountRenderableLakeCells(
+        WaterState[,] waterStateMap,
+        float[,] riverMaskMap,
+        int stepIncrement)
+    {
+        int width = waterStateMap.GetLength(0);
+        int height = waterStateMap.GetLength(1);
+
+        int count = 0;
+
+        for (int y = 0; y < height - 1; y += stepIncrement)
+        {
+            for (int x = 0; x < width - 1; x += stepIncrement)
+            {
+                if (IsRenderableLakeCell(waterStateMap, riverMaskMap, x, y, stepIncrement))
+                    count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static bool IsRenderableLakeCell(
+        WaterState[,] waterStateMap,
+        float[,] riverMaskMap,
+        int x,
+        int y,
+        int stepIncrement)
+    {
+        int x1 = x + stepIncrement;
+        int y1 = y + stepIncrement;
+
+        if (x1 >= waterStateMap.GetLength(0) || y1 >= waterStateMap.GetLength(1))
+            return false;
+
+        if (riverMaskMap[x, y] >= RiverExclusionThreshold ||
+            riverMaskMap[x1, y] >= RiverExclusionThreshold ||
+            riverMaskMap[x, y1] >= RiverExclusionThreshold ||
+            riverMaskMap[x1, y1] >= RiverExclusionThreshold)
+        {
+            return false;
+        }
+
+        int waterCornerCount = 0;
+
+        if (IsRenderableWater(waterStateMap[x, y])) waterCornerCount++;
+        if (IsRenderableWater(waterStateMap[x1, y])) waterCornerCount++;
+        if (IsRenderableWater(waterStateMap[x, y1])) waterCornerCount++;
+        if (IsRenderableWater(waterStateMap[x1, y1])) waterCornerCount++;
+
+        return waterCornerCount >= 1;
+    }
+
+    private static bool IsRenderableWater(WaterState waterState)
+    {
+        return waterState == WaterState.Shallow || waterState == WaterState.Deep;
+    }
+}
+
+
 
 public class WaterMeshData
 {

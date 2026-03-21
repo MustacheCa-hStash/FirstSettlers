@@ -402,7 +402,7 @@ Transform:
   m_GameObject: {fileID: 705461054}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 648, y: 0, z: -1478}
+  m_LocalPosition: {x: 839, y: 0, z: -1903}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -438,7 +438,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   worldSeed: 4
-  viewDistance: 25
+  viewDistance: 50
   chunkSize: 128
   viewer: {fileID: 705461055}
   chunkParent: {fileID: 1025920260}
