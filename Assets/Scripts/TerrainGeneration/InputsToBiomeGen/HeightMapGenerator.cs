@@ -21,7 +21,7 @@ public static class HeightMapGenerator
         Vector2[] baseLandOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 20000, 2);
         Vector2[] mountainMaskOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 30000, 3);
         Vector2[] mountainTerrainOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 40000, 4);
-        Vector2[] riverOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 50000, 2);
+        Vector2[] riverOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 50000, 1);
 
         for (int x = 0; x < width; x++)
         {
@@ -45,8 +45,8 @@ public static class HeightMapGenerator
                 float mountainTerrainSampleZ = worldZ / (sampleScale * 0.4f);
                 float mountainTerrain = MountainTerrainGenerator.Sample(mountainTerrainSampleX, mountainTerrainSampleZ, mountainTerrainOffsets);
 
-                float riverSampleX = worldX / (sampleScale * 1.0f);
-                float riverSampleZ = worldZ / (sampleScale * 1.0f);
+                float riverSampleX = worldX / (sampleScale * 10.0f);
+                float riverSampleZ = worldZ / (sampleScale * 10.0f);
                 float riverMask = RiverGenerator.Sample(riverSampleX, riverSampleZ, riverOffsets);
 
                 float finalHeight = baseLand + mountainTerrain * mountainWeight * 15.0f;
