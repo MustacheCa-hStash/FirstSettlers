@@ -195,9 +195,13 @@ public class ChunkManager
 
         if (!runtime.IsShowingLOD(lod))
         {
-            Mesh waterMesh = null;
-            record.TryGetLODWaterMesh(lod, out waterMesh);
-            runtime.SetMeshes(terrainMesh, waterMesh, lod);
+            Mesh lakeMesh = null;
+            Mesh riverMesh = null;
+
+            record.TryGetLODLakeMesh(lod, out lakeMesh);
+            record.TryGetLODRiverMesh(lod, out riverMesh);
+
+            runtime.SetMeshes(terrainMesh, lakeMesh, riverMesh, lod);
         }
     }
 
@@ -226,9 +230,10 @@ public class ChunkManager
                 continue;
 
             Mesh terrainMesh = meshResult.TerrainMeshData.CreateMesh();
-            Mesh waterMesh = meshResult.WaterMeshData.CreateMesh();
+            Mesh lakeMesh = meshResult.LakeMeshData.CreateMesh();
+            Mesh riverMesh = meshResult.RiverMeshData.CreateMesh();
 
-            record.TryCompleteMeshRequest(meshResult.LOD, meshResult.RequestVersion, terrainMesh, waterMesh);
+            record.TryCompleteMeshRequest(meshResult.LOD, meshResult.RequestVersion, terrainMesh, lakeMesh, riverMesh);
         }
     }
 

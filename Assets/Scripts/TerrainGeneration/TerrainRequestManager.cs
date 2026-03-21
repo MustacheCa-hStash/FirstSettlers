@@ -101,7 +101,6 @@ public class TerrainRequestManager
                 MeshData terrainMeshData = MeshGenerator.GenerateTerrainMesh(heightMap, biomeMap, surfaceTypeMap, 
                     waterStateMap, meshHeightMultiplier, stepIncrement, worldScale, riverMaskMap);
 
-                //LAKE MESH IS DOING NOTHING. ADD PASS THROUGH FOR RIVER AND LAKE SEPARATE MESHES
                 WaterMeshData lakeMeshData = LakeMeshGenerator.GenerateLakeMesh(heightMap, waterStateMap,
                     riverMaskMap, meshHeightMultiplier, stepIncrement, worldScale);
 
@@ -110,7 +109,7 @@ public class TerrainRequestManager
 
                 //only taking rivermeshdata here
                 MeshRequestResult result = new MeshRequestResult(chunkCoord, lod, requestVersion, 
-                    terrainMeshData, riverMeshData);
+                    terrainMeshData, lakeMeshData, riverMeshData);
 
                 lock (meshResultsLock)
                 {

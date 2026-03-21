@@ -55,7 +55,7 @@ public static class HeightMapGenerator
                 float riverEligibility;
                 float mountainContribution = mountainTerrain * mountainWeight;
 
-                if (mountainContribution >= 0.04f)
+                if (mountainContribution >= 0.03f)
                 {
                     riverEligibility = 0f;
                 }
@@ -66,7 +66,7 @@ public static class HeightMapGenerator
 
                 float carvedRiverMask = riverMask * riverEligibility;
 
-                finalHeight -= carvedRiverMask * 0.2f;
+                finalHeight -= carvedRiverMask * 0.05f;
 
                 finalHeightMap[x, z] = finalHeight;
                 mountainMaskMap[x, z] = mountainMask;

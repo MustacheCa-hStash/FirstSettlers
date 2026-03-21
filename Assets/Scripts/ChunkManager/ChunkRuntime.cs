@@ -10,9 +10,14 @@ public class ChunkRuntime
     private MeshRenderer terrainMeshRenderer;
     private Material runtimeTerrainMaterial;
 
-    private GameObject waterRoot;
-    private MeshFilter waterMeshFilter;
-    private MeshRenderer waterMeshRenderer;
+    private GameObject lakeRoot;
+    private MeshFilter lakeMeshFilter;
+    private MeshRenderer lakeMeshRenderer;
+
+    private GameObject riverRoot;
+    private MeshFilter riverMeshFilter;
+    private MeshRenderer riverMeshRenderer;
+
     private Material runtimeWaterMaterial;
 
     private int currentLOD = -1;
@@ -44,46 +49,74 @@ public class ChunkRuntime
         runtimeTerrainMaterial = new Material(terrainMaterial);
         terrainMeshRenderer.material = runtimeTerrainMaterial;
 
-        waterRoot = new GameObject("Water");
-        waterRoot.transform.SetParent(root.transform, false);
-        waterRoot.transform.localPosition = Vector3.zero;
-        waterRoot.transform.localRotation = Quaternion.identity;
-        waterRoot.transform.localScale = Vector3.one;
+        lakeRoot = new GameObject("Lake");
+        lakeRoot.transform.SetParent(root.transform, false);
+        lakeRoot.transform.localPosition = Vector3.zero;
+        lakeRoot.transform.localRotation = Quaternion.identity;
+        lakeRoot.transform.localScale = Vector3.one;
 
-        waterMeshFilter = waterRoot.AddComponent<MeshFilter>();
-        waterMeshRenderer = waterRoot.AddComponent<MeshRenderer>();
+        lakeMeshFilter = lakeRoot.AddComponent<MeshFilter>();
+        lakeMeshRenderer = lakeRoot.AddComponent<MeshRenderer>();
+
+        riverRoot = new GameObject("River");
+        riverRoot.transform.SetParent(root.transform, false);
+        riverRoot.transform.localPosition = Vector3.zero;
+        riverRoot.transform.localRotation = Quaternion.identity;
+        riverRoot.transform.localScale = Vector3.one;
+
+        riverMeshFilter = riverRoot.AddComponent<MeshFilter>();
+        riverMeshRenderer = riverRoot.AddComponent<MeshRenderer>();
 
         runtimeWaterMaterial = new Material(waterMaterial);
-        waterMeshRenderer.material = runtimeWaterMaterial;
+        lakeMeshRenderer.material = runtimeWaterMaterial;
+        riverMeshRenderer.material = runtimeWaterMaterial;
 
-        waterRoot.SetActive(false);
+        lakeRoot.SetActive(false);
+        riverRoot.SetActive(false);
 
         SetVisible(false);
         chunkRecord.SetActiveRuntime(this);
     }
 
-    public void SetMeshes(Mesh terrainMesh, Mesh waterMesh, int lod)
+    public void SetMeshes(Mesh terrainMesh, Mesh lakeMesh, Mesh riverMesh, int lod)
     {
         if (terrainMeshFilter.sharedMesh != terrainMesh)
             terrainMeshFilter.sharedMesh = terrainMesh;
 
-        //bool hasRenderableWater = waterMesh != null && waterMesh.vertexCount > 0;
+        bool hasRenderableLake = lakeMesh != null && lakeMesh.vertexCount > 0;
+        bool hasRenderableRiver = riverMesh != null && riverMesh.vertexCount > 0;
 
-        //if (hasRenderableWater)
-        //{
-        //    if (waterMeshFilter.sharedMesh != waterMesh)
-        //        waterMeshFilter.sharedMesh = waterMesh;
+        if (hasRenderableLake)
+        {
+            if (lakeMeshFilter.sharedMesh != lakeMesh)
+                lakeMeshFilter.sharedMesh = lakeMesh;
 
-        //    if (!waterRoot.activeSelf)
-        //        waterRoot.SetActive(true);
-        //}
-        //else
-        //{
-        //    waterMeshFilter.sharedMesh = null;
-        //
-        //    if (waterRoot.activeSelf)
-        //        waterRoot.SetActive(false);
-        //}
+            if (!lakeRoot.activeSelf)
+                lakeRoot.SetActive(true);
+        }
+        else
+        {
+            lakeMeshFilter.sharedMesh = null;
+
+            if (lakeRoot.activeSelf)
+                lakeRoot.SetActive(false);
+        }
+
+        if (hasRenderableRiver)
+        {
+            if (riverMeshFilter.sharedMesh != riverMesh)
+                riverMeshFilter.sharedMesh = riverMesh;
+
+            if (!riverRoot.activeSelf)
+                riverRoot.SetActive(true);
+        }
+        else
+        {
+            riverMeshFilter.sharedMesh = null;
+
+            if (riverRoot.activeSelf)
+                riverRoot.SetActive(false);
+        }
 
         currentLOD = lod;
     }
@@ -91,10 +124,14 @@ public class ChunkRuntime
     public void ClearMeshes()
     {
         terrainMeshFilter.sharedMesh = null;
-        waterMeshFilter.sharedMesh = null;
+        lakeMeshFilter.sharedMesh = null;
+        riverMeshFilter.sharedMesh = null;
 
-        if (waterRoot != null)
-            waterRoot.SetActive(false);
+        if (lakeRoot != null)
+            lakeRoot.SetActive(false);
+
+        if (riverRoot != null)
+            riverRoot.SetActive(false);
 
         currentLOD = -1;
     }
@@ -134,11 +171,14 @@ public class ChunkRuntime
             root = null;
         }
 
-        waterRoot = null;
+        lakeRoot = null;
+        riverRoot = null;
         terrainMeshFilter = null;
         terrainMeshRenderer = null;
-        waterMeshFilter = null;
-        waterMeshRenderer = null;
+        lakeMeshFilter = null;
+        lakeMeshRenderer = null;
+        riverMeshFilter = null;
+        riverMeshRenderer = null;
         chunkRecord = null;
         currentLOD = -1;
     }

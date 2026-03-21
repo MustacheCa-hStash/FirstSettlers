@@ -24,9 +24,9 @@ public static class MeshGenerator
                 heightMap[x, y] * heightMultiplier * worldScale,
                 (bottomLeftZ + y) * worldScale);
                 meshData.uvs[vertexIndex] = new Vector2(x / (float)(width - 1), y / (float)(height - 1));
-                //meshData.colors[vertexIndex] = BiomeClassifier.GenerateColorFromBiomeType(biomeMap[x, y]);
+                meshData.colors[vertexIndex] = BiomeClassifier.GenerateColorFromBiomeType(biomeMap[x, y]);
                 //meshData.colors[vertexIndex] = BiomeClassifier.GenerateDebugColorFromRiverMask(riverMaskMap[x, y]);
-                meshData.colors[vertexIndex] = SurfaceTypeClassifier.GenerateColor(surfaceTypeMap[x, y], waterStateMap[x, y]);
+                //meshData.colors[vertexIndex] = SurfaceTypeClassifier.GenerateColor(surfaceTypeMap[x, y], waterStateMap[x, y]);
 
                 if (x < width - 1 && y < height - 1)
                 {

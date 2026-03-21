@@ -4,15 +4,17 @@ public class MeshRequestResult
     public int LOD { get; }
     public int RequestVersion { get; }
     public MeshData TerrainMeshData { get; }
-    public WaterMeshData WaterMeshData { get; }
+    public WaterMeshData LakeMeshData { get; }
+    public WaterMeshData RiverMeshData { get; }
 
     public MeshRequestResult(ChunkCoord chunkCoord, int lod, int requestVersion, MeshData terrainMeshData, 
-        WaterMeshData waterMeshData)
+        WaterMeshData lakeMeshData, WaterMeshData riverMeshData)
     {
         ChunkCoord = chunkCoord;
         LOD = lod;
         RequestVersion = requestVersion;
         TerrainMeshData = terrainMeshData;
-        WaterMeshData = waterMeshData;
+        LakeMeshData = lakeMeshData;
+        RiverMeshData = riverMeshData;
     }
 }
