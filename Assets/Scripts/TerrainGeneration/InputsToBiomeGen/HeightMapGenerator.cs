@@ -50,13 +50,27 @@ public static class HeightMapGenerator
                 float riverMask = RiverGenerator.Sample(riverSampleX, riverSampleZ);
 
                 float finalHeight = baseLand + mountainTerrain * mountainWeight * 15.0f;
-
                 finalHeight = ApplyHeightPipeline(finalHeight);
-                //finalHeight -= riverMask * 0.1f;
 
-                finalHeightMap[x, z] = 0f; // finalHeight;
+                float riverEligibility;
+                float mountainContribution = mountainTerrain * mountainWeight;
+
+                if (mountainContribution >= 0.04f)
+                {
+                    riverEligibility = 0f;
+                }
+                else
+                {
+                    riverEligibility = 1f - Mathf.SmoothStep(0.20f, 0.55f, mountainWeight);
+                }
+
+                float carvedRiverMask = riverMask * riverEligibility;
+
+                finalHeight -= carvedRiverMask * 0.2f;
+
+                finalHeightMap[x, z] = finalHeight;
                 mountainMaskMap[x, z] = mountainMask;
-                riverMaskMap[x, z] = riverMask;
+                riverMaskMap[x, z] = carvedRiverMask;
             }
         }
 

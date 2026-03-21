@@ -9,7 +9,7 @@ public static class RiverGenerator
     private const float BankFalloffWidth = 0.01f;
 
     private const float WarpScale = 0.65f;
-    private const float WarpStrength = 0.5f;
+    private const float WarpStrength = 1.0f;
 
     public static float Sample(float sampleX, float sampleZ)
     {

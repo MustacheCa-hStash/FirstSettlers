@@ -5,10 +5,10 @@ public static class SurfaceTypeClassifier
     private const float OceanWaterLevel = TerrainWaterSettings.WaterLevel;
     private const float BeachBand = TerrainWaterSettings.BeachLevel - TerrainWaterSettings.WaterLevel;
 
-    private const float RiverBankThreshold = 0.40f;
-    private const float RiverCoreThreshold = 0.65f;
+    private const float RiverBankThreshold = 0.02f;
+    private const float RiverCoreThreshold = 0.25f;
 
-    private const float CliffSlopeThreshold = 0.60f;
+    private const float CliffSlopeThreshold = 0.6f;
     private const float RockSlopeThreshold = 0.42f;
 
     public static SurfaceType Classify(float height, float slope, float riverMask, BiomeType biome)
@@ -16,11 +16,14 @@ public static class SurfaceTypeClassifier
         if (slope >= CliffSlopeThreshold)
             return SurfaceType.Cliff;
 
-        if (riverMask >= RiverCoreThreshold)
-            return SurfaceType.Riverbed;
-
         if (height <= OceanWaterLevel + BeachBand)
             return SurfaceType.Sand;
+
+        if (biome == BiomeType.Rock)
+            return SurfaceType.Rock;
+
+        if (riverMask >= RiverCoreThreshold)
+            return SurfaceType.Riverbed;
 
         if (riverMask >= RiverBankThreshold)
         {
@@ -33,14 +36,10 @@ public static class SurfaceTypeClassifier
         switch (biome)
         {
             case BiomeType.Beach:
-                return SurfaceType.Sand;
-
             case BiomeType.Desert:
                 return SurfaceType.Sand;
 
             case BiomeType.Forest:
-                return SurfaceType.Grass;
-
             case BiomeType.Grassland:
                 return SurfaceType.Grass;
 
