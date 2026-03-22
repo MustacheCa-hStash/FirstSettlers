@@ -143,7 +143,7 @@ public class TerrainRequestManager
 
             try
             {
-                // ⭐ fixed collider step
+                // ⭐ fixed collider step, LOD of 2
                 const int colliderStep = 4;
 
                 MeshData colliderMeshData =
