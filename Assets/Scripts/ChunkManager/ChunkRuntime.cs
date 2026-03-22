@@ -20,6 +20,8 @@ public class ChunkRuntime
 
     private Material runtimeWaterMaterial;
 
+    private MeshCollider terrainMeshCollider;
+
     private int currentLOD = -1;
 
     public ChunkRecord ChunkRecord => chunkRecord;
@@ -121,6 +123,32 @@ public class ChunkRuntime
         currentLOD = lod;
     }
 
+    public void ApplyCollider(Mesh colliderMesh)
+    {
+        if (terrainMeshCollider == null)
+            terrainMeshCollider = root.AddComponent<MeshCollider>();
+
+        if (terrainMeshCollider.sharedMesh != null)
+            terrainMeshCollider.sharedMesh = null;
+
+        terrainMeshCollider.sharedMesh = colliderMesh;
+    }
+
+    public void RemoveCollider()
+    {
+        if (terrainMeshCollider == null)
+            return;
+
+        terrainMeshCollider.sharedMesh = null;
+        Object.Destroy(terrainMeshCollider);
+        terrainMeshCollider = null;
+    }
+
+    public bool HasCollider()
+    {
+        return terrainMeshCollider != null && terrainMeshCollider.sharedMesh != null;
+    }
+
     public void ClearMeshes()
     {
         terrainMeshFilter.sharedMesh = null;
@@ -150,6 +178,7 @@ public class ChunkRuntime
     {
         chunkRecord.ClearActiveRuntime(this);
 
+        RemoveCollider();
         ClearMeshes();
         visible = false;
 
@@ -179,6 +208,7 @@ public class ChunkRuntime
         lakeMeshRenderer = null;
         riverMeshFilter = null;
         riverMeshRenderer = null;
+        terrainMeshCollider = null;
         chunkRecord = null;
         currentLOD = -1;
     }

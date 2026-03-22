@@ -4,6 +4,7 @@ public class WorldManager : MonoBehaviour
 {
     [SerializeField] int worldSeed = 12345;
     [SerializeField] int viewDistance = 4;
+    [SerializeField] int colliderDistance = 3;
     [SerializeField] int chunkSize = 128;
     [SerializeField] Transform viewer;
     [SerializeField] Transform chunkParent;
@@ -21,7 +22,7 @@ public class WorldManager : MonoBehaviour
 
     void Awake()
     {
-        chunkManager = new ChunkManager(viewDistance, chunkSize, worldSeed, viewer, chunkParent, sampleScale,
+        chunkManager = new ChunkManager(viewDistance, colliderDistance, chunkSize, worldSeed, viewer, chunkParent, sampleScale,
             worldScale, octaves, persistence, lacunarity, erosionStrength, meshHeightMultiplier, terrainMaterial,
             waterMaterial);
     }

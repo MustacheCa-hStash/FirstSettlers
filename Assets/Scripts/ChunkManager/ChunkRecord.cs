@@ -17,6 +17,14 @@ public class ChunkRecord
     private Dictionary<int, Mesh> LODLakeMeshes = new Dictionary<int, Mesh>();
     private Dictionary<int, Mesh> LODRiverMeshes = new Dictionary<int, Mesh>();
 
+    private Mesh colliderMesh;
+
+    private bool colliderRequestInFlight;
+    private int colliderRequestVersion;
+
+    private bool colliderReady;
+    private bool colliderDesired;
+
     private bool terrainDataRequestInFlight;
     private int terrainDataRequestVersion;
 
@@ -43,9 +51,48 @@ public class ChunkRecord
     public bool IsTerrainDataRequestInFlight => terrainDataRequestInFlight;
     public int TerrainDataRequestVersion => terrainDataRequestVersion;
 
+    public bool ColliderRequestInFlight => colliderRequestInFlight;
+    public bool ColliderReady => colliderReady;
+    public bool ColliderDesired
+    {
+        get => colliderDesired;
+        set => colliderDesired = value;
+    }
+
     public ChunkRecord(ChunkCoord chunkCoord)
     {
         this.chunkCoord = chunkCoord;
+    }
+
+    public int BeginColliderRequest()
+    {
+        colliderRequestInFlight = true;
+        colliderRequestVersion++;
+        return colliderRequestVersion;
+    }
+    public bool TryCompleteColliderRequest(int requestVersion, Mesh mesh)
+    {
+        if (!colliderRequestInFlight || requestVersion != colliderRequestVersion)
+            return false;
+
+        colliderRequestInFlight = false;
+
+        colliderMesh = mesh;
+        colliderReady = true;
+
+        return true;
+    }
+
+    public bool TryGetColliderMesh(out Mesh mesh)
+    {
+        mesh = colliderMesh;
+        return colliderReady && colliderMesh != null;
+    }
+
+    public void ClearColliderMesh()
+    {
+        colliderMesh = null;
+        colliderReady = false;
     }
 
     public bool TryGetLODTerrainMesh(int lod, out Mesh terrainMesh)

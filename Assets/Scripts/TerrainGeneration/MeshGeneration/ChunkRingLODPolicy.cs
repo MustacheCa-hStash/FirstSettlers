@@ -8,10 +8,11 @@ public static class ChunkRingLODPolicy
         int dz = Mathf.Abs(viewer.z - target.z);
         int ring = Mathf.Max(dx, dz);
 
-        if (ring <= 1) return 0;
-        if (ring <= 3) return 1;
-        if (ring <= 5) return 2;
-        if (ring <= 7) return 3;
+        //0123 to 2334
+        if (ring <= 1) return 2;
+        if (ring <= 3) return 3;
+        if (ring <= 5) return 3;
+        if (ring <= 7) return 4;
         return 4;
     }
 }

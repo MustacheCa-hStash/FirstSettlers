@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 
@@ -6,12 +6,15 @@ public class TerrainRequestManager
 {
     private readonly Queue<TerrainDataRequestResult> completedTerrainDataResults = new Queue<TerrainDataRequestResult>();
     private readonly Queue<MeshRequestResult> completedMeshResults = new Queue<MeshRequestResult>();
+    private readonly Queue<ColliderRequestResult> completedColliderResults = new();
 
     private readonly object terrainDataResultsLock = new object();
     private readonly object meshResultsLock = new object();
+    private readonly object colliderResultsLock = new();
 
     private static int activeTerrainDataJobs;
     private static int activeMeshJobs;
+    private static int activeColliderJobs;
 
     private const int MaxActiveTerrainDataJobs = 6;
 
@@ -127,6 +130,51 @@ public class TerrainRequestManager
         });
     }
 
+    public void RequestColliderMesh(
+        ChunkCoord chunkCoord,
+        int requestVersion,
+        float[,] heightMap,
+        float meshHeightMultiplier,
+        float worldScale)
+    {
+        ThreadPool.QueueUserWorkItem(_ =>
+        {
+            Interlocked.Increment(ref activeColliderJobs);
+
+            try
+            {
+                // ⭐ fixed collider step
+                const int colliderStep = 4;
+
+                MeshData colliderMeshData =
+                    ColliderMeshGenerator.GenerateColliderMesh(
+                        heightMap,
+                        meshHeightMultiplier,
+                        colliderStep,
+                        worldScale);
+
+                ColliderRequestResult result =
+                    new ColliderRequestResult(
+                        chunkCoord,
+                        requestVersion,
+                        colliderMeshData);
+
+                lock (colliderResultsLock)
+                {
+                    completedColliderResults.Enqueue(result);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Collider request failed for chunk={chunkCoord}, version={requestVersion}\n{ex}");
+            }
+            finally
+            {
+                Interlocked.Decrement(ref activeColliderJobs);
+            }
+        });
+    }
+
     public bool TryDequeueTerrainDataResult(out TerrainDataRequestResult result)
     {
         lock (terrainDataResultsLock)
@@ -149,6 +197,21 @@ public class TerrainRequestManager
             if (completedMeshResults.Count > 0)
             {
                 result = completedMeshResults.Dequeue();
+                return true;
+            }
+        }
+
+        result = null;
+        return false;
+    }
+
+    public bool TryDequeueColliderResult(out ColliderRequestResult result)
+    {
+        lock (colliderResultsLock)
+        {
+            if (completedColliderResults.Count > 0)
+            {
+                result = completedColliderResults.Dequeue();
                 return true;
             }
         }

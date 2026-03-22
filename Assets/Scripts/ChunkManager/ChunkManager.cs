@@ -4,6 +4,7 @@ using UnityEngine;
 public class ChunkManager
 {
     private int viewDistance;
+    private int colliderDistance;
     private int chunkSize;
     private int seed;
     private Transform viewer;
@@ -26,11 +27,12 @@ public class ChunkManager
 
     private TerrainRequestManager terrainRequestManager;
 
-    public ChunkManager(int viewDistance, int chunkSize, int seed, Transform viewer, Transform chunkParent, 
+    public ChunkManager(int viewDistance, int colliderDistance, int chunkSize, int seed, Transform viewer, Transform chunkParent, 
         float sampleScale, float worldScale, int octaves, float persistence, float lacunarity, 
         float erosionStrength, float meshHeightMultiplier, Material terrainMaterial, Material waterMaterial)
     {
         this.viewDistance = viewDistance;
+        this.colliderDistance = colliderDistance;
         this.chunkSize = chunkSize;
         this.seed = seed;
         this.viewer = viewer;
@@ -82,6 +84,24 @@ public class ChunkManager
                 EnsureTerrainDataRequested(record);
                 EnsureLODMeshRequested(record, lod);
                 TryApplyLODMesh(record, runtime, lod);
+
+                //modify later to match LOD ring policy method implementation for custom setup
+                bool colliderDesired = sqrDistance <= colliderDistance * colliderDistance;
+                record.ColliderDesired = colliderDesired;
+
+                if (colliderDesired)
+                {
+                    EnsureColliderRequested(record);
+                    TryApplyCollider(record, runtime);
+                }
+                else
+                {
+                    if (runtime.HasCollider())
+                    {
+                        runtime.RemoveCollider();
+                        record.ClearColliderMesh();
+                    }
+                }
 
                 if (!runtime.IsVisible)
                 {
@@ -156,6 +176,39 @@ public class ChunkManager
         if (!submitted)
         {
             record.CancelTerrainDataRequest(requestVersion);
+        }
+    }
+
+    private void EnsureColliderRequested(ChunkRecord record)
+    {
+        if (!record.HasTerrainData)
+            return;
+
+        if (record.ColliderReady)
+            return;
+
+        if (record.ColliderRequestInFlight)
+            return;
+
+        int requestVersion = record.BeginColliderRequest();
+
+        terrainRequestManager.RequestColliderMesh(
+            record.ChunkCoord,
+            requestVersion,
+            record.HeightMap,
+            meshHeightMultiplier,
+            worldScale
+        );
+    }
+
+    private void TryApplyCollider(ChunkRecord record, ChunkRuntime runtime)
+    {
+        if (!record.TryGetColliderMesh(out Mesh colliderMesh))
+            return;
+
+        if (!runtime.HasCollider())
+        {
+            runtime.ApplyCollider(colliderMesh);
         }
     }
 
@@ -234,6 +287,19 @@ public class ChunkManager
             Mesh riverMesh = meshResult.RiverMeshData.CreateMesh();
 
             record.TryCompleteMeshRequest(meshResult.LOD, meshResult.RequestVersion, terrainMesh, lakeMesh, riverMesh);
+        }
+
+        while (terrainRequestManager.TryDequeueColliderResult(out ColliderRequestResult colliderResult))
+        {
+            if (!chunkRecords.TryGetValue(colliderResult.ChunkCoord, out ChunkRecord record))
+                continue;
+
+            Mesh colliderMesh = colliderResult.ColliderMeshData.CreateMesh();
+
+            record.TryCompleteColliderRequest(
+                colliderResult.RequestVersion,
+                colliderMesh
+            );
         }
     }
 
