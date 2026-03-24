@@ -2,14 +2,21 @@ using UnityEngine;
 
 public static class MeshGenerator
 {
-    public static MeshData GenerateTerrainMesh(float[,] heightMap, BiomeType[,] biomeMap, SurfaceType[,] surfaceTypeMap,
+    public static MeshData GenerateTerrainMesh(ChunkCoord chunkCoord, float[,] heightMap, BiomeType[,] biomeMap, SurfaceType[,] surfaceTypeMap,
         WaterState[,] waterStateMap, float heightMultiplier, int stepIncrement, float worldScale, float[,] riverMaskMap)
     {
+        //change later to take as parameter in worldmanager
+        float textureTileSize = 2f;
+
         int width = heightMap.GetLength(0);
         int height = heightMap.GetLength(1);
 
         float topLeftX = (width - 1) / -2f;
         float bottomLeftZ = (height - 1) / -2f;
+
+        int chunkSize = width - 1;
+        float chunkWorldCenterX = (chunkCoord.x * chunkSize + chunkSize * 0.5f) * worldScale;
+        float chunkWorldCenterZ = (chunkCoord.z * chunkSize + chunkSize * 0.5f) * worldScale;
 
         int verticesPerLine = (width - 1) / stepIncrement + 1;
         MeshData meshData = new MeshData(verticesPerLine, verticesPerLine);
@@ -19,14 +26,20 @@ public static class MeshGenerator
         {
             for (int x = 0; x < width; x += stepIncrement)
             {
-                meshData.vertices[vertexIndex] = new Vector3(
-                (topLeftX + x) * worldScale,
-                heightMap[x, y] * heightMultiplier * worldScale,
-                (bottomLeftZ + y) * worldScale);
-                meshData.uvs[vertexIndex] = new Vector2(x / (float)(width - 1), y / (float)(height - 1));
-                meshData.colors[vertexIndex] = BiomeClassifier.GenerateColorFromBiomeType(biomeMap[x, y]);
+                float localX = (topLeftX + x) * worldScale;
+                float localZ = (bottomLeftZ + y) * worldScale;
+
+                float worldX = chunkWorldCenterX + localX;
+                float worldZ = chunkWorldCenterZ + localZ;
+
+                meshData.vertices[vertexIndex] = new Vector3(localX, heightMap[x, y] * heightMultiplier * worldScale, 
+                    localZ);
+
+                meshData.uvs[vertexIndex] = new Vector2(worldX / textureTileSize, worldZ / textureTileSize);
+
+                //meshData.colors[vertexIndex] = BiomeClassifier.GenerateColorFromBiomeType(biomeMap[x, y]);
                 //meshData.colors[vertexIndex] = BiomeClassifier.GenerateDebugColorFromRiverMask(riverMaskMap[x, y]);
-                //meshData.colors[vertexIndex] = SurfaceTypeClassifier.GenerateColor(surfaceTypeMap[x, y], waterStateMap[x, y]);
+                meshData.colors[vertexIndex] = SurfaceTypeClassifier.GenerateColor(surfaceTypeMap[x, y], waterStateMap[x, y]);
 
                 if (x < width - 1 && y < height - 1)
                 {
