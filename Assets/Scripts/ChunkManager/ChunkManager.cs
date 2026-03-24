@@ -52,8 +52,8 @@ public class ChunkManager
 
     public ChunkCoord GetViewerChunkCoord()
     {
-        int cx = Mathf.FloorToInt(viewer.position.x / chunkSize);
-        int cz = Mathf.FloorToInt(viewer.position.z / chunkSize);
+        int cx = Mathf.FloorToInt(viewer.position.x / (chunkSize * worldScale));
+        int cz = Mathf.FloorToInt(viewer.position.z  / (chunkSize * worldScale));
         return new ChunkCoord(cx, cz);
     }
 
