@@ -444,7 +444,7 @@ MonoBehaviour:
   viewer: {fileID: 1578603182}
   chunkParent: {fileID: 1025920260}
   sampleScale: 600
-  worldScale: 0.4
+  worldScale: 0.3
   octaves: 2
   persistence: 0.05
   lacunarity: 10

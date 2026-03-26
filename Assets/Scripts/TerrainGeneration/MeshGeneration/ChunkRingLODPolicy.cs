@@ -8,6 +8,7 @@ public static class ChunkRingLODPolicy
         int dz = Mathf.Abs(viewer.z - target.z);
         int ring = Mathf.Max(dx, dz);
 
+        //return between 3 and 5 (5 is upper bound, 2^5)
         return 3;
         //0123 to 2334
         if (ring <= 1) return 3;

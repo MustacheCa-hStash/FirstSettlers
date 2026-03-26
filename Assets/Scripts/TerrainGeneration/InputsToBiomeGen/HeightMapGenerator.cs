@@ -8,8 +8,8 @@ public static class HeightMapGenerator
         float sampleScale,
         ChunkCoord chunkCoord)
     {
-        int width = chunkSize + 1;
-        int height = chunkSize + 1;
+        int width = chunkSize + 3;
+        int height = chunkSize + 3;
 
         float[,] finalHeightMap = new float[width, height];
         float[,] mountainMaskMap = new float[width, height];
@@ -26,8 +26,11 @@ public static class HeightMapGenerator
         {
             for (int z = 0; z < height; z++)
             {
-                float worldX = chunkCoord.x * chunkSize + x;
-                float worldZ = chunkCoord.z * chunkSize + z;
+                int localSampleX = x - 1;
+                int localSampleZ = z - 1;
+
+                float worldX = chunkCoord.x * chunkSize + localSampleX;
+                float worldZ = chunkCoord.z * chunkSize + localSampleZ;
 
                 float baseLandSampleX = worldX / (sampleScale * 1.6f);
                 float baseLandSampleZ = worldZ / (sampleScale * 1.6f);
