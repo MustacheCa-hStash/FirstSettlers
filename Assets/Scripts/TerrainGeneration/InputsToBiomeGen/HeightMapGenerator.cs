@@ -21,7 +21,6 @@ public static class HeightMapGenerator
         Vector2[] baseLandOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 20000, 2);
         Vector2[] mountainMaskOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 30000, 3);
         Vector2[] mountainTerrainOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 40000, 4);
-        //Vector2[] riverOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 50000, 2);
 
         for (int x = 0; x < width; x++)
         {

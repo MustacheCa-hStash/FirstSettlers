@@ -22,14 +22,29 @@ public class ChunkManager
     private Dictionary<ChunkCoord, ChunkRecord> chunkRecords = new();
     private Dictionary<ChunkCoord, ChunkRuntime> loadedChunks = new();
 
-    private HashSet<ChunkCoord> activeLastUpdate = new();
-    private HashSet<ChunkCoord> activeThisUpdate = new();
+    private HashSet<ChunkCoord> activeLastUpdate;
+    private HashSet<ChunkCoord> activeThisUpdate;
+    private List<ChunkCoord> orderedActiveCoords;
+    private ChunkCoord lastUpdateViewerCoord = new ChunkCoord(int.MinValue, int.MinValue);
 
     private TerrainRequestManager terrainRequestManager;
 
-    public ChunkManager(int viewDistance, int colliderDistance, int chunkSize, int seed, Transform viewer, Transform chunkParent, 
-        float sampleScale, float worldScale, int octaves, float persistence, float lacunarity, 
-        float erosionStrength, float meshHeightMultiplier, Material terrainMaterial, Material waterMaterial)
+    public ChunkManager(
+        int viewDistance,
+        int colliderDistance,
+        int chunkSize,
+        int seed,
+        Transform viewer,
+        Transform chunkParent,
+        float sampleScale,
+        float worldScale,
+        int octaves,
+        float persistence,
+        float lacunarity,
+        float erosionStrength,
+        float meshHeightMultiplier,
+        Material terrainMaterial,
+        Material waterMaterial)
     {
         this.viewDistance = viewDistance;
         this.colliderDistance = colliderDistance;
@@ -47,13 +62,18 @@ public class ChunkManager
         this.terrainMaterial = terrainMaterial;
         this.waterMaterial = waterMaterial;
 
+        int maxChunks = ComputeMaxActiveChunkCount(viewDistance);
+
+        activeLastUpdate = new HashSet<ChunkCoord>(maxChunks);
+        activeThisUpdate = new HashSet<ChunkCoord>(maxChunks);
+        orderedActiveCoords = new List<ChunkCoord>(maxChunks);
         terrainRequestManager = new TerrainRequestManager();
     }
 
     public ChunkCoord GetViewerChunkCoord()
     {
         int cx = Mathf.FloorToInt(viewer.position.x / (chunkSize * worldScale));
-        int cz = Mathf.FloorToInt(viewer.position.z  / (chunkSize * worldScale));
+        int cz = Mathf.FloorToInt(viewer.position.z / (chunkSize * worldScale));
         return new ChunkCoord(cx, cz);
     }
 
@@ -61,53 +81,50 @@ public class ChunkManager
     {
         ProcessCompletedRequests();
 
-        activeThisUpdate.Clear();
-
         ChunkCoord viewerCoord = GetViewerChunkCoord();
+
+        if (viewerCoord != lastUpdateViewerCoord)
+        {
+            RebuildActiveChunkSet(viewerCoord);
+            lastUpdateViewerCoord = viewerCoord;
+        }
+
+        UpdateVisibleChunkContent(viewerCoord);
+    }
+
+    private void RebuildActiveChunkSet(ChunkCoord viewerCoord)
+    {
+        activeThisUpdate.Clear();
+        orderedActiveCoords.Clear();
+
+        int sqrViewRadius = viewDistance * viewDistance;
 
         for (int x = -viewDistance; x <= viewDistance; x++)
         {
             for (int z = -viewDistance; z <= viewDistance; z++)
             {
                 int sqrDistance = x * x + z * z;
-                int sqrViewRadius = viewDistance * viewDistance;
-                if (sqrDistance > sqrViewRadius) continue;
+                if (sqrDistance > sqrViewRadius)
+                    continue;
 
                 ChunkCoord targetCoord = new ChunkCoord(viewerCoord.x + x, viewerCoord.z + z);
+
                 activeThisUpdate.Add(targetCoord);
-
-                ChunkRecord record = GetOrCreateChunkRecord(targetCoord);
-                ChunkRuntime runtime = GetOrCreateChunkRuntime(record);
-
-                int lod = ChunkRingLODPolicy.GetLOD(viewerCoord, targetCoord);
-
-                EnsureTerrainDataRequested(record);
-                EnsureLODMeshRequested(record, lod);
-                TryApplyLODMesh(record, runtime, lod);
-
-                //modify later to match LOD ring policy method implementation for custom setup
-                bool colliderDesired = sqrDistance <= colliderDistance * colliderDistance;
-                record.ColliderDesired = colliderDesired;
-
-                if (colliderDesired)
-                {
-                    EnsureColliderRequested(record);
-                    TryApplyCollider(record, runtime);
-                }
-                else
-                {
-                    if (runtime.HasCollider())
-                    {
-                        runtime.RemoveCollider();
-                        record.ClearColliderMesh();
-                    }
-                }
-
-                if (!runtime.IsVisible)
-                {
-                    runtime.SetVisible(true);
-                }
+                orderedActiveCoords.Add(targetCoord);
             }
+        }
+
+        SortOrderedActiveCoords(viewerCoord);
+
+        foreach (ChunkCoord targetCoord in orderedActiveCoords)
+        {
+            ChunkRecord record = GetOrCreateChunkRecord(targetCoord);
+            ChunkRuntime runtime = GetOrCreateChunkRuntime(record);
+
+            if (!runtime.IsVisible)
+                runtime.SetVisible(true);
+
+            EnsureTerrainDataRequested(record);
         }
 
         foreach (ChunkCoord coord in activeLastUpdate)
@@ -120,14 +137,56 @@ public class ChunkManager
                     loadedChunks.Remove(coord);
                 }
 
-                //if (chunkRecords.TryGetValue(coord, out ChunkRecord record))
-                    //record.ClearAllLODMeshes();
+                // if (chunkRecords.TryGetValue(coord, out ChunkRecord record))
+                //     record.ClearAllLODMeshes();
             }
         }
 
         var temp = activeLastUpdate;
         activeLastUpdate = activeThisUpdate;
         activeThisUpdate = temp;
+    }
+
+    private void UpdateVisibleChunkContent(ChunkCoord viewerCoord)
+    {
+        int sqrColliderRadius = colliderDistance * colliderDistance;
+
+        foreach (ChunkCoord coord in orderedActiveCoords)
+        {
+            if (!loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
+                continue;
+
+            if (!chunkRecords.TryGetValue(coord, out ChunkRecord record))
+                continue;
+
+            EnsureTerrainDataRequested(record);
+
+            int dx = coord.x - viewerCoord.x;
+            int dz = coord.z - viewerCoord.z;
+            int sqrDistance = dx * dx + dz * dz;
+
+            int lod = ChunkRingLODPolicy.GetLOD(viewerCoord, coord);
+
+            EnsureLODMeshRequested(record, lod);
+            TryApplyLODMesh(record, runtime, lod);
+
+            bool colliderDesired = sqrDistance <= sqrColliderRadius;
+            record.ColliderDesired = colliderDesired;
+
+            if (colliderDesired)
+            {
+                EnsureColliderRequested(record);
+                TryApplyCollider(record, runtime);
+            }
+            else if (runtime.HasCollider())
+            {
+                runtime.RemoveCollider();
+                record.ClearColliderMesh();
+            }
+
+            if (!runtime.IsVisible)
+                runtime.SetVisible(true);
+        }
     }
 
     private ChunkRecord GetOrCreateChunkRecord(ChunkCoord coord)
@@ -137,8 +196,10 @@ public class ChunkManager
             record = new ChunkRecord(coord);
             chunkRecords.Add(coord, record);
         }
+
         return record;
     }
+
     private ChunkRuntime GetOrCreateChunkRuntime(ChunkRecord record)
     {
         ChunkCoord coord = record.ChunkCoord;
@@ -148,6 +209,7 @@ public class ChunkManager
             runtime = new ChunkRuntime(record, chunkSize, worldScale, chunkParent, terrainMaterial, waterMaterial);
             loadedChunks.Add(coord, runtime);
         }
+
         return runtime;
     }
 
@@ -286,7 +348,13 @@ public class ChunkManager
             Mesh lakeMesh = meshResult.LakeMeshData.CreateMesh();
             Mesh riverMesh = meshResult.RiverMeshData.CreateMesh();
 
-            record.TryCompleteMeshRequest(meshResult.LOD, meshResult.RequestVersion, terrainMesh, lakeMesh, riverMesh);
+            record.TryCompleteMeshRequest(
+                meshResult.LOD,
+                meshResult.RequestVersion,
+                terrainMesh,
+                lakeMesh,
+                riverMesh
+            );
         }
 
         while (terrainRequestManager.TryDequeueColliderResult(out ColliderRequestResult colliderResult))
@@ -303,4 +371,55 @@ public class ChunkManager
         }
     }
 
+    private void SortOrderedActiveCoords(ChunkCoord viewerCoord)
+    {
+        Vector2 forward = new Vector2(viewer.forward.x, viewer.forward.z).normalized;
+
+        orderedActiveCoords.Sort((a, b) =>
+        {
+            int adx = a.x - viewerCoord.x;
+            int adz = a.z - viewerCoord.z;
+            int bdx = b.x - viewerCoord.x;
+            int bdz = b.z - viewerCoord.z;
+
+            int aRing = Mathf.Max(Mathf.Abs(adx), Mathf.Abs(adz));
+            int bRing = Mathf.Max(Mathf.Abs(bdx), Mathf.Abs(bdz));
+
+            int ringCompare = aRing.CompareTo(bRing);
+            if (ringCompare != 0)
+                return ringCompare;
+
+            int aSqrDist = adx * adx + adz * adz;
+            int bSqrDist = bdx * bdx + bdz * bdz;
+
+            float aDot = aSqrDist == 0 ? 2f : Vector2.Dot(forward, new Vector2(adx, adz).normalized);
+            float bDot = bSqrDist == 0 ? 2f : Vector2.Dot(forward, new Vector2(bdx, bdz).normalized);
+
+            int dotCompare = bDot.CompareTo(aDot);
+            if (dotCompare != 0)
+                return dotCompare;
+
+            return aSqrDist.CompareTo(bSqrDist);
+        });
+
+    }
+
+    private static int ComputeMaxActiveChunkCount(int viewDistance)
+    {
+        int count = 0;
+        int sqrViewRadius = viewDistance * viewDistance;
+
+        for (int x = -viewDistance; x <= viewDistance; x++)
+        {
+            for (int z = -viewDistance; z <= viewDistance; z++)
+            {
+                if (x * x + z * z <= sqrViewRadius)
+                {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
 }

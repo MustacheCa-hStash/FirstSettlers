@@ -5,8 +5,8 @@ public static class RiverGenerator
     private const float SiteCellSize = 1.8f;
     private const float SiteJitter = 0.85f;
 
-    private const float RiverHalfWidth = 0.005f;
-    private const float BankFalloffWidth = 0.01f;
+    private const float RiverHalfWidth = 0.015f;
+    private const float BankFalloffWidth = 0.017f;
 
     private const float WarpScale = 0.65f;
     private const float WarpStrength = 1.0f;

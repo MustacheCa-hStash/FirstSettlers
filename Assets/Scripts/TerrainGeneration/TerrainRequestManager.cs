@@ -143,8 +143,8 @@ public class TerrainRequestManager
 
             try
             {
-                // ⭐ fixed collider step, LOD of 2
-                const int colliderStep = 4;
+                // ⭐ fixed collider step, LOD of 3
+                const int colliderStep = 8;
 
                 MeshData colliderMeshData =
                     ColliderMeshGenerator.GenerateColliderMesh(
