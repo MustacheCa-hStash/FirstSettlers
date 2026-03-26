@@ -8,8 +8,8 @@ public static class HeightMapGenerator
         float sampleScale,
         ChunkCoord chunkCoord)
     {
-        int width = chunkSize + 3;
-        int height = chunkSize + 3;
+        int width = chunkSize + 1;
+        int height = chunkSize + 1;
 
         float[,] finalHeightMap = new float[width, height];
         float[,] mountainMaskMap = new float[width, height];
@@ -26,8 +26,8 @@ public static class HeightMapGenerator
         {
             for (int z = 0; z < height; z++)
             {
-                int localSampleX = x - 1;
-                int localSampleZ = z - 1;
+                int localSampleX = x;
+                int localSampleZ = z;
 
                 float worldX = chunkCoord.x * chunkSize + localSampleX;
                 float worldZ = chunkCoord.z * chunkSize + localSampleZ;
@@ -73,11 +73,12 @@ public static class HeightMapGenerator
                 finalHeightMap[x, z] = finalHeight;
                 mountainMaskMap[x, z] = mountainMask;
                 riverMaskMap[x, z] = carvedRiverMask;
+
             }
         }
 
         ComputeFinalGradients(finalHeightMap, out float[,] gradientXMap, out float[,] gradientZMap, out float[,] slopeMap);
-
+        
         return new HeightFieldResult(finalHeightMap, gradientXMap, gradientZMap, slopeMap, mountainMaskMap, riverMaskMap);
     }
 

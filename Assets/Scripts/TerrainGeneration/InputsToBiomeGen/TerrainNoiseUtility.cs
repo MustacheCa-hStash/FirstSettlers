@@ -9,8 +9,8 @@ public static class TerrainNoiseUtility
 
         for (int i = 0; i < octaves; i++)
         {
-            float offsetX = prng.Next(-100000, 100000);
-            float offsetZ = prng.Next(-100000, 100000);
+            float offsetX = prng.Next(-1000, 1000);
+            float offsetZ = prng.Next(-1000, 1000);
             octaveOffsets[i] = new Vector2(offsetX, offsetZ);
         }
 
