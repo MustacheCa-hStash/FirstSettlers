@@ -16,8 +16,6 @@ public static class MeshGenerator
         float textureTileSize = 2f;
 
         int paddedWidth = heightMap.GetLength(0);
-        int paddedHeight = heightMap.GetLength(1);
-
         int chunkSize = paddedWidth - 3;
 
         float topLeftX = chunkSize / -2f;
@@ -26,51 +24,141 @@ public static class MeshGenerator
         float chunkWorldCenterX = (chunkCoord.x * chunkSize + chunkSize * 0.5f) * worldScale;
         float chunkWorldCenterZ = (chunkCoord.z * chunkSize + chunkSize * 0.5f) * worldScale;
 
-        int verticesPerLine = chunkSize / stepIncrement + 1;
-
+        int verticesPerLine = chunkSize + 1;
         MeshData meshData = new MeshData(verticesPerLine, verticesPerLine);
-        int vertexIndex = 0;
 
-        for (int localZ = 0; localZ <= chunkSize; localZ += stepIncrement)
+        for (int z = 0; z <= chunkSize; z++)
         {
-            for (int localX = 0; localX <= chunkSize; localX += stepIncrement)
+            for (int x = 0; x <= chunkSize; x++)
             {
-                int paddedX = localX + 1;
-                int paddedZ = localZ + 1;
+                int paddedX = x + 1;
+                int paddedZ = z + 1;
 
-                float localWorldX = (topLeftX + localX) * worldScale;
-                float localWorldZ = (bottomLeftZ + localZ) * worldScale;
+                float localWorldX = (topLeftX + x) * worldScale;
+                float localWorldZ = (bottomLeftZ + z) * worldScale;
 
                 float worldX = chunkWorldCenterX + localWorldX;
                 float worldZ = chunkWorldCenterZ + localWorldZ;
 
-                float vertexHeight = heightMap[paddedX, paddedZ] * heightMultiplier * worldScale;
+                float h = heightMap[paddedX, paddedZ] * heightMultiplier * worldScale;
 
-                meshData.vertices[vertexIndex] = new Vector3(localWorldX, vertexHeight, localWorldZ);
-                meshData.uvs[vertexIndex] = new Vector2(worldX / textureTileSize, worldZ / textureTileSize);
+                int i = z * verticesPerLine + x;
 
-                // meshData.colors[vertexIndex] = BiomeClassifier.GenerateColorFromBiomeType(biomeMap[paddedX, paddedZ]);
-                // meshData.colors[vertexIndex] = BiomeClassifier.GenerateDebugColorFromRiverMask(riverMaskMap[paddedX, paddedZ]);
-                meshData.colors[vertexIndex] = SurfaceTypeClassifier.GenerateColor(
+                meshData.vertices[i] = new Vector3(localWorldX, h, localWorldZ);
+                meshData.uvs[i] = new Vector2(worldX / textureTileSize, worldZ / textureTileSize);
+
+                meshData.colors[i] = SurfaceTypeClassifier.GenerateColor(
                     surfaceTypeMap[paddedX, paddedZ],
                     waterStateMap[paddedX, paddedZ]);
 
-                meshData.normals[vertexIndex] = CalculateHeightMapNormal(heightMap, paddedX, paddedZ, heightMultiplier);
+                meshData.normals[i] = CalculateHeightMapNormal(heightMap, paddedX, paddedZ, heightMultiplier);
+            }
+        }
 
-                int xIndex = localX / stepIncrement;
-                int zIndex = localZ / stepIncrement;
+        int strip = Mathf.Max(1, stepIncrement);
+        int interiorMin = strip;
+        int interiorMax = chunkSize - strip;
 
-                if (xIndex < verticesPerLine - 1 && zIndex < verticesPerLine - 1)
-                {
-                    meshData.AddTriangle(vertexIndex, vertexIndex + verticesPerLine, vertexIndex + verticesPerLine + 1);
-                    meshData.AddTriangle(vertexIndex, vertexIndex + verticesPerLine + 1, vertexIndex + 1);
-                }
+        for (int z = interiorMin; z < interiorMax; z += stepIncrement)
+        {
+            for (int x = interiorMin; x < interiorMax; x += stepIncrement)
+            {
+                int a = Index(x, z, verticesPerLine);
+                int b = Index(x, z + stepIncrement, verticesPerLine);
+                int c = Index(x + stepIncrement, z + stepIncrement, verticesPerLine);
+                int d = Index(x + stepIncrement, z, verticesPerLine);
 
-                vertexIndex++;
+                meshData.AddTriangle(a, b, c);
+                meshData.AddTriangle(a, c, d);
+            }
+        }
+
+        for (int x0 = 0; x0 < chunkSize; x0 += stepIncrement)
+        {
+            int x1 = Mathf.Min(x0 + stepIncrement, chunkSize);
+
+            int anchor = Index(x0, 0, verticesPerLine);
+
+            int prev = Index(x0 + 1, 0, verticesPerLine);
+            for (int x = x0 + 2; x <= x1; x++)
+            {
+                int next = Index(x, 0, verticesPerLine);
+                meshData.AddTriangle(anchor, next, prev);
+                prev = next;
+            }
+
+            int innerRight = Index(x1, strip, verticesPerLine);
+            int innerLeft = Index(x0, strip, verticesPerLine);
+
+            meshData.AddTriangle(anchor, innerRight, prev);
+            meshData.AddTriangle(anchor, innerLeft, innerRight);
+        }
+
+        for (int x0 = 0; x0 < chunkSize; x0 += stepIncrement)
+        {
+            int x1 = Mathf.Min(x0 + stepIncrement, chunkSize);
+
+            int anchor = Index(x0, chunkSize - strip, verticesPerLine);
+
+            int prev = Index(x0, chunkSize, verticesPerLine);
+            for (int x = x0 + 1; x <= x1; x++)
+            {
+                int next = Index(x, chunkSize, verticesPerLine);
+                meshData.AddTriangle(anchor, prev, next);
+                prev = next;
+            }
+
+            int innerRight = Index(x1, chunkSize - strip, verticesPerLine);
+            meshData.AddTriangle(anchor, prev, innerRight);
+        }
+
+        for (int z0 = strip; z0 < chunkSize - strip; z0 += stepIncrement)
+        {
+            int z1 = Mathf.Min(z0 + stepIncrement, chunkSize - strip);
+
+            int anchor = Index(0, z0, verticesPerLine);
+
+            int prev = Index(0, z0 + 1, verticesPerLine);
+            for (int z = z0 + 2; z <= z1; z++)
+            {
+                int next = Index(0, z, verticesPerLine);
+                meshData.AddTriangle(anchor, prev, next);
+                prev = next;
+            }
+
+            int innerBottom = Index(strip, z1, verticesPerLine);
+            int innerTop = Index(strip, z0, verticesPerLine);
+
+            meshData.AddTriangle(anchor, prev, innerBottom);
+            meshData.AddTriangle(anchor, innerBottom, innerTop);
+        }
+
+        for (int z0 = strip; z0 < chunkSize - strip; z0 += stepIncrement)
+        {
+            int z1 = Mathf.Min(z0 + stepIncrement, chunkSize - strip);
+
+            int anchor = Index(chunkSize - strip, z0, verticesPerLine);
+
+            int prev = Index(chunkSize - strip, z1, verticesPerLine);
+
+            int first = Index(chunkSize, z1, verticesPerLine);
+            meshData.AddTriangle(anchor, prev, first);
+            prev = first;
+
+            for (int z = z1 - 1; z >= z0; z--)
+            {
+                int next = Index(chunkSize, z, verticesPerLine);
+                meshData.AddTriangle(anchor, prev, next);
+                prev = next;
             }
         }
 
         return meshData;
+    }
+
+    private static int Index(int x, int z, int size)
+    {
+        return z * size + x;
     }
 
     private static Vector3 CalculateHeightMapNormal(float[,] heightMap, int x, int z, float heightMultiplier)
@@ -83,8 +171,7 @@ public static class MeshGenerator
         float dx = (right - left) * heightMultiplier;
         float dz = (up - down) * heightMultiplier;
 
-        Vector3 normal = new Vector3(-dx, 2f, -dz).normalized;
-        return normal;
+        return new Vector3(-dx, 2f, -dz).normalized;
     }
 }
 

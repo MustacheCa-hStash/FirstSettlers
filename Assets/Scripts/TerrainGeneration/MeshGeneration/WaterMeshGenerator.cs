@@ -1,10 +1,10 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 public static class LakeMeshGenerator
 {
     private const float LakeWaterLevel = TerrainWaterSettings.WaterLevel;
     private const float WaterSurfaceOffset = 0.02f;
-    private const float RiverExclusionThreshold = 0.40f;
 
     public static WaterMeshData GenerateLakeMesh(
         float[,] heightMap,
@@ -15,36 +15,26 @@ public static class LakeMeshGenerator
         float worldScale)
     {
         int paddedWidth = heightMap.GetLength(0);
-        int paddedHeight = heightMap.GetLength(1);
-
         int chunkSize = paddedWidth - 3;
 
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;
-
-        int waterCellCount = CountRenderableLakeCells(waterStateMap, riverMaskMap, chunkSize, stepIncrement);
-
-        if (waterCellCount == 0)
-            return new WaterMeshData(0);
-
-        WaterMeshData meshData = new WaterMeshData(waterCellCount);
-
         float waterY = LakeWaterLevel * heightMultiplier * worldScale + WaterSurfaceOffset;
 
-        for (int y = 1; y <= chunkSize - stepIncrement + 1; y += stepIncrement)
+        bool[,] lakeCellMask = BuildLakeCellMask(waterStateMap, chunkSize);
+        int renderableCellCount = CountRenderableBlocks(lakeCellMask, chunkSize, stepIncrement);
+
+        if (renderableCellCount == 0)
+            return new WaterMeshData(0);
+
+        WaterMeshData meshData = new WaterMeshData(renderableCellCount);
+
+        for (int localY = 0; localY <= chunkSize - stepIncrement; localY += stepIncrement)
         {
-            for (int x = 1; x <= chunkSize - stepIncrement + 1; x += stepIncrement)
+            for (int localX = 0; localX <= chunkSize - stepIncrement; localX += stepIncrement)
             {
-                if (!IsRenderableLakeCell(waterStateMap, riverMaskMap, x, y, stepIncrement))
+                if (!BlockContainsRenderableRect(lakeCellMask, localX, localY, stepIncrement, stepIncrement, chunkSize))
                     continue;
-
-                int x1 = x + stepIncrement;
-                int y1 = y + stepIncrement;
-
-                int localX = x - 1;
-                int localY = y - 1;
-                int localX1 = x1 - 1;
-                int localY1 = y1 - 1;
 
                 Vector3 a = new Vector3(
                     (topLeftX + localX) * worldScale,
@@ -52,45 +42,73 @@ public static class LakeMeshGenerator
                     (bottomLeftZ + localY) * worldScale);
 
                 Vector3 b = new Vector3(
-                    (topLeftX + localX1) * worldScale,
+                    (topLeftX + localX + stepIncrement) * worldScale,
                     waterY,
                     (bottomLeftZ + localY) * worldScale);
 
                 Vector3 c = new Vector3(
                     (topLeftX + localX) * worldScale,
                     waterY,
-                    (bottomLeftZ + localY1) * worldScale);
+                    (bottomLeftZ + localY + stepIncrement) * worldScale);
 
                 Vector3 d = new Vector3(
-                    (topLeftX + localX1) * worldScale,
+                    (topLeftX + localX + stepIncrement) * worldScale,
                     waterY,
-                    (bottomLeftZ + localY1) * worldScale);
+                    (bottomLeftZ + localY + stepIncrement) * worldScale);
 
                 Vector2 uvA = new Vector2(localX / (float)chunkSize, localY / (float)chunkSize);
-                Vector2 uvB = new Vector2(localX1 / (float)chunkSize, localY / (float)chunkSize);
-                Vector2 uvC = new Vector2(localX / (float)chunkSize, localY1 / (float)chunkSize);
-                Vector2 uvD = new Vector2(localX1 / (float)chunkSize, localY1 / (float)chunkSize);
+                Vector2 uvB = new Vector2((localX + stepIncrement) / (float)chunkSize, localY / (float)chunkSize);
+                Vector2 uvC = new Vector2(localX / (float)chunkSize, (localY + stepIncrement) / (float)chunkSize);
+                Vector2 uvD = new Vector2((localX + stepIncrement) / (float)chunkSize, (localY + stepIncrement) / (float)chunkSize);
 
-                meshData.AddQuad(a, b, c, d, uvA, uvB, uvC, uvD);
+                meshData.AddCell(a, b, c, d, uvA, uvB, uvC, uvD);
             }
         }
 
         return meshData;
     }
 
-    private static int CountRenderableLakeCells(
-        WaterState[,] waterStateMap,
-        float[,] riverMaskMap,
-        int chunkSize,
-        int stepIncrement)
+    private static bool[,] BuildLakeCellMask(WaterState[,] waterStateMap, int chunkSize)
+    {
+        bool[,] lakeCellMask = new bool[chunkSize, chunkSize];
+
+        for (int localY = 0; localY < chunkSize; localY++)
+        {
+            for (int localX = 0; localX < chunkSize; localX++)
+            {
+                int x = localX + 1;
+                int y = localY + 1;
+                int x1 = x + 1;
+                int y1 = y + 1;
+
+                int waterCornerCount = 0;
+
+                if (IsRenderableWater(waterStateMap[x, y])) waterCornerCount++;
+                if (IsRenderableWater(waterStateMap[x1, y])) waterCornerCount++;
+                if (IsRenderableWater(waterStateMap[x, y1])) waterCornerCount++;
+                if (IsRenderableWater(waterStateMap[x1, y1])) waterCornerCount++;
+
+                lakeCellMask[localX, localY] = waterCornerCount >= 1;
+            }
+        }
+
+        return lakeCellMask;
+    }
+
+    private static bool IsRenderableWater(WaterState waterState)
+    {
+        return waterState == WaterState.Shallow || waterState == WaterState.Deep;
+    }
+
+    private static int CountRenderableBlocks(bool[,] cellMask, int chunkSize, int stepIncrement)
     {
         int count = 0;
 
-        for (int y = 1; y <= chunkSize - stepIncrement + 1; y += stepIncrement)
+        for (int localY = 0; localY <= chunkSize - stepIncrement; localY += stepIncrement)
         {
-            for (int x = 1; x <= chunkSize - stepIncrement + 1; x += stepIncrement)
+            for (int localX = 0; localX <= chunkSize - stepIncrement; localX += stepIncrement)
             {
-                if (IsRenderableLakeCell(waterStateMap, riverMaskMap, x, y, stepIncrement))
+                if (BlockContainsRenderableRect(cellMask, localX, localY, stepIncrement, stepIncrement, chunkSize))
                     count++;
             }
         }
@@ -98,32 +116,21 @@ public static class LakeMeshGenerator
         return count;
     }
 
-    private static bool IsRenderableLakeCell(
-        WaterState[,] waterStateMap,
-        float[,] riverMaskMap,
-        int x,
-        int y,
-        int stepIncrement)
+    private static bool BlockContainsRenderableRect(bool[,] cellMask, int startX, int startY, int width, int height, int chunkSize)
     {
-        int x1 = x + stepIncrement;
-        int y1 = y + stepIncrement;
+        int maxX = Mathf.Min(startX + width, chunkSize);
+        int maxY = Mathf.Min(startY + height, chunkSize);
 
-        if (x1 >= waterStateMap.GetLength(0) || y1 >= waterStateMap.GetLength(1))
-            return false;
+        for (int y = startY; y < maxY; y++)
+        {
+            for (int x = startX; x < maxX; x++)
+            {
+                if (cellMask[x, y])
+                    return true;
+            }
+        }
 
-        int waterCornerCount = 0;
-
-        if (IsRenderableWater(waterStateMap[x, y])) waterCornerCount++;
-        if (IsRenderableWater(waterStateMap[x1, y])) waterCornerCount++;
-        if (IsRenderableWater(waterStateMap[x, y1])) waterCornerCount++;
-        if (IsRenderableWater(waterStateMap[x1, y1])) waterCornerCount++;
-
-        return waterCornerCount >= 1;
-    }
-
-    private static bool IsRenderableWater(WaterState waterState)
-    {
-        return waterState == WaterState.Shallow || waterState == WaterState.Deep;
+        return false;
     }
 }
 
@@ -141,135 +148,234 @@ public static class RiverMeshGenerator
         float worldScale)
     {
         int paddedWidth = heightMap.GetLength(0);
-        int paddedHeight = heightMap.GetLength(1);
-
         int chunkSize = paddedWidth - 3;
 
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;
 
-        int riverCellCount = CountRenderableRiverCells(waterStateMap, riverMaskMap, chunkSize, stepIncrement);
+        bool[,] riverCellMask = BuildRiverCellMask(riverMaskMap, chunkSize);
 
-        if (riverCellCount == 0)
-            return new WaterMeshData(0);
+        int strip = Mathf.Max(1, stepIncrement);
+        int interiorMin = strip;
+        int interiorMax = chunkSize - strip;
 
-        WaterMeshData meshData = new WaterMeshData(riverCellCount);
+        WaterMeshData meshData = new WaterMeshData(0);
 
-        for (int y = 1; y <= chunkSize - stepIncrement + 1; y += stepIncrement)
+        Vector3[,] positions = new Vector3[chunkSize + 1, chunkSize + 1];
+        Vector2[,] uvs = new Vector2[chunkSize + 1, chunkSize + 1];
+
+        for (int z = 0; z <= chunkSize; z++)
         {
-            for (int x = 1; x <= chunkSize - stepIncrement + 1; x += stepIncrement)
+            for (int x = 0; x <= chunkSize; x++)
             {
-                if (!IsRenderableRiverCell(waterStateMap, riverMaskMap, x, y, stepIncrement))
-                    continue;
+                float h = heightMap[x + 1, z + 1] * heightMultiplier * worldScale + WaterSurfaceOffset;
 
-                int x1 = x + stepIncrement;
-                int y1 = y + stepIncrement;
+                positions[x, z] = new Vector3(
+                    (topLeftX + x) * worldScale,
+                    h,
+                    (bottomLeftZ + z) * worldScale);
 
-                int localX = x - 1;
-                int localY = y - 1;
-                int localX1 = x1 - 1;
-                int localY1 = y1 - 1;
-
-                float heightA = heightMap[x, y] * heightMultiplier * worldScale + WaterSurfaceOffset;
-                float heightB = heightMap[x1, y] * heightMultiplier * worldScale + WaterSurfaceOffset;
-                float heightC = heightMap[x, y1] * heightMultiplier * worldScale + WaterSurfaceOffset;
-                float heightD = heightMap[x1, y1] * heightMultiplier * worldScale + WaterSurfaceOffset;
-
-                Vector3 a = new Vector3(
-                    (topLeftX + localX) * worldScale,
-                    heightA,
-                    (bottomLeftZ + localY) * worldScale);
-
-                Vector3 b = new Vector3(
-                    (topLeftX + localX1) * worldScale,
-                    heightB,
-                    (bottomLeftZ + localY) * worldScale);
-
-                Vector3 c = new Vector3(
-                    (topLeftX + localX) * worldScale,
-                    heightC,
-                    (bottomLeftZ + localY1) * worldScale);
-
-                Vector3 d = new Vector3(
-                    (topLeftX + localX1) * worldScale,
-                    heightD,
-                    (bottomLeftZ + localY1) * worldScale);
-
-                Vector2 uvA = new Vector2(localX / (float)chunkSize, localY / (float)chunkSize);
-                Vector2 uvB = new Vector2(localX1 / (float)chunkSize, localY / (float)chunkSize);
-                Vector2 uvC = new Vector2(localX / (float)chunkSize, localY1 / (float)chunkSize);
-                Vector2 uvD = new Vector2(localX1 / (float)chunkSize, localY1 / (float)chunkSize);
-
-                meshData.AddQuad(a, b, c, d, uvA, uvB, uvC, uvD);
+                uvs[x, z] = new Vector2(
+                    x / (float)chunkSize,
+                    z / (float)chunkSize);
             }
         }
+
+        for (int z = interiorMin; z < interiorMax; z += stepIncrement)
+        {
+            for (int x = interiorMin; x < interiorMax; x += stepIncrement)
+            {
+                int spanX = Mathf.Min(stepIncrement, interiorMax - x);
+                int spanZ = Mathf.Min(stepIncrement, interiorMax - z);
+
+                if (!BlockContainsRenderableRect(riverCellMask, x, z, spanX, spanZ, chunkSize))
+                    continue;
+
+                AddTri(meshData, positions, uvs, x, z, x, z + spanZ, x + spanX, z + spanZ);
+                AddTri(meshData, positions, uvs, x, z, x + spanX, z + spanZ, x + spanX, z);
+            }
+        }
+
+        // Top stitched border
+        for (int x0 = 0; x0 < chunkSize; x0 += stepIncrement)
+        {
+            int x1 = Mathf.Min(x0 + stepIncrement, chunkSize);
+
+            if (!BlockContainsRenderableRect(riverCellMask, x0, 0, x1 - x0, strip, chunkSize))
+                continue;
+
+            int anchorX = x0;
+            int anchorZ = 0;
+
+            int prevX = x0 + 1;
+            int prevZ = 0;
+
+            for (int x = x0 + 2; x <= x1; x++)
+            {
+                AddTri(meshData, positions, uvs, anchorX, anchorZ, x, 0, prevX, prevZ);
+                prevX = x;
+            }
+
+            AddTri(meshData, positions, uvs, anchorX, anchorZ, x1, strip, prevX, prevZ);
+            AddTri(meshData, positions, uvs, anchorX, anchorZ, x0, strip, x1, strip);
+        }
+
+        // Bottom stitched border
+        for (int x0 = 0; x0 < chunkSize; x0 += stepIncrement)
+        {
+            int x1 = Mathf.Min(x0 + stepIncrement, chunkSize);
+
+            if (!BlockContainsRenderableRect(riverCellMask, x0, chunkSize - strip, x1 - x0, strip, chunkSize))
+                continue;
+
+            int anchorX = x0;
+            int anchorZ = chunkSize - strip;
+
+            int prevX = x0;
+            int prevZ = chunkSize;
+
+            for (int x = x0 + 1; x <= x1; x++)
+            {
+                AddTri(meshData, positions, uvs, anchorX, anchorZ, prevX, prevZ, x, chunkSize);
+                prevX = x;
+            }
+
+            AddTri(meshData, positions, uvs, anchorX, anchorZ, prevX, prevZ, x1, chunkSize - strip);
+        }
+
+        // Left stitched border
+        for (int z0 = strip; z0 < chunkSize - strip; z0 += stepIncrement)
+        {
+            int z1 = Mathf.Min(z0 + stepIncrement, chunkSize - strip);
+
+            if (!BlockContainsRenderableRect(riverCellMask, 0, z0, strip, z1 - z0, chunkSize))
+                continue;
+
+            int anchorX = 0;
+            int anchorZ = z0;
+
+            int prevX = 0;
+            int prevZ = z0 + 1;
+
+            for (int z = z0 + 2; z <= z1; z++)
+            {
+                AddTri(meshData, positions, uvs, anchorX, anchorZ, prevX, prevZ, 0, z);
+                prevZ = z;
+            }
+
+            AddTri(meshData, positions, uvs, anchorX, anchorZ, 0, z1, strip, z1);
+            AddTri(meshData, positions, uvs, anchorX, anchorZ, strip, z1, strip, z0);
+        }
+
+        // Right stitched border
+        for (int z0 = strip; z0 < chunkSize - strip; z0 += stepIncrement)
+        {
+            int z1 = Mathf.Min(z0 + stepIncrement, chunkSize - strip);
+
+            if (!BlockContainsRenderableRect(riverCellMask, chunkSize - strip, z0, strip, z1 - z0, chunkSize))
+                continue;
+
+            int anchorX = chunkSize - strip;
+            int anchorZ = z0;
+
+            int prevX = chunkSize - strip;
+            int prevZ = z1;
+
+            AddTri(meshData, positions, uvs, anchorX, anchorZ, prevX, prevZ, chunkSize, z1);
+            prevX = chunkSize;
+            prevZ = z1;
+
+            for (int z = z1 - 1; z >= z0; z--)
+            {
+                AddTri(meshData, positions, uvs, anchorX, anchorZ, prevX, prevZ, chunkSize, z);
+                prevZ = z;
+            }
+        }
+
+        if (meshData.VertexCount == 0)
+            return new WaterMeshData(0);
 
         return meshData;
     }
 
-    private static int CountRenderableRiverCells(
-        WaterState[,] waterStateMap,
-        float[,] riverMaskMap,
-        int chunkSize,
-        int stepIncrement)
+    private static void AddTri(
+        WaterMeshData meshData,
+        Vector3[,] positions,
+        Vector2[,] uvs,
+        int ax, int az,
+        int bx, int bz,
+        int cx, int cz)
     {
-        int count = 0;
+        meshData.AddTriangle(
+            positions[ax, az], positions[bx, bz], positions[cx, cz],
+            uvs[ax, az], uvs[bx, bz], uvs[cx, cz]);
+    }
 
-        for (int y = 1; y <= chunkSize - stepIncrement + 1; y += stepIncrement)
+    private static bool[,] BuildRiverCellMask(float[,] riverMaskMap, int chunkSize)
+    {
+        bool[,] riverCellMask = new bool[chunkSize, chunkSize];
+
+        for (int localY = 0; localY < chunkSize; localY++)
         {
-            for (int x = 1; x <= chunkSize - stepIncrement + 1; x += stepIncrement)
+            for (int localX = 0; localX < chunkSize; localX++)
             {
-                if (IsRenderableRiverCell(waterStateMap, riverMaskMap, x, y, stepIncrement))
-                    count++;
+                int x = localX + 1;
+                int y = localY + 1;
+
+                int count = 0;
+                if (riverMaskMap[x, y] >= RiverInclusionThreshold) count++;
+                if (riverMaskMap[x + 1, y] >= RiverInclusionThreshold) count++;
+                if (riverMaskMap[x, y + 1] >= RiverInclusionThreshold) count++;
+                if (riverMaskMap[x + 1, y + 1] >= RiverInclusionThreshold) count++;
+
+                riverCellMask[localX, localY] = count >= 1;
             }
         }
 
-        return count;
+        return riverCellMask;
     }
 
-    private static bool IsRenderableRiverCell(
-        WaterState[,] waterStateMap,
-        float[,] riverMaskMap,
-        int x,
-        int y,
-        int stepIncrement)
+    private static bool BlockContainsRenderableRect(bool[,] cellMask, int startX, int startY, int width, int height, int chunkSize)
     {
-        int x1 = x + stepIncrement;
-        int y1 = y + stepIncrement;
+        int maxX = Mathf.Min(startX + width, chunkSize);
+        int maxY = Mathf.Min(startY + height, chunkSize);
 
-        if (x1 >= waterStateMap.GetLength(0) || y1 >= waterStateMap.GetLength(1))
-            return false;
+        for (int y = startY; y < maxY; y++)
+        {
+            for (int x = startX; x < maxX; x++)
+            {
+                if (cellMask[x, y])
+                    return true;
+            }
+        }
 
-        int riverCornerCount = 0;
-
-        if (riverMaskMap[x, y] >= RiverInclusionThreshold) riverCornerCount++;
-        if (riverMaskMap[x1, y] >= RiverInclusionThreshold) riverCornerCount++;
-        if (riverMaskMap[x, y1] >= RiverInclusionThreshold) riverCornerCount++;
-        if (riverMaskMap[x1, y1] >= RiverInclusionThreshold) riverCornerCount++;
-
-        return riverCornerCount >= 1;
+        return false;
     }
 }
 
 public class WaterMeshData
 {
-    public Vector3[] vertices;
-    public Vector2[] uvs;
-    public int[] triangles;
-    public Color[] colors;
+    private readonly List<Vector3> vertices;
+    private readonly List<Vector2> uvs;
+    private readonly List<int> triangles;
+    private readonly List<Color> colors;
 
-    private int vertexIndex;
-    private int triangleIndex;
+    private static readonly Color WaterColor = new Color(0.05f, 0.25f, 0.60f, 1f);
 
-    public WaterMeshData(int quadCount)
+    public int VertexCount => vertices.Count;
+
+    public WaterMeshData(int initialCellCount)
     {
-        vertices = new Vector3[quadCount * 4];
-        uvs = new Vector2[quadCount * 4];
-        triangles = new int[quadCount * 6];
-        colors = new Color[quadCount * 4];
+        int initialVertexCapacity = Mathf.Max(4, initialCellCount * 4);
+        int initialTriangleCapacity = Mathf.Max(6, initialCellCount * 6);
+
+        vertices = new List<Vector3>(initialVertexCapacity);
+        uvs = new List<Vector2>(initialVertexCapacity);
+        triangles = new List<int>(initialTriangleCapacity);
+        colors = new List<Color>(initialVertexCapacity);
     }
 
-    public void AddQuad(
+    public void AddCell(
         Vector3 a,
         Vector3 b,
         Vector3 c,
@@ -279,41 +385,66 @@ public class WaterMeshData
         Vector2 uvC,
         Vector2 uvD)
     {
-        vertices[vertexIndex] = a;
-        vertices[vertexIndex + 1] = b;
-        vertices[vertexIndex + 2] = c;
-        vertices[vertexIndex + 3] = d;
+        int baseIndex = vertices.Count;
 
-        uvs[vertexIndex] = uvA;
-        uvs[vertexIndex + 1] = uvB;
-        uvs[vertexIndex + 2] = uvC;
-        uvs[vertexIndex + 3] = uvD;
+        vertices.Add(a);
+        vertices.Add(b);
+        vertices.Add(c);
+        vertices.Add(d);
 
-        Color waterColor = new Color(0.05f, 0.25f, 0.60f, 1f);
-        colors[vertexIndex] = waterColor;
-        colors[vertexIndex + 1] = waterColor;
-        colors[vertexIndex + 2] = waterColor;
-        colors[vertexIndex + 3] = waterColor;
+        uvs.Add(uvA);
+        uvs.Add(uvB);
+        uvs.Add(uvC);
+        uvs.Add(uvD);
 
-        triangles[triangleIndex] = vertexIndex;
-        triangles[triangleIndex + 1] = vertexIndex + 2;
-        triangles[triangleIndex + 2] = vertexIndex + 3;
+        colors.Add(WaterColor);
+        colors.Add(WaterColor);
+        colors.Add(WaterColor);
+        colors.Add(WaterColor);
 
-        triangles[triangleIndex + 3] = vertexIndex;
-        triangles[triangleIndex + 4] = vertexIndex + 3;
-        triangles[triangleIndex + 5] = vertexIndex + 1;
+        triangles.Add(baseIndex);
+        triangles.Add(baseIndex + 2);
+        triangles.Add(baseIndex + 1);
 
-        vertexIndex += 4;
-        triangleIndex += 6;
+        triangles.Add(baseIndex + 1);
+        triangles.Add(baseIndex + 2);
+        triangles.Add(baseIndex + 3);
+    }
+
+    public void AddTriangle(
+        Vector3 a,
+        Vector3 b,
+        Vector3 c,
+        Vector2 uvA,
+        Vector2 uvB,
+        Vector2 uvC)
+    {
+        int baseIndex = vertices.Count;
+
+        vertices.Add(a);
+        vertices.Add(b);
+        vertices.Add(c);
+
+        uvs.Add(uvA);
+        uvs.Add(uvB);
+        uvs.Add(uvC);
+
+        colors.Add(WaterColor);
+        colors.Add(WaterColor);
+        colors.Add(WaterColor);
+
+        triangles.Add(baseIndex);
+        triangles.Add(baseIndex + 1);
+        triangles.Add(baseIndex + 2);
     }
 
     public Mesh CreateMesh()
     {
         Mesh mesh = new Mesh();
-        mesh.vertices = vertices;
-        mesh.uv = uvs;
-        mesh.triangles = triangles;
-        mesh.colors = colors;
+        mesh.vertices = vertices.ToArray();
+        mesh.uv = uvs.ToArray();
+        mesh.triangles = triangles.ToArray();
+        mesh.colors = colors.ToArray();
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
         return mesh;
