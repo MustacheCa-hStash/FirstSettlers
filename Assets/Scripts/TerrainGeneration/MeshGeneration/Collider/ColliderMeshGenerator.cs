@@ -8,28 +8,36 @@ public static class ColliderMeshGenerator
         int stepIncrement,
         float worldScale)
     {
-        int width = heightMap.GetLength(0);
-        int height = heightMap.GetLength(1);
+        int paddedWidth = heightMap.GetLength(0);
+        int paddedHeight = heightMap.GetLength(1);
 
-        float topLeftX = (width - 1) / -2f;
-        float bottomLeftZ = (height - 1) / -2f;
+        int chunkSize = paddedWidth - 3;
 
-        int verticesPerLine = (width - 1) / stepIncrement + 1;
+        float topLeftX = chunkSize / -2f;
+        float bottomLeftZ = chunkSize / -2f;
+
+        int verticesPerLine = chunkSize / stepIncrement + 1;
         MeshData meshData = new MeshData(verticesPerLine, verticesPerLine);
 
         int vertexIndex = 0;
 
-        for (int y = 0; y < height; y += stepIncrement)
+        for (int localZ = 0; localZ <= chunkSize; localZ += stepIncrement)
         {
-            for (int x = 0; x < width; x += stepIncrement)
+            for (int localX = 0; localX <= chunkSize; localX += stepIncrement)
             {
+                int paddedX = localX + 1;
+                int paddedZ = localZ + 1;
+
                 meshData.vertices[vertexIndex] = new Vector3(
-                    (topLeftX + x) * worldScale,
-                    heightMap[x, y] * heightMultiplier * worldScale,
-                    (bottomLeftZ + y) * worldScale
+                    (topLeftX + localX) * worldScale,
+                    heightMap[paddedX, paddedZ] * heightMultiplier * worldScale,
+                    (bottomLeftZ + localZ) * worldScale
                 );
 
-                if (x < width - 1 && y < height - 1)
+                int xIndex = localX / stepIncrement;
+                int zIndex = localZ / stepIncrement;
+
+                if (xIndex < verticesPerLine - 1 && zIndex < verticesPerLine - 1)
                 {
                     meshData.AddTriangle(
                         vertexIndex,

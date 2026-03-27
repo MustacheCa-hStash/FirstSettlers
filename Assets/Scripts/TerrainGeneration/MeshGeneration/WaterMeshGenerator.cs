@@ -14,13 +14,15 @@ public static class LakeMeshGenerator
         int stepIncrement,
         float worldScale)
     {
-        int width = heightMap.GetLength(0);
-        int height = heightMap.GetLength(1);
+        int paddedWidth = heightMap.GetLength(0);
+        int paddedHeight = heightMap.GetLength(1);
 
-        float topLeftX = (width - 1) / -2f;
-        float bottomLeftZ = (height - 1) / -2f;
+        int chunkSize = paddedWidth - 3;
 
-        int waterCellCount = CountRenderableLakeCells(waterStateMap, riverMaskMap, stepIncrement);
+        float topLeftX = chunkSize / -2f;
+        float bottomLeftZ = chunkSize / -2f;
+
+        int waterCellCount = CountRenderableLakeCells(waterStateMap, riverMaskMap, chunkSize, stepIncrement);
 
         if (waterCellCount == 0)
             return new WaterMeshData(0);
@@ -29,37 +31,45 @@ public static class LakeMeshGenerator
 
         float waterY = LakeWaterLevel * heightMultiplier * worldScale + WaterSurfaceOffset;
 
-        for (int y = 0; y < height - 1; y += stepIncrement)
+        for (int y = 1; y <= chunkSize - stepIncrement + 1; y += stepIncrement)
         {
-            for (int x = 0; x < width - 1; x += stepIncrement)
+            for (int x = 1; x <= chunkSize - stepIncrement + 1; x += stepIncrement)
             {
                 if (!IsRenderableLakeCell(waterStateMap, riverMaskMap, x, y, stepIncrement))
                     continue;
 
+                int x1 = x + stepIncrement;
+                int y1 = y + stepIncrement;
+
+                int localX = x - 1;
+                int localY = y - 1;
+                int localX1 = x1 - 1;
+                int localY1 = y1 - 1;
+
                 Vector3 a = new Vector3(
-                    (topLeftX + x) * worldScale,
+                    (topLeftX + localX) * worldScale,
                     waterY,
-                    (bottomLeftZ + y) * worldScale);
+                    (bottomLeftZ + localY) * worldScale);
 
                 Vector3 b = new Vector3(
-                    (topLeftX + x + stepIncrement) * worldScale,
+                    (topLeftX + localX1) * worldScale,
                     waterY,
-                    (bottomLeftZ + y) * worldScale);
+                    (bottomLeftZ + localY) * worldScale);
 
                 Vector3 c = new Vector3(
-                    (topLeftX + x) * worldScale,
+                    (topLeftX + localX) * worldScale,
                     waterY,
-                    (bottomLeftZ + y + stepIncrement) * worldScale);
+                    (bottomLeftZ + localY1) * worldScale);
 
                 Vector3 d = new Vector3(
-                    (topLeftX + x + stepIncrement) * worldScale,
+                    (topLeftX + localX1) * worldScale,
                     waterY,
-                    (bottomLeftZ + y + stepIncrement) * worldScale);
+                    (bottomLeftZ + localY1) * worldScale);
 
-                Vector2 uvA = new Vector2(x / (float)(width - 1), y / (float)(height - 1));
-                Vector2 uvB = new Vector2((x + stepIncrement) / (float)(width - 1), y / (float)(height - 1));
-                Vector2 uvC = new Vector2(x / (float)(width - 1), (y + stepIncrement) / (float)(height - 1));
-                Vector2 uvD = new Vector2((x + stepIncrement) / (float)(width - 1), (y + stepIncrement) / (float)(height - 1));
+                Vector2 uvA = new Vector2(localX / (float)chunkSize, localY / (float)chunkSize);
+                Vector2 uvB = new Vector2(localX1 / (float)chunkSize, localY / (float)chunkSize);
+                Vector2 uvC = new Vector2(localX / (float)chunkSize, localY1 / (float)chunkSize);
+                Vector2 uvD = new Vector2(localX1 / (float)chunkSize, localY1 / (float)chunkSize);
 
                 meshData.AddQuad(a, b, c, d, uvA, uvB, uvC, uvD);
             }
@@ -71,16 +81,14 @@ public static class LakeMeshGenerator
     private static int CountRenderableLakeCells(
         WaterState[,] waterStateMap,
         float[,] riverMaskMap,
+        int chunkSize,
         int stepIncrement)
     {
-        int width = waterStateMap.GetLength(0);
-        int height = waterStateMap.GetLength(1);
-
         int count = 0;
 
-        for (int y = 0; y < height - 1; y += stepIncrement)
+        for (int y = 1; y <= chunkSize - stepIncrement + 1; y += stepIncrement)
         {
-            for (int x = 0; x < width - 1; x += stepIncrement)
+            for (int x = 1; x <= chunkSize - stepIncrement + 1; x += stepIncrement)
             {
                 if (IsRenderableLakeCell(waterStateMap, riverMaskMap, x, y, stepIncrement))
                     count++;
@@ -91,11 +99,11 @@ public static class LakeMeshGenerator
     }
 
     private static bool IsRenderableLakeCell(
-    WaterState[,] waterStateMap,
-    float[,] riverMaskMap,
-    int x,
-    int y,
-    int stepIncrement)
+        WaterState[,] waterStateMap,
+        float[,] riverMaskMap,
+        int x,
+        int y,
+        int stepIncrement)
     {
         int x1 = x + stepIncrement;
         int y1 = y + stepIncrement;
@@ -132,22 +140,24 @@ public static class RiverMeshGenerator
         int stepIncrement,
         float worldScale)
     {
-        int width = heightMap.GetLength(0);
-        int height = heightMap.GetLength(1);
+        int paddedWidth = heightMap.GetLength(0);
+        int paddedHeight = heightMap.GetLength(1);
 
-        float topLeftX = (width - 1) / -2f;
-        float bottomLeftZ = (height - 1) / -2f;
+        int chunkSize = paddedWidth - 3;
 
-        int riverCellCount = CountRenderableRiverCells(waterStateMap, riverMaskMap, stepIncrement);
+        float topLeftX = chunkSize / -2f;
+        float bottomLeftZ = chunkSize / -2f;
+
+        int riverCellCount = CountRenderableRiverCells(waterStateMap, riverMaskMap, chunkSize, stepIncrement);
 
         if (riverCellCount == 0)
             return new WaterMeshData(0);
 
         WaterMeshData meshData = new WaterMeshData(riverCellCount);
 
-        for (int y = 0; y < height - 1; y += stepIncrement)
+        for (int y = 1; y <= chunkSize - stepIncrement + 1; y += stepIncrement)
         {
-            for (int x = 0; x < width - 1; x += stepIncrement)
+            for (int x = 1; x <= chunkSize - stepIncrement + 1; x += stepIncrement)
             {
                 if (!IsRenderableRiverCell(waterStateMap, riverMaskMap, x, y, stepIncrement))
                     continue;
@@ -155,35 +165,40 @@ public static class RiverMeshGenerator
                 int x1 = x + stepIncrement;
                 int y1 = y + stepIncrement;
 
+                int localX = x - 1;
+                int localY = y - 1;
+                int localX1 = x1 - 1;
+                int localY1 = y1 - 1;
+
                 float heightA = heightMap[x, y] * heightMultiplier * worldScale + WaterSurfaceOffset;
                 float heightB = heightMap[x1, y] * heightMultiplier * worldScale + WaterSurfaceOffset;
                 float heightC = heightMap[x, y1] * heightMultiplier * worldScale + WaterSurfaceOffset;
                 float heightD = heightMap[x1, y1] * heightMultiplier * worldScale + WaterSurfaceOffset;
 
                 Vector3 a = new Vector3(
-                    (topLeftX + x) * worldScale,
+                    (topLeftX + localX) * worldScale,
                     heightA,
-                    (bottomLeftZ + y) * worldScale);
+                    (bottomLeftZ + localY) * worldScale);
 
                 Vector3 b = new Vector3(
-                    (topLeftX + x1) * worldScale,
+                    (topLeftX + localX1) * worldScale,
                     heightB,
-                    (bottomLeftZ + y) * worldScale);
+                    (bottomLeftZ + localY) * worldScale);
 
                 Vector3 c = new Vector3(
-                    (topLeftX + x) * worldScale,
+                    (topLeftX + localX) * worldScale,
                     heightC,
-                    (bottomLeftZ + y1) * worldScale);
+                    (bottomLeftZ + localY1) * worldScale);
 
                 Vector3 d = new Vector3(
-                    (topLeftX + x1) * worldScale,
+                    (topLeftX + localX1) * worldScale,
                     heightD,
-                    (bottomLeftZ + y1) * worldScale);
+                    (bottomLeftZ + localY1) * worldScale);
 
-                Vector2 uvA = new Vector2(x / (float)(width - 1), y / (float)(height - 1));
-                Vector2 uvB = new Vector2(x1 / (float)(width - 1), y / (float)(height - 1));
-                Vector2 uvC = new Vector2(x / (float)(width - 1), y1 / (float)(height - 1));
-                Vector2 uvD = new Vector2(x1 / (float)(width - 1), y1 / (float)(height - 1));
+                Vector2 uvA = new Vector2(localX / (float)chunkSize, localY / (float)chunkSize);
+                Vector2 uvB = new Vector2(localX1 / (float)chunkSize, localY / (float)chunkSize);
+                Vector2 uvC = new Vector2(localX / (float)chunkSize, localY1 / (float)chunkSize);
+                Vector2 uvD = new Vector2(localX1 / (float)chunkSize, localY1 / (float)chunkSize);
 
                 meshData.AddQuad(a, b, c, d, uvA, uvB, uvC, uvD);
             }
@@ -195,16 +210,14 @@ public static class RiverMeshGenerator
     private static int CountRenderableRiverCells(
         WaterState[,] waterStateMap,
         float[,] riverMaskMap,
+        int chunkSize,
         int stepIncrement)
     {
-        int width = waterStateMap.GetLength(0);
-        int height = waterStateMap.GetLength(1);
-
         int count = 0;
 
-        for (int y = 0; y < height - 1; y += stepIncrement)
+        for (int y = 1; y <= chunkSize - stepIncrement + 1; y += stepIncrement)
         {
-            for (int x = 0; x < width - 1; x += stepIncrement)
+            for (int x = 1; x <= chunkSize - stepIncrement + 1; x += stepIncrement)
             {
                 if (IsRenderableRiverCell(waterStateMap, riverMaskMap, x, y, stepIncrement))
                     count++;
@@ -236,10 +249,7 @@ public static class RiverMeshGenerator
 
         return riverCornerCount >= 1;
     }
-
 }
-
-
 
 public class WaterMeshData
 {

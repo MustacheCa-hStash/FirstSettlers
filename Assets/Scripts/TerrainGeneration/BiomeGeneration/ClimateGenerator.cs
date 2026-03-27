@@ -22,12 +22,14 @@ public static class ClimateGenerator
         float noisePersistence = persistence;
         float noiseLacunarity = lacunarity;
 
-        float[,] terrainNoiseMap = new float[chunkSize + 1, chunkSize + 1];
+        int size = chunkSize + 3;
+        float[,] terrainNoiseMap = new float[size, size];
+
         System.Random prng = new System.Random(seed);
         Vector2[] octaveOffsets = new Vector2[noiseOctaves];
 
-        float maxPossibleNoise = 0;
-        float amplitude = 1;
+        float maxPossibleNoise = 0f;
+        float amplitude = 1f;
 
         for (int i = 0; i < noiseOctaves; i++)
         {
@@ -45,19 +47,26 @@ public static class ClimateGenerator
         if (noiseLacunarity < 1f)
             noiseLacunarity = 1f;
 
-        for (int x = 0; x < chunkSize + 1; x++)
+        for (int x = 0; x < size; x++)
         {
-            for (int z = 0; z < chunkSize + 1; z++)
+            for (int z = 0; z < size; z++)
             {
-                amplitude = 1;
-                float frequency = 1;
-                float noise = 0;
+                int localSampleX = x - 1;
+                int localSampleZ = z - 1;
+
+                float worldX = chunkCoord.x * chunkSize + localSampleX;
+                float worldZ = chunkCoord.z * chunkSize + localSampleZ;
+
+                amplitude = 1f;
+                float frequency = 1f;
+                float noise = 0f;
 
                 for (int o = 0; o < noiseOctaves; o++)
                 {
-                    float sampleX = (chunkCoord.x * chunkSize + x + octaveOffsets[o].x) / noiseSampleScale * frequency;
-                    float sampleZ = (chunkCoord.z * chunkSize + z + octaveOffsets[o].y) / noiseSampleScale * frequency;
-                    float perlinValue = Mathf.PerlinNoise(sampleX, sampleZ) * 2 - 1;
+                    float sampleX = (worldX / noiseSampleScale + octaveOffsets[o].x) * frequency;
+                    float sampleZ = (worldZ / noiseSampleScale + octaveOffsets[o].y) * frequency;
+
+                    float perlinValue = Mathf.PerlinNoise(sampleX, sampleZ) * 2f - 1f;
 
                     noise += perlinValue * amplitude;
                     amplitude *= noisePersistence;
@@ -68,9 +77,9 @@ public static class ClimateGenerator
             }
         }
 
-        for (int x = 0; x < chunkSize + 1; x++)
+        for (int x = 0; x < size; x++)
         {
-            for (int z = 0; z < chunkSize + 1; z++)
+            for (int z = 0; z < size; z++)
             {
                 terrainNoiseMap[x, z] = Normalize01(terrainNoiseMap[x, z], maxPossibleNoise);
             }
@@ -84,5 +93,4 @@ public static class ClimateGenerator
         float normalizedHeight = (raw + maxPossible) / (2f * maxPossible);
         return Mathf.Clamp01(normalizedHeight);
     }
-
 }

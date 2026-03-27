@@ -3,7 +3,7 @@ using UnityEngine;
 public static class BaseLandGenerator
 {
     const int octaves = 2;
-    const float persistence = 0.10f;
+    const float persistence = 0.15f;
     const float lacunarity = 1.5f;
     const float flatteningFactor = 1.5f; //increase for more flattening, inverse is true
 

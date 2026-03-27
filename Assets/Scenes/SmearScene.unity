@@ -437,8 +437,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 68
-  viewDistance: 20
+  worldSeed: 69
+  viewDistance: 15
   colliderDistance: 5
   chunkSize: 128
   viewer: {fileID: 1578603182}
