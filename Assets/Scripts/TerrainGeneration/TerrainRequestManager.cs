@@ -66,9 +66,11 @@ public class TerrainRequestManager
 
                 WaterState[,] waterStateMap = WaterStateMapGenerator.GenerateWaterStateMap(finalHeightMap, riverMaskMap);
 
+                ControlMapPixelData controlMapRawData = TerrainControlMapBuilder.BuildRaw(surfaceTypeMap);
+
                 TerrainDataRequestResult result = new TerrainDataRequestResult(chunkCoord, requestVersion, 
                     finalHeightMap, gradientXMap, gradientZMap, moistureMap, temperatureMap, biomeMap, 
-                    surfaceTypeMap, waterStateMap, riverMaskMap);
+                    surfaceTypeMap, waterStateMap, riverMaskMap, controlMapRawData);
 
                 lock (terrainDataResultsLock)
                 {

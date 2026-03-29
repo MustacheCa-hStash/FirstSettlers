@@ -437,7 +437,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 69
+  worldSeed: 790
   viewDistance: 15
   colliderDistance: 5
   chunkSize: 128
@@ -450,7 +450,7 @@ MonoBehaviour:
   lacunarity: 10
   erosionStrength: 2
   meshHeightMultiplier: 200
-  terrainMaterial: {fileID: 2100000, guid: a7ea6abc93329ca49ab74e81010c2eec, type: 2}
+  terrainMaterial: {fileID: 2100000, guid: 75e8037765088694c9d1b4d066552b07, type: 2}
   waterMaterial: {fileID: 2100000, guid: 14ca6caf7c7b1af4395d2aad206230ea, type: 2}
 --- !u!4 &830849844
 Transform:

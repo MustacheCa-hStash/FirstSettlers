@@ -12,6 +12,7 @@ public class ChunkRecord
     private SurfaceType[,] surfaceTypeMap;
     private WaterState[,] waterStateMap;
     private float[,] riverMaskMap;
+    private Texture2D[] controlMapData;
 
     private Dictionary<int, Mesh> LODTerrainMeshes = new Dictionary<int, Mesh>();
     private Dictionary<int, Mesh> LODLakeMeshes = new Dictionary<int, Mesh>();
@@ -40,7 +41,9 @@ public class ChunkRecord
         temperatureMap != null &&
         biomeMap != null &&
         surfaceTypeMap != null &&
-        waterStateMap != null;
+        waterStateMap != null &&
+        riverMaskMap != null &&
+        controlMapData != null;
     public float[,] HeightMap => heightMap;
     public float[,] MoistureMap => moistureMap;
     public float[,] TemperatureMap => temperatureMap;
@@ -48,6 +51,7 @@ public class ChunkRecord
     public SurfaceType[,] SurfaceTypeMap => surfaceTypeMap;
     public WaterState[,] WaterStateMap => waterStateMap;
     public float[,] RiverMaskMap => riverMaskMap;
+    public Texture2D[] ControlMapData => controlMapData;
     public bool IsTerrainDataRequestInFlight => terrainDataRequestInFlight;
     public int TerrainDataRequestVersion => terrainDataRequestVersion;
 
@@ -174,7 +178,8 @@ public class ChunkRecord
 
     public bool TryCompleteTerrainDataRequest(int requestVersion, float[,] returnedHeightMap,
         float[,] returnedMoistureMap, float[,] returnedTemperatureMap, BiomeType[,] returnedBiomeMap, 
-        SurfaceType[,] returnedSurfaceTypeMap, WaterState[,] returnedWaterStateMap, float[,] returnedRiverMaskMap)
+        SurfaceType[,] returnedSurfaceTypeMap, WaterState[,] returnedWaterStateMap, float[,] returnedRiverMaskMap, 
+        Texture2D[] returnedControlMapData)
     {
         if (!terrainDataRequestInFlight) 
             return false;
@@ -188,6 +193,7 @@ public class ChunkRecord
         surfaceTypeMap = returnedSurfaceTypeMap;
         waterStateMap = returnedWaterStateMap;
         riverMaskMap = returnedRiverMaskMap;
+        controlMapData = returnedControlMapData;
 
         terrainDataRequestInFlight = false;
         return true;

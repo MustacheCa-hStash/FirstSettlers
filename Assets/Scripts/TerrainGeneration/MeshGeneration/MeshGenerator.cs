@@ -45,7 +45,8 @@ public static class MeshGenerator
                 int i = z * verticesPerLine + x;
 
                 meshData.vertices[i] = new Vector3(localWorldX, h, localWorldZ);
-                meshData.uvs[i] = new Vector2(worldX / textureTileSize, worldZ / textureTileSize);
+                //meshData.uvs[i] = new Vector2(worldX / textureTileSize, worldZ / textureTileSize);
+                meshData.uvs[i] = new Vector2((float)x / chunkSize, (float)z / chunkSize);
 
                 meshData.colors[i] = SurfaceTypeClassifier.GenerateColor(
                     surfaceTypeMap[paddedX, paddedZ],

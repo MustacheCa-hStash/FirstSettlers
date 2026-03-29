@@ -316,6 +316,7 @@ public class ChunkManager
             record.TryGetLODLakeMesh(lod, out lakeMesh);
             record.TryGetLODRiverMesh(lod, out riverMesh);
 
+            runtime.SetControlMaps(record.ControlMapData);
             runtime.SetMeshes(terrainMesh, lakeMesh, riverMesh, lod);
         }
     }
@@ -327,6 +328,8 @@ public class ChunkManager
             if (!chunkRecords.TryGetValue(terrainResult.ChunkCoord, out ChunkRecord record))
                 continue;
 
+            Texture2D[] controlMaps = CreateControlMapTextures(terrainResult.ControlMapsRawData);
+
             record.TryCompleteTerrainDataRequest(
                 terrainResult.RequestVersion,
                 terrainResult.HeightMap,
@@ -335,7 +338,8 @@ public class ChunkManager
                 terrainResult.BiomeMap,
                 terrainResult.SurfaceTypeMap,
                 terrainResult.WaterStateMap,
-                terrainResult.RiverMaskMap
+                terrainResult.RiverMaskMap,
+                controlMaps
             );
         }
 
@@ -421,6 +425,24 @@ public class ChunkManager
         }
 
         return count;
+    }
+
+    private Texture2D[] CreateControlMapTextures(ControlMapPixelData rawData)
+    {
+        Texture2D[] textures = new Texture2D[rawData.Maps.Length];
+
+        for (int i = 0; i < rawData.Maps.Length; i++)
+        {
+            Texture2D tex = new Texture2D(rawData.Width, rawData.Height, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            tex.filterMode = FilterMode.Bilinear;
+            tex.SetPixels32(rawData.Maps[i]);
+            tex.Apply(false, false);
+
+            textures[i] = tex;
+        }
+
+        return textures;
     }
 
 }

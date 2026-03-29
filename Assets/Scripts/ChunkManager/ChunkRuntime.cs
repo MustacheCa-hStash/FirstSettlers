@@ -80,6 +80,18 @@ public class ChunkRuntime
         chunkRecord.SetActiveRuntime(this);
     }
 
+    public void SetControlMaps(Texture2D[] controlMaps)
+    {
+        if (runtimeTerrainMaterial == null || controlMaps == null)
+            return;
+
+        if (controlMaps.Length > 0)
+            runtimeTerrainMaterial.SetTexture("_ControlMap0", controlMaps[0]);
+
+        if (controlMaps.Length > 1)
+            runtimeTerrainMaterial.SetTexture("_ControlMap1", controlMaps[1]);
+    }
+
     public void SetMeshes(Mesh terrainMesh, Mesh lakeMesh, Mesh riverMesh, int lod)
     {
         if (terrainMeshFilter.sharedMesh != terrainMesh)

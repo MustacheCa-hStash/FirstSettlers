@@ -72,7 +72,7 @@ public static class SurfaceTypeClassifier
                 break;
 
             case SurfaceType.Grass:
-                baseColor = new Color(0.25f, 0.60f, 0.25f);
+                baseColor = new Color(0.1255f, 0.5451f, 0.1569f);
                 break;
 
             case SurfaceType.Rock:
