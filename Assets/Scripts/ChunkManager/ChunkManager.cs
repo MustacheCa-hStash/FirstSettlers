@@ -28,6 +28,9 @@ public class ChunkManager
     private ChunkCoord lastUpdateViewerCoord = new ChunkCoord(int.MinValue, int.MinValue);
 
     private TerrainRequestManager terrainRequestManager;
+    private Transform foliageParent;
+    private GrassSettings grassSettings;
+    private FoliageManager foliageManager;
 
     public ChunkManager(
         int viewDistance,
@@ -36,6 +39,8 @@ public class ChunkManager
         int seed,
         Transform viewer,
         Transform chunkParent,
+        Transform foliageParent,
+        GrassSettings grassSettings,
         float sampleScale,
         float worldScale,
         int octaves,
@@ -68,6 +73,8 @@ public class ChunkManager
         activeThisUpdate = new HashSet<ChunkCoord>(maxChunks);
         orderedActiveCoords = new List<ChunkCoord>(maxChunks);
         terrainRequestManager = new TerrainRequestManager();
+        foliageManager = new FoliageManager(foliageParent, grassSettings, seed, chunkSize, worldScale, 
+            meshHeightMultiplier);
     }
 
     public ChunkCoord GetViewerChunkCoord()
@@ -90,6 +97,7 @@ public class ChunkManager
         }
 
         UpdateVisibleChunkContent(viewerCoord);
+        foliageManager.UpdateVisibleFoliage(this, viewerCoord, orderedActiveCoords);
     }
 
     private void RebuildActiveChunkSet(ChunkCoord viewerCoord)
@@ -445,4 +453,17 @@ public class ChunkManager
         return textures;
     }
 
+    public ChunkRecord GetChunkRecord(ChunkCoord coord)
+    {
+        chunkRecords.TryGetValue(coord, out ChunkRecord record);
+        return record;
+    }
+    public ChunkRuntime GetChunkRuntime(ChunkRecord record)
+    {
+        if (record == null)
+            return null;
+
+        loadedChunks.TryGetValue(record.ChunkCoord, out ChunkRuntime runtime);
+        return runtime;
+    }
 }

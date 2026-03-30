@@ -13,6 +13,7 @@ public class ChunkRecord
     private WaterState[,] waterStateMap;
     private float[,] riverMaskMap;
     private Texture2D[] controlMapData;
+    private ChunkFoliageData foliageData;
 
     private Dictionary<int, Mesh> LODTerrainMeshes = new Dictionary<int, Mesh>();
     private Dictionary<int, Mesh> LODLakeMeshes = new Dictionary<int, Mesh>();
@@ -52,6 +53,10 @@ public class ChunkRecord
     public WaterState[,] WaterStateMap => waterStateMap;
     public float[,] RiverMaskMap => riverMaskMap;
     public Texture2D[] ControlMapData => controlMapData;
+    public ChunkFoliageData FoliageData {
+        get => foliageData;
+        set => foliageData = value;
+    }
     public bool IsTerrainDataRequestInFlight => terrainDataRequestInFlight;
     public int TerrainDataRequestVersion => terrainDataRequestVersion;
 

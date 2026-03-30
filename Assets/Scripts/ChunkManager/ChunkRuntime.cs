@@ -19,15 +19,21 @@ public class ChunkRuntime
     private MeshRenderer riverMeshRenderer;
 
     private Material runtimeWaterMaterial;
-
     private MeshCollider terrainMeshCollider;
+
+    private ChunkFoliageRuntime foliageRuntime;
 
     private int currentLOD = -1;
 
     public ChunkRecord ChunkRecord => chunkRecord;
     public GameObject Root => root;
+    public Transform RootTransform => root != null ? root.transform : null;
     public bool IsVisible => visible;
     public int CurrentLOD => currentLOD;
+    public ChunkFoliageRuntime FoliageRuntime {
+        get => foliageRuntime;
+        set => foliageRuntime = value;
+    }
 
     public ChunkRuntime(ChunkRecord chunkRecord, int chunkSize, float worldScale, Transform parent,
         Material terrainMaterial, Material waterMaterial)
