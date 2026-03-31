@@ -28,8 +28,6 @@ public class ChunkManager
     private ChunkCoord lastUpdateViewerCoord = new ChunkCoord(int.MinValue, int.MinValue);
 
     private TerrainRequestManager terrainRequestManager;
-    private Transform foliageParent;
-    private GrassSettings grassSettings;
     private FoliageManager foliageManager;
 
     public ChunkManager(

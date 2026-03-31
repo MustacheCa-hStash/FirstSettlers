@@ -41,15 +41,7 @@ public class FoliageManager
 
             EnsureFoliageRuntimeExists(runtime, record);
 
-            if (!shouldHaveGrass)
-            {
-                if (runtime.FoliageRuntime != null)
-                    runtime.FoliageRuntime.SetVisible(false);
-
-                continue;
-            }
-
-            if (!HasRequiredTerrainData(record))
+            if (!shouldHaveGrass || !HasRequiredTerrainData(record))
             {
                 if (runtime.FoliageRuntime != null)
                     runtime.FoliageRuntime.SetVisible(false);
@@ -95,10 +87,7 @@ public class FoliageManager
 
         GameObject root = new GameObject($"Foliage_{record.ChunkCoord.x}_{record.ChunkCoord.z}");
 
-        if (chunkRuntime.RootTransform != null)
-            root.transform.SetParent(chunkRuntime.RootTransform, false);
-        else if (foliageParent != null)
-            root.transform.SetParent(foliageParent, false);
+        root.transform.SetParent(chunkRuntime.RootTransform, false);
 
         chunkRuntime.FoliageRuntime.root = root.transform;
         chunkRuntime.FoliageRuntime.SetVisible(false);
