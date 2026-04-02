@@ -16,6 +16,11 @@ Shader "Custom/StylizedTerrainURP"
         _MidGrassColor("Mid Grass Color", Color) = (0.29, 0.62, 0.24, 1)
         _LightGrassColor("Light Grass Color", Color) = (0.44, 0.78, 0.30, 1)
 
+        _GrassAlbedo("Grass Albedo", 2D) = "white" {}
+        _GrassNormal("Grass Normal", 2D) = "bump" {}
+        _GrassTiling("Grass Tiling", Float) = 0.08
+        _GrassNormalStrength("Grass Normal Strength", Range(0.0, 2.0)) = 0.6
+
         _NoiseScale("Noise Scale", Range(0.001, 0.2)) = 0.03
         _NoiseStrength("Noise Strength", Range(0.0, 2.0)) = 1.0
         _BlendSharpness("Blend Sharpness", Range(0.25, 3.0)) = 1.0
@@ -49,6 +54,12 @@ Shader "Custom/StylizedTerrainURP"
             TEXTURE2D(_ControlMap1);
             SAMPLER(sampler_ControlMap1);
 
+            TEXTURE2D(_GrassAlbedo);
+            SAMPLER(sampler_GrassAlbedo);
+
+            TEXTURE2D(_GrassNormal);
+            SAMPLER(sampler_GrassNormal);
+
             struct Attributes
             {
                 float4 positionOS : POSITION;
@@ -75,6 +86,9 @@ Shader "Custom/StylizedTerrainURP"
                 half4 _DarkGrassColor;
                 half4 _MidGrassColor;
                 half4 _LightGrassColor;
+
+                float _GrassTiling;
+                float _GrassNormalStrength;
 
                 float _NoiseScale;
                 float _NoiseStrength;
@@ -104,7 +118,7 @@ Shader "Custom/StylizedTerrainURP"
                 return lerp(x1, x2, f.y);
             }
 
-            half3 EvaluateGrassColor(float2 worldXZ)
+            half3 EvaluateGrassTint(float2 worldXZ)
             {
                 float n = ValueNoise(worldXZ * _NoiseScale);
                 n = saturate((n - 0.5) * _NoiseStrength + 0.5);
@@ -116,6 +130,29 @@ Shader "Custom/StylizedTerrainURP"
                 }
 
                 return lerp(_MidGrassColor.rgb, _LightGrassColor.rgb, (n - 0.5) * 2.0);
+            }
+
+            float3 ApplyGrassNormal(float3 baseNormalWS, float2 worldXZ)
+            {
+                float2 grassUV = worldXZ * _GrassTiling;
+
+                float3 tangentNormal = UnpackNormal(
+                    SAMPLE_TEXTURE2D(_GrassNormal, sampler_GrassNormal, grassUV)
+                );
+
+                tangentNormal.xy *= _GrassNormalStrength;
+                tangentNormal.z = sqrt(saturate(1.0 - dot(tangentNormal.xy, tangentNormal.xy)));
+
+                float3 referenceUp = abs(baseNormalWS.y) < 0.999 ? float3(0.0, 1.0, 0.0) : float3(1.0, 0.0, 0.0);
+                float3 tangentWS = normalize(cross(referenceUp, baseNormalWS));
+                float3 bitangentWS = normalize(cross(baseNormalWS, tangentWS));
+
+                float3 mappedNormalWS =
+                    tangentWS * tangentNormal.x +
+                    bitangentWS * tangentNormal.y +
+                    baseNormalWS * tangentNormal.z;
+
+                return normalize(mappedNormalWS);
             }
 
             Varyings vert(Attributes IN)
@@ -135,7 +172,8 @@ Shader "Custom/StylizedTerrainURP"
 
             half4 frag(Varyings IN) : SV_Target
             {
-                half3 normalWS = normalize(IN.normalWS);
+                half3 baseNormalWS = normalize(IN.normalWS);
+                half3 normalWS = baseNormalWS;
 
                 float4 control0 = SAMPLE_TEXTURE2D(_ControlMap0, sampler_ControlMap0, IN.uv);
                 float4 control1 = SAMPLE_TEXTURE2D(_ControlMap1, sampler_ControlMap1, IN.uv);
@@ -149,16 +187,25 @@ Shader "Custom/StylizedTerrainURP"
                 half cliffWeight = control1.g;
                 half riverbedWeight = control1.b;
 
-                half3 grassColor = EvaluateGrassColor(IN.positionWS.xz);
-
                 half3 baseColor = 0;
+
                 baseColor += _SandColor.rgb * sandWeight;
                 baseColor += _MudColor.rgb * mudWeight;
-                baseColor += grassColor * grassWeight;
                 baseColor += _RockColor.rgb * rockWeight;
                 baseColor += _SnowColor.rgb * snowWeight;
                 baseColor += _CliffColor.rgb * cliffWeight;
                 baseColor += _RiverbedColor.rgb * riverbedWeight;
+
+                if (grassWeight > 0.001h)
+                {
+                    float2 grassUV = IN.positionWS.xz * _GrassTiling;
+                    half3 grassTex = SAMPLE_TEXTURE2D(_GrassAlbedo, sampler_GrassAlbedo, grassUV).rgb;
+                    half3 grassTint = EvaluateGrassTint(IN.positionWS.xz);
+                    half3 grassColor = grassTex * grassTint;
+
+                    baseColor += grassColor * grassWeight;
+                    normalWS = ApplyGrassNormal(baseNormalWS, IN.positionWS.xz);
+                }
 
                 Light mainLight = GetMainLight();
                 half3 diffuse = LightingLambert(mainLight.color, mainLight.direction, normalWS) * mainLight.distanceAttenuation;
