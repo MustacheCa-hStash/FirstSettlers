@@ -476,8 +476,8 @@ MonoBehaviour:
   chunkParent: {fileID: 1025920260}
   foliageParent: {fileID: 454788146}
   grassSettings:
-    grassPrefab: {fileID: 4218081068222670364, guid: 54e9f18ee421d034182a593b9f534413, type: 3}
-    cellsPerAxis: 20
+    grassPrefab: {fileID: 606009945628684014, guid: 236786db9ef14bf488bb148fb58493cc, type: 3}
+    cellsPerAxis: 200
     activeRingRadius: 1
     uniformScaleRange: {x: 0.9, y: 1.1}
     randomizeYaw: 1

@@ -43,9 +43,7 @@ public static class FoliageGenerator
                 int paddedZ = mapZ + 1;
 
                 if (record.SurfaceTypeMap[paddedX, paddedZ] != SurfaceType.Grass)
-                {
                     continue;
-                }
 
                 float height = record.HeightMap[paddedX, paddedZ];
 
@@ -97,12 +95,19 @@ public static class FoliageGenerator
     {
         unchecked
         {
-            int hash = 17;
+            uint hash = 2166136261u;
+
             for (int i = 0; i < values.Length; i++)
             {
-                hash = hash * 31 + values[i];
+                hash ^= (uint)values[i];
+                hash *= 16777619u;
+
+                hash ^= hash >> 13;
+                hash *= 1274126177u;
+                hash ^= hash >> 16;
             }
-            return hash;
+
+            return (int)hash;
         }
     }
 
@@ -111,7 +116,16 @@ public static class FoliageGenerator
         unchecked
         {
             uint value = (uint)hash;
-            return (value & 0x00FFFFFF) / 16777215f;
+
+            value ^= value >> 17;
+            value *= 0xed5ad4bbu;
+            value ^= value >> 11;
+            value *= 0xac4c1b51u;
+            value ^= value >> 15;
+            value *= 0x31848babu;
+            value ^= value >> 14;
+
+            return value / 4294967295f;
         }
     }
 }

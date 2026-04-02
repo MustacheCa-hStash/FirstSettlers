@@ -10,6 +10,9 @@ public class FoliageManager
     private readonly float worldScale;
     private readonly float meshHeightMultiplier;
 
+    private Mesh grassMesh;
+    private Material grassMaterial;
+
     public FoliageManager(
         Transform foliageParent,
         GrassSettings grassSettings,
@@ -24,6 +27,8 @@ public class FoliageManager
         this.chunkSize = chunkSize;
         this.worldScale = worldScale;
         this.meshHeightMultiplier = meshHeightMultiplier;
+
+        ResolveGrassRenderAssets();
     }
 
     public void UpdateVisibleFoliage(ChunkManager chunkManager, ChunkCoord viewerCoord, List<ChunkCoord> orderedActiveCoords)
@@ -61,8 +66,10 @@ public class FoliageManager
                 );
             }
 
-            SpawnGrassIfNeeded(runtime, record);
+            CacheGrassMatricesIfNeeded(runtime, record);
+
             runtime.FoliageRuntime.SetVisible(true);
+            runtime.FoliageRuntime.Draw();
         }
     }
 
@@ -86,14 +93,15 @@ public class FoliageManager
         chunkRuntime.FoliageRuntime = new ChunkFoliageRuntime();
 
         GameObject root = new GameObject($"Foliage_{record.ChunkCoord.x}_{record.ChunkCoord.z}");
-
         root.transform.SetParent(chunkRuntime.RootTransform, false);
 
         chunkRuntime.FoliageRuntime.root = root.transform;
+        chunkRuntime.FoliageRuntime.grassMesh = grassMesh;
+        chunkRuntime.FoliageRuntime.grassMaterial = grassMaterial;
         chunkRuntime.FoliageRuntime.SetVisible(false);
     }
 
-    private void SpawnGrassIfNeeded(ChunkRuntime runtime, ChunkRecord record)
+    private void CacheGrassMatricesIfNeeded(ChunkRuntime runtime, ChunkRecord record)
     {
         ChunkFoliageRuntime foliageRuntime = runtime.FoliageRuntime;
         ChunkFoliageData data = record.FoliageData;
@@ -101,21 +109,52 @@ public class FoliageManager
         if (foliageRuntime == null || data == null)
             return;
 
-        if (foliageRuntime.grassObjects.Count == data.grassInstances.Count && foliageRuntime.grassObjects.Count > 0)
+        if (foliageRuntime.cachedInstanceCount == data.grassInstances.Count)
             return;
 
-        foliageRuntime.ClearSpawnedObjects();
+        List<Matrix4x4> worldMatrices = new List<Matrix4x4>(data.grassInstances.Count);
+        Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
 
         for (int i = 0; i < data.grassInstances.Count; i++)
         {
             FoliageInstanceData instance = data.grassInstances[i];
 
-            GameObject grassObject = Object.Instantiate(grassSettings.grassPrefab, foliageRuntime.root);
-            grassObject.transform.localPosition = instance.localPosition;
-            grassObject.transform.localRotation = instance.localRotation;
-            grassObject.transform.localScale = instance.localScale;
+            Matrix4x4 localMatrix = Matrix4x4.TRS(
+                instance.localPosition,
+                instance.localRotation,
+                instance.localScale);
 
-            foliageRuntime.grassObjects.Add(grassObject);
+            Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
+            worldMatrices.Add(worldMatrix);
         }
+
+        foliageRuntime.CacheMatrices(worldMatrices);
+    }
+
+    private void ResolveGrassRenderAssets()
+    {
+        if (grassSettings.grassPrefab == null)
+        {
+            Debug.LogError("Grass prefab is missing.");
+            return;
+        }
+
+        MeshFilter meshFilter = grassSettings.grassPrefab.GetComponentInChildren<MeshFilter>();
+        MeshRenderer meshRenderer = grassSettings.grassPrefab.GetComponentInChildren<MeshRenderer>();
+
+        if (meshFilter == null || meshFilter.sharedMesh == null)
+        {
+            Debug.LogError("Grass prefab missing MeshFilter or mesh.");
+            return;
+        }
+
+        if (meshRenderer == null || meshRenderer.sharedMaterial == null)
+        {
+            Debug.LogError("Grass prefab missing MeshRenderer or material.");
+            return;
+        }
+
+        grassMesh = meshFilter.sharedMesh;
+        grassMaterial = meshRenderer.sharedMaterial;
     }
 }
