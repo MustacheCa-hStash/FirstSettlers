@@ -20,6 +20,8 @@ Shader "Custom/StylizedTerrainURP"
         _GrassNormal("Grass Normal", 2D) = "bump" {}
         _GrassTiling("Grass Tiling", Float) = 0.08
         _GrassNormalStrength("Grass Normal Strength", Range(0.0, 2.0)) = 0.6
+        _GrassDetailStrength("Grass Detail Strength", Range(0.0, 1.0)) = 0.35
+        _GrassDetailContrast("Grass Detail Contrast", Range(0.5, 3.0)) = 1.35
 
         _NoiseScale("Noise Scale", Range(0.001, 0.2)) = 0.03
         _NoiseStrength("Noise Strength", Range(0.0, 2.0)) = 1.0
@@ -94,6 +96,8 @@ Shader "Custom/StylizedTerrainURP"
                 float _NoiseStrength;
                 float _BlendSharpness;
                 float _AmbientStrength;
+                float _GrassDetailStrength;
+                float _GrassDetailContrast;
             CBUFFER_END
 
             float Hash21(float2 p)
@@ -201,7 +205,13 @@ Shader "Custom/StylizedTerrainURP"
                     float2 grassUV = IN.positionWS.xz * _GrassTiling;
                     half3 grassTex = SAMPLE_TEXTURE2D(_GrassAlbedo, sampler_GrassAlbedo, grassUV).rgb;
                     half3 grassTint = EvaluateGrassTint(IN.positionWS.xz);
-                    half3 grassColor = grassTex * grassTint;
+
+                    half grassLuma = dot(grassTex, half3(0.299h, 0.587h, 0.114h));
+                    half grassCentered = (grassLuma - 0.5h) * 2.0h;
+                    half grassDetail = grassCentered * _GrassDetailContrast;
+                    half grassVariation = saturate(1.0h + grassDetail * _GrassDetailStrength);
+
+                    half3 grassColor = grassTint * grassVariation;
 
                     baseColor += grassColor * grassWeight;
                     normalWS = ApplyGrassNormal(baseNormalWS, IN.positionWS.xz);
