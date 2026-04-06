@@ -587,7 +587,7 @@ MonoBehaviour:
   foliageParent: {fileID: 454788146}
   grassSettings:
     grassPrefab: {fileID: 4547928979500997360, guid: 7acbea810f367244183cc3fa9cf18e75, type: 3}
-    cellsPerAxis: 150
+    cellsPerAxis: 125
     activeRingRadius: 1
     uniformScaleRange: {x: 0.9, y: 1.1}
     randomizeYaw: 1
