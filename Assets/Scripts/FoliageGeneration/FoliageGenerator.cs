@@ -3,12 +3,12 @@ using UnityEngine;
 public static class FoliageGenerator
 {
     public static void GenerateGrassForChunk(
-        ChunkRecord record,
-        GrassSettings grassSettings,
-        int worldSeed,
-        int chunkSize,
-        float worldScale,
-        float meshHeightMultiplier)
+    ChunkRecord record,
+    GrassSettings grassSettings,
+    int worldSeed,
+    int chunkSize,
+    float worldScale,
+    float meshHeightMultiplier)
     {
         if (record.FoliageData == null)
         {
@@ -55,7 +55,11 @@ public static class FoliageGenerator
                 if (record.SurfaceTypeMap[paddedX, paddedZ] != SurfaceType.Grass)
                     continue;
 
-                float height = record.HeightMap[paddedX, paddedZ];
+                float height = SampleHeightBilinear(
+                    record.HeightMap,
+                    sampleX,
+                    sampleZ,
+                    chunkSize);
 
                 float localX = (topLeftX + sampleX) * worldScale;
                 float localZ = (bottomLeftZ + sampleZ) * worldScale;
@@ -203,4 +207,38 @@ public static class FoliageGenerator
             return value / 4294967295f;
         }
     }
+
+    private static float SampleHeightBilinear(
+    float[,] heightMap,
+    float sampleX,
+    float sampleZ,
+    int chunkSize)
+    {
+        float x = Mathf.Clamp(sampleX, 0f, chunkSize);
+        float z = Mathf.Clamp(sampleZ, 0f, chunkSize);
+
+        int x0 = Mathf.FloorToInt(x);
+        int z0 = Mathf.FloorToInt(z);
+        int x1 = Mathf.Min(x0 + 1, chunkSize);
+        int z1 = Mathf.Min(z0 + 1, chunkSize);
+
+        float tx = x - x0;
+        float tz = z - z0;
+
+        int px0 = x0 + 1;
+        int pz0 = z0 + 1;
+        int px1 = x1 + 1;
+        int pz1 = z1 + 1;
+
+        float h00 = heightMap[px0, pz0];
+        float h10 = heightMap[px1, pz0];
+        float h01 = heightMap[px0, pz1];
+        float h11 = heightMap[px1, pz1];
+
+        float hx0 = Mathf.Lerp(h00, h10, tx);
+        float hx1 = Mathf.Lerp(h01, h11, tx);
+
+        return Mathf.Lerp(hx0, hx1, tz);
+    }
+
 }

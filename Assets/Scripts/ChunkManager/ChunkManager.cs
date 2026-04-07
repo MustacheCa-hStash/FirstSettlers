@@ -266,6 +266,7 @@ public class ChunkManager
 
             if (!runtime.IsVisible)
                 runtime.SetVisible(true);
+
         }
     }
 
