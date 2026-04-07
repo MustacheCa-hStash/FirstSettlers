@@ -469,7 +469,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   worldSeed: 6766
-  viewDistance: 30
+  viewDistance: 15
   colliderDistance: 5
   chunkSize: 128
   viewer: {fileID: 1578603182}
