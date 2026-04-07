@@ -589,6 +589,11 @@ MonoBehaviour:
     grassPrefab: {fileID: 4547928979500997360, guid: 7acbea810f367244183cc3fa9cf18e75, type: 3}
     cellsPerAxis: 125
     activeRingRadius: 1
+    subChunksPerChunk: 10
+    densityRadius3: 1
+    densityRadius6: 0.738
+    densityRadius10: 0.387
+    densityBeyond10: 0.262
     uniformScaleRange: {x: 0.9, y: 1.1}
     randomizeYaw: 1
     seedOffset: 5000
