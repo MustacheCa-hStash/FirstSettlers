@@ -31,7 +31,11 @@ public class FoliageManager
         ResolveGrassRenderAssets();
     }
 
-    public void UpdateVisibleFoliage(ChunkManager chunkManager, ChunkCoord viewerCoord, List<ChunkCoord> orderedActiveCoords)
+    public void HandleViewerSubChunkChanged(
+        ChunkManager chunkManager,
+        ChunkCoord viewerCoord,
+        SubChunkCoord viewerGlobalSubChunk,
+        List<ChunkCoord> orderedActiveCoords)
     {
         for (int i = 0; i < orderedActiveCoords.Count; i++)
         {
@@ -49,7 +53,10 @@ public class FoliageManager
             if (!shouldHaveGrass || !HasRequiredTerrainData(record))
             {
                 if (runtime.FoliageRuntime != null)
+                {
+                    runtime.FoliageRuntime.ClearCachedBatches();
                     runtime.FoliageRuntime.SetVisible(false);
+                }
 
                 continue;
             }
@@ -62,15 +69,134 @@ public class FoliageManager
                     worldSeed,
                     chunkSize,
                     worldScale,
-                    meshHeightMultiplier
-                );
+                    meshHeightMultiplier);
             }
 
-            CacheGrassMatricesIfNeeded(runtime, record);
+            RebuildGrassMatricesForViewerSubChunk(runtime, record, viewerGlobalSubChunk);
+            runtime.FoliageRuntime.SetVisible(true);
+        }
+    }
+
+    public void DrawVisibleFoliageEveryFrame(
+    ChunkManager chunkManager,
+    ChunkCoord viewerCoord,
+    SubChunkCoord viewerGlobalSubChunk,
+    List<ChunkCoord> orderedActiveCoords)
+    {
+        for (int i = 0; i < orderedActiveCoords.Count; i++)
+        {
+            ChunkCoord coord = orderedActiveCoords[i];
+            ChunkRecord record = chunkManager.GetChunkRecord(coord);
+            ChunkRuntime runtime = chunkManager.GetChunkRuntime(record);
+
+            if (record == null || runtime == null || runtime.FoliageRuntime == null)
+                continue;
+
+            bool shouldHaveGrass = IsWithinGrassRadius(viewerCoord, coord);
+
+            if (!shouldHaveGrass || !HasRequiredTerrainData(record))
+            {
+                runtime.FoliageRuntime.SetVisible(false);
+                continue;
+            }
+
+            if (record.FoliageData == null || !record.FoliageData.grassGenerated)
+            {
+                FoliageGenerator.GenerateGrassForChunk(
+                    record,
+                    grassSettings,
+                    worldSeed,
+                    chunkSize,
+                    worldScale,
+                    meshHeightMultiplier);
+            }
+
+            bool needsInitialCacheBuild =
+                !runtime.FoliageRuntime.HasValidRenderData();
+
+            if (needsInitialCacheBuild)
+            {
+                RebuildGrassMatricesForViewerSubChunk(
+                    runtime,
+                    record,
+                    viewerGlobalSubChunk);
+            }
 
             runtime.FoliageRuntime.SetVisible(true);
             runtime.FoliageRuntime.Draw();
         }
+    }
+
+    private void RebuildGrassMatricesForViewerSubChunk(
+        ChunkRuntime runtime,
+        ChunkRecord record,
+        SubChunkCoord viewerGlobalSubChunk)
+    {
+        ChunkFoliageRuntime foliageRuntime = runtime.FoliageRuntime;
+        ChunkFoliageData data = record.FoliageData;
+
+        if (foliageRuntime == null || data == null || data.grassInstancesBySubChunk == null)
+            return;
+
+        List<Matrix4x4> worldMatrices = new List<Matrix4x4>();
+        Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
+
+        int subChunksPerChunk = data.subChunksPerChunk;
+
+        for (int localSubX = 0; localSubX < subChunksPerChunk; localSubX++)
+        {
+            for (int localSubZ = 0; localSubZ < subChunksPerChunk; localSubZ++)
+            {
+                int targetGlobalSubX = record.ChunkCoord.x * subChunksPerChunk + localSubX;
+                int targetGlobalSubZ = record.ChunkCoord.z * subChunksPerChunk + localSubZ;
+
+                int dx = targetGlobalSubX - viewerGlobalSubChunk.x;
+                int dz = targetGlobalSubZ - viewerGlobalSubChunk.z;
+                int distSqr = dx * dx + dz * dz;
+
+                float density = GetDensityForDistanceSqr(distSqr);
+
+                List<FoliageInstanceData> subChunkInstances =
+                    data.grassInstancesBySubChunk[localSubX, localSubZ];
+
+                int totalCount = subChunkInstances.Count;
+                int renderCount = Mathf.FloorToInt(totalCount * density);
+
+                if (density > 0f && totalCount > 0)
+                {
+                    renderCount = Mathf.Clamp(renderCount, 1, totalCount);
+                }
+
+                for (int i = 0; i < renderCount; i++)
+                {
+                    FoliageInstanceData instance = subChunkInstances[i];
+
+                    Matrix4x4 localMatrix = Matrix4x4.TRS(
+                        instance.localPosition,
+                        instance.localRotation,
+                        instance.localScale);
+
+                    Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
+                    worldMatrices.Add(worldMatrix);
+                }
+            }
+        }
+
+        foliageRuntime.CacheMatrices(worldMatrices);
+    }
+
+    private float GetDensityForDistanceSqr(int distSqr)
+    {
+        if (distSqr <= 3 * 3)
+            return grassSettings.densityRadius3;
+
+        if (distSqr <= 6 * 6)
+            return grassSettings.densityRadius6;
+
+        if (distSqr <= 10 * 10)
+            return grassSettings.densityRadius10;
+
+        return grassSettings.densityBeyond10;
     }
 
     private bool IsWithinGrassRadius(ChunkCoord viewerCoord, ChunkCoord targetCoord)
@@ -99,36 +225,6 @@ public class FoliageManager
         chunkRuntime.FoliageRuntime.grassMesh = grassMesh;
         chunkRuntime.FoliageRuntime.grassMaterial = grassMaterial;
         chunkRuntime.FoliageRuntime.SetVisible(false);
-    }
-
-    private void CacheGrassMatricesIfNeeded(ChunkRuntime runtime, ChunkRecord record)
-    {
-        ChunkFoliageRuntime foliageRuntime = runtime.FoliageRuntime;
-        ChunkFoliageData data = record.FoliageData;
-
-        if (foliageRuntime == null || data == null)
-            return;
-
-        if (foliageRuntime.cachedInstanceCount == data.grassInstances.Count)
-            return;
-
-        List<Matrix4x4> worldMatrices = new List<Matrix4x4>(data.grassInstances.Count);
-        Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
-
-        for (int i = 0; i < data.grassInstances.Count; i++)
-        {
-            FoliageInstanceData instance = data.grassInstances[i];
-
-            Matrix4x4 localMatrix = Matrix4x4.TRS(
-                instance.localPosition,
-                instance.localRotation,
-                instance.localScale);
-
-            Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
-            worldMatrices.Add(worldMatrix);
-        }
-
-        foliageRuntime.CacheMatrices(worldMatrices);
     }
 
     private void ResolveGrassRenderAssets()

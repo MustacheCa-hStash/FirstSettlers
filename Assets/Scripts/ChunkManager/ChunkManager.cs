@@ -3,32 +3,36 @@ using UnityEngine;
 
 public class ChunkManager
 {
-    private int viewDistance;
-    private int colliderDistance;
-    private int chunkSize;
-    private int seed;
-    private Transform viewer;
-    private Transform chunkParent;
-    private float sampleScale;
-    private float worldScale;
-    private int octaves;
-    private float persistence;
-    private float lacunarity;
-    private float erosionStrength;
-    private float meshHeightMultiplier;
-    private Material terrainMaterial;
-    private Material waterMaterial;
+    private readonly int subChunksPerChunk = 10;
 
-    private Dictionary<ChunkCoord, ChunkRecord> chunkRecords = new();
-    private Dictionary<ChunkCoord, ChunkRuntime> loadedChunks = new();
+    private readonly int viewDistance;
+    private readonly int colliderDistance;
+    private readonly int chunkSize;
+    private readonly int seed;
+    private readonly Transform viewer;
+    private readonly Transform chunkParent;
+    private readonly float sampleScale;
+    private readonly float worldScale;
+    private readonly int octaves;
+    private readonly float persistence;
+    private readonly float lacunarity;
+    private readonly float erosionStrength;
+    private readonly float meshHeightMultiplier;
+    private readonly Material terrainMaterial;
+    private readonly Material waterMaterial;
+
+    private readonly Dictionary<ChunkCoord, ChunkRecord> chunkRecords = new();
+    private readonly Dictionary<ChunkCoord, ChunkRuntime> loadedChunks = new();
 
     private HashSet<ChunkCoord> activeLastUpdate;
     private HashSet<ChunkCoord> activeThisUpdate;
-    private List<ChunkCoord> orderedActiveCoords;
-    private ChunkCoord lastUpdateViewerCoord = new ChunkCoord(int.MinValue, int.MinValue);
+    private readonly List<ChunkCoord> orderedActiveCoords;
 
-    private TerrainRequestManager terrainRequestManager;
-    private FoliageManager foliageManager;
+    private ChunkCoord lastUpdateViewerCoord = new ChunkCoord(int.MinValue, int.MinValue);
+    private SubChunkCoord lastViewerGlobalSubChunk = new SubChunkCoord(int.MinValue, int.MinValue);
+
+    private readonly TerrainRequestManager terrainRequestManager;
+    private readonly FoliageManager foliageManager;
 
     public ChunkManager(
         int viewDistance,
@@ -70,16 +74,69 @@ public class ChunkManager
         activeLastUpdate = new HashSet<ChunkCoord>(maxChunks);
         activeThisUpdate = new HashSet<ChunkCoord>(maxChunks);
         orderedActiveCoords = new List<ChunkCoord>(maxChunks);
+
         terrainRequestManager = new TerrainRequestManager();
-        foliageManager = new FoliageManager(foliageParent, grassSettings, seed, chunkSize, worldScale, 
+        foliageManager = new FoliageManager(
+            foliageParent,
+            grassSettings,
+            seed,
+            chunkSize,
+            worldScale,
             meshHeightMultiplier);
     }
 
     public ChunkCoord GetViewerChunkCoord()
     {
-        int cx = Mathf.FloorToInt(viewer.position.x / (chunkSize * worldScale));
-        int cz = Mathf.FloorToInt(viewer.position.z / (chunkSize * worldScale));
+        float chunkWorldSize = chunkSize * worldScale;
+
+        int cx = Mathf.FloorToInt(viewer.position.x / chunkWorldSize);
+        int cz = Mathf.FloorToInt(viewer.position.z / chunkWorldSize);
+
         return new ChunkCoord(cx, cz);
+    }
+
+    public SubChunkCoord GetViewerGlobalSubChunkCoord()
+    {
+        ChunkCoord viewerChunk = GetViewerChunkCoord();
+
+        float chunkWorldSize = chunkSize * worldScale;
+        float subChunkWorldSize = chunkWorldSize / subChunksPerChunk;
+
+        float chunkMinWorldX = viewerChunk.x * chunkWorldSize;
+        float chunkMinWorldZ = viewerChunk.z * chunkWorldSize;
+
+        float localWorldX = viewer.position.x - chunkMinWorldX;
+        float localWorldZ = viewer.position.z - chunkMinWorldZ;
+
+        int localSubChunkX = Mathf.Clamp(
+            Mathf.FloorToInt(localWorldX / subChunkWorldSize),
+            0,
+            subChunksPerChunk - 1);
+
+        int localSubChunkZ = Mathf.Clamp(
+            Mathf.FloorToInt(localWorldZ / subChunkWorldSize),
+            0,
+            subChunksPerChunk - 1);
+
+        int globalSubChunkX = viewerChunk.x * subChunksPerChunk + localSubChunkX;
+        int globalSubChunkZ = viewerChunk.z * subChunksPerChunk + localSubChunkZ;
+
+        return new SubChunkCoord(globalSubChunkX, globalSubChunkZ);
+    }
+
+    public int GetSubChunksPerChunk()
+    {
+        return subChunksPerChunk;
+    }
+
+    public float GetChunkWorldSize()
+    {
+        return chunkSize * worldScale;
+    }
+
+    public float GetSubChunkWorldSize()
+    {
+        return (chunkSize * worldScale) / subChunksPerChunk;
     }
 
     public void UpdateActiveChunks()
@@ -87,15 +144,35 @@ public class ChunkManager
         ProcessCompletedRequests();
 
         ChunkCoord viewerCoord = GetViewerChunkCoord();
+        SubChunkCoord viewerGlobalSubChunk = GetViewerGlobalSubChunkCoord();
 
-        if (viewerCoord != lastUpdateViewerCoord)
+        bool viewerChunkChanged = viewerCoord != lastUpdateViewerCoord;
+        bool viewerSubChunkChanged = viewerGlobalSubChunk != lastViewerGlobalSubChunk;
+
+        if (viewerChunkChanged)
         {
             RebuildActiveChunkSet(viewerCoord);
             lastUpdateViewerCoord = viewerCoord;
         }
 
         UpdateVisibleChunkContent(viewerCoord);
-        foliageManager.UpdateVisibleFoliage(this, viewerCoord, orderedActiveCoords);
+
+        if (viewerChunkChanged || viewerSubChunkChanged)
+        {
+            foliageManager.HandleViewerSubChunkChanged(
+                this,
+                viewerCoord,
+                viewerGlobalSubChunk,
+                orderedActiveCoords);
+        }
+
+        foliageManager.DrawVisibleFoliageEveryFrame(
+            this,
+            viewerCoord,
+            viewerGlobalSubChunk,
+            orderedActiveCoords);
+
+        lastViewerGlobalSubChunk = viewerGlobalSubChunk;
     }
 
     private void RebuildActiveChunkSet(ChunkCoord viewerCoord)
@@ -142,9 +219,6 @@ public class ChunkManager
                     runtime.DestroyRuntime();
                     loadedChunks.Remove(coord);
                 }
-
-                // if (chunkRecords.TryGetValue(coord, out ChunkRecord record))
-                //     record.ClearAllLODMeshes();
             }
         }
 
@@ -193,6 +267,21 @@ public class ChunkManager
             if (!runtime.IsVisible)
                 runtime.SetVisible(true);
         }
+    }
+
+    public ChunkRecord GetChunkRecord(ChunkCoord coord)
+    {
+        chunkRecords.TryGetValue(coord, out ChunkRecord record);
+        return record;
+    }
+
+    public ChunkRuntime GetChunkRuntime(ChunkRecord record)
+    {
+        if (record == null)
+            return null;
+
+        loadedChunks.TryGetValue(record.ChunkCoord, out ChunkRuntime runtime);
+        return runtime;
     }
 
     private ChunkRecord GetOrCreateChunkRecord(ChunkCoord coord)
@@ -411,7 +500,6 @@ public class ChunkManager
 
             return aSqrDist.CompareTo(bSqrDist);
         });
-
     }
 
     private static int ComputeMaxActiveChunkCount(int viewDistance)
@@ -424,9 +512,7 @@ public class ChunkManager
             for (int z = -viewDistance; z <= viewDistance; z++)
             {
                 if (x * x + z * z <= sqrViewRadius)
-                {
                     count++;
-                }
             }
         }
 
@@ -435,33 +521,21 @@ public class ChunkManager
 
     private Texture2D[] CreateControlMapTextures(ControlMapPixelData rawData)
     {
+        if (rawData == null || rawData.Maps == null || rawData.Maps.Length == 0)
+            return null;
+
         Texture2D[] textures = new Texture2D[rawData.Maps.Length];
 
         for (int i = 0; i < rawData.Maps.Length; i++)
         {
             Texture2D tex = new Texture2D(rawData.Width, rawData.Height, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
             tex.wrapMode = TextureWrapMode.Clamp;
-            tex.filterMode = FilterMode.Bilinear;
             tex.SetPixels32(rawData.Maps[i]);
             tex.Apply(false, false);
-
             textures[i] = tex;
         }
 
         return textures;
-    }
-
-    public ChunkRecord GetChunkRecord(ChunkCoord coord)
-    {
-        chunkRecords.TryGetValue(coord, out ChunkRecord record);
-        return record;
-    }
-    public ChunkRuntime GetChunkRuntime(ChunkRecord record)
-    {
-        if (record == null)
-            return null;
-
-        loadedChunks.TryGetValue(record.ChunkCoord, out ChunkRuntime runtime);
-        return runtime;
     }
 }
