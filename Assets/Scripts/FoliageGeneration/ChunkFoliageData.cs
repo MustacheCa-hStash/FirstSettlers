@@ -2,44 +2,58 @@ using System.Collections.Generic;
 
 public class ChunkFoliageData
 {
-    public bool grassGenerated;
+    public bool nearGrassGenerated;
     public int subChunksPerChunk;
+    public List<FoliageInstanceData>[,] nearGrassInstancesBySubChunk;
 
-    public List<FoliageInstanceData>[,] grassInstancesBySubChunk;
+    public bool billboardGenerated;
+    public List<BillboardFoliageInstanceData> billboardGrassInstances = new List<BillboardFoliageInstanceData>();
 
-    public void Initialize(int subChunksPerChunk)
+    public void InitializeNearGrass(int subChunksPerChunk)
     {
         this.subChunksPerChunk = subChunksPerChunk;
-        grassInstancesBySubChunk = new List<FoliageInstanceData>[subChunksPerChunk, subChunksPerChunk];
+        nearGrassInstancesBySubChunk = new List<FoliageInstanceData>[subChunksPerChunk, subChunksPerChunk];
 
         for (int x = 0; x < subChunksPerChunk; x++)
         {
             for (int z = 0; z < subChunksPerChunk; z++)
             {
-                grassInstancesBySubChunk[x, z] = new List<FoliageInstanceData>();
+                nearGrassInstancesBySubChunk[x, z] = new List<FoliageInstanceData>();
             }
         }
     }
 
-    public void Clear()
+    public void ClearNearGrass()
     {
-        grassGenerated = false;
+        nearGrassGenerated = false;
 
-        if (grassInstancesBySubChunk == null)
+        if (nearGrassInstancesBySubChunk == null)
             return;
 
         for (int x = 0; x < subChunksPerChunk; x++)
         {
             for (int z = 0; z < subChunksPerChunk; z++)
             {
-                grassInstancesBySubChunk[x, z].Clear();
+                nearGrassInstancesBySubChunk[x, z].Clear();
             }
         }
     }
 
-    public int GetTotalInstanceCount()
+    public void ClearBillboards()
     {
-        if (grassInstancesBySubChunk == null)
+        billboardGenerated = false;
+        billboardGrassInstances.Clear();
+    }
+
+    public void ClearAll()
+    {
+        ClearNearGrass();
+        ClearBillboards();
+    }
+
+    public int GetTotalNearGrassInstanceCount()
+    {
+        if (nearGrassInstancesBySubChunk == null)
             return 0;
 
         int total = 0;
@@ -48,10 +62,15 @@ public class ChunkFoliageData
         {
             for (int z = 0; z < subChunksPerChunk; z++)
             {
-                total += grassInstancesBySubChunk[x, z].Count;
+                total += nearGrassInstancesBySubChunk[x, z].Count;
             }
         }
 
         return total;
+    }
+
+    public int GetTotalBillboardInstanceCount()
+    {
+        return billboardGrassInstances != null ? billboardGrassInstances.Count : 0;
     }
 }

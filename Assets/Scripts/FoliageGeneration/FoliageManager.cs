@@ -13,6 +13,9 @@ public class FoliageManager
     private Mesh grassMesh;
     private Material grassMaterial;
 
+    private Mesh billboardGrassMesh;
+    private Material billboardGrassMaterial;
+
     public FoliageManager(
         Transform foliageParent,
         GrassSettings grassSettings,
@@ -46,11 +49,12 @@ public class FoliageManager
             if (record == null || runtime == null)
                 continue;
 
-            bool shouldHaveGrass = IsWithinGrassRadius(viewerCoord, coord);
-
             EnsureFoliageRuntimeExists(runtime, record);
 
-            if (!shouldHaveGrass || !HasRequiredTerrainData(record))
+            bool useNearGrass = IsWithinNearGrass(viewerCoord, coord);
+            bool useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
+
+            if (!HasRequiredTerrainData(record))
             {
                 if (runtime.FoliageRuntime != null)
                 {
@@ -61,27 +65,51 @@ public class FoliageManager
                 continue;
             }
 
-            if (record.FoliageData == null || !record.FoliageData.grassGenerated)
+            if (useNearGrass)
             {
-                FoliageGenerator.GenerateGrassForChunk(
-                    record,
-                    grassSettings,
-                    worldSeed,
-                    chunkSize,
-                    worldScale,
-                    meshHeightMultiplier);
-            }
+                if (record.FoliageData == null || !record.FoliageData.nearGrassGenerated)
+                {
+                    FoliageGenerator.GenerateGrassForChunk(
+                        record,
+                        grassSettings,
+                        worldSeed,
+                        chunkSize,
+                        worldScale,
+                        meshHeightMultiplier);
+                }
 
-            RebuildGrassMatricesForViewerSubChunk(runtime, record, viewerGlobalSubChunk);
-            runtime.FoliageRuntime.SetVisible(true);
+                RebuildGrassMatricesForViewerSubChunk(runtime, record, viewerGlobalSubChunk);
+                runtime.FoliageRuntime.SetVisible(true);
+            }
+            else if (useBillboardGrass)
+            {
+                if (record.FoliageData == null || !record.FoliageData.billboardGenerated)
+                {
+                    FoliageGenerator.GenerateBillboardGrassForChunk(
+                        record,
+                        grassSettings,
+                        worldSeed,
+                        chunkSize,
+                        worldScale,
+                        meshHeightMultiplier);
+                }
+
+                RebuildBillboardMatrices(runtime, record, viewerCoord);
+                runtime.FoliageRuntime.SetVisible(true);
+            }
+            else
+            {
+                runtime.FoliageRuntime.ClearCachedBatches();
+                runtime.FoliageRuntime.SetVisible(false);
+            }
         }
     }
 
     public void DrawVisibleFoliageEveryFrame(
-    ChunkManager chunkManager,
-    ChunkCoord viewerCoord,
-    SubChunkCoord viewerGlobalSubChunk,
-    List<ChunkCoord> orderedActiveCoords)
+        ChunkManager chunkManager,
+        ChunkCoord viewerCoord,
+        SubChunkCoord viewerGlobalSubChunk,
+        List<ChunkCoord> orderedActiveCoords)
     {
         for (int i = 0; i < orderedActiveCoords.Count; i++)
         {
@@ -92,38 +120,66 @@ public class FoliageManager
             if (record == null || runtime == null || runtime.FoliageRuntime == null)
                 continue;
 
-            bool shouldHaveGrass = IsWithinGrassRadius(viewerCoord, coord);
+            bool useNearGrass = IsWithinNearGrass(viewerCoord, coord);
+            bool useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
 
-            if (!shouldHaveGrass || !HasRequiredTerrainData(record))
+            if (!HasRequiredTerrainData(record))
             {
                 runtime.FoliageRuntime.SetVisible(false);
                 continue;
             }
 
-            if (record.FoliageData == null || !record.FoliageData.grassGenerated)
+            if (useNearGrass)
             {
-                FoliageGenerator.GenerateGrassForChunk(
-                    record,
-                    grassSettings,
-                    worldSeed,
-                    chunkSize,
-                    worldScale,
-                    meshHeightMultiplier);
+                if (record.FoliageData == null || !record.FoliageData.nearGrassGenerated)
+                {
+                    FoliageGenerator.GenerateGrassForChunk(
+                        record,
+                        grassSettings,
+                        worldSeed,
+                        chunkSize,
+                        worldScale,
+                        meshHeightMultiplier);
+                }
+
+                bool needsGrassCacheBuild = !runtime.FoliageRuntime.HasValidGrassRenderData();
+                if (needsGrassCacheBuild)
+                {
+                    RebuildGrassMatricesForViewerSubChunk(
+                        runtime,
+                        record,
+                        viewerGlobalSubChunk);
+                }
+
+                runtime.FoliageRuntime.SetVisible(true);
+                runtime.FoliageRuntime.DrawGrass();
             }
-
-            bool needsInitialCacheBuild =
-                !runtime.FoliageRuntime.HasValidRenderData();
-
-            if (needsInitialCacheBuild)
+            else if (useBillboardGrass)
             {
-                RebuildGrassMatricesForViewerSubChunk(
-                    runtime,
-                    record,
-                    viewerGlobalSubChunk);
-            }
+                if (record.FoliageData == null || !record.FoliageData.billboardGenerated)
+                {
+                    FoliageGenerator.GenerateBillboardGrassForChunk(
+                        record,
+                        grassSettings,
+                        worldSeed,
+                        chunkSize,
+                        worldScale,
+                        meshHeightMultiplier);
+                }
 
-            runtime.FoliageRuntime.SetVisible(true);
-            runtime.FoliageRuntime.Draw();
+                bool needsBillboardCacheBuild = !runtime.FoliageRuntime.HasValidBillboardRenderData();
+                if (needsBillboardCacheBuild)
+                {
+                    RebuildBillboardMatrices(runtime, record, viewerCoord);
+                }
+
+                runtime.FoliageRuntime.SetVisible(true);
+                runtime.FoliageRuntime.DrawBillboards();
+            }
+            else
+            {
+                runtime.FoliageRuntime.SetVisible(false);
+            }
         }
     }
 
@@ -135,7 +191,7 @@ public class FoliageManager
         ChunkFoliageRuntime foliageRuntime = runtime.FoliageRuntime;
         ChunkFoliageData data = record.FoliageData;
 
-        if (foliageRuntime == null || data == null || data.grassInstancesBySubChunk == null)
+        if (foliageRuntime == null || data == null || data.nearGrassInstancesBySubChunk == null)
             return;
 
         List<Matrix4x4> worldMatrices = new List<Matrix4x4>();
@@ -157,7 +213,7 @@ public class FoliageManager
                 float density = GetDensityForDistanceSqr(distSqr);
 
                 List<FoliageInstanceData> subChunkInstances =
-                    data.grassInstancesBySubChunk[localSubX, localSubZ];
+                    data.nearGrassInstancesBySubChunk[localSubX, localSubZ];
 
                 int totalCount = subChunkInstances.Count;
                 int renderCount = Mathf.FloorToInt(totalCount * density);
@@ -182,7 +238,112 @@ public class FoliageManager
             }
         }
 
-        foliageRuntime.CacheMatrices(worldMatrices);
+        foliageRuntime.CacheGrassMatrices(worldMatrices);
+    }
+
+    private void RebuildBillboardMatrices(
+    ChunkRuntime runtime,
+    ChunkRecord record,
+    ChunkCoord viewerCoord)
+    {
+        ChunkFoliageRuntime foliageRuntime = runtime.FoliageRuntime;
+        ChunkFoliageData data = record.FoliageData;
+
+        if (foliageRuntime == null || data == null || data.billboardGrassInstances == null)
+            return;
+
+        List<Matrix4x4> worldMatrices = new List<Matrix4x4>();
+        Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
+
+        int chunkRing = GetChunkRingDistance(viewerCoord, record.ChunkCoord);
+        float densityMultiplier = GetBillboardDensityMultiplierForChunkRing(chunkRing);
+        float scaleMultiplier = GetBillboardScaleMultiplierForChunkRing(chunkRing);
+
+        int cellsPerAxis = Mathf.Max(1, grassSettings.billboardCellsPerAxis);
+        float cellSize = (float)chunkSize / cellsPerAxis;
+
+        List<BillboardFoliageInstanceData>[,] cellBuckets =
+            new List<BillboardFoliageInstanceData>[cellsPerAxis, cellsPerAxis];
+
+        for (int x = 0; x < cellsPerAxis; x++)
+        {
+            for (int z = 0; z < cellsPerAxis; z++)
+            {
+                cellBuckets[x, z] = new List<BillboardFoliageInstanceData>();
+            }
+        }
+
+        for (int i = 0; i < data.billboardGrassInstances.Count; i++)
+        {
+            BillboardFoliageInstanceData instance = data.billboardGrassInstances[i];
+
+            float localX = (instance.localPosition.x / worldScale) + chunkSize / 2f;
+            float localZ = (instance.localPosition.z / worldScale) + chunkSize / 2f;
+
+            int cellX = Mathf.Clamp(Mathf.FloorToInt(localX / cellSize), 0, cellsPerAxis - 1);
+            int cellZ = Mathf.Clamp(Mathf.FloorToInt(localZ / cellSize), 0, cellsPerAxis - 1);
+
+            cellBuckets[cellX, cellZ].Add(instance);
+        }
+
+        for (int cellX = 0; cellX < cellsPerAxis; cellX++)
+        {
+            for (int cellZ = 0; cellZ < cellsPerAxis; cellZ++)
+            {
+                List<BillboardFoliageInstanceData> bucket = cellBuckets[cellX, cellZ];
+                int totalCount = bucket.Count;
+
+                if (totalCount == 0)
+                    continue;
+
+                int renderCount = Mathf.FloorToInt(totalCount * densityMultiplier);
+
+                if (densityMultiplier > 0f)
+                {
+                    renderCount = Mathf.Clamp(renderCount, 1, totalCount);
+                }
+
+                for (int i = 0; i < renderCount; i++)
+                {
+                    BillboardFoliageInstanceData instance = bucket[i];
+
+                    Vector3 scaledScale = instance.localScale * scaleMultiplier;
+
+                    Matrix4x4 localMatrix = Matrix4x4.TRS(
+                        instance.localPosition,
+                        instance.localRotation,
+                        scaledScale);
+
+                    Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
+                    worldMatrices.Add(worldMatrix);
+                }
+            }
+        }
+
+        foliageRuntime.CacheBillboardMatrices(worldMatrices);
+    }
+
+    private int GetChunkRingDistance(ChunkCoord viewerCoord, ChunkCoord targetCoord)
+    {
+        int dx = Mathf.Abs(targetCoord.x - viewerCoord.x);
+        int dz = Mathf.Abs(targetCoord.z - viewerCoord.z);
+        return Mathf.Max(dx, dz);
+    }
+
+    private float GetBillboardDensityMultiplierForChunkRing(int chunkRing)
+    {
+        if (chunkRing <= 2)
+            return 1f;
+
+        return 1f / (chunkRing - 1);
+    }
+
+    private float GetBillboardScaleMultiplierForChunkRing(int chunkRing)
+    {
+        if (chunkRing <= 2)
+            return 1f;
+
+        return 1f + 0.25f * (chunkRing - 2);
     }
 
     private float GetDensityForDistanceSqr(int distSqr)
@@ -199,11 +360,31 @@ public class FoliageManager
         return grassSettings.densityBeyond10;
     }
 
-    private bool IsWithinGrassRadius(ChunkCoord viewerCoord, ChunkCoord targetCoord)
+    private bool IsWithinNearGrass(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
         int dx = Mathf.Abs(targetCoord.x - viewerCoord.x);
         int dz = Mathf.Abs(targetCoord.z - viewerCoord.z);
         return dx <= grassSettings.activeRingRadius && dz <= grassSettings.activeRingRadius;
+    }
+
+    private bool IsWithinBillboardGrass(ChunkCoord viewerCoord, ChunkCoord targetCoord)
+    {
+        int absDx = Mathf.Abs(targetCoord.x - viewerCoord.x);
+        int absDz = Mathf.Abs(targetCoord.z - viewerCoord.z);
+
+        bool insideNearSquare =
+            absDx <= grassSettings.activeRingRadius &&
+            absDz <= grassSettings.activeRingRadius;
+
+        if (insideNearSquare)
+            return false;
+
+        int dx = targetCoord.x - viewerCoord.x;
+        int dz = targetCoord.z - viewerCoord.z;
+        int distSqr = dx * dx + dz * dz;
+
+        int billboardRangeSqr = grassSettings.billboardRingRadius * grassSettings.billboardRingRadius;
+        return distSqr <= billboardRangeSqr;
     }
 
     private bool HasRequiredTerrainData(ChunkRecord record)
@@ -224,6 +405,8 @@ public class FoliageManager
         chunkRuntime.FoliageRuntime.root = root.transform;
         chunkRuntime.FoliageRuntime.grassMesh = grassMesh;
         chunkRuntime.FoliageRuntime.grassMaterial = grassMaterial;
+        chunkRuntime.FoliageRuntime.billboardMesh = billboardGrassMesh;
+        chunkRuntime.FoliageRuntime.billboardMaterial = billboardGrassMaterial;
         chunkRuntime.FoliageRuntime.SetVisible(false);
     }
 
@@ -232,25 +415,57 @@ public class FoliageManager
         if (grassSettings.grassPrefab == null)
         {
             Debug.LogError("Grass prefab is missing.");
-            return;
         }
-
-        MeshFilter meshFilter = grassSettings.grassPrefab.GetComponentInChildren<MeshFilter>();
-        MeshRenderer meshRenderer = grassSettings.grassPrefab.GetComponentInChildren<MeshRenderer>();
-
-        if (meshFilter == null || meshFilter.sharedMesh == null)
+        else
         {
-            Debug.LogError("Grass prefab missing MeshFilter or mesh.");
-            return;
+            MeshFilter meshFilter = grassSettings.grassPrefab.GetComponentInChildren<MeshFilter>();
+            MeshRenderer meshRenderer = grassSettings.grassPrefab.GetComponentInChildren<MeshRenderer>();
+
+            if (meshFilter == null || meshFilter.sharedMesh == null)
+            {
+                Debug.LogError("Grass prefab missing MeshFilter or mesh.");
+            }
+            else
+            {
+                grassMesh = meshFilter.sharedMesh;
+            }
+
+            if (meshRenderer == null || meshRenderer.sharedMaterial == null)
+            {
+                Debug.LogError("Grass prefab missing MeshRenderer or material.");
+            }
+            else
+            {
+                grassMaterial = meshRenderer.sharedMaterial;
+            }
         }
 
-        if (meshRenderer == null || meshRenderer.sharedMaterial == null)
+        if (grassSettings.billboardGrassPrefab == null)
         {
-            Debug.LogError("Grass prefab missing MeshRenderer or material.");
-            return;
+            Debug.LogError("Billboard grass prefab is missing.");
         }
+        else
+        {
+            MeshFilter meshFilter = grassSettings.billboardGrassPrefab.GetComponentInChildren<MeshFilter>();
+            MeshRenderer meshRenderer = grassSettings.billboardGrassPrefab.GetComponentInChildren<MeshRenderer>();
 
-        grassMesh = meshFilter.sharedMesh;
-        grassMaterial = meshRenderer.sharedMaterial;
+            if (meshFilter == null || meshFilter.sharedMesh == null)
+            {
+                Debug.LogError("Billboard grass prefab missing MeshFilter or mesh.");
+            }
+            else
+            {
+                billboardGrassMesh = meshFilter.sharedMesh;
+            }
+
+            if (meshRenderer == null || meshRenderer.sharedMaterial == null)
+            {
+                Debug.LogError("Billboard grass prefab missing MeshRenderer or material.");
+            }
+            else
+            {
+                billboardGrassMaterial = meshRenderer.sharedMaterial;
+            }
+        }
     }
 }

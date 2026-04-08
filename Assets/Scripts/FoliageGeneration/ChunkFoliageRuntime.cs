@@ -9,17 +9,20 @@ public class ChunkFoliageRuntime
     public Mesh grassMesh;
     public Material grassMaterial;
 
+    public Mesh billboardMesh;
+    public Material billboardMaterial;
+
     public bool isVisible;
-    public int cachedInstanceCount = -1;
 
     private readonly List<Matrix4x4[]> grassMatrixBatches = new List<Matrix4x4[]>();
+    private readonly List<Matrix4x4[]> billboardMatrixBatches = new List<Matrix4x4[]>();
 
     public bool IsCreated => root != null;
 
     public void ClearCachedBatches()
     {
         grassMatrixBatches.Clear();
-        cachedInstanceCount = -1;
+        billboardMatrixBatches.Clear();
     }
 
     public void SetVisible(bool visible)
@@ -32,14 +35,29 @@ public class ChunkFoliageRuntime
         }
     }
 
-    public bool HasValidRenderData()
+    public bool HasValidGrassRenderData()
     {
         return grassMesh != null && grassMaterial != null && grassMatrixBatches.Count > 0;
     }
 
-    public void CacheMatrices(List<Matrix4x4> worldMatrices)
+    public bool HasValidBillboardRenderData()
     {
-        grassMatrixBatches.Clear();
+        return billboardMesh != null && billboardMaterial != null && billboardMatrixBatches.Count > 0;
+    }
+
+    public void CacheGrassMatrices(List<Matrix4x4> worldMatrices)
+    {
+        CacheMatrices(worldMatrices, grassMatrixBatches);
+    }
+
+    public void CacheBillboardMatrices(List<Matrix4x4> worldMatrices)
+    {
+        CacheMatrices(worldMatrices, billboardMatrixBatches);
+    }
+
+    private void CacheMatrices(List<Matrix4x4> worldMatrices, List<Matrix4x4[]> targetBatches)
+    {
+        targetBatches.Clear();
 
         const int maxBatchSize = 1023;
         int totalCount = worldMatrices.Count;
@@ -55,16 +73,14 @@ public class ChunkFoliageRuntime
                 batch[i] = worldMatrices[startIndex + i];
             }
 
-            grassMatrixBatches.Add(batch);
+            targetBatches.Add(batch);
             startIndex += batchCount;
         }
-
-        cachedInstanceCount = totalCount;
     }
 
-    public void Draw()
+    public void DrawGrass()
     {
-        if (!isVisible || !HasValidRenderData())
+        if (!isVisible || !HasValidGrassRenderData())
             return;
 
         for (int i = 0; i < grassMatrixBatches.Count; i++)
@@ -76,7 +92,27 @@ public class ChunkFoliageRuntime
                 grassMatrixBatches[i],
                 grassMatrixBatches[i].Length,
                 null,
-                ShadowCastingMode.On,
+                ShadowCastingMode.Off,
+                true
+            );
+        }
+    }
+
+    public void DrawBillboards()
+    {
+        if (!isVisible || !HasValidBillboardRenderData())
+            return;
+
+        for (int i = 0; i < billboardMatrixBatches.Count; i++)
+        {
+            Graphics.DrawMeshInstanced(
+                billboardMesh,
+                0,
+                billboardMaterial,
+                billboardMatrixBatches[i],
+                billboardMatrixBatches[i].Length,
+                null,
+                ShadowCastingMode.Off,
                 true
             );
         }

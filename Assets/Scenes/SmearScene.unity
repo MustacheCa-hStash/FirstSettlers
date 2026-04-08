@@ -481,12 +481,19 @@ MonoBehaviour:
     activeRingRadius: 1
     subChunksPerChunk: 10
     densityRadius3: 1
-    densityRadius6: 0.738
-    densityRadius10: 0.387
-    densityBeyond10: 0.262
+    densityRadius6: 0.7
+    densityRadius10: 0.25
+    densityBeyond10: 0.1
     uniformScaleRange: {x: 0.9, y: 1.1}
     randomizeYaw: 1
     seedOffset: 5000
+    billboardGrassPrefab: {fileID: 2274311721168609727, guid: e76b7893d4994f848a5f13029dbbffa1, type: 3}
+    billboardRingRadius: 4
+    billboardCellsPerAxis: 60
+    billboardSpawnChance: 0.25
+    billboardUniformScaleRange: {x: 0.9, y: 1.1}
+    randomizeBillboardYaw: 1
+    billboardSeedOffset: 9000
   sampleScale: 600
   worldScale: 0.3
   octaves: 2

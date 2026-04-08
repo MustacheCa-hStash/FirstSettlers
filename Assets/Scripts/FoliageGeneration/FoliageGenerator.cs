@@ -3,12 +3,12 @@ using UnityEngine;
 public static class FoliageGenerator
 {
     public static void GenerateGrassForChunk(
-    ChunkRecord record,
-    GrassSettings grassSettings,
-    int worldSeed,
-    int chunkSize,
-    float worldScale,
-    float meshHeightMultiplier)
+        ChunkRecord record,
+        GrassSettings grassSettings,
+        int worldSeed,
+        int chunkSize,
+        float worldScale,
+        float meshHeightMultiplier)
     {
         if (record.FoliageData == null)
         {
@@ -19,14 +19,14 @@ public static class FoliageGenerator
 
         int subChunksPerChunk = Mathf.Max(1, grassSettings.subChunksPerChunk);
 
-        if (foliageData.grassInstancesBySubChunk == null ||
+        if (foliageData.nearGrassInstancesBySubChunk == null ||
             foliageData.subChunksPerChunk != subChunksPerChunk)
         {
-            foliageData.Initialize(subChunksPerChunk);
+            foliageData.InitializeNearGrass(subChunksPerChunk);
         }
         else
         {
-            foliageData.Clear();
+            foliageData.ClearNearGrass();
         }
 
         if (record.SurfaceTypeMap == null || record.HeightMap == null)
@@ -105,7 +105,7 @@ public static class FoliageGenerator
                     0,
                     subChunksPerChunk - 1);
 
-                foliageData.grassInstancesBySubChunk[subChunkX, subChunkZ].Add(
+                foliageData.nearGrassInstancesBySubChunk[subChunkX, subChunkZ].Add(
                     new FoliageInstanceData(
                         localPosition,
                         localRotation,
@@ -115,7 +115,99 @@ public static class FoliageGenerator
         }
 
         SortSubChunkBucketsBySelectionRank(foliageData);
-        foliageData.grassGenerated = true;
+        foliageData.nearGrassGenerated = true;
+    }
+
+    public static void GenerateBillboardGrassForChunk(
+        ChunkRecord record,
+        GrassSettings grassSettings,
+        int worldSeed,
+        int chunkSize,
+        float worldScale,
+        float meshHeightMultiplier)
+    {
+        if (record.FoliageData == null)
+        {
+            record.FoliageData = new ChunkFoliageData();
+        }
+
+        ChunkFoliageData foliageData = record.FoliageData;
+        foliageData.ClearBillboards();
+
+        if (record.SurfaceTypeMap == null || record.HeightMap == null)
+            return;
+
+        int cellsPerAxis = Mathf.Max(1, grassSettings.billboardCellsPerAxis);
+        float cellSize = (float)chunkSize / cellsPerAxis;
+
+        float topLeftX = chunkSize / -2f;
+        float bottomLeftZ = chunkSize / -2f;
+
+        for (int cellZ = 0; cellZ < cellsPerAxis; cellZ++)
+        {
+            for (int cellX = 0; cellX < cellsPerAxis; cellX++)
+            {
+                int baseHash = Hash(
+                    worldSeed,
+                    grassSettings.billboardSeedOffset,
+                    record.ChunkCoord.x,
+                    record.ChunkCoord.z,
+                    cellX,
+                    cellZ,
+                    211);
+
+                float spawnRoll = Hash01(baseHash);
+                if (spawnRoll > grassSettings.billboardSpawnChance)
+                    continue;
+
+                float offsetX = Hash01(baseHash + 31);
+                float offsetZ = Hash01(baseHash + 67);
+
+                float sampleX = (cellX + offsetX) * cellSize;
+                float sampleZ = (cellZ + offsetZ) * cellSize;
+
+                sampleX = Mathf.Clamp(sampleX, 0f, chunkSize);
+                sampleZ = Mathf.Clamp(sampleZ, 0f, chunkSize);
+
+                int mapX = Mathf.Clamp(Mathf.RoundToInt(sampleX), 0, chunkSize);
+                int mapZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize);
+
+                int paddedX = mapX + 1;
+                int paddedZ = mapZ + 1;
+
+                if (record.SurfaceTypeMap[paddedX, paddedZ] != SurfaceType.Grass)
+                    continue;
+
+                float height = SampleHeightBilinear(
+                    record.HeightMap,
+                    sampleX,
+                    sampleZ,
+                    chunkSize);
+
+                float localX = (topLeftX + sampleX) * worldScale;
+                float localZ = (bottomLeftZ + sampleZ) * worldScale;
+                float localY = height * meshHeightMultiplier * worldScale;
+
+                float yaw = 0f;
+                if (grassSettings.randomizeBillboardYaw)
+                {
+                    yaw = Hash01(baseHash + 97) * 360f;
+                }
+
+                float uniformScale = Mathf.Lerp(
+                    grassSettings.billboardUniformScaleRange.x,
+                    grassSettings.billboardUniformScaleRange.y,
+                    Hash01(baseHash + 131));
+
+                foliageData.billboardGrassInstances.Add(
+                    new BillboardFoliageInstanceData(
+                        new Vector3(localX, localY, localZ),
+                        Quaternion.Euler(0f, yaw, 0f),
+                        Vector3.one * uniformScale));
+            }
+        }
+
+        foliageData.billboardGenerated = true;
     }
 
     private static void SortSubChunkBucketsBySelectionRank(ChunkFoliageData foliageData)
@@ -126,7 +218,7 @@ public static class FoliageGenerator
         {
             for (int z = 0; z < subChunksPerChunk; z++)
             {
-                foliageData.grassInstancesBySubChunk[x, z].Sort((a, b) =>
+                foliageData.nearGrassInstancesBySubChunk[x, z].Sort((a, b) =>
                     a.selectionRank.CompareTo(b.selectionRank));
             }
         }
@@ -209,10 +301,10 @@ public static class FoliageGenerator
     }
 
     private static float SampleHeightBilinear(
-    float[,] heightMap,
-    float sampleX,
-    float sampleZ,
-    int chunkSize)
+        float[,] heightMap,
+        float sampleX,
+        float sampleZ,
+        int chunkSize)
     {
         float x = Mathf.Clamp(sampleX, 0f, chunkSize);
         float z = Mathf.Clamp(sampleZ, 0f, chunkSize);
@@ -240,5 +332,4 @@ public static class FoliageGenerator
 
         return Mathf.Lerp(hx0, hx1, tz);
     }
-
 }
