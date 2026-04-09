@@ -155,6 +155,15 @@ public static class RiverMeshGenerator
 
         bool[,] riverCellMask = BuildRiverCellMask(riverMaskMap, chunkSize);
 
+        if (stepIncrement == 1)
+        {
+            return GenerateRiverMeshLOD0(
+                heightMap,
+                riverCellMask,
+                heightMultiplier,
+                worldScale);
+        }
+
         int strip = Mathf.Max(1, stepIncrement);
         int interiorMin = strip;
         int interiorMax = chunkSize - strip;
@@ -196,7 +205,6 @@ public static class RiverMeshGenerator
             }
         }
 
-        // Top stitched border
         for (int x0 = 0; x0 < chunkSize; x0 += stepIncrement)
         {
             int x1 = Mathf.Min(x0 + stepIncrement, chunkSize);
@@ -220,7 +228,6 @@ public static class RiverMeshGenerator
             AddTri(meshData, positions, uvs, anchorX, anchorZ, x0, strip, x1, strip);
         }
 
-        // Bottom stitched border
         for (int x0 = 0; x0 < chunkSize; x0 += stepIncrement)
         {
             int x1 = Mathf.Min(x0 + stepIncrement, chunkSize);
@@ -243,7 +250,6 @@ public static class RiverMeshGenerator
             AddTri(meshData, positions, uvs, anchorX, anchorZ, prevX, prevZ, x1, chunkSize - strip);
         }
 
-        // Left stitched border
         for (int z0 = strip; z0 < chunkSize - strip; z0 += stepIncrement)
         {
             int z1 = Mathf.Min(z0 + stepIncrement, chunkSize - strip);
@@ -267,7 +273,6 @@ public static class RiverMeshGenerator
             AddTri(meshData, positions, uvs, anchorX, anchorZ, strip, z1, strip, z0);
         }
 
-        // Right stitched border
         for (int z0 = strip; z0 < chunkSize - strip; z0 += stepIncrement)
         {
             int z1 = Mathf.Min(z0 + stepIncrement, chunkSize - strip);
@@ -296,6 +301,74 @@ public static class RiverMeshGenerator
             return new WaterMeshData(0);
 
         return meshData;
+    }
+
+    private static WaterMeshData GenerateRiverMeshLOD0(
+        float[,] heightMap,
+        bool[,] riverCellMask,
+        float heightMultiplier,
+        float worldScale)
+    {
+        int paddedWidth = heightMap.GetLength(0);
+        int chunkSize = paddedWidth - 3;
+
+        float topLeftX = chunkSize / -2f;
+        float bottomLeftZ = chunkSize / -2f;
+
+        int renderableCellCount = 0;
+        for (int z = 0; z < chunkSize; z++)
+        {
+            for (int x = 0; x < chunkSize; x++)
+            {
+                if (riverCellMask[x, z])
+                    renderableCellCount++;
+            }
+        }
+
+        if (renderableCellCount == 0)
+            return new WaterMeshData(0);
+
+        WaterMeshData meshData = new WaterMeshData(renderableCellCount);
+
+        for (int z = 0; z < chunkSize; z++)
+        {
+            for (int x = 0; x < chunkSize; x++)
+            {
+                if (!riverCellMask[x, z])
+                    continue;
+
+                Vector3 a = BuildRiverVertex(heightMap, topLeftX, bottomLeftZ, x, z, heightMultiplier, worldScale);
+                Vector3 b = BuildRiverVertex(heightMap, topLeftX, bottomLeftZ, x + 1, z, heightMultiplier, worldScale);
+                Vector3 c = BuildRiverVertex(heightMap, topLeftX, bottomLeftZ, x, z + 1, heightMultiplier, worldScale);
+                Vector3 d = BuildRiverVertex(heightMap, topLeftX, bottomLeftZ, x + 1, z + 1, heightMultiplier, worldScale);
+
+                Vector2 uvA = new Vector2(x / (float)chunkSize, z / (float)chunkSize);
+                Vector2 uvB = new Vector2((x + 1) / (float)chunkSize, z / (float)chunkSize);
+                Vector2 uvC = new Vector2(x / (float)chunkSize, (z + 1) / (float)chunkSize);
+                Vector2 uvD = new Vector2((x + 1) / (float)chunkSize, (z + 1) / (float)chunkSize);
+
+                meshData.AddCell(a, b, c, d, uvA, uvB, uvC, uvD);
+            }
+        }
+
+        return meshData;
+    }
+
+    private static Vector3 BuildRiverVertex(
+        float[,] heightMap,
+        float topLeftX,
+        float bottomLeftZ,
+        int x,
+        int z,
+        float heightMultiplier,
+        float worldScale)
+    {
+        float h = heightMap[x + 1, z + 1] * heightMultiplier * worldScale + WaterSurfaceOffset;
+
+        return new Vector3(
+            (topLeftX + x) * worldScale,
+            h,
+            (bottomLeftZ + z) * worldScale);
     }
 
     private static void AddTri(
