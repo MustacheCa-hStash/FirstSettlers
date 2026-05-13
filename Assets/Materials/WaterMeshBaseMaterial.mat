@@ -104,10 +104,10 @@ Material:
     - _EnvironmentReflections: 1
     - _FoamAmount: 20
     - _FoamCutoff: 1
-    - _FoamDistanceInner: 11.5
-    - _FoamDistanceOuter: 12
-    - _FoamNoiseStrength: 0.15
-    - _FoamRingStrength: 10
+    - _FoamDistanceInner: 7.9
+    - _FoamDistanceOuter: 8
+    - _FoamNoiseStrength: 1
+    - _FoamRingStrength: 40
     - _FoamScale: 100
     - _FoamSharpness: 2
     - _FoamSpeed: 1
