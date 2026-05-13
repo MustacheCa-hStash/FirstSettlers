@@ -18,22 +18,44 @@ public static class BiomeClassifier
 
     private const float slopeScale = 4f;
 
-    public static BiomeType Classify(float height, float moisture, float temperature, float slope, float mountainMask, 
-        float riverMask)
+    public static BiomeType Classify(float height, float moisture, float temperature, float slope, float mountainMask,
+    float riverMask)
     {
-        //normalize slope
-        slope = Mathf.Clamp01(slope * slopeScale);
+        slope *= slopeScale;
 
         bool isRiver =
-        riverMask > 0.22f &&
-        height < WaterLevel + 0.05f &&
-        slope < 0.55f;
+            riverMask > 0.22f &&
+            height < WaterLevel + 0.05f &&
+            slope < 0.55f;
 
         if (height < WaterLevel || isRiver)
             return BiomeType.Water;
 
         if (height < BeachLevel)
             return BiomeType.Beach;
+
+        bool strongMountain = mountainMask > 0.45f;
+
+        if (strongMountain)
+        {
+            float heightSnowBias = Mathf.InverseLerp(1f, 5f, height);
+            if (height > 2f)
+            {
+                Debug.Log(height + ", " + slope);
+            }
+
+            float slopeRockThreshold = Mathf.Lerp(0.03f, 0.25f, heightSnowBias);
+
+            bool steepMountainSlope = slope > slopeRockThreshold;
+
+            if (steepMountainSlope)
+                return BiomeType.Rock;
+
+            if (temperature < ColdTemp)
+                return BiomeType.Snow;
+
+            return BiomeType.Rock;
+        }
 
         if (temperature < 0.18f)
         {
@@ -50,22 +72,12 @@ public static class BiomeClassifier
         }
 
         float adjustedRockLevel = RockLevel;
-        adjustedRockLevel -= slope * 0.14f;
+        adjustedRockLevel -= Mathf.InverseLerp(0.05f, 0.45f, slope) * 0.14f;
         adjustedRockLevel -= mountainMask * 0.18f;
         adjustedRockLevel = Mathf.Clamp(adjustedRockLevel, 0.50f, RockLevel);
 
         if (height > adjustedRockLevel)
-        {
-            float adjustedSnowLevel = SnowLevel;
-            adjustedSnowLevel -= mountainMask * 0.06f;
-            adjustedSnowLevel -= slope * 0.03f;
-            adjustedSnowLevel = Mathf.Clamp(adjustedSnowLevel, 0.80f, SnowLevel);
-
-            if (temperature < ColdTemp && height > adjustedSnowLevel)
-                return BiomeType.Snow;
-
             return BiomeType.Rock;
-        }
 
         if (temperature > HotTemp && moisture < DryMoisture)
             return BiomeType.Desert;

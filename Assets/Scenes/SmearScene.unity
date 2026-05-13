@@ -468,8 +468,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 5
-  viewDistance: 15
+  worldSeed: 10
+  viewDistance: 30
   colliderDistance: 5
   chunkSize: 128
   viewer: {fileID: 1578603182}
@@ -685,8 +685,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: -0.8450755, z: 0, w: -0.5346471}
-  m_LocalPosition: {x: 285.34235, y: 50, z: -0.5092869}
+  m_LocalRotation: {x: 0, y: 0.9999961, z: 0, w: -0.0027924888}
+  m_LocalPosition: {x: 588.5817, y: 150, z: 35.124176}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -705,14 +705,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d273fd913b3ace24b986b68f7a847e3c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  walkSpeed: 3
+  walkSpeed: 20
   sprintSpeed: 6
   crouchSpeed: 1.5
   acceleration: 12
   mouseSensitivity: 0.08
   pitchMin: -80
   pitchMax: 80
-  gravity: -20
+  gravity: 0
   jumpHeight: 1.1
   standingHeight: 1.8
   crouchingHeight: 1.2

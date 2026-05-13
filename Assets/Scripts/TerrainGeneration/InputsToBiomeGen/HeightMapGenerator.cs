@@ -22,6 +22,7 @@ public static class HeightMapGenerator
         Vector2[] mountainMaskOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 30000, 3);
         Vector2[] mountainTerrainOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 40000, 4);
 
+
         for (int x = 0; x < width; x++)
         {
             for (int z = 0; z < height; z++)
@@ -36,22 +37,22 @@ public static class HeightMapGenerator
                 float baseLandSampleZ = worldZ / (sampleScale * 1.6f);
                 float baseLand = BaseLandGenerator.Sample(baseLandSampleX, baseLandSampleZ, baseLandOffsets);
 
-                float mountainMaskSampleX = worldX / (sampleScale * 4.0f);
-                float mountainMaskSampleZ = worldZ / (sampleScale * 4.0f);
+                float mountainMaskSampleX = worldX / (sampleScale * 6.0f);
+                float mountainMaskSampleZ = worldZ / (sampleScale * 6.0f);
                 float mountainMask = MountainMaskGenerator.Sample(mountainMaskSampleX, mountainMaskSampleZ, mountainMaskOffsets);
 
                 float gatedMask = Mathf.SmoothStep(0.12f, 0.9f, mountainMask);
                 float mountainWeight = Mathf.Pow(gatedMask, 1.8f);
 
-                float mountainTerrainSampleX = worldX / (sampleScale * 0.4f);
-                float mountainTerrainSampleZ = worldZ / (sampleScale * 0.4f);
+                float mountainTerrainSampleX = worldX / (sampleScale * 3f);
+                float mountainTerrainSampleZ = worldZ / (sampleScale * 3f);
                 float mountainTerrain = MountainTerrainGenerator.Sample(mountainTerrainSampleX, mountainTerrainSampleZ, mountainTerrainOffsets);
 
                 float riverSampleX = worldX / (sampleScale * 10.0f);
                 float riverSampleZ = worldZ / (sampleScale * 10.0f);
                 float riverMask = RiverGenerator.Sample(riverSampleX, riverSampleZ);
 
-                float finalHeight = baseLand + mountainTerrain * mountainWeight * 15.0f;
+                float finalHeight = baseLand + mountainTerrain * mountainWeight * 45.0f;
                 finalHeight = ApplyHeightPipeline(finalHeight);
 
                 float riverEligibility;
@@ -87,7 +88,6 @@ public static class HeightMapGenerator
                 finalHeightMap[x, z] = finalHeight;
                 mountainMaskMap[x, z] = mountainMask;
                 riverMaskMap[x, z] = carvedRiverMask;
-
             }
         }
 
