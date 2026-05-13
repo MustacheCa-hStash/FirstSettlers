@@ -102,9 +102,14 @@ Material:
     - _DstBlend: 10
     - _DstBlendAlpha: 10
     - _EnvironmentReflections: 1
-    - _FoamAmount: 12
+    - _FoamAmount: 20
     - _FoamCutoff: 1
+    - _FoamDistanceInner: 11.5
+    - _FoamDistanceOuter: 12
+    - _FoamNoiseStrength: 0.15
+    - _FoamRingStrength: 10
     - _FoamScale: 100
+    - _FoamSharpness: 2
     - _FoamSpeed: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
