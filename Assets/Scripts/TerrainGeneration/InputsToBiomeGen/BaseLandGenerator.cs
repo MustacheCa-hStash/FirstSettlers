@@ -2,9 +2,9 @@ using UnityEngine;
 
 public static class BaseLandGenerator
 {
-    const int octaves = 2;
+    const int octaves = 1;
     const float persistence = 0.15f;
-    const float lacunarity = 1.5f;
+    const float lacunarity = 1.2f;
     const float flatteningFactor = 1.5f; //increase for more flattening, inverse is true
 
     static readonly float maxPossibleHeight = TerrainNoiseUtility.ComputeMaxPossibleHeight(octaves, persistence);

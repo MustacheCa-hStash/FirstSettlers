@@ -68,7 +68,13 @@ public static class HeightMapGenerator
 
                 float carvedRiverMask = riverMask * riverEligibility;
 
-                finalHeight -= carvedRiverMask * 0.05f;
+                float originalHeight = finalHeight;
+
+                float riverDepth = 0.035f;
+                float riverReferenceHeight = ApplyHeightPipeline(baseLand);
+                float riverbedTarget = riverReferenceHeight - riverDepth;
+
+                finalHeight = Mathf.Lerp(originalHeight, riverbedTarget, carvedRiverMask);
 
                 finalHeightMap[x, z] = finalHeight;
                 mountainMaskMap[x, z] = mountainMask;
@@ -89,22 +95,7 @@ public static class HeightMapGenerator
 
     private static float ApplyHeightPipeline(float normalizedHeight)
     {
-
-        return ApplyWaterFlattening(normalizedHeight);
-    }
-
-    private static float ApplyWaterFlattening(float normalizedHeight)
-    {
-        float waterLevel = 0.2f;
-        float height = normalizedHeight;
-
-        if (height < waterLevel)
-        {
-            float depth = waterLevel - height;
-            height = waterLevel - depth * 0.35f;
-        }
-
-        return height;
+        return normalizedHeight;
     }
 
     private static void ComputeFinalGradients(float[,] finalHeightMap, out float[,] gradientXMap, out float[,] gradientZMap, out float[,] slopeMap)

@@ -5,8 +5,8 @@ public static class SurfaceTypeClassifier
     private const float OceanWaterLevel = TerrainWaterSettings.WaterLevel;
     private const float BeachBand = TerrainWaterSettings.BeachLevel - TerrainWaterSettings.WaterLevel;
 
-    private const float RiverBankThreshold = 0.02f;
-    private const float RiverCoreThreshold = 0.25f;
+    private const float RiverBankThreshold = 0.69f;
+    private const float RiverCoreThreshold = 0.72f;
 
     private const float CliffSlopeThreshold = 0.6f;
     private const float RockSlopeThreshold = 0.42f;

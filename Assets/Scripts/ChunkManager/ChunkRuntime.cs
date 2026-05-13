@@ -133,7 +133,7 @@ public class ChunkRuntime
         else
         {
             riverMeshFilter.sharedMesh = null;
-
+        
             if (riverRoot.activeSelf)
                 riverRoot.SetActive(false);
         }

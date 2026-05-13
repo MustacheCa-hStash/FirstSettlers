@@ -137,7 +137,7 @@ public static class LakeMeshGenerator
 public static class RiverMeshGenerator
 {
     private const float WaterSurfaceOffset = 0.02f;
-    private const float RiverInclusionThreshold = 0.40f;
+    private const float RiverInclusionThreshold = 0.75f;
 
     public static WaterMeshData GenerateRiverMesh(
         float[,] heightMap,
