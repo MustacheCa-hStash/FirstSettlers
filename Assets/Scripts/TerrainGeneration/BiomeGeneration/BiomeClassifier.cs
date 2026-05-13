@@ -39,11 +39,6 @@ public static class BiomeClassifier
         if (strongMountain)
         {
             float heightSnowBias = Mathf.InverseLerp(2f, 11f, height);
-            if (height > 2f)
-            {
-                //return BiomeType.Grassland;
-                Debug.Log(height + ", " + slope);
-            }
 
             float slopeRockThreshold = Mathf.Lerp(0.015f, 0.16f, heightSnowBias);
 
@@ -54,6 +49,19 @@ public static class BiomeClassifier
 
             if (temperature < ColdTemp)
                 return BiomeType.Snow;
+
+            if (temperature < HotTemp)
+            {
+                float temperateSnowHeight = Mathf.InverseLerp(3.0f, 8f, height);
+                float gentleSlopeMask = 1f - Mathf.InverseLerp(0.02f, 0.18f, slope);
+
+                float snowChance = temperateSnowHeight * gentleSlopeMask;
+
+                if (snowChance > 0.5f)
+                    return BiomeType.Snow;
+
+                return BiomeType.Rock;
+            }
 
             return BiomeType.Rock;
         }
