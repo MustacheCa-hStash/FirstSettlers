@@ -21,7 +21,7 @@ public static class HeightMapGenerator
         Vector2[] baseLandOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 20000, 2);
         Vector2[] mountainMaskOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 30000, 3);
         Vector2[] mountainTerrainOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 40000, 4);
-
+        Vector2[] mountainRuggedOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 50000, 3);
 
         for (int x = 0; x < width; x++)
         {
@@ -52,7 +52,28 @@ public static class HeightMapGenerator
                 float riverSampleZ = worldZ / (sampleScale * 10.0f);
                 float riverMask = RiverGenerator.Sample(riverSampleX, riverSampleZ);
 
-                float finalHeight = baseLand + mountainTerrain * mountainWeight * 45.0f;
+                float mainMountainHeight = mountainTerrain * mountainWeight * 45.0f;
+
+                float ruggedSampleX = worldX / (sampleScale * 0.3f);
+                float ruggedSampleZ = worldZ / (sampleScale * 0.3f);
+
+                float ruggedRaw = TerrainNoiseUtility.SampleBasicFbm(
+                    ruggedSampleX,
+                    ruggedSampleZ,
+                    0,
+                    3,
+                    0.5f,
+                    2.0f,
+                    mountainRuggedOffsets
+                );
+
+                float ruggedNoise = Mathf.Max(0f, ruggedRaw);
+
+                float ruggedMask = Mathf.SmoothStep(0.25f, 0.8f, mountainTerrain);
+
+                float ruggedHeight = ruggedNoise * ruggedMask * mountainWeight * 2.0f;
+
+                float finalHeight = baseLand + mainMountainHeight + ruggedHeight;
                 finalHeight = ApplyHeightPipeline(finalHeight);
 
                 float riverEligibility;
@@ -115,6 +136,8 @@ public static class HeightMapGenerator
         gradientZMap = new float[width, height];
         slopeMap = new float[width, height];
 
+        const int slopeRadius = 4;
+
         for (int x = 0; x < width; x++)
         {
             for (int z = 0; z < height; z++)
@@ -142,7 +165,16 @@ public static class HeightMapGenerator
 
                 gradientXMap[x, z] = dx;
                 gradientZMap[x, z] = dz;
-                slopeMap[x, z] = Mathf.Sqrt(dx * dx + dz * dz);
+
+                int x0 = Mathf.Max(x - slopeRadius, 0);
+                int x1 = Mathf.Min(x + slopeRadius, width - 1);
+                int z0 = Mathf.Max(z - slopeRadius, 0);
+                int z1 = Mathf.Min(z + slopeRadius, height - 1);
+
+                float wideDx = (finalHeightMap[x1, z] - finalHeightMap[x0, z]) / Mathf.Max(1f, x1 - x0);
+                float wideDz = (finalHeightMap[x, z1] - finalHeightMap[x, z0]) / Mathf.Max(1f, z1 - z0);
+
+                slopeMap[x, z] = Mathf.Sqrt(wideDx * wideDx + wideDz * wideDz);
             }
         }
     }
