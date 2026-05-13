@@ -74,7 +74,15 @@ public static class HeightMapGenerator
                 float riverReferenceHeight = ApplyHeightPipeline(baseLand);
                 float riverbedTarget = riverReferenceHeight - riverDepth;
 
+                float riverInclusionThreshold = 0.75f;
+
                 finalHeight = Mathf.Lerp(originalHeight, riverbedTarget, carvedRiverMask);
+
+                float riverCoreMask = Mathf.InverseLerp(riverInclusionThreshold, 1.0f, carvedRiverMask);
+                riverCoreMask = Mathf.SmoothStep(0f, 1f, riverCoreMask);
+
+                float riverCoreExtraDepth = 0.5f;
+                finalHeight -= riverCoreMask * riverCoreExtraDepth;
 
                 finalHeightMap[x, z] = finalHeight;
                 mountainMaskMap[x, z] = mountainMask;

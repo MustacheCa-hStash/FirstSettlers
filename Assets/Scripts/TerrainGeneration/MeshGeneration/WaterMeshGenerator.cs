@@ -157,11 +157,7 @@ public static class RiverMeshGenerator
 
         if (stepIncrement == 1)
         {
-            return GenerateRiverMeshLOD0(
-                heightMap,
-                riverCellMask,
-                heightMultiplier,
-                worldScale);
+            return GenerateRiverMeshLOD0(heightMap, riverMaskMap, riverCellMask, heightMultiplier, worldScale);
         }
 
         int strip = Mathf.Max(1, stepIncrement);
@@ -177,7 +173,17 @@ public static class RiverMeshGenerator
         {
             for (int x = 0; x <= chunkSize; x++)
             {
-                float h = heightMap[x + 1, z + 1] * heightMultiplier * worldScale + WaterSurfaceOffset;
+                const float riverCoreExtraDepth = 0.5f;
+
+                float terrainHeight = heightMap[x + 1, z + 1];
+
+                float riverMask = riverMaskMap[x + 1, z + 1];
+                float riverCoreMask = Mathf.InverseLerp(RiverInclusionThreshold, 1.0f, riverMask);
+                riverCoreMask = Mathf.SmoothStep(0f, 1f, riverCoreMask);
+
+                float restoredWaterHeight = terrainHeight + riverCoreMask * riverCoreExtraDepth;
+
+                float h = restoredWaterHeight * heightMultiplier * worldScale + WaterSurfaceOffset;
 
                 positions[x, z] = new Vector3(
                     (topLeftX + x) * worldScale,
@@ -305,6 +311,7 @@ public static class RiverMeshGenerator
 
     private static WaterMeshData GenerateRiverMeshLOD0(
         float[,] heightMap,
+        float[,] riverMaskMap,
         bool[,] riverCellMask,
         float heightMultiplier,
         float worldScale)
@@ -337,10 +344,10 @@ public static class RiverMeshGenerator
                 if (!riverCellMask[x, z])
                     continue;
 
-                Vector3 a = BuildRiverVertex(heightMap, topLeftX, bottomLeftZ, x, z, heightMultiplier, worldScale);
-                Vector3 b = BuildRiverVertex(heightMap, topLeftX, bottomLeftZ, x + 1, z, heightMultiplier, worldScale);
-                Vector3 c = BuildRiverVertex(heightMap, topLeftX, bottomLeftZ, x, z + 1, heightMultiplier, worldScale);
-                Vector3 d = BuildRiverVertex(heightMap, topLeftX, bottomLeftZ, x + 1, z + 1, heightMultiplier, worldScale);
+                Vector3 a = BuildRiverVertex(heightMap, riverMaskMap, topLeftX, bottomLeftZ, x, z, heightMultiplier, worldScale);
+                Vector3 b = BuildRiverVertex(heightMap, riverMaskMap, topLeftX, bottomLeftZ, x + 1, z, heightMultiplier, worldScale);
+                Vector3 c = BuildRiverVertex(heightMap, riverMaskMap, topLeftX, bottomLeftZ, x, z + 1, heightMultiplier, worldScale);
+                Vector3 d = BuildRiverVertex(heightMap, riverMaskMap, topLeftX, bottomLeftZ, x + 1, z + 1, heightMultiplier, worldScale);
 
                 Vector2 uvA = new Vector2(x / (float)chunkSize, z / (float)chunkSize);
                 Vector2 uvB = new Vector2((x + 1) / (float)chunkSize, z / (float)chunkSize);
@@ -356,6 +363,7 @@ public static class RiverMeshGenerator
 
     private static Vector3 BuildRiverVertex(
         float[,] heightMap,
+        float[,] riverMaskMap,
         float topLeftX,
         float bottomLeftZ,
         int x,
@@ -363,12 +371,19 @@ public static class RiverMeshGenerator
         float heightMultiplier,
         float worldScale)
     {
-        float h = heightMap[x + 1, z + 1] * heightMultiplier * worldScale + WaterSurfaceOffset;
+        const float riverCoreExtraDepth = 0.5f;
 
-        return new Vector3(
-            (topLeftX + x) * worldScale,
-            h,
-            (bottomLeftZ + z) * worldScale);
+        float terrainHeight = heightMap[x + 1, z + 1];
+
+        float riverMask = riverMaskMap[x + 1, z + 1];
+        float riverCoreMask = Mathf.InverseLerp(RiverInclusionThreshold, 1.0f, riverMask);
+        riverCoreMask = Mathf.SmoothStep(0f, 1f, riverCoreMask);
+
+        float restoredWaterHeight = terrainHeight + riverCoreMask * riverCoreExtraDepth;
+
+        float h = restoredWaterHeight * heightMultiplier * worldScale + WaterSurfaceOffset;
+
+        return new Vector3((topLeftX + x) * worldScale, h, (bottomLeftZ + z) * worldScale);
     }
 
     private static void AddTri(
