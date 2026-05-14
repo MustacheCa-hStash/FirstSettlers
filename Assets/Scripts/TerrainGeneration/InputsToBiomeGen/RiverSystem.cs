@@ -11,7 +11,7 @@ public static class RiverGenerator
     private const float WarpScale = 0.45f;
     private const float WarpStrength = 0.30f;
 
-    private const float PairAdjacencyFadeWidth = 0.035f;
+    private const float PairAdjacencyFadeWidth = 0.06f;
 
     public static float Sample(float sampleX, float sampleZ)
     {
@@ -77,7 +77,9 @@ public static class RiverGenerator
 
                 float adjacencyGate = Mathf.InverseLerp(-PairAdjacencyFadeWidth, 0f, closestThirdGap);
 
-                adjacencyGate = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(adjacencyGate));
+                adjacencyGate = Mathf.Clamp01(adjacencyGate);
+                adjacencyGate = adjacencyGate * adjacencyGate * (3f - 2f * adjacencyGate);
+                adjacencyGate = adjacencyGate * adjacencyGate * (3f - 2f * adjacencyGate);
 
                 if (adjacencyGate <= 0f)
                     continue;

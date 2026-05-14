@@ -178,7 +178,7 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.3
-  far clip plane: 1000
+  far clip plane: 5000
   field of view: 60
   orthographic: 0
   orthographic size: 5
@@ -469,7 +469,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   worldSeed: 10
-  viewDistance: 15
+  viewDistance: 50
   colliderDistance: 5
   chunkSize: 128
   viewer: {fileID: 1578603182}
@@ -685,8 +685,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: -0.9809553, z: 0, w: 0.19423379}
-  m_LocalPosition: {x: 298.7502, y: 100, z: 121.74642}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 100, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
