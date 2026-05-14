@@ -3,13 +3,15 @@
 public static class RiverGenerator
 {
     private const float SiteCellSize = 1.8f;
-    private const float SiteJitter = 0.85f;
+    private const float SiteJitter = 0.6f;
 
-    private const float RiverHalfWidth = 0.01f;
-    private const float BankFalloffWidth = 0.02f;
+    private const float RiverHalfWidth = 0.014f;
+    private const float BankFalloffWidth = 0.025f;
 
-    private const float WarpScale = 0.65f;
-    private const float WarpStrength = 1.0f;
+    private const float WarpScale = 0.45f;
+    private const float WarpStrength = 0.30f;
+
+    private const float PairAdjacencyFadeWidth = 0.035f;
 
     public static float Sample(float sampleX, float sampleZ)
     {
@@ -18,11 +20,10 @@ public static class RiverGenerator
         int baseCellX = Mathf.FloorToInt(warpedX / SiteCellSize);
         int baseCellZ = Mathf.FloorToInt(warpedZ / SiteCellSize);
 
-        float nearestDistSq = float.MaxValue;
-        float secondDistSq = float.MaxValue;
+        Vector2[] sites = new Vector2[9];
+        float[] distSq = new float[9];
 
-        Vector2 nearestSite = Vector2.zero;
-        Vector2 secondSite = Vector2.zero;
+        int siteCount = 0;
 
         for (int dz = -1; dz <= 1; dz++)
         {
@@ -33,39 +34,67 @@ public static class RiverGenerator
 
                 Vector2 site = GetSite(cx, cz);
 
+                sites[siteCount] = site;
+
                 float dxp = warpedX - site.x;
                 float dzp = warpedZ - site.y;
-                float distSq = dxp * dxp + dzp * dzp;
+                distSq[siteCount] = dxp * dxp + dzp * dzp;
 
-                if (distSq < nearestDistSq)
-                {
-                    secondDistSq = nearestDistSq;
-                    secondSite = nearestSite;
-
-                    nearestDistSq = distSq;
-                    nearestSite = site;
-                }
-                else if (distSq < secondDistSq)
-                {
-                    secondDistSq = distSq;
-                    secondSite = site;
-                }
+                siteCount++;
             }
         }
 
-        float siteDeltaX = secondSite.x - nearestSite.x;
-        float siteDeltaZ = secondSite.y - nearestSite.y;
-        float siteSeparation = Mathf.Sqrt(siteDeltaX * siteDeltaX + siteDeltaZ * siteDeltaZ);
+        float riverMask = 0f;
 
-        if (siteSeparation < 0.0001f)
-            return 0f;
+        for (int i = 0; i < siteCount; i++)
+        {
+            for (int j = i + 1; j < siteCount; j++)
+            {
+                Vector2 a = sites[i];
+                Vector2 b = sites[j];
 
-        float borderDistance = Mathf.Abs(secondDistSq - nearestDistSq) / (2f * siteSeparation);
+                float siteDeltaX = b.x - a.x;
+                float siteDeltaZ = b.y - a.y;
+                float siteSeparation = Mathf.Sqrt(siteDeltaX * siteDeltaX + siteDeltaZ * siteDeltaZ);
 
-        float riverMask = 1f - Mathf.InverseLerp(
-            RiverHalfWidth,
-            RiverHalfWidth + BankFalloffWidth,
-            borderDistance);
+                if (siteSeparation < 0.0001f)
+                    continue;
+
+                float pairNearness = Mathf.Max(distSq[i], distSq[j]);
+
+                float closestThirdGap = float.MaxValue;
+
+                for (int k = 0; k < siteCount; k++)
+                {
+                    if (k == i || k == j)
+                        continue;
+
+                    float thirdGap = distSq[k] - pairNearness;
+
+                    if (thirdGap < closestThirdGap)
+                        closestThirdGap = thirdGap;
+                }
+
+                float adjacencyGate = Mathf.InverseLerp(-PairAdjacencyFadeWidth, 0f, closestThirdGap);
+
+                adjacencyGate = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(adjacencyGate));
+
+                if (adjacencyGate <= 0f)
+                    continue;
+
+                float borderDistance = Mathf.Abs(distSq[j] - distSq[i]) / (2f * siteSeparation);
+
+                float edgeMask = 1f - Mathf.InverseLerp(
+                    RiverHalfWidth,
+                    RiverHalfWidth + BankFalloffWidth,
+                    borderDistance);
+
+                edgeMask = Mathf.Clamp01(edgeMask);
+                edgeMask *= adjacencyGate;
+
+                riverMask = Mathf.Max(riverMask, edgeMask);
+            }
+        }
 
         return Mathf.Clamp01(riverMask);
     }

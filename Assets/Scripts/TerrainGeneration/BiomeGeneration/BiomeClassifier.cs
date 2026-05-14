@@ -5,7 +5,7 @@ public static class BiomeClassifier
     // Height thresholds
     private const float WaterLevel = TerrainWaterSettings.WaterLevel;
     private const float BeachLevel = TerrainWaterSettings.BeachLevel;
-    private const float RockLevel = 0.62f;
+    private const float RockLevel = 0.8f;
     private const float SnowLevel = 0.93f;
 
     // Temperature thresholds
@@ -18,8 +18,8 @@ public static class BiomeClassifier
 
     private const float slopeScale = 4f;
 
-    public static BiomeType Classify(float height, float moisture, float temperature, float slope, float mountainMask,
-    float riverMask)
+    public static BiomeType Classify(float height, float moisture, float temperature,
+    float slope, float mountainMask, float riverMask)
     {
         slope *= slopeScale;
 
@@ -34,6 +34,7 @@ public static class BiomeClassifier
         if (height < BeachLevel)
             return BiomeType.Beach;
 
+        bool moderateMountain = mountainMask > 0.30f;
         bool strongMountain = mountainMask > 0.45f;
 
         if (strongMountain)
@@ -80,19 +81,29 @@ public static class BiomeClassifier
                 return BiomeType.Taiga;
         }
 
-        float adjustedRockLevel = RockLevel;
-        adjustedRockLevel -= Mathf.InverseLerp(0.05f, 0.45f, slope) * 0.14f;
-        adjustedRockLevel -= mountainMask * 0.18f;
-        adjustedRockLevel = Mathf.Clamp(adjustedRockLevel, 0.50f, RockLevel);
+        if (moderateMountain)
+        {
+            float mountainStrength = Mathf.InverseLerp(0.30f, 0.45f, mountainMask);
 
-        if (height > adjustedRockLevel)
-            return BiomeType.Rock;
+            float adjustedRockLevel = RockLevel;
+            adjustedRockLevel -= Mathf.InverseLerp(0.05f, 0.45f, slope) * 0.14f;
+            adjustedRockLevel -= mountainStrength * 0.18f;
+            adjustedRockLevel = Mathf.Clamp(adjustedRockLevel, 0.62f, RockLevel);
+
+            if (height > adjustedRockLevel)
+                return BiomeType.Rock;
+        }
 
         if (temperature > HotTemp && moisture < DryMoisture)
             return BiomeType.Desert;
 
         if (moisture > WetMoisture)
             return BiomeType.Forest;
+
+        bool steepGrasslandSlope = slope > 0.03f && height > BeachLevel + 0.08f;
+
+        if (steepGrasslandSlope)
+            return BiomeType.Rock;
 
         return BiomeType.Grassland;
     }
