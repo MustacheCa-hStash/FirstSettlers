@@ -6,6 +6,7 @@ public static class FoliageGenerator
     public static void GenerateGrassForChunk(
         ChunkRecord record,
         GrassSettings grassSettings,
+        TreeSettings treeSettings,
         int worldSeed,
         int chunkSize,
         float worldScale,
@@ -40,6 +41,9 @@ public static class FoliageGenerator
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;
 
+        float treeExclusionRadiusSqr =
+            treeSettings.grassExclusionRadius * treeSettings.grassExclusionRadius;
+
         for (int cellZ = 0; cellZ < cellsPerAxis; cellZ++)
         {
             for (int cellX = 0; cellX < cellsPerAxis; cellX++)
@@ -56,14 +60,24 @@ public static class FoliageGenerator
                 if (record.SurfaceTypeMap[paddedX, paddedZ] != SurfaceType.Grass)
                     continue;
 
+                float localX = (topLeftX + sampleX) * worldScale;
+                float localZ = (bottomLeftZ + sampleZ) * worldScale;
+
+                if (IsInsideTreeExclusion(
+                    localX,
+                    localZ,
+                    foliageData.treeCubeInstances,
+                    treeExclusionRadiusSqr))
+                {
+                    continue;
+                }
+
                 float height = SampleHeightBilinear(
                     record.HeightMap,
                     sampleX,
                     sampleZ,
                     chunkSize);
 
-                float localX = (topLeftX + sampleX) * worldScale;
-                float localZ = (bottomLeftZ + sampleZ) * worldScale;
                 float localY = height * meshHeightMultiplier * worldScale;
 
                 float yaw = 0f;
@@ -211,7 +225,12 @@ public static class FoliageGenerator
         foliageData.billboardGenerated = true;
     }
 
-    public static void GenerateTreeCubesForChunk(ChunkRecord record, int worldSeed, int chunkSize, float worldScale,
+    public static void GenerateTreeCubesForChunk(
+        ChunkRecord record,
+        TreeSettings treeSettings,
+        int worldSeed,
+        int chunkSize,
+        float worldScale,
         float meshHeightMultiplier)
     {
         if (record.FoliageData == null)
@@ -225,12 +244,7 @@ public static class FoliageGenerator
         if (record.SurfaceTypeMap == null || record.HeightMap == null)
             return;
 
-        float treeCellSize = 12f;
-        float treeSpawnChance = 0.3f;
-        float treeMinDistance = 9f;
-        float cubeScale = 2f;
-
-        int cellsPerAxis = Mathf.CeilToInt(chunkSize / treeCellSize);
+        int cellsPerAxis = Mathf.CeilToInt(chunkSize / treeSettings.treeCellSize);
 
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;
@@ -243,7 +257,7 @@ public static class FoliageGenerator
             {
                 int baseHash = Hash(
                     worldSeed,
-                    12000,
+                    treeSettings.seedOffset,
                     record.ChunkCoord.x,
                     record.ChunkCoord.z,
                     cellX,
@@ -251,14 +265,14 @@ public static class FoliageGenerator
                     311);
 
                 float spawnRoll = Hash01(baseHash);
-                if (spawnRoll > treeSpawnChance)
+                if (spawnRoll > treeSettings.treeSpawnChance)
                     continue;
 
                 float offsetX = Hash01(baseHash + 37);
                 float offsetZ = Hash01(baseHash + 73);
 
-                float sampleX = (cellX + offsetX) * treeCellSize;
-                float sampleZ = (cellZ + offsetZ) * treeCellSize;
+                float sampleX = (cellX + offsetX) * treeSettings.treeCellSize;
+                float sampleZ = (cellZ + offsetZ) * treeSettings.treeCellSize;
 
                 if (sampleX < 0f || sampleX > chunkSize || sampleZ < 0f || sampleZ > chunkSize)
                     continue;
@@ -284,9 +298,14 @@ public static class FoliageGenerator
 
                 float yaw = Hash01(baseHash + 109) * 360f;
 
+                float uniformScale = Mathf.Lerp(
+                    treeSettings.treeUniformScaleRange.x,
+                    treeSettings.treeUniformScaleRange.y,
+                    Hash01(baseHash + 151));
+
                 uint priority = (uint)Hash(
                     worldSeed,
-                    12000,
+                    treeSettings.seedOffset,
                     record.ChunkCoord.x,
                     record.ChunkCoord.z,
                     cellX,
@@ -296,14 +315,14 @@ public static class FoliageGenerator
                 candidates.Add(new TreeCandidateData(
                     new Vector3(localX, localY, localZ),
                     Quaternion.Euler(0f, yaw, 0f),
-                    Vector3.one * cubeScale,
+                    Vector3.one * uniformScale,
                     priority));
             }
         }
 
         candidates.Sort((a, b) => a.priority.CompareTo(b.priority));
 
-        float minDistanceSqr = treeMinDistance * treeMinDistance;
+        float minDistanceSqr = treeSettings.treeMinDistance * treeSettings.treeMinDistance;
 
         for (int i = 0; i < candidates.Count; i++)
         {
@@ -337,6 +356,28 @@ public static class FoliageGenerator
         }
 
         foliageData.treeCubesGenerated = true;
+    }
+
+    private static bool IsInsideTreeExclusion(
+        float localX,
+        float localZ,
+        List<TreeInstanceData> treeInstances,
+        float exclusionRadiusSqr)
+    {
+        for (int i = 0; i < treeInstances.Count; i++)
+        {
+            TreeInstanceData tree = treeInstances[i];
+
+            float dx = localX - tree.localPosition.x;
+            float dz = localZ - tree.localPosition.z;
+
+            float distSqr = dx * dx + dz * dz;
+
+            if (distSqr < exclusionRadiusSqr)
+                return true;
+        }
+
+        return false;
     }
 
     private static void SortSubChunkBucketsBySelectionRank(ChunkFoliageData foliageData)

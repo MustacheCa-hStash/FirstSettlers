@@ -43,6 +43,7 @@ public class ChunkManager
         Transform chunkParent,
         Transform foliageParent,
         GrassSettings grassSettings,
+        TreeSettings treeSettings,
         float sampleScale,
         float worldScale,
         int octaves,
@@ -79,6 +80,7 @@ public class ChunkManager
         foliageManager = new FoliageManager(
             foliageParent,
             grassSettings,
+            treeSettings,
             seed,
             chunkSize,
             worldScale,

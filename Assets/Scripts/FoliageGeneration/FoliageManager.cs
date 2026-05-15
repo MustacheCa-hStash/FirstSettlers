@@ -5,6 +5,7 @@ public class FoliageManager
 {
     private readonly Transform foliageParent;
     private readonly GrassSettings grassSettings;
+    private readonly TreeSettings treeSettings;
     private readonly int worldSeed;
     private readonly int chunkSize;
     private readonly float worldScale;
@@ -19,16 +20,12 @@ public class FoliageManager
     private Mesh treeCubeMesh;
     private Material treeCubeMaterial;
 
-    public FoliageManager(
-        Transform foliageParent,
-        GrassSettings grassSettings,
-        int worldSeed,
-        int chunkSize,
-        float worldScale,
-        float meshHeightMultiplier)
+    public FoliageManager(Transform foliageParent, GrassSettings grassSettings, TreeSettings treeSettings, int worldSeed, 
+        int chunkSize, float worldScale, float meshHeightMultiplier)
     {
         this.foliageParent = foliageParent;
         this.grassSettings = grassSettings;
+        this.treeSettings = treeSettings;
         this.worldSeed = worldSeed;
         this.chunkSize = chunkSize;
         this.worldScale = worldScale;
@@ -83,6 +80,7 @@ public class FoliageManager
                     FoliageGenerator.GenerateGrassForChunk(
                         record,
                         grassSettings,
+                        treeSettings,
                         worldSeed,
                         chunkSize,
                         worldScale,
@@ -157,6 +155,7 @@ public class FoliageManager
                     FoliageGenerator.GenerateGrassForChunk(
                         record,
                         grassSettings,
+                        treeSettings,
                         worldSeed,
                         chunkSize,
                         worldScale,
@@ -203,6 +202,7 @@ public class FoliageManager
         {
             FoliageGenerator.GenerateTreeCubesForChunk(
                 record,
+                treeSettings,
                 worldSeed,
                 chunkSize,
                 worldScale,
@@ -536,14 +536,14 @@ public class FoliageManager
 
     private void ResolveTreeCubeRenderAssets()
     {
-        if (grassSettings.treeCubePrefab == null)
+        if (treeSettings.treeCubePrefab == null)
         {
             Debug.LogError("Tree cube prefab is missing.");
             return;
         }
 
-        MeshFilter meshFilter = grassSettings.treeCubePrefab.GetComponentInChildren<MeshFilter>();
-        MeshRenderer meshRenderer = grassSettings.treeCubePrefab.GetComponentInChildren<MeshRenderer>();
+        MeshFilter meshFilter = treeSettings.treeCubePrefab.GetComponentInChildren<MeshFilter>();
+        MeshRenderer meshRenderer = treeSettings.treeCubePrefab.GetComponentInChildren<MeshRenderer>();
 
         if (meshFilter == null || meshFilter.sharedMesh == null)
         {

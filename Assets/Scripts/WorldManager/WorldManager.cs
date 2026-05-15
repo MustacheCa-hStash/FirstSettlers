@@ -10,6 +10,7 @@ public class WorldManager : MonoBehaviour
     [SerializeField] Transform chunkParent;
     [SerializeField] Transform foliageParent;
     [SerializeField] GrassSettings grassSettings;
+    [SerializeField] TreeSettings treeSettings;
     [SerializeField] float sampleScale = 10f;
     [SerializeField] float worldScale = 1.0f;
     [SerializeField] int octaves = 3;
@@ -25,7 +26,7 @@ public class WorldManager : MonoBehaviour
     void Awake()
     {
         chunkManager = new ChunkManager(viewDistance, colliderDistance, chunkSize, worldSeed, viewer, chunkParent, 
-            foliageParent, grassSettings, sampleScale, worldScale, octaves, persistence, lacunarity, 
+            foliageParent, grassSettings, treeSettings, sampleScale, worldScale, octaves, persistence, lacunarity, 
             erosionStrength, meshHeightMultiplier, terrainMaterial, waterMaterial);
     }
 
