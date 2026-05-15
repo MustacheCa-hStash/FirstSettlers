@@ -16,6 +16,9 @@ public class FoliageManager
     private Mesh billboardGrassMesh;
     private Material billboardGrassMaterial;
 
+    private Mesh treeCubeMesh;
+    private Material treeCubeMaterial;
+
     public FoliageManager(
         Transform foliageParent,
         GrassSettings grassSettings,
@@ -32,6 +35,7 @@ public class FoliageManager
         this.meshHeightMultiplier = meshHeightMultiplier;
 
         ResolveGrassRenderAssets();
+        ResolveTreeCubeRenderAssets();
     }
 
     public void HandleViewerSubChunkChanged(
@@ -53,17 +57,24 @@ public class FoliageManager
 
             bool useNearGrass = IsWithinNearGrass(viewerCoord, coord);
             bool useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
+            bool useFoliage = useNearGrass || useBillboardGrass;
 
             if (!HasRequiredTerrainData(record))
             {
-                if (runtime.FoliageRuntime != null)
-                {
-                    runtime.FoliageRuntime.ClearCachedBatches();
-                    runtime.FoliageRuntime.SetVisible(false);
-                }
-
+                runtime.FoliageRuntime.ClearCachedBatches();
+                runtime.FoliageRuntime.SetVisible(false);
                 continue;
             }
+
+            if (!useFoliage)
+            {
+                runtime.FoliageRuntime.ClearCachedBatches();
+                runtime.FoliageRuntime.SetVisible(false);
+                continue;
+            }
+
+            EnsureTreeCubesGenerated(record);
+            RebuildTreeCubeMatrices(runtime, record);
 
             if (useNearGrass)
             {
@@ -79,7 +90,6 @@ public class FoliageManager
                 }
 
                 RebuildGrassMatricesForViewerSubChunk(runtime, record, viewerGlobalSubChunk);
-                runtime.FoliageRuntime.SetVisible(true);
             }
             else if (useBillboardGrass)
             {
@@ -95,13 +105,9 @@ public class FoliageManager
                 }
 
                 RebuildBillboardMatrices(runtime, record, viewerCoord);
-                runtime.FoliageRuntime.SetVisible(true);
             }
-            else
-            {
-                runtime.FoliageRuntime.ClearCachedBatches();
-                runtime.FoliageRuntime.SetVisible(false);
-            }
+
+            runtime.FoliageRuntime.SetVisible(true);
         }
     }
 
@@ -122,11 +128,26 @@ public class FoliageManager
 
             bool useNearGrass = IsWithinNearGrass(viewerCoord, coord);
             bool useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
+            bool useFoliage = useNearGrass || useBillboardGrass;
 
             if (!HasRequiredTerrainData(record))
             {
                 runtime.FoliageRuntime.SetVisible(false);
                 continue;
+            }
+
+            if (!useFoliage)
+            {
+                runtime.FoliageRuntime.SetVisible(false);
+                continue;
+            }
+
+            EnsureTreeCubesGenerated(record);
+
+            if (record.FoliageData.GetTotalTreeCubeInstanceCount() > 0 &&
+                !runtime.FoliageRuntime.HasValidTreeCubeRenderData())
+            {
+                RebuildTreeCubeMatrices(runtime, record);
             }
 
             if (useNearGrass)
@@ -142,17 +163,14 @@ public class FoliageManager
                         meshHeightMultiplier);
                 }
 
-                bool needsGrassCacheBuild = !runtime.FoliageRuntime.HasValidGrassRenderData();
-                if (needsGrassCacheBuild)
+                if (!runtime.FoliageRuntime.HasValidGrassRenderData())
                 {
-                    RebuildGrassMatricesForViewerSubChunk(
-                        runtime,
-                        record,
-                        viewerGlobalSubChunk);
+                    RebuildGrassMatricesForViewerSubChunk(runtime, record, viewerGlobalSubChunk);
                 }
 
                 runtime.FoliageRuntime.SetVisible(true);
                 runtime.FoliageRuntime.DrawGrass();
+                runtime.FoliageRuntime.DrawTreeCubes();
             }
             else if (useBillboardGrass)
             {
@@ -167,20 +185,61 @@ public class FoliageManager
                         meshHeightMultiplier);
                 }
 
-                bool needsBillboardCacheBuild = !runtime.FoliageRuntime.HasValidBillboardRenderData();
-                if (needsBillboardCacheBuild)
+                if (!runtime.FoliageRuntime.HasValidBillboardRenderData())
                 {
                     RebuildBillboardMatrices(runtime, record, viewerCoord);
                 }
 
                 runtime.FoliageRuntime.SetVisible(true);
                 runtime.FoliageRuntime.DrawBillboards();
-            }
-            else
-            {
-                runtime.FoliageRuntime.SetVisible(false);
+                runtime.FoliageRuntime.DrawTreeCubes();
             }
         }
+    }
+
+    private void EnsureTreeCubesGenerated(ChunkRecord record)
+    {
+        if (record.FoliageData == null || !record.FoliageData.treeCubesGenerated)
+        {
+            FoliageGenerator.GenerateTreeCubesForChunk(
+                record,
+                worldSeed,
+                chunkSize,
+                worldScale,
+                meshHeightMultiplier);
+
+            Debug.Log(
+                $"Tree cubes for chunk {record.ChunkCoord.x},{record.ChunkCoord.z}: " +
+                $"{record.FoliageData.GetTotalTreeCubeInstanceCount()}");
+        }
+    }
+
+    private void RebuildTreeCubeMatrices(ChunkRuntime runtime, ChunkRecord record)
+    {
+        ChunkFoliageRuntime foliageRuntime = runtime.FoliageRuntime;
+        ChunkFoliageData data = record.FoliageData;
+
+        List<Matrix4x4> worldMatrices = new List<Matrix4x4>();
+        Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
+
+        for (int i = 0; i < data.treeCubeInstances.Count; i++)
+        {
+            TreeInstanceData instance = data.treeCubeInstances[i];
+
+            Matrix4x4 localMatrix = Matrix4x4.TRS(
+                instance.localPosition,
+                instance.localRotation,
+                instance.localScale);
+
+            Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
+            worldMatrices.Add(worldMatrix);
+        }
+
+        foliageRuntime.CacheTreeCubeMatrices(worldMatrices);
+
+        Debug.Log(
+            $"Tree cube matrices for chunk {record.ChunkCoord.x},{record.ChunkCoord.z}: " +
+            $"{worldMatrices.Count}");
     }
 
     private void RebuildGrassMatricesForViewerSubChunk(
@@ -242,9 +301,9 @@ public class FoliageManager
     }
 
     private void RebuildBillboardMatrices(
-    ChunkRuntime runtime,
-    ChunkRecord record,
-    ChunkCoord viewerCoord)
+        ChunkRuntime runtime,
+        ChunkRecord record,
+        ChunkCoord viewerCoord)
     {
         ChunkFoliageRuntime foliageRuntime = runtime.FoliageRuntime;
         ChunkFoliageData data = record.FoliageData;
@@ -403,10 +462,16 @@ public class FoliageManager
         root.transform.SetParent(chunkRuntime.RootTransform, false);
 
         chunkRuntime.FoliageRuntime.root = root.transform;
+
         chunkRuntime.FoliageRuntime.grassMesh = grassMesh;
         chunkRuntime.FoliageRuntime.grassMaterial = grassMaterial;
+
         chunkRuntime.FoliageRuntime.billboardMesh = billboardGrassMesh;
         chunkRuntime.FoliageRuntime.billboardMaterial = billboardGrassMaterial;
+
+        chunkRuntime.FoliageRuntime.treeCubeMesh = treeCubeMesh;
+        chunkRuntime.FoliageRuntime.treeCubeMaterial = treeCubeMaterial;
+
         chunkRuntime.FoliageRuntime.SetVisible(false);
     }
 
@@ -466,6 +531,36 @@ public class FoliageManager
             {
                 billboardGrassMaterial = meshRenderer.sharedMaterial;
             }
+        }
+    }
+
+    private void ResolveTreeCubeRenderAssets()
+    {
+        if (grassSettings.treeCubePrefab == null)
+        {
+            Debug.LogError("Tree cube prefab is missing.");
+            return;
+        }
+
+        MeshFilter meshFilter = grassSettings.treeCubePrefab.GetComponentInChildren<MeshFilter>();
+        MeshRenderer meshRenderer = grassSettings.treeCubePrefab.GetComponentInChildren<MeshRenderer>();
+
+        if (meshFilter == null || meshFilter.sharedMesh == null)
+        {
+            Debug.LogError("Tree cube prefab missing MeshFilter or mesh.");
+        }
+        else
+        {
+            treeCubeMesh = meshFilter.sharedMesh;
+        }
+
+        if (meshRenderer == null || meshRenderer.sharedMaterial == null)
+        {
+            Debug.LogError("Tree cube prefab missing MeshRenderer or material.");
+        }
+        else
+        {
+            treeCubeMaterial = meshRenderer.sharedMaterial;
         }
     }
 }

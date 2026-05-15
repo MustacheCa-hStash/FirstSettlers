@@ -27,4 +27,6 @@ public class GrassSettings
     public Vector2 billboardUniformScaleRange = new Vector2(1.5f, 2.5f);
     public bool randomizeBillboardYaw = true;
     public int billboardSeedOffset = 9000;
+
+    public GameObject treeCubePrefab;
 }
