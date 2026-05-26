@@ -226,12 +226,12 @@ public static class FoliageGenerator
     }
 
     public static void GenerateTreeCubesForChunk(
-        ChunkRecord record,
-        TreeSettings treeSettings,
-        int worldSeed,
-        int chunkSize,
-        float worldScale,
-        float meshHeightMultiplier)
+    ChunkRecord record,
+    TreeSettings treeSettings,
+    int worldSeed,
+    int chunkSize,
+    float worldScale,
+    float meshHeightMultiplier)
     {
         if (record.FoliageData == null)
         {
@@ -244,24 +244,38 @@ public static class FoliageGenerator
         if (record.SurfaceTypeMap == null || record.HeightMap == null)
             return;
 
-        int cellsPerAxis = Mathf.CeilToInt(chunkSize / treeSettings.treeCellSize);
+        float chunkSampleMinX = record.ChunkCoord.x * chunkSize;
+        float chunkSampleMinZ = record.ChunkCoord.z * chunkSize;
+        float chunkSampleMaxX = chunkSampleMinX + chunkSize;
+        float chunkSampleMaxZ = chunkSampleMinZ + chunkSize;
+
+        float minDistanceSampleUnits = treeSettings.treeMinDistance / worldScale;
+        float padding = minDistanceSampleUnits + treeSettings.treeCellSize;
+
+        float expandedMinX = chunkSampleMinX - padding;
+        float expandedMaxX = chunkSampleMaxX + padding;
+        float expandedMinZ = chunkSampleMinZ - padding;
+        float expandedMaxZ = chunkSampleMaxZ + padding;
+
+        int globalCellMinX = Mathf.FloorToInt(expandedMinX / treeSettings.treeCellSize);
+        int globalCellMaxX = Mathf.FloorToInt(expandedMaxX / treeSettings.treeCellSize);
+        int globalCellMinZ = Mathf.FloorToInt(expandedMinZ / treeSettings.treeCellSize);
+        int globalCellMaxZ = Mathf.FloorToInt(expandedMaxZ / treeSettings.treeCellSize);
 
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;
 
         List<TreeCandidateData> candidates = new List<TreeCandidateData>();
 
-        for (int cellZ = 0; cellZ < cellsPerAxis; cellZ++)
+        for (int globalCellZ = globalCellMinZ; globalCellZ <= globalCellMaxZ; globalCellZ++)
         {
-            for (int cellX = 0; cellX < cellsPerAxis; cellX++)
+            for (int globalCellX = globalCellMinX; globalCellX <= globalCellMaxX; globalCellX++)
             {
                 int baseHash = Hash(
                     worldSeed,
                     treeSettings.seedOffset,
-                    record.ChunkCoord.x,
-                    record.ChunkCoord.z,
-                    cellX,
-                    cellZ,
+                    globalCellX,
+                    globalCellZ,
                     311);
 
                 float spawnRoll = Hash01(baseHash);
@@ -271,30 +285,23 @@ public static class FoliageGenerator
                 float offsetX = Hash01(baseHash + 37);
                 float offsetZ = Hash01(baseHash + 73);
 
-                float sampleX = (cellX + offsetX) * treeSettings.treeCellSize;
-                float sampleZ = (cellZ + offsetZ) * treeSettings.treeCellSize;
+                float globalSampleX = (globalCellX + offsetX) * treeSettings.treeCellSize;
+                float globalSampleZ = (globalCellZ + offsetZ) * treeSettings.treeCellSize;
 
-                if (sampleX < 0f || sampleX > chunkSize || sampleZ < 0f || sampleZ > chunkSize)
+                if (globalSampleX < expandedMinX || globalSampleX > expandedMaxX ||
+                    globalSampleZ < expandedMinZ || globalSampleZ > expandedMaxZ)
+                {
                     continue;
+                }
 
-                int mapX = Mathf.Clamp(Mathf.RoundToInt(sampleX), 0, chunkSize);
-                int mapZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize);
+                float localSampleX = globalSampleX - chunkSampleMinX;
+                float localSampleZ = globalSampleZ - chunkSampleMinZ;
 
-                int paddedX = mapX + 1;
-                int paddedZ = mapZ + 1;
+                float localX = (topLeftX + localSampleX) * worldScale;
+                float localZ = (bottomLeftZ + localSampleZ) * worldScale;
 
-                if (record.SurfaceTypeMap[paddedX, paddedZ] != SurfaceType.Grass)
-                    continue;
-
-                float height = SampleHeightBilinear(
-                    record.HeightMap,
-                    sampleX,
-                    sampleZ,
-                    chunkSize);
-
-                float localX = (topLeftX + sampleX) * worldScale;
-                float localZ = (bottomLeftZ + sampleZ) * worldScale;
-                float localY = height * meshHeightMultiplier * worldScale;
+                float globalUnityX = globalSampleX * worldScale;
+                float globalUnityZ = globalSampleZ * worldScale;
 
                 float yaw = Hash01(baseHash + 109) * 360f;
 
@@ -306,22 +313,25 @@ public static class FoliageGenerator
                 uint priority = (uint)Hash(
                     worldSeed,
                     treeSettings.seedOffset,
-                    record.ChunkCoord.x,
-                    record.ChunkCoord.z,
-                    cellX,
-                    cellZ,
+                    globalCellX,
+                    globalCellZ,
                     919);
 
                 candidates.Add(new TreeCandidateData(
-                    new Vector3(localX, localY, localZ),
+                    new Vector3(localX, 0f, localZ),
+                    globalUnityX,
+                    globalUnityZ,
                     Quaternion.Euler(0f, yaw, 0f),
                     Vector3.one * uniformScale,
-                    priority));
+                    priority,
+                    localSampleX,
+                    localSampleZ));
             }
         }
 
         candidates.Sort((a, b) => a.priority.CompareTo(b.priority));
 
+        List<TreeCandidateData> acceptedCandidates = new List<TreeCandidateData>();
         float minDistanceSqr = treeSettings.treeMinDistance * treeSettings.treeMinDistance;
 
         for (int i = 0; i < candidates.Count; i++)
@@ -330,12 +340,12 @@ public static class FoliageGenerator
 
             bool tooClose = false;
 
-            for (int j = 0; j < foliageData.treeCubeInstances.Count; j++)
+            for (int j = 0; j < acceptedCandidates.Count; j++)
             {
-                TreeInstanceData accepted = foliageData.treeCubeInstances[j];
+                TreeCandidateData accepted = acceptedCandidates[j];
 
-                float dx = candidate.localPosition.x - accepted.localPosition.x;
-                float dz = candidate.localPosition.z - accepted.localPosition.z;
+                float dx = candidate.globalUnityX - accepted.globalUnityX;
+                float dz = candidate.globalUnityZ - accepted.globalUnityZ;
 
                 float distSqr = dx * dx + dz * dz;
 
@@ -349,8 +359,41 @@ public static class FoliageGenerator
             if (tooClose)
                 continue;
 
+            acceptedCandidates.Add(candidate);
+        }
+
+        for (int i = 0; i < acceptedCandidates.Count; i++)
+        {
+            TreeCandidateData candidate = acceptedCandidates[i];
+
+            if (candidate.localSampleX < 0f || candidate.localSampleX > chunkSize ||
+                candidate.localSampleZ < 0f || candidate.localSampleZ > chunkSize)
+            {
+                continue;
+            }
+
+            int mapX = Mathf.Clamp(Mathf.RoundToInt(candidate.localSampleX), 0, chunkSize);
+            int mapZ = Mathf.Clamp(Mathf.RoundToInt(candidate.localSampleZ), 0, chunkSize);
+
+            int paddedX = mapX + 1;
+            int paddedZ = mapZ + 1;
+
+            if (record.SurfaceTypeMap[paddedX, paddedZ] != SurfaceType.Grass)
+                continue;
+
+            float height = SampleHeightBilinear(
+                record.HeightMap,
+                candidate.localSampleX,
+                candidate.localSampleZ,
+                chunkSize);
+
+            Vector3 finalLocalPosition = new Vector3(
+                candidate.localPosition.x,
+                height * meshHeightMultiplier * worldScale,
+                candidate.localPosition.z);
+
             foliageData.treeCubeInstances.Add(new TreeInstanceData(
-                candidate.localPosition,
+                finalLocalPosition,
                 candidate.localRotation,
                 candidate.localScale));
         }
@@ -435,20 +478,32 @@ public static class FoliageGenerator
     private struct TreeCandidateData
     {
         public Vector3 localPosition;
+        public float globalUnityX;
+        public float globalUnityZ;
         public Quaternion localRotation;
         public Vector3 localScale;
         public uint priority;
+        public float localSampleX;
+        public float localSampleZ;
 
         public TreeCandidateData(
             Vector3 localPosition,
+            float globalUnityX,
+            float globalUnityZ,
             Quaternion localRotation,
             Vector3 localScale,
-            uint priority)
+            uint priority,
+            float localSampleX,
+            float localSampleZ)
         {
             this.localPosition = localPosition;
+            this.globalUnityX = globalUnityX;
+            this.globalUnityZ = globalUnityZ;
             this.localRotation = localRotation;
             this.localScale = localScale;
             this.priority = priority;
+            this.localSampleX = localSampleX;
+            this.localSampleZ = localSampleZ;
         }
     }
 
