@@ -2,6 +2,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
+public struct TreeRenderPart
+{
+    public Mesh mesh;
+    public Material material;
+    public Matrix4x4 childLocalMatrix;
+}
+
 public class ChunkFoliageRuntime
 {
     public Transform root;
@@ -12,8 +19,7 @@ public class ChunkFoliageRuntime
     public Mesh billboardMesh;
     public Material billboardMaterial;
 
-    public Mesh treeCubeMesh;
-    public Material treeCubeMaterial;
+    public List<TreeRenderPart> treeRenderParts = new List<TreeRenderPart>();
 
     public bool isVisible;
 
@@ -52,7 +58,9 @@ public class ChunkFoliageRuntime
 
     public bool HasValidTreeCubeRenderData()
     {
-        return treeCubeMesh != null && treeCubeMaterial != null && treeCubeMatrixBatches.Count > 0;
+        return treeRenderParts != null &&
+               treeRenderParts.Count > 0 &&
+               treeCubeMatrixBatches.Count > 0;
     }
 
     public void CacheGrassMatrices(List<Matrix4x4> worldMatrices)
@@ -138,18 +146,34 @@ public class ChunkFoliageRuntime
         if (!isVisible || !HasValidTreeCubeRenderData())
             return;
 
-        for (int i = 0; i < treeCubeMatrixBatches.Count; i++)
+        for (int partIndex = 0; partIndex < treeRenderParts.Count; partIndex++)
         {
-            Graphics.DrawMeshInstanced(
-                treeCubeMesh,
-                0,
-                treeCubeMaterial,
-                treeCubeMatrixBatches[i],
-                treeCubeMatrixBatches[i].Length,
-                null,
-                ShadowCastingMode.On,
-                true
-            );
+            TreeRenderPart part = treeRenderParts[partIndex];
+
+            if (part.mesh == null || part.material == null)
+                continue;
+
+            for (int batchIndex = 0; batchIndex < treeCubeMatrixBatches.Count; batchIndex++)
+            {
+                Matrix4x4[] sourceBatch = treeCubeMatrixBatches[batchIndex];
+                Matrix4x4[] finalBatch = new Matrix4x4[sourceBatch.Length];
+
+                for (int i = 0; i < sourceBatch.Length; i++)
+                {
+                    finalBatch[i] = sourceBatch[i] * part.childLocalMatrix;
+                }
+
+                Graphics.DrawMeshInstanced(
+                    part.mesh,
+                    0,
+                    part.material,
+                    finalBatch,
+                    finalBatch.Length,
+                    null,
+                    ShadowCastingMode.On,
+                    true
+                );
+            }
         }
     }
 }

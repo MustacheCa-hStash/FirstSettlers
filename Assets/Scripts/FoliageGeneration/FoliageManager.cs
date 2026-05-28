@@ -17,10 +17,9 @@ public class FoliageManager
     private Mesh billboardGrassMesh;
     private Material billboardGrassMaterial;
 
-    private Mesh treeCubeMesh;
-    private Material treeCubeMaterial;
+    private readonly List<TreeRenderPart> treeRenderParts = new List<TreeRenderPart>();
 
-    public FoliageManager(Transform foliageParent, GrassSettings grassSettings, TreeSettings treeSettings, int worldSeed, 
+    public FoliageManager(Transform foliageParent, GrassSettings grassSettings, TreeSettings treeSettings, int worldSeed,
         int chunkSize, float worldScale, float meshHeightMultiplier)
     {
         this.foliageParent = foliageParent;
@@ -469,8 +468,7 @@ public class FoliageManager
         chunkRuntime.FoliageRuntime.billboardMesh = billboardGrassMesh;
         chunkRuntime.FoliageRuntime.billboardMaterial = billboardGrassMaterial;
 
-        chunkRuntime.FoliageRuntime.treeCubeMesh = treeCubeMesh;
-        chunkRuntime.FoliageRuntime.treeCubeMaterial = treeCubeMaterial;
+        chunkRuntime.FoliageRuntime.treeRenderParts = treeRenderParts;
 
         chunkRuntime.FoliageRuntime.SetVisible(false);
     }
@@ -542,25 +540,43 @@ public class FoliageManager
             return;
         }
 
-        MeshFilter meshFilter = treeSettings.treeCubePrefab.GetComponentInChildren<MeshFilter>();
-        MeshRenderer meshRenderer = treeSettings.treeCubePrefab.GetComponentInChildren<MeshRenderer>();
+        treeRenderParts.Clear();
 
-        if (meshFilter == null || meshFilter.sharedMesh == null)
+        MeshFilter[] meshFilters =
+            treeSettings.treeCubePrefab.GetComponentsInChildren<MeshFilter>(true);
+
+        for (int i = 0; i < meshFilters.Length; i++)
         {
-            Debug.LogError("Tree cube prefab missing MeshFilter or mesh.");
-        }
-        else
-        {
-            treeCubeMesh = meshFilter.sharedMesh;
+            MeshFilter meshFilter = meshFilters[i];
+            MeshRenderer meshRenderer = meshFilter.GetComponent<MeshRenderer>();
+
+            if (meshFilter.sharedMesh == null)
+                continue;
+
+            if (meshRenderer == null || meshRenderer.sharedMaterial == null)
+                continue;
+
+            TreeRenderPart part = new TreeRenderPart
+            {
+                mesh = meshFilter.sharedMesh,
+                material = meshRenderer.sharedMaterial,
+                childLocalMatrix = Matrix4x4.TRS(
+                    meshFilter.transform.localPosition,
+                    meshFilter.transform.localRotation,
+                    meshFilter.transform.localScale
+                )
+            };
+
+            treeRenderParts.Add(part);
+
+            Debug.Log(
+                $"Added tree render part: {meshFilter.name}, " +
+                $"Mesh={part.mesh.name}, Material={part.material.name}");
         }
 
-        if (meshRenderer == null || meshRenderer.sharedMaterial == null)
+        if (treeRenderParts.Count == 0)
         {
-            Debug.LogError("Tree cube prefab missing MeshRenderer or material.");
-        }
-        else
-        {
-            treeCubeMaterial = meshRenderer.sharedMaterial;
+            Debug.LogError("Tree prefab has no valid MeshFilter + MeshRenderer parts.");
         }
     }
 }
