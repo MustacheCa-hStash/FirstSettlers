@@ -9,6 +9,18 @@ public struct TreeRenderPart
     public Matrix4x4 childLocalMatrix;
 }
 
+public struct TreeGpuLODRenderData
+{
+    public Mesh mesh;
+    public Material material;
+
+    public TreeGpuLODRenderData(Mesh mesh, Material material)
+    {
+        this.mesh = mesh;
+        this.material = material;
+    }
+}
+
 public class ChunkFoliageRuntime
 {
     public Transform root;
@@ -19,21 +31,60 @@ public class ChunkFoliageRuntime
     public Mesh billboardMesh;
     public Material billboardMaterial;
 
-    public List<TreeRenderPart> treeRenderParts = new List<TreeRenderPart>();
+    public List<TreeGpuLODRenderData> treeGpuLODs = new List<TreeGpuLODRenderData>();
+
+    public Mesh treeBillboardMesh;
+    public Material treeBillboardMaterial;
 
     public bool isVisible;
 
     private readonly List<Matrix4x4[]> grassMatrixBatches = new List<Matrix4x4[]>();
     private readonly List<Matrix4x4[]> billboardMatrixBatches = new List<Matrix4x4[]>();
-    private readonly List<Matrix4x4[]> treeCubeMatrixBatches = new List<Matrix4x4[]>();
+
+    private readonly List<Matrix4x4[]> treeGpuMatrixBatches = new List<Matrix4x4[]>();
+    private readonly List<Matrix4x4[]> treeBillboardMatrixBatches = new List<Matrix4x4[]>();
+
+    private GameObject treeGameObjectRoot;
+    private readonly List<GameObject> treeGameObjects = new List<GameObject>();
+
+    private FoliageRepresentationMode currentTreeRepresentationMode;
+    private int currentTreeGpuLODIndex = -1;
+    private bool hasCurrentTreeRepresentation;
 
     public bool IsCreated => root != null;
+
+    public bool HasCurrentTreeRepresentation(
+        FoliageRepresentationMode mode,
+        int gpuLODIndex)
+    {
+        return hasCurrentTreeRepresentation &&
+               currentTreeRepresentationMode == mode &&
+               currentTreeGpuLODIndex == gpuLODIndex;
+    }
+
+    public void SetCurrentTreeRepresentation(
+        FoliageRepresentationMode mode,
+        int gpuLODIndex)
+    {
+        currentTreeRepresentationMode = mode;
+        currentTreeGpuLODIndex = gpuLODIndex;
+        hasCurrentTreeRepresentation = true;
+    }
+
+    public void ClearCurrentTreeRepresentation()
+    {
+        hasCurrentTreeRepresentation = false;
+        currentTreeGpuLODIndex = -1;
+    }
 
     public void ClearCachedBatches()
     {
         grassMatrixBatches.Clear();
         billboardMatrixBatches.Clear();
-        treeCubeMatrixBatches.Clear();
+        treeGpuMatrixBatches.Clear();
+        treeBillboardMatrixBatches.Clear();
+        ClearTreeGameObjects();
+        ClearCurrentTreeRepresentation();
     }
 
     public void SetVisible(bool visible)
@@ -56,11 +107,26 @@ public class ChunkFoliageRuntime
         return billboardMesh != null && billboardMaterial != null && billboardMatrixBatches.Count > 0;
     }
 
-    public bool HasValidTreeCubeRenderData()
+    public bool HasValidTreeGpuRenderData(int gpuLODIndex)
     {
-        return treeRenderParts != null &&
-               treeRenderParts.Count > 0 &&
-               treeCubeMatrixBatches.Count > 0;
+        return gpuLODIndex >= 0 &&
+               treeGpuLODs != null &&
+               gpuLODIndex < treeGpuLODs.Count &&
+               treeGpuLODs[gpuLODIndex].mesh != null &&
+               treeGpuLODs[gpuLODIndex].material != null &&
+               treeGpuMatrixBatches.Count > 0;
+    }
+
+    public bool HasValidTreeBillboardRenderData()
+    {
+        return treeBillboardMesh != null &&
+               treeBillboardMaterial != null &&
+               treeBillboardMatrixBatches.Count > 0;
+    }
+
+    public bool HasTreeGameObjects()
+    {
+        return treeGameObjects.Count > 0;
     }
 
     public void CacheGrassMatrices(List<Matrix4x4> worldMatrices)
@@ -73,9 +139,14 @@ public class ChunkFoliageRuntime
         CacheMatrices(worldMatrices, billboardMatrixBatches);
     }
 
-    public void CacheTreeCubeMatrices(List<Matrix4x4> worldMatrices)
+    public void CacheTreeGpuMatrices(List<Matrix4x4> worldMatrices)
     {
-        CacheMatrices(worldMatrices, treeCubeMatrixBatches);
+        CacheMatrices(worldMatrices, treeGpuMatrixBatches);
+    }
+
+    public void CacheTreeBillboardMatrices(List<Matrix4x4> worldMatrices)
+    {
+        CacheMatrices(worldMatrices, treeBillboardMatrixBatches);
     }
 
     private void CacheMatrices(List<Matrix4x4> worldMatrices, List<Matrix4x4[]> targetBatches)
@@ -99,6 +170,61 @@ public class ChunkFoliageRuntime
             targetBatches.Add(batch);
             startIndex += batchCount;
         }
+    }
+
+    public void RebuildTreeGameObjects(
+        GameObject prefab,
+        List<TreeInstanceData> instances,
+        Transform chunkRoot)
+    {
+        ClearTreeGameObjects();
+
+        if (prefab == null || instances == null || chunkRoot == null || root == null)
+            return;
+
+        treeGameObjectRoot = new GameObject("Tree_GameObjects");
+        treeGameObjectRoot.transform.SetParent(root, false);
+
+        for (int i = 0; i < instances.Count; i++)
+        {
+            TreeInstanceData instance = instances[i];
+
+            GameObject treeObject = Object.Instantiate(prefab, treeGameObjectRoot.transform);
+            treeObject.transform.localPosition = instance.localPosition;
+            treeObject.transform.localRotation = instance.localRotation;
+            treeObject.transform.localScale = instance.localScale;
+
+            treeGameObjects.Add(treeObject);
+        }
+    }
+
+    public void ClearTreeGameObjects()
+    {
+        for (int i = 0; i < treeGameObjects.Count; i++)
+        {
+            if (treeGameObjects[i] != null)
+            {
+                Object.Destroy(treeGameObjects[i]);
+            }
+        }
+
+        treeGameObjects.Clear();
+
+        if (treeGameObjectRoot != null)
+        {
+            Object.Destroy(treeGameObjectRoot);
+            treeGameObjectRoot = null;
+        }
+    }
+
+    public void ClearTreeGpuMatrices()
+    {
+        treeGpuMatrixBatches.Clear();
+    }
+
+    public void ClearTreeBillboardMatrices()
+    {
+        treeBillboardMatrixBatches.Clear();
     }
 
     public void DrawGrass()
@@ -141,39 +267,53 @@ public class ChunkFoliageRuntime
         }
     }
 
-    public void DrawTreeCubes()
+    public void DrawTreeGpuLOD(int gpuLODIndex, bool castShadows, bool receiveShadows)
     {
-        if (!isVisible || !HasValidTreeCubeRenderData())
+        if (!isVisible || !HasValidTreeGpuRenderData(gpuLODIndex))
             return;
 
-        for (int partIndex = 0; partIndex < treeRenderParts.Count; partIndex++)
+        TreeGpuLODRenderData lodData = treeGpuLODs[gpuLODIndex];
+
+        ShadowCastingMode shadowMode = castShadows
+            ? ShadowCastingMode.On
+            : ShadowCastingMode.Off;
+
+        for (int i = 0; i < treeGpuMatrixBatches.Count; i++)
         {
-            TreeRenderPart part = treeRenderParts[partIndex];
+            Graphics.DrawMeshInstanced(
+                lodData.mesh,
+                0,
+                lodData.material,
+                treeGpuMatrixBatches[i],
+                treeGpuMatrixBatches[i].Length,
+                null,
+                shadowMode,
+                receiveShadows
+            );
+        }
+    }
 
-            if (part.mesh == null || part.material == null)
-                continue;
+    public void DrawTreeBillboards(bool castShadows, bool receiveShadows)
+    {
+        if (!isVisible || !HasValidTreeBillboardRenderData())
+            return;
 
-            for (int batchIndex = 0; batchIndex < treeCubeMatrixBatches.Count; batchIndex++)
-            {
-                Matrix4x4[] sourceBatch = treeCubeMatrixBatches[batchIndex];
-                Matrix4x4[] finalBatch = new Matrix4x4[sourceBatch.Length];
+        ShadowCastingMode shadowMode = castShadows
+            ? ShadowCastingMode.On
+            : ShadowCastingMode.Off;
 
-                for (int i = 0; i < sourceBatch.Length; i++)
-                {
-                    finalBatch[i] = sourceBatch[i] * part.childLocalMatrix;
-                }
-
-                Graphics.DrawMeshInstanced(
-                    part.mesh,
-                    0,
-                    part.material,
-                    finalBatch,
-                    finalBatch.Length,
-                    null,
-                    ShadowCastingMode.On,
-                    true
-                );
-            }
+        for (int i = 0; i < treeBillboardMatrixBatches.Count; i++)
+        {
+            Graphics.DrawMeshInstanced(
+                treeBillboardMesh,
+                0,
+                treeBillboardMaterial,
+                treeBillboardMatrixBatches[i],
+                treeBillboardMatrixBatches[i].Length,
+                null,
+                shadowMode,
+                receiveShadows
+            );
         }
     }
 }

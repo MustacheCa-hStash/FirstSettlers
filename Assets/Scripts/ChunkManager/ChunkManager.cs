@@ -10,6 +10,7 @@ public class ChunkManager
     private readonly int chunkSize;
     private readonly int seed;
     private readonly Transform viewer;
+    private readonly Camera viewerCamera;
     private readonly Transform chunkParent;
     private readonly float sampleScale;
     private readonly float worldScale;
@@ -27,6 +28,8 @@ public class ChunkManager
     private HashSet<ChunkCoord> activeLastUpdate;
     private HashSet<ChunkCoord> activeThisUpdate;
     private readonly List<ChunkCoord> orderedActiveCoords;
+    private readonly List<ChunkCoord> frustumVisibleCoords;
+    private readonly Plane[] frustumPlanes = new Plane[6];
 
     private ChunkCoord lastUpdateViewerCoord = new ChunkCoord(int.MinValue, int.MinValue);
     private SubChunkCoord lastViewerGlobalSubChunk = new SubChunkCoord(int.MinValue, int.MinValue);
@@ -40,6 +43,7 @@ public class ChunkManager
         int chunkSize,
         int seed,
         Transform viewer,
+        Camera viewerCamera,
         Transform chunkParent,
         Transform foliageParent,
         GrassSettings grassSettings,
@@ -59,6 +63,7 @@ public class ChunkManager
         this.chunkSize = chunkSize;
         this.seed = seed;
         this.viewer = viewer;
+        this.viewerCamera = viewerCamera;
         this.chunkParent = chunkParent;
         this.sampleScale = sampleScale;
         this.worldScale = worldScale;
@@ -75,6 +80,7 @@ public class ChunkManager
         activeLastUpdate = new HashSet<ChunkCoord>(maxChunks);
         activeThisUpdate = new HashSet<ChunkCoord>(maxChunks);
         orderedActiveCoords = new List<ChunkCoord>(maxChunks);
+        frustumVisibleCoords = new List<ChunkCoord>(maxChunks);
 
         terrainRequestManager = new TerrainRequestManager();
         foliageManager = new FoliageManager(
@@ -172,7 +178,7 @@ public class ChunkManager
             this,
             viewerCoord,
             viewerGlobalSubChunk,
-            orderedActiveCoords);
+            frustumVisibleCoords);
 
         lastViewerGlobalSubChunk = viewerGlobalSubChunk;
     }
@@ -233,6 +239,13 @@ public class ChunkManager
     {
         int sqrColliderRadius = colliderDistance * colliderDistance;
 
+        frustumVisibleCoords.Clear();
+
+        if (viewerCamera != null)
+        {
+            GeometryUtility.CalculateFrustumPlanes(viewerCamera, frustumPlanes);
+        }
+
         foreach (ChunkCoord coord in orderedActiveCoords)
         {
             if (!loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
@@ -269,7 +282,44 @@ public class ChunkManager
             if (!runtime.IsVisible)
                 runtime.SetVisible(true);
 
+            bool renderVisible = viewerCamera == null || IsChunkInFrustum(coord);
+            runtime.SetRenderVisible(renderVisible);
+
+            if (renderVisible)
+            {
+                frustumVisibleCoords.Add(coord);
+            }
         }
+    }
+
+    private bool IsChunkInFrustum(ChunkCoord coord)
+    {
+        Bounds bounds = GetChunkWorldBounds(coord);
+        return GeometryUtility.TestPlanesAABB(frustumPlanes, bounds);
+    }
+
+    private Bounds GetChunkWorldBounds(ChunkCoord coord)
+    {
+        float chunkWorldSize = chunkSize * worldScale;
+
+        float centerX = coord.x * chunkWorldSize + chunkWorldSize * 0.5f;
+        float centerZ = coord.z * chunkWorldSize + chunkWorldSize * 0.5f;
+
+        float boundsHeight = Mathf.Max(200f, meshHeightMultiplier * 2f + 100f);
+
+        Vector3 center = new Vector3(
+            centerX,
+            boundsHeight * 0.5f,
+            centerZ
+        );
+
+        Vector3 size = new Vector3(
+            chunkWorldSize,
+            boundsHeight,
+            chunkWorldSize
+        );
+
+        return new Bounds(center, size);
     }
 
     public ChunkRecord GetChunkRecord(ChunkCoord coord)

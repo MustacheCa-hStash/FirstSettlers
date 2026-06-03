@@ -187,6 +187,13 @@ public class ChunkRuntime
         return currentLOD == lod;
     }
 
+    public void SetRenderVisible(bool visible)
+    {
+        terrainMeshRenderer.enabled = visible;
+        lakeMeshRenderer.enabled = visible;
+        riverMeshRenderer.enabled = visible;
+    }
+
     public void SetVisible(bool visible)
     {
         this.visible = visible;

@@ -479,6 +479,7 @@ MonoBehaviour:
   colliderDistance: 5
   chunkSize: 128
   viewer: {fileID: 1578603182}
+  viewerCamera: {fileID: 81284299}
   chunkParent: {fileID: 1025920260}
   foliageParent: {fileID: 454788146}
   grassSettings:
@@ -501,13 +502,20 @@ MonoBehaviour:
     randomizeBillboardYaw: 1
     billboardSeedOffset: 9000
   treeSettings:
-    treeCubePrefab: {fileID: 3514175622589223158, guid: 30307d1938dec364b9ff45e3ea8531b0, type: 3}
+    treeLOD0GameObjectPrefab: {fileID: 3514175622589223158, guid: 30307d1938dec364b9ff45e3ea8531b0, type: 3}
+    treeGPUInstancedLODPrefabs: []
+    treeBillboardPrefab: {fileID: 0}
     treeCellSize: 12
     treeSpawnChance: 0.02
     treeMinDistance: 9
     treeUniformScaleRange: {x: 2, y: 2}
     grassExclusionRadius: 1.5
     seedOffset: 12000
+    gameObjectTreeChunkRingRadius: 1
+    gpuInstancedTreeChunkRingRadius: 4
+    billboardTreeChunkRingRadius: 8
+    castTreeShadows: 1
+    receiveTreeShadows: 1
   sampleScale: 600
   worldScale: 0.3
   octaves: 2
@@ -723,7 +731,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d273fd913b3ace24b986b68f7a847e3c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  walkSpeed: 20
+  walkSpeed: 5
   sprintSpeed: 6
   crouchSpeed: 1.5
   acceleration: 12
