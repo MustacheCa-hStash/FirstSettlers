@@ -52,6 +52,8 @@ public class ChunkFoliageRuntime
     private bool hasCurrentTreeRepresentation;
 
     public bool IsCreated => root != null;
+    public int GpuGrassInstanceCount => CountMatrices(grassMatrixBatches) + CountMatrices(billboardMatrixBatches);
+    public int GpuTreeInstanceCount => CountMatrices(treeGpuMatrixBatches) + CountMatrices(treeBillboardMatrixBatches);
 
     public bool HasCurrentTreeRepresentation(
         FoliageRepresentationMode mode,
@@ -170,6 +172,19 @@ public class ChunkFoliageRuntime
             targetBatches.Add(batch);
             startIndex += batchCount;
         }
+    }
+
+    private int CountMatrices(List<Matrix4x4[]> batches)
+    {
+        int count = 0;
+
+        for (int i = 0; i < batches.Count; i++)
+        {
+            if (batches[i] != null)
+                count += batches[i].Length;
+        }
+
+        return count;
     }
 
     public void RebuildTreeGameObjects(

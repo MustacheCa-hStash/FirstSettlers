@@ -23,6 +23,7 @@ public class WorldManager : MonoBehaviour
     [SerializeField] Material waterMaterial;
 
     private ChunkManager chunkManager;
+    public Transform Viewer => viewer;
 
     void Awake()
     {
@@ -39,5 +40,10 @@ public class WorldManager : MonoBehaviour
     void Update()
     {
         chunkManager.UpdateActiveChunks();
+    }
+
+    public WorldDebugInfo GetDebugInfoAtWorldPosition(Vector3 worldPosition)
+    {
+        return chunkManager.GetDebugInfoAtWorldPosition(worldPosition);
     }
 }

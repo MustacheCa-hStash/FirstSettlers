@@ -95,12 +95,106 @@ public class ChunkManager
 
     public ChunkCoord GetViewerChunkCoord()
     {
-        float chunkWorldSize = chunkSize * worldScale;
+        return GetChunkCoordFromWorldPosition(viewer.position);
+    }
 
-        int cx = Mathf.FloorToInt(viewer.position.x / chunkWorldSize);
-        int cz = Mathf.FloorToInt(viewer.position.z / chunkWorldSize);
+    public WorldDebugInfo GetDebugInfoAtWorldPosition(Vector3 worldPosition)
+    {
+        ChunkCoord coord = GetChunkCoordFromWorldPosition(worldPosition);
+        chunkRecords.TryGetValue(coord, out ChunkRecord record);
+
+        bool hasChunkRecord = record != null;
+        bool hasTerrainData = hasChunkRecord && record.HasTerrainData;
+        ChunkRuntime runtime = null;
+        bool hasRuntime = hasChunkRecord && loadedChunks.TryGetValue(coord, out runtime);
+        bool hasFoliageRuntime = hasRuntime && runtime.FoliageRuntime != null && runtime.FoliageRuntime.IsCreated;
+
+        BiomeType biome = default;
+        SurfaceType surfaceType = default;
+        float worldHeight = 0f;
+        float moisture = 0f;
+        float temperature = 0f;
+        float riverMask = 0f;
+        int gpuGrassInstanceCount = 0;
+        int gpuTreeInstanceCount = 0;
+
+        if (hasTerrainData && TryGetPaddedSampleIndices(coord, worldPosition, record, out int sampleX, out int sampleZ))
+        {
+            biome = record.BiomeMap[sampleX, sampleZ];
+            surfaceType = record.SurfaceTypeMap[sampleX, sampleZ];
+            worldHeight = record.HeightMap[sampleX, sampleZ] * meshHeightMultiplier * worldScale;
+            moisture = record.MoistureMap[sampleX, sampleZ];
+            temperature = record.TemperatureMap[sampleX, sampleZ];
+            riverMask = record.RiverMaskMap[sampleX, sampleZ];
+        }
+
+        if (hasFoliageRuntime)
+        {
+            gpuGrassInstanceCount = runtime.FoliageRuntime.GpuGrassInstanceCount;
+            gpuTreeInstanceCount = runtime.FoliageRuntime.GpuTreeInstanceCount;
+        }
+
+        return new WorldDebugInfo(
+            worldPosition,
+            coord,
+            hasChunkRecord,
+            hasTerrainData,
+            hasRuntime,
+            hasFoliageRuntime,
+            biome,
+            surfaceType,
+            worldHeight,
+            moisture,
+            temperature,
+            riverMask,
+            gpuGrassInstanceCount,
+            gpuTreeInstanceCount);
+    }
+
+    private ChunkCoord GetChunkCoordFromWorldPosition(Vector3 worldPosition)
+    {
+        float safeWorldScale = Mathf.Max(0.0001f, worldScale);
+        float chunkWorldSize = chunkSize * safeWorldScale;
+
+        int cx = Mathf.FloorToInt(worldPosition.x / chunkWorldSize);
+        int cz = Mathf.FloorToInt(worldPosition.z / chunkWorldSize);
 
         return new ChunkCoord(cx, cz);
+    }
+
+    private bool TryGetPaddedSampleIndices(
+        ChunkCoord coord,
+        Vector3 worldPosition,
+        ChunkRecord record,
+        out int sampleX,
+        out int sampleZ)
+    {
+        sampleX = 0;
+        sampleZ = 0;
+
+        if (record == null || !record.HasTerrainData)
+            return false;
+
+        int width = record.HeightMap.GetLength(0);
+        int height = record.HeightMap.GetLength(1);
+
+        if (width == 0 || height == 0)
+            return false;
+
+        float safeWorldScale = Mathf.Max(0.0001f, worldScale);
+        float chunkWorldSize = chunkSize * safeWorldScale;
+        float chunkMinWorldX = coord.x * chunkWorldSize;
+        float chunkMinWorldZ = coord.z * chunkWorldSize;
+
+        float localTerrainX = (worldPosition.x - chunkMinWorldX) / safeWorldScale;
+        float localTerrainZ = (worldPosition.z - chunkMinWorldZ) / safeWorldScale;
+
+        int localVertexX = Mathf.Clamp(Mathf.RoundToInt(localTerrainX), 0, chunkSize);
+        int localVertexZ = Mathf.Clamp(Mathf.RoundToInt(localTerrainZ), 0, chunkSize);
+
+        sampleX = Mathf.Clamp(localVertexX + 1, 0, width - 1);
+        sampleZ = Mathf.Clamp(localVertexZ + 1, 0, height - 1);
+        return true;
     }
 
     public SubChunkCoord GetViewerGlobalSubChunkCoord()
