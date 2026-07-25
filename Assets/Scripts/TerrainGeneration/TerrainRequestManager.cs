@@ -69,7 +69,7 @@ public class TerrainRequestManager
                 ControlMapPixelData controlMapRawData = TerrainControlMapBuilder.BuildRaw(surfaceTypeMap);
 
                 TerrainDataRequestResult result = new TerrainDataRequestResult(chunkCoord, requestVersion, 
-                    finalHeightMap, gradientXMap, gradientZMap, moistureMap, temperatureMap, biomeMap, 
+                    finalHeightMap, gradientXMap, gradientZMap, slopeMap, moistureMap, temperatureMap, biomeMap, 
                     surfaceTypeMap, waterStateMap, riverMaskMap, controlMapRawData);
 
                 lock (terrainDataResultsLock)

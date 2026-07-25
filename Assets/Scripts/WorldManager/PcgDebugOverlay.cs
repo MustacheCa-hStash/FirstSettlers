@@ -20,9 +20,8 @@ public class PcgDebugOverlay : MonoBehaviour
 
     void Awake()
     {
-        ResolveReferences();
         EnsureOverlay();
-        SetVisible(visibleOnStart);
+        isVisible = visibleOnStart;
     }
 
     void Update()
@@ -34,18 +33,6 @@ public class PcgDebugOverlay : MonoBehaviour
 
         nextRefreshTime = Time.unscaledTime + refreshInterval;
         RefreshText();
-    }
-
-    private void ResolveReferences()
-    {
-        if (worldManager == null)
-            worldManager = FindObjectOfType<WorldManager>();
-
-        if (target == null && worldManager != null)
-            target = worldManager.Viewer;
-
-        if (target == null && Camera.main != null)
-            target = Camera.main.transform;
     }
 
     private void EnsureOverlay()
@@ -105,9 +92,6 @@ public class PcgDebugOverlay : MonoBehaviour
 
     private void HandleToggleInput()
     {
-        if (Keyboard.current == null || toggleKey == Key.None)
-            return;
-
         if (Keyboard.current[toggleKey].wasPressedThisFrame)
             SetVisible(!isVisible);
     }
@@ -130,8 +114,6 @@ public class PcgDebugOverlay : MonoBehaviour
     {
         if (debugText == null)
             return;
-
-        ResolveReferences();
 
         builder.Clear();
         builder.AppendLine("PCG Debug");
@@ -185,6 +167,8 @@ public class PcgDebugOverlay : MonoBehaviour
         builder.AppendLine(info.SurfaceType.ToString());
         builder.Append("World Height: ");
         builder.AppendLine(info.WorldHeight.ToString("0.00"));
+        builder.Append("Slope: ");
+        builder.AppendLine(info.Slope.ToString("0.000"));
         builder.Append("Moisture: ");
         builder.AppendLine(info.Moisture.ToString("0.000"));
         builder.Append("Temperature: ");

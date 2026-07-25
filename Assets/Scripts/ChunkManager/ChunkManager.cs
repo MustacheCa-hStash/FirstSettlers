@@ -112,6 +112,7 @@ public class ChunkManager
         BiomeType biome = default;
         SurfaceType surfaceType = default;
         float worldHeight = 0f;
+        float slope = 0f;
         float moisture = 0f;
         float temperature = 0f;
         float riverMask = 0f;
@@ -123,6 +124,7 @@ public class ChunkManager
             biome = record.BiomeMap[sampleX, sampleZ];
             surfaceType = record.SurfaceTypeMap[sampleX, sampleZ];
             worldHeight = record.HeightMap[sampleX, sampleZ] * meshHeightMultiplier * worldScale;
+            slope = record.SlopeMap[sampleX, sampleZ];
             moisture = record.MoistureMap[sampleX, sampleZ];
             temperature = record.TemperatureMap[sampleX, sampleZ];
             riverMask = record.RiverMaskMap[sampleX, sampleZ];
@@ -144,6 +146,7 @@ public class ChunkManager
             biome,
             surfaceType,
             worldHeight,
+            slope,
             moisture,
             temperature,
             riverMask,
@@ -575,6 +578,7 @@ public class ChunkManager
             record.TryCompleteTerrainDataRequest(
                 terrainResult.RequestVersion,
                 terrainResult.HeightMap,
+                terrainResult.SlopeMap,
                 terrainResult.MoistureMap,
                 terrainResult.TemperatureMap,
                 terrainResult.BiomeMap,

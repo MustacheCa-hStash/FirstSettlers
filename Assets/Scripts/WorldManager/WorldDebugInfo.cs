@@ -11,6 +11,7 @@ public readonly struct WorldDebugInfo
     public readonly BiomeType Biome;
     public readonly SurfaceType SurfaceType;
     public readonly float WorldHeight;
+    public readonly float Slope;
     public readonly float Moisture;
     public readonly float Temperature;
     public readonly float RiverMask;
@@ -27,6 +28,7 @@ public readonly struct WorldDebugInfo
         BiomeType biome,
         SurfaceType surfaceType,
         float worldHeight,
+        float slope,
         float moisture,
         float temperature,
         float riverMask,
@@ -42,6 +44,7 @@ public readonly struct WorldDebugInfo
         Biome = biome;
         SurfaceType = surfaceType;
         WorldHeight = worldHeight;
+        Slope = slope;
         Moisture = moisture;
         Temperature = temperature;
         RiverMask = riverMask;

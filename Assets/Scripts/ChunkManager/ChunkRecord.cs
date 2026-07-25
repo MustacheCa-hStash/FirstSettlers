@@ -6,6 +6,7 @@ public class ChunkRecord
     private ChunkCoord chunkCoord;
     private ChunkRuntime activeRuntime;
     private float[,] heightMap;
+    private float[,] slopeMap;
     private float[,] moistureMap;
     private float[,] temperatureMap;
     private BiomeType[,] biomeMap;
@@ -38,6 +39,7 @@ public class ChunkRecord
     public bool IsLoaded => activeRuntime != null;
     public bool HasTerrainData =>
         heightMap != null &&
+        slopeMap != null &&
         moistureMap != null &&
         temperatureMap != null &&
         biomeMap != null &&
@@ -46,6 +48,7 @@ public class ChunkRecord
         riverMaskMap != null &&
         controlMapData != null;
     public float[,] HeightMap => heightMap;
+    public float[,] SlopeMap => slopeMap;
     public float[,] MoistureMap => moistureMap;
     public float[,] TemperatureMap => temperatureMap;
     public BiomeType[,] BiomeMap => biomeMap;
@@ -182,6 +185,7 @@ public class ChunkRecord
     }
 
     public bool TryCompleteTerrainDataRequest(int requestVersion, float[,] returnedHeightMap,
+        float[,] returnedSlopeMap,
         float[,] returnedMoistureMap, float[,] returnedTemperatureMap, BiomeType[,] returnedBiomeMap, 
         SurfaceType[,] returnedSurfaceTypeMap, WaterState[,] returnedWaterStateMap, float[,] returnedRiverMaskMap, 
         Texture2D[] returnedControlMapData)
@@ -192,6 +196,7 @@ public class ChunkRecord
             return false;
 
         heightMap = returnedHeightMap;
+        slopeMap = returnedSlopeMap;
         moistureMap = returnedMoistureMap;
         temperatureMap = returnedTemperatureMap;
         biomeMap = returnedBiomeMap;

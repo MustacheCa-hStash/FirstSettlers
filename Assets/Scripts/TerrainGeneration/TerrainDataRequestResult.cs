@@ -5,6 +5,7 @@ public class TerrainDataRequestResult
     public float[,] HeightMap { get; }
     public float[,] GradientXMap { get; }
     public float[,] GradientZMap { get; }
+    public float[,] SlopeMap { get; }
     public float[,] MoistureMap { get; }
     public float[,] TemperatureMap { get; }
     public BiomeType[,] BiomeMap { get; }
@@ -14,7 +15,7 @@ public class TerrainDataRequestResult
     public ControlMapPixelData ControlMapsRawData { get; }
 
     public TerrainDataRequestResult(ChunkCoord chunkCoord, int requestVersion, float[,] heightMap, float[,] gradientXMap,
-        float[,] gradientZMap, float[,] moistureMap, float[,] temperatureMap, BiomeType[,] biomeMap, 
+        float[,] gradientZMap, float[,] slopeMap, float[,] moistureMap, float[,] temperatureMap, BiomeType[,] biomeMap, 
         SurfaceType[,] surfaceTypeMap, WaterState[,] waterStateMap, float[,] riverMaskMap, 
         ControlMapPixelData controlMapsRawData)
     {
@@ -23,6 +24,7 @@ public class TerrainDataRequestResult
         HeightMap = heightMap;
         GradientXMap = gradientXMap;
         GradientZMap = gradientZMap;
+        SlopeMap = slopeMap;
         MoistureMap = moistureMap;
         TemperatureMap = temperatureMap;
         BiomeMap = biomeMap;
