@@ -13,9 +13,9 @@ public static class RiverGenerator
 
     private const float PairAdjacencyFadeWidth = 0.06f;
 
-    public static float Sample(float sampleX, float sampleZ)
+    public static float Sample(float sampleX, float sampleZ, int seed)
     {
-        GetWarpedSample(sampleX, sampleZ, out float warpedX, out float warpedZ);
+        GetWarpedSample(sampleX, sampleZ, seed, out float warpedX, out float warpedZ);
 
         int baseCellX = Mathf.FloorToInt(warpedX / SiteCellSize);
         int baseCellZ = Mathf.FloorToInt(warpedZ / SiteCellSize);
@@ -32,7 +32,7 @@ public static class RiverGenerator
                 int cx = baseCellX + dx;
                 int cz = baseCellZ + dz;
 
-                Vector2 site = GetSite(cx, cz);
+                Vector2 site = GetSite(cx, cz, seed);
 
                 sites[siteCount] = site;
 
@@ -101,13 +101,18 @@ public static class RiverGenerator
         return Mathf.Clamp01(riverMask);
     }
 
-    private static void GetWarpedSample(float sampleX, float sampleZ, out float warpedX, out float warpedZ)
+    private static void GetWarpedSample(float sampleX, float sampleZ, int seed, out float warpedX, out float warpedZ)
     {
-        float warpSampleX1 = sampleX * WarpScale + 17.13f;
-        float warpSampleZ1 = sampleZ * WarpScale + 41.27f;
+        float seedOffsetX1 = Hash01(seed, 0, 10) * 2000f - 1000f;
+        float seedOffsetZ1 = Hash01(seed, 0, 11) * 2000f - 1000f;
+        float seedOffsetX2 = Hash01(seed, 0, 12) * 2000f - 1000f;
+        float seedOffsetZ2 = Hash01(seed, 0, 13) * 2000f - 1000f;
 
-        float warpSampleX2 = sampleX * WarpScale + 73.91f;
-        float warpSampleZ2 = sampleZ * WarpScale + 12.58f;
+        float warpSampleX1 = sampleX * WarpScale + 17.13f + seedOffsetX1;
+        float warpSampleZ1 = sampleZ * WarpScale + 41.27f + seedOffsetZ1;
+
+        float warpSampleX2 = sampleX * WarpScale + 73.91f + seedOffsetX2;
+        float warpSampleZ2 = sampleZ * WarpScale + 12.58f + seedOffsetZ2;
 
         float offsetX = (Mathf.PerlinNoise(warpSampleX1, warpSampleZ1) * 2f - 1f) * WarpStrength;
         float offsetZ = (Mathf.PerlinNoise(warpSampleX2, warpSampleZ2) * 2f - 1f) * WarpStrength;
@@ -116,12 +121,12 @@ public static class RiverGenerator
         warpedZ = sampleZ + offsetZ;
     }
 
-    private static Vector2 GetSite(int cellX, int cellZ)
+    private static Vector2 GetSite(int cellX, int cellZ, int seed)
     {
         float jitterRange = SiteCellSize * 0.5f * SiteJitter;
 
-        float ox = Hash01(cellX, cellZ, 0) * 2f - 1f;
-        float oz = Hash01(cellX, cellZ, 1) * 2f - 1f;
+        float ox = Hash01(cellX, cellZ, seed) * 2f - 1f;
+        float oz = Hash01(cellX, cellZ, seed + 1) * 2f - 1f;
 
         float sx = (cellX + 0.5f) * SiteCellSize + ox * jitterRange;
         float sz = (cellZ + 0.5f) * SiteCellSize + oz * jitterRange;
@@ -131,9 +136,12 @@ public static class RiverGenerator
 
     private static float Hash01(int x, int z, int channel)
     {
-        uint h = (uint)(x * 374761393 + z * 668265263 + channel * 2246822519);
-        h = (h ^ (h >> 13)) * 1274126177;
-        h ^= h >> 16;
-        return h / (float)uint.MaxValue;
+        unchecked
+        {
+            uint h = (uint)x * 374761393u + (uint)z * 668265263u + (uint)channel * 2246822519u;
+            h = (h ^ (h >> 13)) * 1274126177u;
+            h ^= h >> 16;
+            return h / (float)uint.MaxValue;
+        }
     }
 }
