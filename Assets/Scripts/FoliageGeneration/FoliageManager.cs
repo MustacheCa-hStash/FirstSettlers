@@ -5,6 +5,7 @@ public class FoliageManager
 {
     private readonly Transform foliageParent;
     private readonly GrassSettings grassSettings;
+    private readonly FlowerSettings flowerSettings;
     private readonly TreeSettings treeSettings;
     private readonly int worldSeed;
     private readonly int chunkSize;
@@ -17,16 +18,21 @@ public class FoliageManager
     private Mesh billboardGrassMesh;
     private Material billboardGrassMaterial;
 
+    private Mesh flowerMesh;
+    private Material flowerMaterial;
+    private int flowerPetalColorPropertyId;
+
     private readonly List<TreeGpuLODRenderData> treeGpuLODs = new List<TreeGpuLODRenderData>();
 
     private Mesh treeBillboardMesh;
     private Material treeBillboardMaterial;
 
-    public FoliageManager(Transform foliageParent, GrassSettings grassSettings, TreeSettings treeSettings, int worldSeed,
+    public FoliageManager(Transform foliageParent, GrassSettings grassSettings, FlowerSettings flowerSettings, TreeSettings treeSettings, int worldSeed,
         int chunkSize, float worldScale, float meshHeightMultiplier)
     {
         this.foliageParent = foliageParent;
         this.grassSettings = grassSettings;
+        this.flowerSettings = flowerSettings;
         this.treeSettings = treeSettings;
         this.worldSeed = worldSeed;
         this.chunkSize = chunkSize;
@@ -34,6 +40,7 @@ public class FoliageManager
         this.meshHeightMultiplier = meshHeightMultiplier;
 
         ResolveGrassRenderAssets();
+        ResolveFlowerRenderAssets();
         ResolveTreeRenderAssets();
     }
 
@@ -56,8 +63,9 @@ public class FoliageManager
 
             bool useNearGrass = IsWithinNearGrass(viewerCoord, coord);
             bool useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
+            bool useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
             bool useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
-            bool useFoliage = useNearGrass || useBillboardGrass || useTrees;
+            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useTrees;
 
             if (!HasRequiredTerrainData(record))
             {
@@ -84,6 +92,20 @@ public class FoliageManager
                 runtime.FoliageRuntime.ClearTreeGpuMatrices();
                 runtime.FoliageRuntime.ClearTreeBillboardMatrices();
                 runtime.FoliageRuntime.ClearCurrentTreeRepresentation();
+            }
+
+            if (useFlowers && HasFlowerRenderAssets())
+            {
+                if (record.FoliageData == null || !record.FoliageData.flowersGenerated)
+                {
+                    EnsureFlowersGenerated(record);
+                }
+
+                RebuildFlowerBatches(runtime, record);
+            }
+            else
+            {
+                runtime.FoliageRuntime.ClearFlowerBatches();
             }
 
             if (useNearGrass)
@@ -139,8 +161,9 @@ public class FoliageManager
 
             bool useNearGrass = IsWithinNearGrass(viewerCoord, coord);
             bool useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
+            bool useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
             bool useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
-            bool useFoliage = useNearGrass || useBillboardGrass || useTrees;
+            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useTrees;
 
             if (!HasRequiredTerrainData(record))
             {
@@ -204,6 +227,22 @@ public class FoliageManager
                 runtime.FoliageRuntime.DrawBillboards();
             }
 
+            if (useFlowers && HasFlowerRenderAssets())
+            {
+                if (record.FoliageData == null || !record.FoliageData.flowersGenerated)
+                {
+                    EnsureFlowersGenerated(record);
+                }
+
+                if (!runtime.FoliageRuntime.HasValidFlowerRenderData())
+                {
+                    RebuildFlowerBatches(runtime, record);
+                }
+
+                runtime.FoliageRuntime.SetVisible(true);
+                runtime.FoliageRuntime.DrawFlowers();
+            }
+
             DrawTreesForChunk(runtime, viewerCoord, coord);
         }
     }
@@ -215,6 +254,28 @@ public class FoliageManager
             FoliageGenerator.GenerateTreeCubesForChunk(
                 record,
                 treeSettings,
+                worldSeed,
+                chunkSize,
+                worldScale,
+                meshHeightMultiplier);
+        }
+    }
+
+    private void EnsureFlowersGenerated(ChunkRecord record)
+    {
+        if (!IsFlowerSystemEnabled())
+            return;
+
+        if (record.FoliageData == null || !record.FoliageData.treeCubesGenerated)
+        {
+            EnsureTreesGenerated(record);
+        }
+
+        if (record.FoliageData == null || !record.FoliageData.flowersGenerated)
+        {
+            FoliageGenerator.GenerateFlowersForChunk(
+                record,
+                flowerSettings,
                 worldSeed,
                 chunkSize,
                 worldScale,
@@ -332,6 +393,35 @@ public class FoliageManager
         }
 
         foliageRuntime.CacheTreeBillboardMatrices(worldMatrices);
+    }
+
+    private void RebuildFlowerBatches(ChunkRuntime runtime, ChunkRecord record)
+    {
+        ChunkFoliageRuntime foliageRuntime = runtime.FoliageRuntime;
+        ChunkFoliageData data = record.FoliageData;
+
+        if (foliageRuntime == null || data == null || data.flowerInstances == null)
+            return;
+
+        List<Matrix4x4> worldMatrices = new List<Matrix4x4>();
+        List<Vector4> petalColors = new List<Vector4>();
+        Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
+
+        for (int i = 0; i < data.flowerInstances.Count; i++)
+        {
+            FlowerInstanceData instance = data.flowerInstances[i];
+
+            Matrix4x4 localMatrix = Matrix4x4.TRS(
+                instance.localPosition,
+                instance.localRotation,
+                instance.localScale);
+
+            Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
+            worldMatrices.Add(worldMatrix);
+            petalColors.Add(Color32ToVector4(instance.petalColor));
+        }
+
+        foliageRuntime.CacheFlowerBatches(worldMatrices, petalColors);
     }
 
     private void RebuildGrassMatricesForViewerSubChunk(
@@ -560,6 +650,16 @@ public class FoliageManager
         return dx <= grassSettings.activeRingRadius && dz <= grassSettings.activeRingRadius;
     }
 
+    private bool IsWithinFlowerRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
+    {
+        if (!IsFlowerSystemEnabled())
+            return false;
+
+        int dx = Mathf.Abs(targetCoord.x - viewerCoord.x);
+        int dz = Mathf.Abs(targetCoord.z - viewerCoord.z);
+        return dx <= flowerSettings.activeRingRadius && dz <= flowerSettings.activeRingRadius;
+    }
+
     private bool IsWithinBillboardGrass(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
         int absDx = Mathf.Abs(targetCoord.x - viewerCoord.x);
@@ -582,7 +682,29 @@ public class FoliageManager
 
     private bool HasRequiredTerrainData(ChunkRecord record)
     {
-        return record.HeightMap != null && record.SurfaceTypeMap != null;
+        return record.HeightMap != null &&
+               record.SurfaceTypeMap != null &&
+               record.BiomeMap != null;
+    }
+
+    private bool IsFlowerSystemEnabled()
+    {
+        return flowerSettings != null && flowerSettings.enableFlowers;
+    }
+
+    private bool HasFlowerRenderAssets()
+    {
+        return flowerMesh != null && flowerMaterial != null;
+    }
+
+    private static Vector4 Color32ToVector4(Color32 color)
+    {
+        const float inv255 = 1f / 255f;
+        return new Vector4(
+            color.r * inv255,
+            color.g * inv255,
+            color.b * inv255,
+            color.a * inv255);
     }
 
     private void EnsureFoliageRuntimeExists(ChunkRuntime chunkRuntime, ChunkRecord record)
@@ -602,6 +724,10 @@ public class FoliageManager
 
         chunkRuntime.FoliageRuntime.billboardMesh = billboardGrassMesh;
         chunkRuntime.FoliageRuntime.billboardMaterial = billboardGrassMaterial;
+
+        chunkRuntime.FoliageRuntime.flowerMesh = flowerMesh;
+        chunkRuntime.FoliageRuntime.flowerMaterial = flowerMaterial;
+        chunkRuntime.FoliageRuntime.flowerPetalColorPropertyId = flowerPetalColorPropertyId;
 
         chunkRuntime.FoliageRuntime.treeGpuLODs = treeGpuLODs;
         chunkRuntime.FoliageRuntime.treeBillboardMesh = treeBillboardMesh;
@@ -666,6 +792,46 @@ public class FoliageManager
             {
                 billboardGrassMaterial = meshRenderer.sharedMaterial;
             }
+        }
+    }
+
+    private void ResolveFlowerRenderAssets()
+    {
+        if (!IsFlowerSystemEnabled())
+            return;
+
+        string petalColorPropertyName = string.IsNullOrEmpty(flowerSettings.flowerPetalColorPropertyName)
+            ? "_FlowerPetalColor"
+            : flowerSettings.flowerPetalColorPropertyName;
+
+        flowerPetalColorPropertyId = Shader.PropertyToID(petalColorPropertyName);
+
+        if (flowerSettings.flowerPrefab == null)
+        {
+            Debug.LogWarning("Flower prefab is missing. Flowers will not render until one is assigned.");
+            return;
+        }
+
+        MeshFilter meshFilter = flowerSettings.flowerPrefab.GetComponentInChildren<MeshFilter>();
+        MeshRenderer meshRenderer = flowerSettings.flowerPrefab.GetComponentInChildren<MeshRenderer>();
+
+        if (meshFilter == null || meshFilter.sharedMesh == null)
+        {
+            Debug.LogError("Flower prefab missing MeshFilter or mesh.");
+        }
+        else
+        {
+            flowerMesh = meshFilter.sharedMesh;
+        }
+
+        if (meshRenderer == null || meshRenderer.sharedMaterial == null)
+        {
+            Debug.LogError("Flower prefab missing MeshRenderer or material.");
+        }
+        else
+        {
+            flowerMaterial = meshRenderer.sharedMaterial;
+            flowerMaterial.enableInstancing = true;
         }
     }
 

@@ -48,8 +48,21 @@ public static class FoliageGenerator
         {
             for (int cellX = 0; cellX < cellsPerAxis; cellX++)
             {
-                float sampleX = (cellX + 0.5f) * cellSize;
-                float sampleZ = (cellZ + 0.5f) * cellSize;
+                int cellHash = Hash(
+                    worldSeed,
+                    grassSettings.seedOffset,
+                    record.ChunkCoord.x,
+                    record.ChunkCoord.z,
+                    cellX,
+                    cellZ,
+                    713);
+
+                float jitterStrength = Mathf.Clamp01(grassSettings.cellJitter);
+                float jitterX = Mathf.Lerp(0.5f, Hash01(cellHash + 31), jitterStrength);
+                float jitterZ = Mathf.Lerp(0.5f, Hash01(cellHash + 67), jitterStrength);
+
+                float sampleX = (cellX + jitterX) * cellSize;
+                float sampleZ = (cellZ + jitterZ) * cellSize;
 
                 int mapX = Mathf.Clamp(Mathf.RoundToInt(sampleX), 0, chunkSize);
                 int mapZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize);
@@ -223,6 +236,200 @@ public static class FoliageGenerator
         }
 
         foliageData.billboardGenerated = true;
+    }
+
+    public static void GenerateFlowersForChunk(
+        ChunkRecord record,
+        FlowerSettings flowerSettings,
+        int worldSeed,
+        int chunkSize,
+        float worldScale,
+        float meshHeightMultiplier)
+    {
+        if (record.FoliageData == null)
+        {
+            record.FoliageData = new ChunkFoliageData();
+        }
+
+        ChunkFoliageData foliageData = record.FoliageData;
+        foliageData.ClearFlowers();
+
+        if (flowerSettings == null || !flowerSettings.enableFlowers)
+            return;
+
+        if (record.SurfaceTypeMap == null || record.HeightMap == null || record.BiomeMap == null)
+            return;
+
+        float chunkSampleMinX = record.ChunkCoord.x * chunkSize;
+        float chunkSampleMinZ = record.ChunkCoord.z * chunkSize;
+        float chunkSampleMaxX = chunkSampleMinX + chunkSize;
+        float chunkSampleMaxZ = chunkSampleMinZ + chunkSize;
+
+        float patchCellSize = Mathf.Max(0.1f, flowerSettings.patchCellSize);
+        float maxPatchRadius = Mathf.Max(
+            Mathf.Max(flowerSettings.patchRadiusRange.x, flowerSettings.patchRadiusRange.y),
+            0f);
+        float padding = maxPatchRadius + patchCellSize;
+
+        float expandedMinX = chunkSampleMinX - padding;
+        float expandedMaxX = chunkSampleMaxX + padding;
+        float expandedMinZ = chunkSampleMinZ - padding;
+        float expandedMaxZ = chunkSampleMaxZ + padding;
+
+        int globalCellMinX = Mathf.FloorToInt(expandedMinX / patchCellSize);
+        int globalCellMaxX = Mathf.FloorToInt(expandedMaxX / patchCellSize);
+        int globalCellMinZ = Mathf.FloorToInt(expandedMinZ / patchCellSize);
+        int globalCellMaxZ = Mathf.FloorToInt(expandedMaxZ / patchCellSize);
+
+        int maxPatchCentersPerCell = Mathf.Max(1, flowerSettings.maxPatchCentersPerCell);
+        int minFlowersPerPatch = Mathf.Max(1, flowerSettings.minFlowersPerPatch);
+        int maxFlowersPerPatch = Mathf.Max(minFlowersPerPatch, flowerSettings.maxFlowersPerPatch);
+        float patchNoiseScale = Mathf.Max(0.0001f, flowerSettings.patchNoiseScale);
+        float patchNoiseThreshold = Mathf.Clamp01(flowerSettings.patchNoiseThreshold);
+
+        float topLeftX = chunkSize / -2f;
+        float bottomLeftZ = chunkSize / -2f;
+
+        float treeExclusionRadiusSqr =
+            flowerSettings.treeExclusionRadius * flowerSettings.treeExclusionRadius;
+
+        for (int globalCellZ = globalCellMinZ; globalCellZ <= globalCellMaxZ; globalCellZ++)
+        {
+            for (int globalCellX = globalCellMinX; globalCellX <= globalCellMaxX; globalCellX++)
+            {
+                for (int patchIndex = 0; patchIndex < maxPatchCentersPerCell; patchIndex++)
+                {
+                    int patchHash = Hash(
+                        worldSeed,
+                        flowerSettings.seedOffset,
+                        globalCellX,
+                        globalCellZ,
+                        patchIndex,
+                        421);
+
+                    float centerGlobalSampleX =
+                        (globalCellX + Hash01(patchHash + 31)) * patchCellSize;
+                    float centerGlobalSampleZ =
+                        (globalCellZ + Hash01(patchHash + 67)) * patchCellSize;
+
+                    NoiseSample2D patchNoise = AnalyticValueNoise2D.Sample(
+                        centerGlobalSampleX * patchNoiseScale,
+                        centerGlobalSampleZ * patchNoiseScale,
+                        worldSeed + flowerSettings.seedOffset);
+
+                    float patchNoise01 = Mathf.Clamp01((patchNoise.Value + 1f) * 0.5f);
+                    if (patchNoise01 < patchNoiseThreshold)
+                        continue;
+
+                    float patchStrength = patchNoiseThreshold >= 0.999f
+                        ? 1f
+                        : Mathf.InverseLerp(patchNoiseThreshold, 1f, patchNoise01);
+
+                    float spawnChance = Mathf.Clamp01(flowerSettings.patchSpawnChance * patchStrength);
+                    if (Hash01(patchHash + 103) > spawnChance)
+                        continue;
+
+                    float patchRadius = Mathf.Lerp(
+                        flowerSettings.patchRadiusRange.x,
+                        flowerSettings.patchRadiusRange.y,
+                        Hash01(patchHash + 139));
+
+                    patchRadius = Mathf.Max(0f, patchRadius);
+
+                    if (centerGlobalSampleX + patchRadius < chunkSampleMinX ||
+                        centerGlobalSampleX - patchRadius > chunkSampleMaxX ||
+                        centerGlobalSampleZ + patchRadius < chunkSampleMinZ ||
+                        centerGlobalSampleZ - patchRadius > chunkSampleMaxZ)
+                    {
+                        continue;
+                    }
+
+                    int flowersInPatch = GetDeterministicCount(
+                        minFlowersPerPatch,
+                        maxFlowersPerPatch,
+                        patchHash + 173);
+
+                    for (int flowerIndex = 0; flowerIndex < flowersInPatch; flowerIndex++)
+                    {
+                        int flowerHash = Hash(
+                            worldSeed,
+                            flowerSettings.seedOffset,
+                            globalCellX,
+                            globalCellZ,
+                            patchIndex,
+                            flowerIndex,
+                            557);
+
+                        float angle = Hash01(flowerHash + 19) * Mathf.PI * 2f;
+                        float radius = Mathf.Sqrt(Hash01(flowerHash + 41)) * patchRadius;
+
+                        float globalSampleX = centerGlobalSampleX + Mathf.Cos(angle) * radius;
+                        float globalSampleZ = centerGlobalSampleZ + Mathf.Sin(angle) * radius;
+
+                        if (globalSampleX < chunkSampleMinX || globalSampleX > chunkSampleMaxX ||
+                            globalSampleZ < chunkSampleMinZ || globalSampleZ > chunkSampleMaxZ)
+                        {
+                            continue;
+                        }
+
+                        float localSampleX = globalSampleX - chunkSampleMinX;
+                        float localSampleZ = globalSampleZ - chunkSampleMinZ;
+
+                        int mapX = Mathf.Clamp(Mathf.RoundToInt(localSampleX), 0, chunkSize);
+                        int mapZ = Mathf.Clamp(Mathf.RoundToInt(localSampleZ), 0, chunkSize);
+                        int paddedX = mapX + 1;
+                        int paddedZ = mapZ + 1;
+
+                        if (!IsValidFlowerSample(record, flowerSettings, paddedX, paddedZ))
+                            continue;
+
+                        float localX = (topLeftX + localSampleX) * worldScale;
+                        float localZ = (bottomLeftZ + localSampleZ) * worldScale;
+
+                        if (flowerSettings.treeExclusionRadius > 0f &&
+                            IsInsideTreeExclusion(
+                                localX,
+                                localZ,
+                                foliageData.treeCubeInstances,
+                                treeExclusionRadiusSqr))
+                        {
+                            continue;
+                        }
+
+                        float height = SampleHeightBilinear(
+                            record.HeightMap,
+                            localSampleX,
+                            localSampleZ,
+                            chunkSize);
+
+                        float localY = height * meshHeightMultiplier * worldScale;
+
+                        float yaw = flowerSettings.randomizeYaw
+                            ? Hash01(flowerHash + 83) * 360f
+                            : 0f;
+
+                        float uniformScale = Mathf.Lerp(
+                            flowerSettings.uniformScaleRange.x,
+                            flowerSettings.uniformScaleRange.y,
+                            Hash01(flowerHash + 127));
+
+                        BiomeType biome = record.BiomeMap[paddedX, paddedZ];
+                        Color32 petalColor = GetDeterministicPetalColor(
+                            flowerSettings,
+                            biome,
+                            flowerHash);
+
+                        foliageData.flowerInstances.Add(new FlowerInstanceData(
+                            new Vector3(localX, localY, localZ),
+                            Quaternion.Euler(0f, yaw, 0f),
+                            Vector3.one * uniformScale,
+                            petalColor));
+                    }
+                }
+            }
+        }
+
+        foliageData.flowersGenerated = true;
     }
 
     public static void GenerateTreeCubesForChunk(
@@ -421,6 +628,55 @@ public static class FoliageGenerator
         }
 
         return false;
+    }
+
+    private static bool IsValidFlowerSample(
+        ChunkRecord record,
+        FlowerSettings flowerSettings,
+        int paddedX,
+        int paddedZ)
+    {
+        if (record.SurfaceTypeMap[paddedX, paddedZ] != SurfaceType.Grass)
+            return false;
+
+        BiomeType biome = record.BiomeMap[paddedX, paddedZ];
+        if (!flowerSettings.AllowsBiome(biome))
+            return false;
+
+        if (record.SlopeMap != null &&
+            record.SlopeMap[paddedX, paddedZ] > flowerSettings.maxSlope)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static int GetDeterministicCount(int minCount, int maxCount, int hash)
+    {
+        if (maxCount <= minCount)
+            return minCount;
+
+        int range = maxCount - minCount + 1;
+        int offset = Mathf.FloorToInt(Hash01(hash) * range);
+        return Mathf.Clamp(minCount + offset, minCount, maxCount);
+    }
+
+    private static Color32 GetDeterministicPetalColor(
+        FlowerSettings flowerSettings,
+        BiomeType biome,
+        int hash)
+    {
+        Color baseColor = flowerSettings.GetBasePetalColor(biome, Hash01(hash + 271));
+        float variation = Mathf.Max(0f, flowerSettings.petalColorVariation);
+        float brightness = Mathf.Lerp(1f - variation, 1f + variation, Hash01(hash + 307));
+
+        baseColor.r = Mathf.Clamp01(baseColor.r * brightness);
+        baseColor.g = Mathf.Clamp01(baseColor.g * brightness);
+        baseColor.b = Mathf.Clamp01(baseColor.b * brightness);
+        baseColor.a = 1f;
+
+        return (Color32)baseColor;
     }
 
     private static void SortSubChunkBucketsBySelectionRank(ChunkFoliageData foliageData)

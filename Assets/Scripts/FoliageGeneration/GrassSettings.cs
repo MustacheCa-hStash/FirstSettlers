@@ -6,6 +6,7 @@ public class GrassSettings
     public GameObject grassPrefab;
 
     public int cellsPerAxis = 125;
+    [Range(0f, 1f)] public float cellJitter = 1.0f;
     public int activeRingRadius = 1;
     public int subChunksPerChunk = 10;
 

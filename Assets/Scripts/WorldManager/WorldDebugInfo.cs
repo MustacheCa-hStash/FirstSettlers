@@ -16,6 +16,7 @@ public readonly struct WorldDebugInfo
     public readonly float Temperature;
     public readonly float RiverMask;
     public readonly int GpuGrassInstanceCount;
+    public readonly int GpuFlowerInstanceCount;
     public readonly int GpuTreeInstanceCount;
 
     public WorldDebugInfo(
@@ -33,6 +34,7 @@ public readonly struct WorldDebugInfo
         float temperature,
         float riverMask,
         int gpuGrassInstanceCount,
+        int gpuFlowerInstanceCount,
         int gpuTreeInstanceCount)
     {
         WorldPosition = worldPosition;
@@ -49,6 +51,7 @@ public readonly struct WorldDebugInfo
         Temperature = temperature;
         RiverMask = riverMask;
         GpuGrassInstanceCount = gpuGrassInstanceCount;
+        GpuFlowerInstanceCount = gpuFlowerInstanceCount;
         GpuTreeInstanceCount = gpuTreeInstanceCount;
     }
 }

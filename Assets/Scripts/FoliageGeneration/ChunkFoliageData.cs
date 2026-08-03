@@ -9,6 +9,9 @@ public class ChunkFoliageData
     public bool billboardGenerated;
     public List<BillboardFoliageInstanceData> billboardGrassInstances = new List<BillboardFoliageInstanceData>();
 
+    public bool flowersGenerated;
+    public List<FlowerInstanceData> flowerInstances = new List<FlowerInstanceData>();
+
     public bool treeCubesGenerated;
     public List<TreeInstanceData> treeCubeInstances = new List<TreeInstanceData>();
 
@@ -48,6 +51,12 @@ public class ChunkFoliageData
         billboardGrassInstances.Clear();
     }
 
+    public void ClearFlowers()
+    {
+        flowersGenerated = false;
+        flowerInstances.Clear();
+    }
+
     public void ClearTreeCubes()
     {
         treeCubesGenerated = false;
@@ -58,6 +67,7 @@ public class ChunkFoliageData
     {
         ClearNearGrass();
         ClearBillboards();
+        ClearFlowers();
         ClearTreeCubes();
     }
 
@@ -82,6 +92,11 @@ public class ChunkFoliageData
     public int GetTotalBillboardInstanceCount()
     {
         return billboardGrassInstances != null ? billboardGrassInstances.Count : 0;
+    }
+
+    public int GetTotalFlowerInstanceCount()
+    {
+        return flowerInstances != null ? flowerInstances.Count : 0;
     }
 
     public int GetTotalTreeCubeInstanceCount()

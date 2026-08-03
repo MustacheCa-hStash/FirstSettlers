@@ -31,6 +31,10 @@ public class ChunkFoliageRuntime
     public Mesh billboardMesh;
     public Material billboardMaterial;
 
+    public Mesh flowerMesh;
+    public Material flowerMaterial;
+    public int flowerPetalColorPropertyId;
+
     public List<TreeGpuLODRenderData> treeGpuLODs = new List<TreeGpuLODRenderData>();
 
     public Mesh treeBillboardMesh;
@@ -40,6 +44,8 @@ public class ChunkFoliageRuntime
 
     private readonly List<Matrix4x4[]> grassMatrixBatches = new List<Matrix4x4[]>();
     private readonly List<Matrix4x4[]> billboardMatrixBatches = new List<Matrix4x4[]>();
+    private readonly List<FlowerRenderBatch> flowerRenderBatches = new List<FlowerRenderBatch>();
+    private readonly MaterialPropertyBlock flowerPropertyBlock = new MaterialPropertyBlock();
 
     private readonly List<Matrix4x4[]> treeGpuMatrixBatches = new List<Matrix4x4[]>();
     private readonly List<Matrix4x4[]> treeBillboardMatrixBatches = new List<Matrix4x4[]>();
@@ -53,6 +59,7 @@ public class ChunkFoliageRuntime
 
     public bool IsCreated => root != null;
     public int GpuGrassInstanceCount => CountMatrices(grassMatrixBatches) + CountMatrices(billboardMatrixBatches);
+    public int GpuFlowerInstanceCount => CountFlowerInstances();
     public int GpuTreeInstanceCount => CountMatrices(treeGpuMatrixBatches) + CountMatrices(treeBillboardMatrixBatches);
 
     public bool HasCurrentTreeRepresentation(
@@ -83,6 +90,7 @@ public class ChunkFoliageRuntime
     {
         grassMatrixBatches.Clear();
         billboardMatrixBatches.Clear();
+        flowerRenderBatches.Clear();
         treeGpuMatrixBatches.Clear();
         treeBillboardMatrixBatches.Clear();
         ClearTreeGameObjects();
@@ -107,6 +115,11 @@ public class ChunkFoliageRuntime
     public bool HasValidBillboardRenderData()
     {
         return billboardMesh != null && billboardMaterial != null && billboardMatrixBatches.Count > 0;
+    }
+
+    public bool HasValidFlowerRenderData()
+    {
+        return flowerMesh != null && flowerMaterial != null && flowerRenderBatches.Count > 0;
     }
 
     public bool HasValidTreeGpuRenderData(int gpuLODIndex)
@@ -146,6 +159,40 @@ public class ChunkFoliageRuntime
         CacheMatrices(worldMatrices, treeGpuMatrixBatches);
     }
 
+    public void CacheFlowerBatches(List<Matrix4x4> worldMatrices, List<Vector4> petalColors)
+    {
+        flowerRenderBatches.Clear();
+
+        if (worldMatrices == null || petalColors == null)
+            return;
+
+        if (worldMatrices.Count != petalColors.Count)
+        {
+            Debug.LogError("Flower matrix and petal color counts must match.");
+            return;
+        }
+
+        const int maxBatchSize = 1023;
+        int totalCount = worldMatrices.Count;
+        int startIndex = 0;
+
+        while (startIndex < totalCount)
+        {
+            int batchCount = Mathf.Min(maxBatchSize, totalCount - startIndex);
+            Matrix4x4[] matrixBatch = new Matrix4x4[batchCount];
+            Vector4[] petalColorBatch = new Vector4[batchCount];
+
+            for (int i = 0; i < batchCount; i++)
+            {
+                matrixBatch[i] = worldMatrices[startIndex + i];
+                petalColorBatch[i] = petalColors[startIndex + i];
+            }
+
+            flowerRenderBatches.Add(new FlowerRenderBatch(matrixBatch, petalColorBatch));
+            startIndex += batchCount;
+        }
+    }
+
     public void CacheTreeBillboardMatrices(List<Matrix4x4> worldMatrices)
     {
         CacheMatrices(worldMatrices, treeBillboardMatrixBatches);
@@ -182,6 +229,19 @@ public class ChunkFoliageRuntime
         {
             if (batches[i] != null)
                 count += batches[i].Length;
+        }
+
+        return count;
+    }
+
+    private int CountFlowerInstances()
+    {
+        int count = 0;
+
+        for (int i = 0; i < flowerRenderBatches.Count; i++)
+        {
+            if (flowerRenderBatches[i].matrices != null)
+                count += flowerRenderBatches[i].matrices.Length;
         }
 
         return count;
@@ -237,6 +297,11 @@ public class ChunkFoliageRuntime
         treeGpuMatrixBatches.Clear();
     }
 
+    public void ClearFlowerBatches()
+    {
+        flowerRenderBatches.Clear();
+    }
+
     public void ClearTreeBillboardMatrices()
     {
         treeBillboardMatrixBatches.Clear();
@@ -276,6 +341,34 @@ public class ChunkFoliageRuntime
                 billboardMatrixBatches[i],
                 billboardMatrixBatches[i].Length,
                 null,
+                ShadowCastingMode.Off,
+                true
+            );
+        }
+    }
+
+    public void DrawFlowers()
+    {
+        if (!isVisible || !HasValidFlowerRenderData())
+            return;
+
+        for (int i = 0; i < flowerRenderBatches.Count; i++)
+        {
+            FlowerRenderBatch batch = flowerRenderBatches[i];
+
+            if (batch.matrices == null || batch.petalColors == null)
+                continue;
+
+            flowerPropertyBlock.Clear();
+            flowerPropertyBlock.SetVectorArray(flowerPetalColorPropertyId, batch.petalColors);
+
+            Graphics.DrawMeshInstanced(
+                flowerMesh,
+                0,
+                flowerMaterial,
+                batch.matrices,
+                batch.matrices.Length,
+                flowerPropertyBlock,
                 ShadowCastingMode.Off,
                 true
             );

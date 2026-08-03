@@ -177,6 +177,8 @@ public class PcgDebugOverlay : MonoBehaviour
         builder.AppendLine(info.RiverMask.ToString("0.000"));
         builder.Append("GPU Grass: ");
         builder.AppendLine(info.GpuGrassInstanceCount.ToString());
+        builder.Append("GPU Flowers: ");
+        builder.AppendLine(info.GpuFlowerInstanceCount.ToString());
         builder.Append("GPU Trees: ");
         builder.AppendLine(info.GpuTreeInstanceCount.ToString());
 

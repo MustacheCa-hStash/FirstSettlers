@@ -47,6 +47,7 @@ public class ChunkManager
         Transform chunkParent,
         Transform foliageParent,
         GrassSettings grassSettings,
+        FlowerSettings flowerSettings,
         TreeSettings treeSettings,
         float sampleScale,
         float worldScale,
@@ -86,6 +87,7 @@ public class ChunkManager
         foliageManager = new FoliageManager(
             foliageParent,
             grassSettings,
+            flowerSettings,
             treeSettings,
             seed,
             chunkSize,
@@ -117,6 +119,7 @@ public class ChunkManager
         float temperature = 0f;
         float riverMask = 0f;
         int gpuGrassInstanceCount = 0;
+        int gpuFlowerInstanceCount = 0;
         int gpuTreeInstanceCount = 0;
 
         if (hasTerrainData && TryGetPaddedSampleIndices(coord, worldPosition, record, out int sampleX, out int sampleZ))
@@ -133,6 +136,7 @@ public class ChunkManager
         if (hasFoliageRuntime)
         {
             gpuGrassInstanceCount = runtime.FoliageRuntime.GpuGrassInstanceCount;
+            gpuFlowerInstanceCount = runtime.FoliageRuntime.GpuFlowerInstanceCount;
             gpuTreeInstanceCount = runtime.FoliageRuntime.GpuTreeInstanceCount;
         }
 
@@ -151,6 +155,7 @@ public class ChunkManager
             temperature,
             riverMask,
             gpuGrassInstanceCount,
+            gpuFlowerInstanceCount,
             gpuTreeInstanceCount);
     }
 
