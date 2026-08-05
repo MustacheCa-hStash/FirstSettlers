@@ -65,6 +65,7 @@ Shader "Custom/StylizedTerrainURP"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -100,6 +101,7 @@ Shader "Custom/StylizedTerrainURP"
                 float3 positionWS : TEXCOORD0;
                 float3 normalWS : TEXCOORD1;
                 float2 uv : TEXCOORD2;
+                float fogFactor : TEXCOORD3;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -257,6 +259,7 @@ Shader "Custom/StylizedTerrainURP"
                 OUT.positionWS = positionInputs.positionWS;
                 OUT.normalWS = normalInputs.normalWS;
                 OUT.uv = IN.uv;
+                OUT.fogFactor = ComputeFogFactor(positionInputs.positionCS.z);
 
                 return OUT;
             }
@@ -374,8 +377,10 @@ Shader "Custom/StylizedTerrainURP"
                 Light mainLight = GetMainLight();
                 half3 diffuse = LightingLambert(mainLight.color, mainLight.direction, normalWS) * mainLight.distanceAttenuation;
                 half3 lighting = diffuse + half3(_AmbientStrength, _AmbientStrength, _AmbientStrength);
+                half3 color = baseColor * lighting;
+                color = MixFog(color, IN.fogFactor);
 
-                return half4(baseColor * lighting, 1.0);
+                return half4(color, 1.0);
             }
             ENDHLSL
         }
