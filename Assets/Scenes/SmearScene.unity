@@ -544,18 +544,18 @@ MonoBehaviour:
   treeSettings:
     treeLOD0GameObjectPrefab: {fileID: 2892109097563917780, guid: 40fc0a45dc34f4443860b3ac9df1ef46, type: 3}
     treeGPUInstancedLODPrefabs: []
-    treeBillboardPrefab: {fileID: 0}
+    treeBillboardPrefab: {fileID: 2065088187390408184, guid: 30aa48ad464964846b008c0cfdf4dc40, type: 3}
     treeCellSize: 12
     treeSpawnChance: 0.03
     treeMinDistance: 9
-    treeUniformScaleRange: {x: 2, y: 2}
+    treeUniformScaleRange: {x: 1.5, y: 2}
     grassExclusionRadius: 0.5
     seedOffset: 12000
-    gameObjectTreeChunkRingRadius: 1
-    gpuInstancedTreeChunkRingRadius: 4
-    billboardTreeChunkRingRadius: 8
+    gameObjectTreeChunkRingRadius: 2
+    gpuInstancedTreeChunkRingRadius: 8
+    billboardTreeChunkRingRadius: 15
     castTreeShadows: 1
-    receiveTreeShadows: 1
+    receiveTreeShadows: 0
   sampleScale: 600
   worldScale: 0.3
   octaves: 2
