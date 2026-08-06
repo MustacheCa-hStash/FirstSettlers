@@ -475,7 +475,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   worldSeed: 16
-  viewDistance: 40
+  viewDistance: 25
   colliderDistance: 5
   chunkSize: 128
   viewer: {fileID: 1578603182}
@@ -542,7 +542,7 @@ MonoBehaviour:
       - {r: 0.72, g: 0.82, b: 1, a: 1}
       - {r: 0.9, g: 0.72, b: 1, a: 1}
   treeSettings:
-    treeLOD0GameObjectPrefab: {fileID: 3514175622589223158, guid: 30307d1938dec364b9ff45e3ea8531b0, type: 3}
+    treeLOD0GameObjectPrefab: {fileID: 4356060867758233746, guid: 53994073d2fdd2b40ae093a0607a8fa9, type: 3}
     treeGPUInstancedLODPrefabs: []
     treeBillboardPrefab: {fileID: 0}
     treeCellSize: 12
