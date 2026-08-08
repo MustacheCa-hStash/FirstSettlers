@@ -2,7 +2,7 @@ using UnityEngine;
 
 public static class TerrainControlMapBuilder
 {
-    public static ControlMapPixelData BuildRaw(SurfaceType[,] surfaceTypeMap)
+    public static ControlMapPixelData BuildRaw(SurfaceType[,] surfaceTypeMap, BiomeType[,] biomeMap)
     {
         int width = surfaceTypeMap.GetLength(0);
         ControlMapPixelData controlMap = new ControlMapPixelData(width, width, 2);
@@ -23,6 +23,11 @@ public static class TerrainControlMapBuilder
                 else
                 {
                     controlMap.Maps[1][pixelIndex] = SurfaceTypeToIndex(surfaceType);
+                }
+
+                if (biomeMap[x, z] == BiomeType.Forest && surfaceType == SurfaceType.Grass)
+                {
+                    controlMap.Maps[1][pixelIndex].a = 255;
                 }
             }
         }

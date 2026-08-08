@@ -31,7 +31,7 @@ public static class FoliageGenerator
             foliageData.ClearNearGrass();
         }
 
-        if (record.SurfaceTypeMap == null || record.HeightMap == null)
+        if (record.SurfaceTypeMap == null || record.HeightMap == null || record.BiomeMap == null)
             return;
 
         int cellsPerAxis = Mathf.Max(1, grassSettings.cellsPerAxis);
@@ -72,6 +72,8 @@ public static class FoliageGenerator
 
                 if (record.SurfaceTypeMap[paddedX, paddedZ] != SurfaceType.Grass)
                     continue;
+
+                BiomeType biome = record.BiomeMap[paddedX, paddedZ];
 
                 float localX = (topLeftX + sampleX) * worldScale;
                 float localZ = (bottomLeftZ + sampleZ) * worldScale;
@@ -138,7 +140,8 @@ public static class FoliageGenerator
                         localPosition,
                         localRotation,
                         localScale,
-                        selectionRank));
+                        selectionRank,
+                        biome));
             }
         }
 
@@ -162,7 +165,7 @@ public static class FoliageGenerator
         ChunkFoliageData foliageData = record.FoliageData;
         foliageData.ClearBillboards();
 
-        if (record.SurfaceTypeMap == null || record.HeightMap == null)
+        if (record.SurfaceTypeMap == null || record.HeightMap == null || record.BiomeMap == null)
             return;
 
         int cellsPerAxis = Mathf.Max(1, grassSettings.billboardCellsPerAxis);
@@ -206,6 +209,8 @@ public static class FoliageGenerator
                 if (record.SurfaceTypeMap[paddedX, paddedZ] != SurfaceType.Grass)
                     continue;
 
+                BiomeType biome = record.BiomeMap[paddedX, paddedZ];
+
                 float height = SampleHeightBilinear(
                     record.HeightMap,
                     sampleX,
@@ -231,7 +236,8 @@ public static class FoliageGenerator
                     new BillboardFoliageInstanceData(
                         new Vector3(localX, localY, localZ),
                         Quaternion.Euler(0f, yaw, 0f),
-                        Vector3.one * uniformScale));
+                        Vector3.one * uniformScale,
+                        biome));
             }
         }
 

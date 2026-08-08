@@ -15,6 +15,10 @@ Shader "Custom/StylizedTerrainURP"
         _DarkGrassColor("Dark Grass Color", Color) = (0.20, 0.48, 0.18, 1)
         _MidGrassColor("Mid Grass Color", Color) = (0.29, 0.62, 0.24, 1)
         _LightGrassColor("Light Grass Color", Color) = (0.44, 0.78, 0.30, 1)
+        _ForestDarkGrassColor("Forest Dark Grass Color", Color) = (0.08, 0.24, 0.09, 1)
+        _ForestMidGrassColor("Forest Mid Grass Color", Color) = (0.13, 0.36, 0.14, 1)
+        _ForestLightGrassColor("Forest Light Grass Color", Color) = (0.24, 0.52, 0.20, 1)
+        _ForestGrassBlendStrength("Forest Grass Blend Strength", Range(0.0, 1.0)) = 1.0
 
         _GrassAlbedo("Grass Albedo", 2D) = "white" {}
         _GrassNormal("Grass Normal", 2D) = "bump" {}
@@ -115,6 +119,10 @@ Shader "Custom/StylizedTerrainURP"
                 half4 _DarkGrassColor;
                 half4 _MidGrassColor;
                 half4 _LightGrassColor;
+                half4 _ForestDarkGrassColor;
+                half4 _ForestMidGrassColor;
+                half4 _ForestLightGrassColor;
+                half _ForestGrassBlendStrength;
 
                 half4 _SnowTint;
 
@@ -166,7 +174,11 @@ Shader "Custom/StylizedTerrainURP"
                 return lerp(x1, x2, f.y);
             }
 
-            half3 EvaluateGrassTint(float2 worldXZ)
+            half3 EvaluateGrassTint(
+                float2 worldXZ,
+                half3 darkGrassColor,
+                half3 midGrassColor,
+                half3 lightGrassColor)
             {
                 float n = ValueNoise(worldXZ * _NoiseScale);
                 n = saturate((n - 0.5) * _NoiseStrength + 0.5);
@@ -174,10 +186,10 @@ Shader "Custom/StylizedTerrainURP"
 
                 if (n < 0.5)
                 {
-                    return lerp(_DarkGrassColor.rgb, _MidGrassColor.rgb, n * 2.0);
+                    return lerp(darkGrassColor, midGrassColor, n * 2.0);
                 }
 
-                return lerp(_MidGrassColor.rgb, _LightGrassColor.rgb, (n - 0.5) * 2.0);
+                return lerp(midGrassColor, lightGrassColor, (n - 0.5) * 2.0);
             }
 
             float3 ApplyDetailNormal(float3 baseNormalWS, float3 tangentNormal, float strength)
@@ -280,6 +292,7 @@ Shader "Custom/StylizedTerrainURP"
                 half snowWeight = control1.r;
                 half cliffWeight = control1.g;
                 half riverbedWeight = control1.b;
+                half forestGrassWeight = control1.a;
 
                 float distanceToCamera = distance(_WorldSpaceCameraPos.xyz, IN.positionWS);
 
@@ -314,7 +327,15 @@ Shader "Custom/StylizedTerrainURP"
                     half3 grassTexFar = SAMPLE_TEXTURE2D(_GrassAlbedo, sampler_GrassAlbedo, grassUVFar).rgb;
                     half3 grassTex = lerp(grassTexNear, grassTexFar, grassDistanceBlend);
 
-                    half3 grassTint = EvaluateGrassTint(IN.positionWS.xz);
+                    half forestBlend = saturate(forestGrassWeight * _ForestGrassBlendStrength);
+                    half3 darkGrassColor = lerp(_DarkGrassColor.rgb, _ForestDarkGrassColor.rgb, forestBlend);
+                    half3 midGrassColor = lerp(_MidGrassColor.rgb, _ForestMidGrassColor.rgb, forestBlend);
+                    half3 lightGrassColor = lerp(_LightGrassColor.rgb, _ForestLightGrassColor.rgb, forestBlend);
+                    half3 grassTint = EvaluateGrassTint(
+                        IN.positionWS.xz,
+                        darkGrassColor,
+                        midGrassColor,
+                        lightGrassColor);
 
                     half grassLuma = dot(grassTex, half3(0.299h, 0.587h, 0.114h));
                     half grassCentered = (grassLuma - 0.5h) * 2.0h;

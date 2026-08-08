@@ -14,6 +14,9 @@ public class FoliageManager
 
     private Mesh grassMesh;
     private Material grassMaterial;
+    private int forestGrassDarkColorPropertyId;
+    private int forestGrassMidColorPropertyId;
+    private int forestGrassLightColorPropertyId;
 
     private Mesh billboardGrassMesh;
     private Material billboardGrassMaterial;
@@ -436,6 +439,7 @@ public class FoliageManager
             return;
 
         List<Matrix4x4> worldMatrices = new List<Matrix4x4>();
+        List<Matrix4x4> forestWorldMatrices = new List<Matrix4x4>();
         Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
 
         int subChunksPerChunk = data.subChunksPerChunk;
@@ -474,12 +478,16 @@ public class FoliageManager
                         instance.localScale);
 
                     Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
-                    worldMatrices.Add(worldMatrix);
+
+                    if (instance.biome == BiomeType.Forest)
+                        forestWorldMatrices.Add(worldMatrix);
+                    else
+                        worldMatrices.Add(worldMatrix);
                 }
             }
         }
 
-        foliageRuntime.CacheGrassMatrices(worldMatrices);
+        foliageRuntime.CacheGrassMatrices(worldMatrices, forestWorldMatrices);
     }
 
     private void RebuildBillboardMatrices(
@@ -494,6 +502,7 @@ public class FoliageManager
             return;
 
         List<Matrix4x4> worldMatrices = new List<Matrix4x4>();
+        List<Matrix4x4> forestWorldMatrices = new List<Matrix4x4>();
         Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
 
         int chunkRing = GetChunkRingDistance(viewerCoord, record.ChunkCoord);
@@ -556,12 +565,16 @@ public class FoliageManager
                         scaledScale);
 
                     Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
-                    worldMatrices.Add(worldMatrix);
+
+                    if (instance.biome == BiomeType.Forest)
+                        forestWorldMatrices.Add(worldMatrix);
+                    else
+                        worldMatrices.Add(worldMatrix);
                 }
             }
         }
 
-        foliageRuntime.CacheBillboardMatrices(worldMatrices);
+        foliageRuntime.CacheBillboardMatrices(worldMatrices, forestWorldMatrices);
     }
 
     private FoliageRepresentationMode GetTreeRepresentationMode(
@@ -721,6 +734,12 @@ public class FoliageManager
 
         chunkRuntime.FoliageRuntime.grassMesh = grassMesh;
         chunkRuntime.FoliageRuntime.grassMaterial = grassMaterial;
+        chunkRuntime.FoliageRuntime.forestGrassDarkColorPropertyId = forestGrassDarkColorPropertyId;
+        chunkRuntime.FoliageRuntime.forestGrassMidColorPropertyId = forestGrassMidColorPropertyId;
+        chunkRuntime.FoliageRuntime.forestGrassLightColorPropertyId = forestGrassLightColorPropertyId;
+        chunkRuntime.FoliageRuntime.forestGrassDarkColor = grassSettings.forestDarkGrassColor;
+        chunkRuntime.FoliageRuntime.forestGrassMidColor = grassSettings.forestMidGrassColor;
+        chunkRuntime.FoliageRuntime.forestGrassLightColor = grassSettings.forestLightGrassColor;
 
         chunkRuntime.FoliageRuntime.billboardMesh = billboardGrassMesh;
         chunkRuntime.FoliageRuntime.billboardMaterial = billboardGrassMaterial;
@@ -738,6 +757,18 @@ public class FoliageManager
 
     private void ResolveGrassRenderAssets()
     {
+        forestGrassDarkColorPropertyId = Shader.PropertyToID(GetGrassColorPropertyName(
+            grassSettings.darkGrassColorPropertyName,
+            "_DarkGrassColor"));
+
+        forestGrassMidColorPropertyId = Shader.PropertyToID(GetGrassColorPropertyName(
+            grassSettings.midGrassColorPropertyName,
+            "_MidGrassColor"));
+
+        forestGrassLightColorPropertyId = Shader.PropertyToID(GetGrassColorPropertyName(
+            grassSettings.lightGrassColorPropertyName,
+            "_LightGrassColor"));
+
         if (grassSettings.grassPrefab == null)
         {
             Debug.LogError("Grass prefab is missing.");
@@ -793,6 +824,13 @@ public class FoliageManager
                 billboardGrassMaterial = meshRenderer.sharedMaterial;
             }
         }
+    }
+
+    private static string GetGrassColorPropertyName(string configuredName, string fallbackName)
+    {
+        return string.IsNullOrEmpty(configuredName)
+            ? fallbackName
+            : configuredName;
     }
 
     private void ResolveFlowerRenderAssets()

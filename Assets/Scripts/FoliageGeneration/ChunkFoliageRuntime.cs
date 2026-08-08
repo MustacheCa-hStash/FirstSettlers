@@ -27,6 +27,12 @@ public class ChunkFoliageRuntime
 
     public Mesh grassMesh;
     public Material grassMaterial;
+    public int forestGrassDarkColorPropertyId;
+    public int forestGrassMidColorPropertyId;
+    public int forestGrassLightColorPropertyId;
+    public Color forestGrassDarkColor;
+    public Color forestGrassMidColor;
+    public Color forestGrassLightColor;
 
     public Mesh billboardMesh;
     public Material billboardMaterial;
@@ -43,7 +49,11 @@ public class ChunkFoliageRuntime
     public bool isVisible;
 
     private readonly List<Matrix4x4[]> grassMatrixBatches = new List<Matrix4x4[]>();
+    private readonly List<Matrix4x4[]> forestGrassMatrixBatches = new List<Matrix4x4[]>();
     private readonly List<Matrix4x4[]> billboardMatrixBatches = new List<Matrix4x4[]>();
+    private readonly List<Matrix4x4[]> forestBillboardMatrixBatches = new List<Matrix4x4[]>();
+    private readonly MaterialPropertyBlock forestGrassPropertyBlock = new MaterialPropertyBlock();
+    private readonly MaterialPropertyBlock forestBillboardPropertyBlock = new MaterialPropertyBlock();
     private readonly List<FlowerRenderBatch> flowerRenderBatches = new List<FlowerRenderBatch>();
     private readonly MaterialPropertyBlock flowerPropertyBlock = new MaterialPropertyBlock();
 
@@ -58,7 +68,11 @@ public class ChunkFoliageRuntime
     private bool hasCurrentTreeRepresentation;
 
     public bool IsCreated => root != null;
-    public int GpuGrassInstanceCount => CountMatrices(grassMatrixBatches) + CountMatrices(billboardMatrixBatches);
+    public int GpuGrassInstanceCount =>
+        CountMatrices(grassMatrixBatches) +
+        CountMatrices(forestGrassMatrixBatches) +
+        CountMatrices(billboardMatrixBatches) +
+        CountMatrices(forestBillboardMatrixBatches);
     public int GpuFlowerInstanceCount => CountFlowerInstances();
     public int GpuTreeInstanceCount => CountMatrices(treeGpuMatrixBatches) + CountMatrices(treeBillboardMatrixBatches);
 
@@ -89,7 +103,9 @@ public class ChunkFoliageRuntime
     public void ClearCachedBatches()
     {
         grassMatrixBatches.Clear();
+        forestGrassMatrixBatches.Clear();
         billboardMatrixBatches.Clear();
+        forestBillboardMatrixBatches.Clear();
         flowerRenderBatches.Clear();
         treeGpuMatrixBatches.Clear();
         treeBillboardMatrixBatches.Clear();
@@ -109,12 +125,16 @@ public class ChunkFoliageRuntime
 
     public bool HasValidGrassRenderData()
     {
-        return grassMesh != null && grassMaterial != null && grassMatrixBatches.Count > 0;
+        return grassMesh != null &&
+               grassMaterial != null &&
+               (grassMatrixBatches.Count > 0 || forestGrassMatrixBatches.Count > 0);
     }
 
     public bool HasValidBillboardRenderData()
     {
-        return billboardMesh != null && billboardMaterial != null && billboardMatrixBatches.Count > 0;
+        return billboardMesh != null &&
+               billboardMaterial != null &&
+               (billboardMatrixBatches.Count > 0 || forestBillboardMatrixBatches.Count > 0);
     }
 
     public bool HasValidFlowerRenderData()
@@ -144,14 +164,16 @@ public class ChunkFoliageRuntime
         return treeGameObjects.Count > 0;
     }
 
-    public void CacheGrassMatrices(List<Matrix4x4> worldMatrices)
+    public void CacheGrassMatrices(List<Matrix4x4> worldMatrices, List<Matrix4x4> forestWorldMatrices)
     {
         CacheMatrices(worldMatrices, grassMatrixBatches);
+        CacheMatrices(forestWorldMatrices, forestGrassMatrixBatches);
     }
 
-    public void CacheBillboardMatrices(List<Matrix4x4> worldMatrices)
+    public void CacheBillboardMatrices(List<Matrix4x4> worldMatrices, List<Matrix4x4> forestWorldMatrices)
     {
         CacheMatrices(worldMatrices, billboardMatrixBatches);
+        CacheMatrices(forestWorldMatrices, forestBillboardMatrixBatches);
     }
 
     public void CacheTreeGpuMatrices(List<Matrix4x4> worldMatrices)
@@ -314,16 +336,14 @@ public class ChunkFoliageRuntime
 
         for (int i = 0; i < grassMatrixBatches.Count; i++)
         {
-            Graphics.DrawMeshInstanced(
-                grassMesh,
-                0,
-                grassMaterial,
-                grassMatrixBatches[i],
-                grassMatrixBatches[i].Length,
-                null,
-                ShadowCastingMode.Off,
-                true
-            );
+            DrawInstancedBatch(grassMesh, grassMaterial, grassMatrixBatches[i], null);
+        }
+
+        ConfigureForestGrassPropertyBlock(forestGrassPropertyBlock);
+
+        for (int i = 0; i < forestGrassMatrixBatches.Count; i++)
+        {
+            DrawInstancedBatch(grassMesh, grassMaterial, forestGrassMatrixBatches[i], forestGrassPropertyBlock);
         }
     }
 
@@ -334,17 +354,45 @@ public class ChunkFoliageRuntime
 
         for (int i = 0; i < billboardMatrixBatches.Count; i++)
         {
-            Graphics.DrawMeshInstanced(
-                billboardMesh,
-                0,
-                billboardMaterial,
-                billboardMatrixBatches[i],
-                billboardMatrixBatches[i].Length,
-                null,
-                ShadowCastingMode.Off,
-                true
-            );
+            DrawInstancedBatch(billboardMesh, billboardMaterial, billboardMatrixBatches[i], null);
         }
+
+        ConfigureForestGrassPropertyBlock(forestBillboardPropertyBlock);
+
+        for (int i = 0; i < forestBillboardMatrixBatches.Count; i++)
+        {
+            DrawInstancedBatch(
+                billboardMesh,
+                billboardMaterial,
+                forestBillboardMatrixBatches[i],
+                forestBillboardPropertyBlock);
+        }
+    }
+
+    private void DrawInstancedBatch(
+        Mesh mesh,
+        Material material,
+        Matrix4x4[] matrices,
+        MaterialPropertyBlock propertyBlock)
+    {
+        Graphics.DrawMeshInstanced(
+            mesh,
+            0,
+            material,
+            matrices,
+            matrices.Length,
+            propertyBlock,
+            ShadowCastingMode.Off,
+            true
+        );
+    }
+
+    private void ConfigureForestGrassPropertyBlock(MaterialPropertyBlock propertyBlock)
+    {
+        propertyBlock.Clear();
+        propertyBlock.SetColor(forestGrassDarkColorPropertyId, forestGrassDarkColor);
+        propertyBlock.SetColor(forestGrassMidColorPropertyId, forestGrassMidColor);
+        propertyBlock.SetColor(forestGrassLightColorPropertyId, forestGrassLightColor);
     }
 
     public void DrawFlowers()

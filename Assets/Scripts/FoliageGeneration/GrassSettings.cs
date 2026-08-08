@@ -19,6 +19,14 @@ public class GrassSettings
     public bool randomizeYaw = true;
     public int seedOffset = 5000;
 
+    [Header("Forest Grass Tint")]
+    public string darkGrassColorPropertyName = "_DarkGrassColor";
+    public string midGrassColorPropertyName = "_MidGrassColor";
+    public string lightGrassColorPropertyName = "_LightGrassColor";
+    public Color forestDarkGrassColor = new Color(0.08f, 0.24f, 0.09f, 1f);
+    public Color forestMidGrassColor = new Color(0.13f, 0.36f, 0.14f, 1f);
+    public Color forestLightGrassColor = new Color(0.24f, 0.52f, 0.20f, 1f);
+
     public GameObject billboardGrassPrefab;
 
     public int billboardRingRadius = 2;

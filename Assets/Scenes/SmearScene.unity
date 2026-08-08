@@ -474,7 +474,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 20
+  worldSeed: 1
   viewDistance: 25
   colliderDistance: 5
   chunkSize: 128
@@ -495,6 +495,12 @@ MonoBehaviour:
     uniformScaleRange: {x: 0.9, y: 1.3}
     randomizeYaw: 1
     seedOffset: 5000
+    darkGrassColorPropertyName: _DarkGrassColor
+    midGrassColorPropertyName: _MidGrassColor
+    lightGrassColorPropertyName: _LightGrassColor
+    forestDarkGrassColor: {r: 0.08, g: 0.24, b: 0.09, a: 1}
+    forestMidGrassColor: {r: 0.13, g: 0.36, b: 0.14, a: 1}
+    forestLightGrassColor: {r: 0.24, g: 0.52, b: 0.2, a: 1}
     billboardGrassPrefab: {fileID: 2274311721168609727, guid: e76b7893d4994f848a5f13029dbbffa1, type: 3}
     billboardRingRadius: 3
     billboardCellsPerAxis: 60
@@ -664,7 +670,7 @@ MonoBehaviour:
   mouseSensitivity: 0.08
   pitchMin: -80
   pitchMax: 80
-  gravity: -20
+  gravity: 0
   jumpHeight: 1.1
   standingHeight: 1.8
   crouchingHeight: 1.2
