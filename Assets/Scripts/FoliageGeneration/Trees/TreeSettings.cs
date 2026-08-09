@@ -4,12 +4,19 @@ using UnityEngine;
 public class TreeSettings
 {
     [Header("Tree Prefabs")]
+    public GameObject mapleTreePrefab;
+    public GameObject spruceTreePrefab;
+
+    [Tooltip("Fallback near tree prefab used when a species prefab is not assigned.")]
     public GameObject treeLOD0GameObjectPrefab;
 
-    [Tooltip("Merged single-mesh, single-material prefabs for GPU-instanced tree LODs. Element 0 is GPU LOD1.")]
-    public GameObject[] treeGPUInstancedLODPrefabs;
+    [Tooltip("Optional merged billboard prefab for maple trees.")]
+    public GameObject mapleTreeBillboardPrefab;
 
-    [Tooltip("Optional merged billboard tree prefab. Used when the tree representation mode becomes GPUInstancedBillboard.")]
+    [Tooltip("Optional merged billboard prefab for spruce trees.")]
+    public GameObject spruceTreeBillboardPrefab;
+
+    [Tooltip("Fallback merged billboard tree prefab used when a species billboard is not assigned.")]
     public GameObject treeBillboardPrefab;
 
     [Header("Tree Placement")]
@@ -28,9 +35,6 @@ public class TreeSettings
     [Header("Tree Representation Rings")]
     [Tooltip("Chunk-ring radius for real GameObject trees. 1 means a 3x3 block around the player.")]
     public int gameObjectTreeChunkRingRadius = 1;
-
-    [Tooltip("Maximum chunk-ring radius for GPU-instanced mesh trees before switching to billboard trees.")]
-    public int gpuInstancedTreeChunkRingRadius = 4;
 
     [Tooltip("Maximum chunk-ring radius for billboard trees.")]
     public int billboardTreeChunkRingRadius = 8;

@@ -66,11 +66,33 @@ public class TerrainRequestManager
 
                 WaterState[,] waterStateMap = WaterStateMapGenerator.GenerateWaterStateMap(finalHeightMap, riverMaskMap);
 
-                ControlMapPixelData controlMapRawData = TerrainControlMapBuilder.BuildRaw(surfaceTypeMap, biomeMap);
+                WorldFeaturePlan worldFeaturePlan = WorldFeaturePlanGenerator.Generate(
+                    chunkCoord,
+                    chunkSize,
+                    seed,
+                    biomeMap,
+                    surfaceTypeMap,
+                    moistureMap,
+                    temperatureMap,
+                    slopeMap,
+                    riverMaskMap);
+
+                GroundCoverType[,] groundCoverMap = GroundCoverMapGenerator.GenerateGroundCoverMap(
+                    biomeMap,
+                    surfaceTypeMap,
+                    moistureMap,
+                    slopeMap,
+                    riverMaskMap,
+                    worldFeaturePlan,
+                    chunkSize,
+                    seed,
+                    chunkCoord);
+
+                ControlMapPixelData controlMapRawData = TerrainControlMapBuilder.BuildRaw(surfaceTypeMap, groundCoverMap);
 
                 TerrainDataRequestResult result = new TerrainDataRequestResult(chunkCoord, requestVersion, 
                     finalHeightMap, gradientXMap, gradientZMap, slopeMap, moistureMap, temperatureMap, biomeMap, 
-                    surfaceTypeMap, waterStateMap, riverMaskMap, controlMapRawData);
+                    surfaceTypeMap, waterStateMap, groundCoverMap, worldFeaturePlan, riverMaskMap, controlMapRawData);
 
                 lock (terrainDataResultsLock)
                 {

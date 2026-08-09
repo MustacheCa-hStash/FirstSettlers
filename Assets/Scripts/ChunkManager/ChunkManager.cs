@@ -589,6 +589,8 @@ public class ChunkManager
                 terrainResult.BiomeMap,
                 terrainResult.SurfaceTypeMap,
                 terrainResult.WaterStateMap,
+                terrainResult.GroundCoverMap,
+                terrainResult.WorldFeaturePlan,
                 terrainResult.RiverMaskMap,
                 controlMaps
             );
@@ -685,7 +687,7 @@ public class ChunkManager
         for (int i = 0; i < rawData.Maps.Length; i++)
         {
             Texture2D tex = new Texture2D(rawData.Width, rawData.Height, TextureFormat.RGBA32, false);
-            tex.filterMode = FilterMode.Point;
+            tex.filterMode = FilterMode.Bilinear;
             tex.wrapMode = TextureWrapMode.Clamp;
             tex.SetPixels32(rawData.Maps[i]);
             tex.Apply(false, false);

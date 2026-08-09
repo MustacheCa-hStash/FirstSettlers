@@ -4,6 +4,7 @@ Shader "Custom/StylizedTerrainURP"
     {
         _ControlMap0("Control Map 0", 2D) = "black" {}
         _ControlMap1("Control Map 1", 2D) = "black" {}
+        _ControlMap2("Ground Cover Map", 2D) = "black" {}
 
         _SandColor("Sand Color", Color) = (0.80, 0.75, 0.55, 1)
         _MudColor("Mud Color", Color) = (0.42, 0.32, 0.22, 1)
@@ -15,10 +16,24 @@ Shader "Custom/StylizedTerrainURP"
         _DarkGrassColor("Dark Grass Color", Color) = (0.20, 0.48, 0.18, 1)
         _MidGrassColor("Mid Grass Color", Color) = (0.29, 0.62, 0.24, 1)
         _LightGrassColor("Light Grass Color", Color) = (0.44, 0.78, 0.30, 1)
-        _ForestDarkGrassColor("Forest Dark Grass Color", Color) = (0.08, 0.24, 0.09, 1)
-        _ForestMidGrassColor("Forest Mid Grass Color", Color) = (0.13, 0.36, 0.14, 1)
-        _ForestLightGrassColor("Forest Light Grass Color", Color) = (0.24, 0.52, 0.20, 1)
-        _ForestGrassBlendStrength("Forest Grass Blend Strength", Range(0.0, 1.0)) = 1.0
+        _GroundDarkGrassColor("Ground Cover Dark Grass Color", Color) = (0.045, 0.16, 0.05, 1)
+        _GroundMidGrassColor("Ground Cover Mid Grass Color", Color) = (0.085, 0.25, 0.085, 1)
+        _GroundLightGrassColor("Ground Cover Light Grass Color", Color) = (0.17, 0.38, 0.14, 1)
+        _LeafLitterColor("Leaf Litter Color", Color) = (0.24, 0.14, 0.07, 1)
+        _BareDirtColor("Bare Dirt Color", Color) = (0.20, 0.13, 0.08, 1)
+        _MossColor("Moss Color", Color) = (0.08, 0.28, 0.10, 1)
+        _LeafLitterAlbedo("Leaf Litter Albedo", 2D) = "white" {}
+        _LeafLitterNormal("Leaf Litter Normal", 2D) = "bump" {}
+        _LeafLitterTiling("Leaf Litter Tiling", Float) = 0.35
+        _LeafLitterNormalStrength("Leaf Litter Normal Strength", Range(0.0, 2.0)) = 0.45
+        _BareDirtAlbedo("Bare Dirt Albedo", 2D) = "white" {}
+        _BareDirtNormal("Bare Dirt Normal", 2D) = "bump" {}
+        _BareDirtTiling("Bare Dirt Tiling", Float) = 0.35
+        _BareDirtNormalStrength("Bare Dirt Normal Strength", Range(0.0, 2.0)) = 0.35
+        _MossAlbedo("Moss Albedo", 2D) = "white" {}
+        _MossNormal("Moss Normal", 2D) = "bump" {}
+        _MossTiling("Moss Tiling", Float) = 0.32
+        _MossNormalStrength("Moss Normal Strength", Range(0.0, 2.0)) = 0.25
 
         _GrassAlbedo("Grass Albedo", 2D) = "white" {}
         _GrassNormal("Grass Normal", 2D) = "bump" {}
@@ -80,11 +95,32 @@ Shader "Custom/StylizedTerrainURP"
             TEXTURE2D(_ControlMap1);
             SAMPLER(sampler_ControlMap1);
 
+            TEXTURE2D(_ControlMap2);
+            SAMPLER(sampler_ControlMap2);
+
             TEXTURE2D(_GrassAlbedo);
             SAMPLER(sampler_GrassAlbedo);
 
             TEXTURE2D(_GrassNormal);
             SAMPLER(sampler_GrassNormal);
+
+            TEXTURE2D(_LeafLitterAlbedo);
+            SAMPLER(sampler_LeafLitterAlbedo);
+
+            TEXTURE2D(_LeafLitterNormal);
+            SAMPLER(sampler_LeafLitterNormal);
+
+            TEXTURE2D(_BareDirtAlbedo);
+            SAMPLER(sampler_BareDirtAlbedo);
+
+            TEXTURE2D(_BareDirtNormal);
+            SAMPLER(sampler_BareDirtNormal);
+
+            TEXTURE2D(_MossAlbedo);
+            SAMPLER(sampler_MossAlbedo);
+
+            TEXTURE2D(_MossNormal);
+            SAMPLER(sampler_MossNormal);
 
             TEXTURE2D(_SnowAlbedo);
             SAMPLER(sampler_SnowAlbedo);
@@ -119,10 +155,18 @@ Shader "Custom/StylizedTerrainURP"
                 half4 _DarkGrassColor;
                 half4 _MidGrassColor;
                 half4 _LightGrassColor;
-                half4 _ForestDarkGrassColor;
-                half4 _ForestMidGrassColor;
-                half4 _ForestLightGrassColor;
-                half _ForestGrassBlendStrength;
+                half4 _GroundDarkGrassColor;
+                half4 _GroundMidGrassColor;
+                half4 _GroundLightGrassColor;
+                half4 _LeafLitterColor;
+                half4 _BareDirtColor;
+                half4 _MossColor;
+                float _LeafLitterTiling;
+                float _LeafLitterNormalStrength;
+                float _BareDirtTiling;
+                float _BareDirtNormalStrength;
+                float _MossTiling;
+                float _MossNormalStrength;
 
                 half4 _SnowTint;
 
@@ -283,6 +327,7 @@ Shader "Custom/StylizedTerrainURP"
 
                 float4 control0 = SAMPLE_TEXTURE2D(_ControlMap0, sampler_ControlMap0, IN.uv);
                 float4 control1 = SAMPLE_TEXTURE2D(_ControlMap1, sampler_ControlMap1, IN.uv);
+                float4 control2 = SAMPLE_TEXTURE2D(_ControlMap2, sampler_ControlMap2, IN.uv);
 
                 half sandWeight = control0.r;
                 half mudWeight = control0.g;
@@ -292,7 +337,11 @@ Shader "Custom/StylizedTerrainURP"
                 half snowWeight = control1.r;
                 half cliffWeight = control1.g;
                 half riverbedWeight = control1.b;
-                half forestGrassWeight = control1.a;
+
+                half darkGrassCoverWeight = control2.r;
+                half leafLitterWeight = control2.g;
+                half bareDirtWeight = control2.b;
+                half mossWeight = control2.a;
 
                 float distanceToCamera = distance(_WorldSpaceCameraPos.xyz, IN.positionWS);
 
@@ -327,15 +376,17 @@ Shader "Custom/StylizedTerrainURP"
                     half3 grassTexFar = SAMPLE_TEXTURE2D(_GrassAlbedo, sampler_GrassAlbedo, grassUVFar).rgb;
                     half3 grassTex = lerp(grassTexNear, grassTexFar, grassDistanceBlend);
 
-                    half forestBlend = saturate(forestGrassWeight * _ForestGrassBlendStrength);
-                    half3 darkGrassColor = lerp(_DarkGrassColor.rgb, _ForestDarkGrassColor.rgb, forestBlend);
-                    half3 midGrassColor = lerp(_MidGrassColor.rgb, _ForestMidGrassColor.rgb, forestBlend);
-                    half3 lightGrassColor = lerp(_LightGrassColor.rgb, _ForestLightGrassColor.rgb, forestBlend);
                     half3 grassTint = EvaluateGrassTint(
                         IN.positionWS.xz,
-                        darkGrassColor,
-                        midGrassColor,
-                        lightGrassColor);
+                        _DarkGrassColor.rgb,
+                        _MidGrassColor.rgb,
+                        _LightGrassColor.rgb);
+
+                    half3 darkGroundGrassTint = EvaluateGrassTint(
+                        IN.positionWS.xz,
+                        _GroundDarkGrassColor.rgb,
+                        _GroundMidGrassColor.rgb,
+                        _GroundLightGrassColor.rgb);
 
                     half grassLuma = dot(grassTex, half3(0.299h, 0.587h, 0.114h));
                     half grassCentered = (grassLuma - 0.5h) * 2.0h;
@@ -343,6 +394,23 @@ Shader "Custom/StylizedTerrainURP"
                     half grassVariation = saturate(1.0h + grassDetail * _GrassDetailStrength);
 
                     half3 grassColor = grassTint * grassVariation;
+                    grassColor = lerp(grassColor, darkGroundGrassTint * grassVariation, darkGrassCoverWeight);
+
+                    float2 leafLitterUV = IN.positionWS.xz * _LeafLitterTiling;
+                    half3 leafLitterTex = SAMPLE_TEXTURE2D(_LeafLitterAlbedo, sampler_LeafLitterAlbedo, leafLitterUV).rgb;
+                    half3 leafLitterColor = leafLitterTex * _LeafLitterColor.rgb;
+
+                    float2 bareDirtUV = IN.positionWS.xz * _BareDirtTiling;
+                    half3 bareDirtTex = SAMPLE_TEXTURE2D(_BareDirtAlbedo, sampler_BareDirtAlbedo, bareDirtUV).rgb;
+                    half3 bareDirtColor = bareDirtTex * _BareDirtColor.rgb;
+
+                    float2 mossUV = IN.positionWS.xz * _MossTiling;
+                    half3 mossTex = SAMPLE_TEXTURE2D(_MossAlbedo, sampler_MossAlbedo, mossUV).rgb;
+                    half3 mossColor = mossTex * _MossColor.rgb;
+
+                    grassColor = lerp(grassColor, leafLitterColor, leafLitterWeight);
+                    grassColor = lerp(grassColor, bareDirtColor, bareDirtWeight);
+                    grassColor = lerp(grassColor, mossColor, mossWeight);
                     baseColor += grassColor * grassWeight;
 
                     float3 grassTangentNormalNear = UnpackNormal(
@@ -354,6 +422,48 @@ Shader "Custom/StylizedTerrainURP"
                     float3 grassTangentNormal = normalize(lerp(grassTangentNormalNear, grassTangentNormalFar, grassDistanceBlend));
 
                     normalWS = ApplyDetailNormal(baseNormalWS, grassTangentNormal, _GrassNormalStrength);
+
+                    if (leafLitterWeight > 0.001h)
+                    {
+                        float3 leafLitterTangentNormal = UnpackNormal(
+                            SAMPLE_TEXTURE2D(_LeafLitterNormal, sampler_LeafLitterNormal, leafLitterUV)
+                        );
+
+                        float3 leafLitterNormalWS = ApplyDetailNormal(
+                            baseNormalWS,
+                            leafLitterTangentNormal,
+                            _LeafLitterNormalStrength);
+
+                        normalWS = normalize(lerp(normalWS, leafLitterNormalWS, leafLitterWeight));
+                    }
+
+                    if (bareDirtWeight > 0.001h)
+                    {
+                        float3 bareDirtTangentNormal = UnpackNormal(
+                            SAMPLE_TEXTURE2D(_BareDirtNormal, sampler_BareDirtNormal, bareDirtUV)
+                        );
+
+                        float3 bareDirtNormalWS = ApplyDetailNormal(
+                            baseNormalWS,
+                            bareDirtTangentNormal,
+                            _BareDirtNormalStrength);
+
+                        normalWS = normalize(lerp(normalWS, bareDirtNormalWS, bareDirtWeight));
+                    }
+
+                    if (mossWeight > 0.001h)
+                    {
+                        float3 mossTangentNormal = UnpackNormal(
+                            SAMPLE_TEXTURE2D(_MossNormal, sampler_MossNormal, mossUV)
+                        );
+
+                        float3 mossNormalWS = ApplyDetailNormal(
+                            baseNormalWS,
+                            mossTangentNormal,
+                            _MossNormalStrength);
+
+                        normalWS = normalize(lerp(normalWS, mossNormalWS, mossWeight));
+                    }
                 }
 
                 if (snowWeight > 0.001h)

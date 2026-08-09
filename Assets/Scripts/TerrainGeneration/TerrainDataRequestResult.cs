@@ -11,13 +11,15 @@ public class TerrainDataRequestResult
     public BiomeType[,] BiomeMap { get; }
     public SurfaceType[,] SurfaceTypeMap { get; }
     public WaterState[,] WaterStateMap { get; }
+    public GroundCoverType[,] GroundCoverMap { get; }
+    public WorldFeaturePlan WorldFeaturePlan { get; }
     public float[,] RiverMaskMap { get; }
     public ControlMapPixelData ControlMapsRawData { get; }
 
     public TerrainDataRequestResult(ChunkCoord chunkCoord, int requestVersion, float[,] heightMap, float[,] gradientXMap,
         float[,] gradientZMap, float[,] slopeMap, float[,] moistureMap, float[,] temperatureMap, BiomeType[,] biomeMap, 
-        SurfaceType[,] surfaceTypeMap, WaterState[,] waterStateMap, float[,] riverMaskMap, 
-        ControlMapPixelData controlMapsRawData)
+        SurfaceType[,] surfaceTypeMap, WaterState[,] waterStateMap, GroundCoverType[,] groundCoverMap,
+        WorldFeaturePlan worldFeaturePlan, float[,] riverMaskMap, ControlMapPixelData controlMapsRawData)
     {
         ChunkCoord = chunkCoord;
         RequestVersion = requestVersion;
@@ -30,6 +32,8 @@ public class TerrainDataRequestResult
         BiomeMap = biomeMap;
         SurfaceTypeMap = surfaceTypeMap;
         WaterStateMap = waterStateMap;
+        GroundCoverMap = groundCoverMap;
+        WorldFeaturePlan = worldFeaturePlan;
         RiverMaskMap = riverMaskMap;
         ControlMapsRawData = controlMapsRawData;
     }

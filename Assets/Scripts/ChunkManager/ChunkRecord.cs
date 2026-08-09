@@ -12,6 +12,8 @@ public class ChunkRecord
     private BiomeType[,] biomeMap;
     private SurfaceType[,] surfaceTypeMap;
     private WaterState[,] waterStateMap;
+    private GroundCoverType[,] groundCoverMap;
+    private WorldFeaturePlan worldFeaturePlan;
     private float[,] riverMaskMap;
     private Texture2D[] controlMapData;
     private ChunkFoliageData foliageData;
@@ -45,6 +47,8 @@ public class ChunkRecord
         biomeMap != null &&
         surfaceTypeMap != null &&
         waterStateMap != null &&
+        groundCoverMap != null &&
+        worldFeaturePlan != null &&
         riverMaskMap != null &&
         controlMapData != null;
     public float[,] HeightMap => heightMap;
@@ -54,6 +58,8 @@ public class ChunkRecord
     public BiomeType[,] BiomeMap => biomeMap;
     public SurfaceType[,] SurfaceTypeMap => surfaceTypeMap;
     public WaterState[,] WaterStateMap => waterStateMap;
+    public GroundCoverType[,] GroundCoverMap => groundCoverMap;
+    public WorldFeaturePlan WorldFeaturePlan => worldFeaturePlan;
     public float[,] RiverMaskMap => riverMaskMap;
     public Texture2D[] ControlMapData => controlMapData;
     public ChunkFoliageData FoliageData {
@@ -187,7 +193,8 @@ public class ChunkRecord
     public bool TryCompleteTerrainDataRequest(int requestVersion, float[,] returnedHeightMap,
         float[,] returnedSlopeMap,
         float[,] returnedMoistureMap, float[,] returnedTemperatureMap, BiomeType[,] returnedBiomeMap, 
-        SurfaceType[,] returnedSurfaceTypeMap, WaterState[,] returnedWaterStateMap, float[,] returnedRiverMaskMap, 
+        SurfaceType[,] returnedSurfaceTypeMap, WaterState[,] returnedWaterStateMap,
+        GroundCoverType[,] returnedGroundCoverMap, WorldFeaturePlan returnedWorldFeaturePlan, float[,] returnedRiverMaskMap,
         Texture2D[] returnedControlMapData)
     {
         if (!terrainDataRequestInFlight) 
@@ -202,6 +209,8 @@ public class ChunkRecord
         biomeMap = returnedBiomeMap;
         surfaceTypeMap = returnedSurfaceTypeMap;
         waterStateMap = returnedWaterStateMap;
+        groundCoverMap = returnedGroundCoverMap;
+        worldFeaturePlan = returnedWorldFeaturePlan;
         riverMaskMap = returnedRiverMaskMap;
         controlMapData = returnedControlMapData;
 

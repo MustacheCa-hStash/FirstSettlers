@@ -9,15 +9,27 @@ public struct TreeRenderPart
     public Matrix4x4 childLocalMatrix;
 }
 
-public struct TreeGpuLODRenderData
+public struct TreeBillboardRenderData
 {
     public Mesh mesh;
     public Material material;
 
-    public TreeGpuLODRenderData(Mesh mesh, Material material)
+    public TreeBillboardRenderData(Mesh mesh, Material material)
     {
         this.mesh = mesh;
         this.material = material;
+    }
+}
+
+public struct GrassRenderBatch
+{
+    public Matrix4x4[] matrices;
+    public Vector4[] instanceData;
+
+    public GrassRenderBatch(Matrix4x4[] matrices, Vector4[] instanceData)
+    {
+        this.matrices = matrices;
+        this.instanceData = instanceData;
     }
 }
 
@@ -27,12 +39,11 @@ public class ChunkFoliageRuntime
 
     public Mesh grassMesh;
     public Material grassMaterial;
-    public int forestGrassDarkColorPropertyId;
-    public int forestGrassMidColorPropertyId;
-    public int forestGrassLightColorPropertyId;
-    public Color forestGrassDarkColor;
-    public Color forestGrassMidColor;
-    public Color forestGrassLightColor;
+    public bool receiveGrassShadows;
+    public int grassInstanceDataPropertyId;
+    public Color forestDarkGrassColor;
+    public Color forestMidGrassColor;
+    public Color forestLightGrassColor;
 
     public Mesh billboardMesh;
     public Material billboardMaterial;
@@ -41,74 +52,63 @@ public class ChunkFoliageRuntime
     public Material flowerMaterial;
     public int flowerPetalColorPropertyId;
 
-    public List<TreeGpuLODRenderData> treeGpuLODs = new List<TreeGpuLODRenderData>();
-
-    public Mesh treeBillboardMesh;
-    public Material treeBillboardMaterial;
+    public GameObject mapleTreePrefab;
+    public GameObject spruceTreePrefab;
+    public GameObject fallbackTreePrefab;
+    public TreeBillboardRenderData mapleTreeBillboard;
+    public TreeBillboardRenderData spruceTreeBillboard;
+    public TreeBillboardRenderData fallbackTreeBillboard;
 
     public bool isVisible;
 
-    private readonly List<Matrix4x4[]> grassMatrixBatches = new List<Matrix4x4[]>();
-    private readonly List<Matrix4x4[]> forestGrassMatrixBatches = new List<Matrix4x4[]>();
-    private readonly List<Matrix4x4[]> billboardMatrixBatches = new List<Matrix4x4[]>();
-    private readonly List<Matrix4x4[]> forestBillboardMatrixBatches = new List<Matrix4x4[]>();
-    private readonly MaterialPropertyBlock forestGrassPropertyBlock = new MaterialPropertyBlock();
-    private readonly MaterialPropertyBlock forestBillboardPropertyBlock = new MaterialPropertyBlock();
+    private readonly List<GrassRenderBatch> grassRenderBatches = new List<GrassRenderBatch>();
+    private readonly List<GrassRenderBatch> billboardRenderBatches = new List<GrassRenderBatch>();
+    private readonly MaterialPropertyBlock grassPropertyBlock = new MaterialPropertyBlock();
     private readonly List<FlowerRenderBatch> flowerRenderBatches = new List<FlowerRenderBatch>();
     private readonly MaterialPropertyBlock flowerPropertyBlock = new MaterialPropertyBlock();
 
-    private readonly List<Matrix4x4[]> treeGpuMatrixBatches = new List<Matrix4x4[]>();
-    private readonly List<Matrix4x4[]> treeBillboardMatrixBatches = new List<Matrix4x4[]>();
+    private readonly List<Matrix4x4[]> mapleTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
+    private readonly List<Matrix4x4[]> spruceTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
 
     private GameObject treeGameObjectRoot;
     private readonly List<GameObject> treeGameObjects = new List<GameObject>();
 
     private FoliageRepresentationMode currentTreeRepresentationMode;
-    private int currentTreeGpuLODIndex = -1;
     private bool hasCurrentTreeRepresentation;
 
     public bool IsCreated => root != null;
     public int GpuGrassInstanceCount =>
-        CountMatrices(grassMatrixBatches) +
-        CountMatrices(forestGrassMatrixBatches) +
-        CountMatrices(billboardMatrixBatches) +
-        CountMatrices(forestBillboardMatrixBatches);
+        CountGrassInstances(grassRenderBatches) +
+        CountGrassInstances(billboardRenderBatches);
     public int GpuFlowerInstanceCount => CountFlowerInstances();
-    public int GpuTreeInstanceCount => CountMatrices(treeGpuMatrixBatches) + CountMatrices(treeBillboardMatrixBatches);
+    public int GpuTreeInstanceCount =>
+        CountMatrices(mapleTreeBillboardMatrixBatches) +
+        CountMatrices(spruceTreeBillboardMatrixBatches);
 
-    public bool HasCurrentTreeRepresentation(
-        FoliageRepresentationMode mode,
-        int gpuLODIndex)
+    public bool HasCurrentTreeRepresentation(FoliageRepresentationMode mode)
     {
         return hasCurrentTreeRepresentation &&
-               currentTreeRepresentationMode == mode &&
-               currentTreeGpuLODIndex == gpuLODIndex;
+               currentTreeRepresentationMode == mode;
     }
 
-    public void SetCurrentTreeRepresentation(
-        FoliageRepresentationMode mode,
-        int gpuLODIndex)
+    public void SetCurrentTreeRepresentation(FoliageRepresentationMode mode)
     {
         currentTreeRepresentationMode = mode;
-        currentTreeGpuLODIndex = gpuLODIndex;
         hasCurrentTreeRepresentation = true;
     }
 
     public void ClearCurrentTreeRepresentation()
     {
         hasCurrentTreeRepresentation = false;
-        currentTreeGpuLODIndex = -1;
     }
 
     public void ClearCachedBatches()
     {
-        grassMatrixBatches.Clear();
-        forestGrassMatrixBatches.Clear();
-        billboardMatrixBatches.Clear();
-        forestBillboardMatrixBatches.Clear();
+        grassRenderBatches.Clear();
+        billboardRenderBatches.Clear();
         flowerRenderBatches.Clear();
-        treeGpuMatrixBatches.Clear();
-        treeBillboardMatrixBatches.Clear();
+        mapleTreeBillboardMatrixBatches.Clear();
+        spruceTreeBillboardMatrixBatches.Clear();
         ClearTreeGameObjects();
         ClearCurrentTreeRepresentation();
     }
@@ -127,14 +127,14 @@ public class ChunkFoliageRuntime
     {
         return grassMesh != null &&
                grassMaterial != null &&
-               (grassMatrixBatches.Count > 0 || forestGrassMatrixBatches.Count > 0);
+               grassRenderBatches.Count > 0;
     }
 
     public bool HasValidBillboardRenderData()
     {
         return billboardMesh != null &&
                billboardMaterial != null &&
-               (billboardMatrixBatches.Count > 0 || forestBillboardMatrixBatches.Count > 0);
+               billboardRenderBatches.Count > 0;
     }
 
     public bool HasValidFlowerRenderData()
@@ -142,21 +142,10 @@ public class ChunkFoliageRuntime
         return flowerMesh != null && flowerMaterial != null && flowerRenderBatches.Count > 0;
     }
 
-    public bool HasValidTreeGpuRenderData(int gpuLODIndex)
-    {
-        return gpuLODIndex >= 0 &&
-               treeGpuLODs != null &&
-               gpuLODIndex < treeGpuLODs.Count &&
-               treeGpuLODs[gpuLODIndex].mesh != null &&
-               treeGpuLODs[gpuLODIndex].material != null &&
-               treeGpuMatrixBatches.Count > 0;
-    }
-
     public bool HasValidTreeBillboardRenderData()
     {
-        return treeBillboardMesh != null &&
-               treeBillboardMaterial != null &&
-               treeBillboardMatrixBatches.Count > 0;
+        return HasValidBillboardBatch(mapleTreeBillboard, mapleTreeBillboardMatrixBatches) ||
+               HasValidBillboardBatch(spruceTreeBillboard, spruceTreeBillboardMatrixBatches);
     }
 
     public bool HasTreeGameObjects()
@@ -164,21 +153,51 @@ public class ChunkFoliageRuntime
         return treeGameObjects.Count > 0;
     }
 
-    public void CacheGrassMatrices(List<Matrix4x4> worldMatrices, List<Matrix4x4> forestWorldMatrices)
+    public void CacheGrassMatrices(List<Matrix4x4> worldMatrices, List<Vector4> instanceData)
     {
-        CacheMatrices(worldMatrices, grassMatrixBatches);
-        CacheMatrices(forestWorldMatrices, forestGrassMatrixBatches);
+        CacheGrassRenderBatches(worldMatrices, instanceData, grassRenderBatches);
     }
 
-    public void CacheBillboardMatrices(List<Matrix4x4> worldMatrices, List<Matrix4x4> forestWorldMatrices)
+    public void CacheBillboardMatrices(List<Matrix4x4> worldMatrices, List<Vector4> instanceData)
     {
-        CacheMatrices(worldMatrices, billboardMatrixBatches);
-        CacheMatrices(forestWorldMatrices, forestBillboardMatrixBatches);
+        CacheGrassRenderBatches(worldMatrices, instanceData, billboardRenderBatches);
     }
 
-    public void CacheTreeGpuMatrices(List<Matrix4x4> worldMatrices)
+    private void CacheGrassRenderBatches(
+        List<Matrix4x4> worldMatrices,
+        List<Vector4> instanceData,
+        List<GrassRenderBatch> targetBatches)
     {
-        CacheMatrices(worldMatrices, treeGpuMatrixBatches);
+        targetBatches.Clear();
+
+        if (worldMatrices == null || instanceData == null)
+            return;
+
+        if (worldMatrices.Count != instanceData.Count)
+        {
+            Debug.LogError("Grass matrix and instance data counts must match.");
+            return;
+        }
+
+        const int maxBatchSize = 1023;
+        int totalCount = worldMatrices.Count;
+        int startIndex = 0;
+
+        while (startIndex < totalCount)
+        {
+            int batchCount = Mathf.Min(maxBatchSize, totalCount - startIndex);
+            Matrix4x4[] matrixBatch = new Matrix4x4[batchCount];
+            Vector4[] instanceDataBatch = new Vector4[batchCount];
+
+            for (int i = 0; i < batchCount; i++)
+            {
+                matrixBatch[i] = worldMatrices[startIndex + i];
+                instanceDataBatch[i] = instanceData[startIndex + i];
+            }
+
+            targetBatches.Add(new GrassRenderBatch(matrixBatch, instanceDataBatch));
+            startIndex += batchCount;
+        }
     }
 
     public void CacheFlowerBatches(List<Matrix4x4> worldMatrices, List<Vector4> petalColors)
@@ -215,9 +234,12 @@ public class ChunkFoliageRuntime
         }
     }
 
-    public void CacheTreeBillboardMatrices(List<Matrix4x4> worldMatrices)
+    public void CacheTreeBillboardMatrices(
+        List<Matrix4x4> mapleWorldMatrices,
+        List<Matrix4x4> spruceWorldMatrices)
     {
-        CacheMatrices(worldMatrices, treeBillboardMatrixBatches);
+        CacheMatrices(mapleWorldMatrices, mapleTreeBillboardMatrixBatches);
+        CacheMatrices(spruceWorldMatrices, spruceTreeBillboardMatrixBatches);
     }
 
     private void CacheMatrices(List<Matrix4x4> worldMatrices, List<Matrix4x4[]> targetBatches)
@@ -256,6 +278,19 @@ public class ChunkFoliageRuntime
         return count;
     }
 
+    private int CountGrassInstances(List<GrassRenderBatch> batches)
+    {
+        int count = 0;
+
+        for (int i = 0; i < batches.Count; i++)
+        {
+            if (batches[i].matrices != null)
+                count += batches[i].matrices.Length;
+        }
+
+        return count;
+    }
+
     private int CountFlowerInstances()
     {
         int count = 0;
@@ -270,13 +305,12 @@ public class ChunkFoliageRuntime
     }
 
     public void RebuildTreeGameObjects(
-        GameObject prefab,
         List<TreeInstanceData> instances,
         Transform chunkRoot)
     {
         ClearTreeGameObjects();
 
-        if (prefab == null || instances == null || chunkRoot == null || root == null)
+        if (instances == null || chunkRoot == null || root == null)
             return;
 
         treeGameObjectRoot = new GameObject("Tree_GameObjects");
@@ -285,6 +319,10 @@ public class ChunkFoliageRuntime
         for (int i = 0; i < instances.Count; i++)
         {
             TreeInstanceData instance = instances[i];
+            GameObject prefab = GetTreePrefab(instance.variant);
+
+            if (prefab == null)
+                continue;
 
             GameObject treeObject = Object.Instantiate(prefab, treeGameObjectRoot.transform);
             treeObject.transform.localPosition = instance.localPosition;
@@ -314,11 +352,6 @@ public class ChunkFoliageRuntime
         }
     }
 
-    public void ClearTreeGpuMatrices()
-    {
-        treeGpuMatrixBatches.Clear();
-    }
-
     public void ClearFlowerBatches()
     {
         flowerRenderBatches.Clear();
@@ -326,7 +359,8 @@ public class ChunkFoliageRuntime
 
     public void ClearTreeBillboardMatrices()
     {
-        treeBillboardMatrixBatches.Clear();
+        mapleTreeBillboardMatrixBatches.Clear();
+        spruceTreeBillboardMatrixBatches.Clear();
     }
 
     public void DrawGrass()
@@ -334,16 +368,9 @@ public class ChunkFoliageRuntime
         if (!isVisible || !HasValidGrassRenderData())
             return;
 
-        for (int i = 0; i < grassMatrixBatches.Count; i++)
+        for (int i = 0; i < grassRenderBatches.Count; i++)
         {
-            DrawInstancedBatch(grassMesh, grassMaterial, grassMatrixBatches[i], null);
-        }
-
-        ConfigureForestGrassPropertyBlock(forestGrassPropertyBlock);
-
-        for (int i = 0; i < forestGrassMatrixBatches.Count; i++)
-        {
-            DrawInstancedBatch(grassMesh, grassMaterial, forestGrassMatrixBatches[i], forestGrassPropertyBlock);
+            DrawInstancedBatch(grassMesh, grassMaterial, grassRenderBatches[i]);
         }
     }
 
@@ -352,47 +379,33 @@ public class ChunkFoliageRuntime
         if (!isVisible || !HasValidBillboardRenderData())
             return;
 
-        for (int i = 0; i < billboardMatrixBatches.Count; i++)
+        for (int i = 0; i < billboardRenderBatches.Count; i++)
         {
-            DrawInstancedBatch(billboardMesh, billboardMaterial, billboardMatrixBatches[i], null);
-        }
-
-        ConfigureForestGrassPropertyBlock(forestBillboardPropertyBlock);
-
-        for (int i = 0; i < forestBillboardMatrixBatches.Count; i++)
-        {
-            DrawInstancedBatch(
-                billboardMesh,
-                billboardMaterial,
-                forestBillboardMatrixBatches[i],
-                forestBillboardPropertyBlock);
+            DrawInstancedBatch(billboardMesh, billboardMaterial, billboardRenderBatches[i]);
         }
     }
 
     private void DrawInstancedBatch(
         Mesh mesh,
         Material material,
-        Matrix4x4[] matrices,
-        MaterialPropertyBlock propertyBlock)
+        GrassRenderBatch batch)
     {
+        grassPropertyBlock.Clear();
+        grassPropertyBlock.SetVectorArray(grassInstanceDataPropertyId, batch.instanceData);
+        grassPropertyBlock.SetColor("_ForestDarkGrassColor", forestDarkGrassColor);
+        grassPropertyBlock.SetColor("_ForestMidGrassColor", forestMidGrassColor);
+        grassPropertyBlock.SetColor("_ForestLightGrassColor", forestLightGrassColor);
+
         Graphics.DrawMeshInstanced(
             mesh,
             0,
             material,
-            matrices,
-            matrices.Length,
-            propertyBlock,
+            batch.matrices,
+            batch.matrices.Length,
+            grassPropertyBlock,
             ShadowCastingMode.Off,
-            true
+            receiveGrassShadows
         );
-    }
-
-    private void ConfigureForestGrassPropertyBlock(MaterialPropertyBlock propertyBlock)
-    {
-        propertyBlock.Clear();
-        propertyBlock.SetColor(forestGrassDarkColorPropertyId, forestGrassDarkColor);
-        propertyBlock.SetColor(forestGrassMidColorPropertyId, forestGrassMidColor);
-        propertyBlock.SetColor(forestGrassLightColorPropertyId, forestGrassLightColor);
     }
 
     public void DrawFlowers()
@@ -423,32 +436,6 @@ public class ChunkFoliageRuntime
         }
     }
 
-    public void DrawTreeGpuLOD(int gpuLODIndex, bool castShadows, bool receiveShadows)
-    {
-        if (!isVisible || !HasValidTreeGpuRenderData(gpuLODIndex))
-            return;
-
-        TreeGpuLODRenderData lodData = treeGpuLODs[gpuLODIndex];
-
-        ShadowCastingMode shadowMode = castShadows
-            ? ShadowCastingMode.On
-            : ShadowCastingMode.Off;
-
-        for (int i = 0; i < treeGpuMatrixBatches.Count; i++)
-        {
-            Graphics.DrawMeshInstanced(
-                lodData.mesh,
-                0,
-                lodData.material,
-                treeGpuMatrixBatches[i],
-                treeGpuMatrixBatches[i].Length,
-                null,
-                shadowMode,
-                receiveShadows
-            );
-        }
-    }
-
     public void DrawTreeBillboards(bool castShadows, bool receiveShadows)
     {
         if (!isVisible || !HasValidTreeBillboardRenderData())
@@ -458,18 +445,49 @@ public class ChunkFoliageRuntime
             ? ShadowCastingMode.On
             : ShadowCastingMode.Off;
 
-        for (int i = 0; i < treeBillboardMatrixBatches.Count; i++)
+        DrawTreeBillboardBatches(mapleTreeBillboard, mapleTreeBillboardMatrixBatches, shadowMode, receiveShadows);
+        DrawTreeBillboardBatches(spruceTreeBillboard, spruceTreeBillboardMatrixBatches, shadowMode, receiveShadows);
+    }
+
+    private void DrawTreeBillboardBatches(
+        TreeBillboardRenderData renderData,
+        List<Matrix4x4[]> batches,
+        ShadowCastingMode shadowMode,
+        bool receiveShadows)
+    {
+        if (renderData.mesh == null || renderData.material == null)
+            return;
+
+        for (int i = 0; i < batches.Count; i++)
         {
             Graphics.DrawMeshInstanced(
-                treeBillboardMesh,
+                renderData.mesh,
                 0,
-                treeBillboardMaterial,
-                treeBillboardMatrixBatches[i],
-                treeBillboardMatrixBatches[i].Length,
+                renderData.material,
+                batches[i],
+                batches[i].Length,
                 null,
                 shadowMode,
                 receiveShadows
             );
         }
+    }
+
+    private bool HasValidBillboardBatch(TreeBillboardRenderData renderData, List<Matrix4x4[]> batches)
+    {
+        return renderData.mesh != null &&
+               renderData.material != null &&
+               batches.Count > 0;
+    }
+
+    private GameObject GetTreePrefab(WorldFeatureVariant variant)
+    {
+        if (variant == WorldFeatureVariant.MapleTree && mapleTreePrefab != null)
+            return mapleTreePrefab;
+
+        if (variant == WorldFeatureVariant.SpruceTree && spruceTreePrefab != null)
+            return spruceTreePrefab;
+
+        return fallbackTreePrefab;
     }
 }

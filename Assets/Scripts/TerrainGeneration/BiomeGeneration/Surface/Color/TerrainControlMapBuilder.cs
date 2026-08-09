@@ -2,10 +2,10 @@ using UnityEngine;
 
 public static class TerrainControlMapBuilder
 {
-    public static ControlMapPixelData BuildRaw(SurfaceType[,] surfaceTypeMap, BiomeType[,] biomeMap)
+    public static ControlMapPixelData BuildRaw(SurfaceType[,] surfaceTypeMap, GroundCoverType[,] groundCoverMap)
     {
         int width = surfaceTypeMap.GetLength(0);
-        ControlMapPixelData controlMap = new ControlMapPixelData(width, width, 2);
+        ControlMapPixelData controlMap = new ControlMapPixelData(width, width, 3);
 
         int pixelCount = width * width;
 
@@ -25,10 +25,7 @@ public static class TerrainControlMapBuilder
                     controlMap.Maps[1][pixelIndex] = SurfaceTypeToIndex(surfaceType);
                 }
 
-                if (biomeMap[x, z] == BiomeType.Forest && surfaceType == SurfaceType.Grass)
-                {
-                    controlMap.Maps[1][pixelIndex].a = 255;
-                }
+                controlMap.Maps[2][pixelIndex] = GroundCoverTypeToIndex(groundCoverMap[x, z]);
             }
         }
 
@@ -69,6 +66,30 @@ public static class TerrainControlMapBuilder
             case SurfaceType.Riverbed: return new Color32(0, 0, value, 0);
 
             default: return new Color32(0, 0, 0, 0);
+        }
+    }
+
+    private static Color32 GroundCoverTypeToIndex(GroundCoverType groundCoverType, byte value = 255)
+    {
+        switch (groundCoverType)
+        {
+            case GroundCoverType.DarkGrass:
+                return new Color32(value, 0, 0, 0);
+
+            case GroundCoverType.LeafLitter:
+            case GroundCoverType.NeedleLitter:
+                return new Color32(0, value, 0, 0);
+
+            case GroundCoverType.BareDirt:
+            case GroundCoverType.Gravel:
+                return new Color32(0, 0, value, 0);
+
+            case GroundCoverType.Moss:
+            case GroundCoverType.Lichen:
+                return new Color32(0, 0, 0, value);
+
+            default:
+                return new Color32(0, 0, 0, 0);
         }
     }
 }

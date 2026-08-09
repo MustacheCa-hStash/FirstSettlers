@@ -494,13 +494,12 @@ MonoBehaviour:
     densityBeyond10: 0.1
     uniformScaleRange: {x: 0.9, y: 1.3}
     randomizeYaw: 1
+    receiveGrassShadows: 0
     seedOffset: 5000
-    darkGrassColorPropertyName: _DarkGrassColor
-    midGrassColorPropertyName: _MidGrassColor
-    lightGrassColorPropertyName: _LightGrassColor
-    forestDarkGrassColor: {r: 0.08, g: 0.24, b: 0.09, a: 1}
-    forestMidGrassColor: {r: 0.13, g: 0.36, b: 0.14, a: 1}
-    forestLightGrassColor: {r: 0.24, g: 0.52, b: 0.2, a: 1}
+    grassInstanceDataPropertyName: _GrassInstanceData
+    forestDarkGrassColor: {r: 0.045, g: 0.16, b: 0.05, a: 1}
+    forestMidGrassColor: {r: 0.085, g: 0.25, b: 0.085, a: 1}
+    forestLightGrassColor: {r: 0.17, g: 0.38, b: 0.14, a: 1}
     billboardGrassPrefab: {fileID: 2274311721168609727, guid: e76b7893d4994f848a5f13029dbbffa1, type: 3}
     billboardRingRadius: 3
     billboardCellsPerAxis: 60
@@ -548,8 +547,11 @@ MonoBehaviour:
       - {r: 0.72, g: 0.82, b: 1, a: 1}
       - {r: 0.9, g: 0.72, b: 1, a: 1}
   treeSettings:
+    mapleTreePrefab: {fileID: 2892109097563917780, guid: 40fc0a45dc34f4443860b3ac9df1ef46, type: 3}
+    spruceTreePrefab: {fileID: 388576432251072559, guid: b0c142caf0e1898418b3b6ff947f009c, type: 3}
     treeLOD0GameObjectPrefab: {fileID: 2892109097563917780, guid: 40fc0a45dc34f4443860b3ac9df1ef46, type: 3}
-    treeGPUInstancedLODPrefabs: []
+    mapleTreeBillboardPrefab: {fileID: 2065088187390408184, guid: 30aa48ad464964846b008c0cfdf4dc40, type: 3}
+    spruceTreeBillboardPrefab: {fileID: 2383747344034210308, guid: c19b3e1250464fe4a9a8410b50d88d95, type: 3}
     treeBillboardPrefab: {fileID: 2383747344034210308, guid: c19b3e1250464fe4a9a8410b50d88d95, type: 3}
     treeCellSize: 12
     treeSpawnChance: 0.03
@@ -558,9 +560,8 @@ MonoBehaviour:
     grassExclusionRadius: 0.5
     seedOffset: 12000
     gameObjectTreeChunkRingRadius: 2
-    gpuInstancedTreeChunkRingRadius: 6
     billboardTreeChunkRingRadius: 15
-    castTreeShadows: 1
+    castTreeShadows: 0
     receiveTreeShadows: 0
   sampleScale: 600
   worldScale: 0.3
@@ -644,7 +645,7 @@ Transform:
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 100, z: 0}
+  m_LocalPosition: {x: 72, y: 100, z: -420}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -664,13 +665,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   walkSpeed: 5
-  sprintSpeed: 6
+  sprintSpeed: 15
   crouchSpeed: 1.5
   acceleration: 12
   mouseSensitivity: 0.08
   pitchMin: -80
   pitchMax: 80
-  gravity: 0
+  gravity: -20
   jumpHeight: 1.1
   standingHeight: 1.8
   crouchingHeight: 1.2

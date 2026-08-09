@@ -37,6 +37,14 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _BareDirtAlbedo:
+        m_Texture: {fileID: 2800000, guid: 39deb6f07acbd164d84b8040ea766fcf, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BareDirtNormal:
+        m_Texture: {fileID: 2800000, guid: 5afb1ec63ffe9174cb83167f4906b1eb, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _BaseMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -50,6 +58,10 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ControlMap1:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ControlMap2:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -77,11 +89,27 @@ Material:
         m_Texture: {fileID: 2800000, guid: c9f275e4f91cbe74794d3dada796a700, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _LeafLitterAlbedo:
+        m_Texture: {fileID: 2800000, guid: 63708bf29953f814d903f28a8ee66d34, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _LeafLitterNormal:
+        m_Texture: {fileID: 2800000, guid: 937d7e378b351114ca93bd2e970a3fb8, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _MainTex:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MossAlbedo:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MossNormal:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -123,6 +151,8 @@ Material:
     - _AlphaClip: 0
     - _AlphaToMask: 0
     - _AmbientStrength: 0.35
+    - _BareDirtNormalStrength: 0.35
+    - _BareDirtTiling: 0.35
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BlendSharpness: 0.61
@@ -150,7 +180,11 @@ Material:
     - _GrassTilingFarDistance: 300
     - _GrassTilingNear: 0.5
     - _GrassTilingNearDistance: 100
+    - _LeafLitterNormalStrength: 0.45
+    - _LeafLitterTiling: 0.35
     - _Metallic: 0
+    - _MossNormalStrength: 0.25
+    - _MossTiling: 0.32
     - _NoiseScale: 0.023
     - _NoiseStrength: 1
     - _OcclusionStrength: 1
@@ -175,19 +209,25 @@ Material:
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:
+    - _BareDirtColor: {r: 0.2, g: 0.13, b: 0.08, a: 1}
     - _BaseColor: {r: 0.1254902, g: 0.54509807, b: 0.15686275, a: 1}
     - _CliffColor: {r: 0.29999998, g: 0.29999998, b: 0.29999998, a: 1}
     - _Color: {r: 0.12549016, g: 0.545098, b: 0.1568627, a: 1}
     - _DarkColor: {r: 0.19999996, g: 0.47999996, b: 0.17999998, a: 1}
     - _DarkGrassColor: {r: 0.2, g: 0.48, b: 0.18, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _ForestDarkGrassColor: {r: 0.08, g: 0.24, b: 0.09, a: 1}
-    - _ForestLightGrassColor: {r: 0.24, g: 0.52, b: 0.2, a: 1}
-    - _ForestMidGrassColor: {r: 0.13, g: 0.36, b: 0.14, a: 1}
+    - _ForestDarkGrassColor: {r: 0.055, g: 0.18, b: 0.06, a: 1}
+    - _ForestLightGrassColor: {r: 0.18, g: 0.43, b: 0.16, a: 1}
+    - _ForestMidGrassColor: {r: 0.095, g: 0.29, b: 0.1, a: 1}
+    - _GroundDarkGrassColor: {r: 0.045, g: 0.16, b: 0.05, a: 1}
+    - _GroundLightGrassColor: {r: 0.17, g: 0.38, b: 0.14, a: 1}
+    - _GroundMidGrassColor: {r: 0.085, g: 0.25, b: 0.085, a: 1}
+    - _LeafLitterColor: {r: 0.6603774, g: 0.42252752, b: 0.25127557, a: 1}
     - _LightColor: {r: 0.43999997, g: 0.78, b: 0.29999998, a: 1}
     - _LightGrassColor: {r: 0.44, g: 0.78, b: 0.3, a: 1}
     - _MidColor: {r: 0.28999996, g: 0.62, b: 0.23999995, a: 1}
     - _MidGrassColor: {r: 0.29, g: 0.62, b: 0.24, a: 1}
+    - _MossColor: {r: 0.08, g: 0.28, b: 0.1, a: 1}
     - _MudColor: {r: 0.41999996, g: 0.31999996, b: 0.21999997, a: 1}
     - _RiverbedColor: {r: 0.34999996, g: 0.29999998, b: 0.23999995, a: 1}
     - _RockColor: {r: 0.45, g: 0.45, b: 0.45, a: 1}

@@ -17,15 +17,14 @@ public class GrassSettings
 
     public Vector2 uniformScaleRange = new Vector2(0.9f, 1.1f);
     public bool randomizeYaw = true;
+    public bool receiveGrassShadows = false;
     public int seedOffset = 5000;
 
-    [Header("Forest Grass Tint")]
-    public string darkGrassColorPropertyName = "_DarkGrassColor";
-    public string midGrassColorPropertyName = "_MidGrassColor";
-    public string lightGrassColorPropertyName = "_LightGrassColor";
-    public Color forestDarkGrassColor = new Color(0.08f, 0.24f, 0.09f, 1f);
-    public Color forestMidGrassColor = new Color(0.13f, 0.36f, 0.14f, 1f);
-    public Color forestLightGrassColor = new Color(0.24f, 0.52f, 0.20f, 1f);
+    [Header("Forest Grass Instance Tint")]
+    public string grassInstanceDataPropertyName = "_GrassInstanceData";
+    public Color forestDarkGrassColor = new Color(0.045f, 0.16f, 0.05f, 1f);
+    public Color forestMidGrassColor = new Color(0.085f, 0.25f, 0.085f, 1f);
+    public Color forestLightGrassColor = new Color(0.17f, 0.38f, 0.14f, 1f);
 
     public GameObject billboardGrassPrefab;
 

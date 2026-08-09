@@ -14,9 +14,7 @@ public class FoliageManager
 
     private Mesh grassMesh;
     private Material grassMaterial;
-    private int forestGrassDarkColorPropertyId;
-    private int forestGrassMidColorPropertyId;
-    private int forestGrassLightColorPropertyId;
+    private int grassInstanceDataPropertyId;
 
     private Mesh billboardGrassMesh;
     private Material billboardGrassMaterial;
@@ -25,10 +23,9 @@ public class FoliageManager
     private Material flowerMaterial;
     private int flowerPetalColorPropertyId;
 
-    private readonly List<TreeGpuLODRenderData> treeGpuLODs = new List<TreeGpuLODRenderData>();
-
-    private Mesh treeBillboardMesh;
-    private Material treeBillboardMaterial;
+    private TreeBillboardRenderData mapleTreeBillboard;
+    private TreeBillboardRenderData spruceTreeBillboard;
+    private TreeBillboardRenderData fallbackTreeBillboard;
 
     public FoliageManager(Transform foliageParent, GrassSettings grassSettings, FlowerSettings flowerSettings, TreeSettings treeSettings, int worldSeed,
         int chunkSize, float worldScale, float meshHeightMultiplier)
@@ -92,7 +89,6 @@ public class FoliageManager
             else
             {
                 runtime.FoliageRuntime.ClearTreeGameObjects();
-                runtime.FoliageRuntime.ClearTreeGpuMatrices();
                 runtime.FoliageRuntime.ClearTreeBillboardMatrices();
                 runtime.FoliageRuntime.ClearCurrentTreeRepresentation();
             }
@@ -294,33 +290,24 @@ public class FoliageManager
         ChunkFoliageRuntime foliageRuntime = runtime.FoliageRuntime;
 
         FoliageRepresentationMode mode = GetTreeRepresentationMode(viewerCoord, record.ChunkCoord);
-        int gpuLODIndex = GetTreeGpuLODIndex(viewerCoord, record.ChunkCoord, mode);
-
-        if (foliageRuntime.HasCurrentTreeRepresentation(mode, gpuLODIndex))
+        if (foliageRuntime.HasCurrentTreeRepresentation(mode))
             return;
 
         foliageRuntime.ClearTreeGameObjects();
-        foliageRuntime.ClearTreeGpuMatrices();
         foliageRuntime.ClearTreeBillboardMatrices();
 
         if (mode == FoliageRepresentationMode.GameObjectWithCollision)
         {
             foliageRuntime.RebuildTreeGameObjects(
-                treeSettings.treeLOD0GameObjectPrefab,
                 record.FoliageData.treeCubeInstances,
                 runtime.RootTransform);
-        }
-        else if (mode == FoliageRepresentationMode.GPUInstancedWithCollision ||
-                 mode == FoliageRepresentationMode.GPUInstancedNoCollision)
-        {
-            RebuildTreeGpuMatrices(runtime, record);
         }
         else if (mode == FoliageRepresentationMode.GPUInstancedBillboard)
         {
             RebuildTreeBillboardMatrices(runtime, record);
         }
 
-        foliageRuntime.SetCurrentTreeRepresentation(mode, gpuLODIndex);
+        foliageRuntime.SetCurrentTreeRepresentation(mode);
     }
 
     private void DrawTreesForChunk(
@@ -332,17 +319,8 @@ public class FoliageManager
             return;
 
         FoliageRepresentationMode mode = GetTreeRepresentationMode(viewerCoord, chunkCoord);
-        int gpuLODIndex = GetTreeGpuLODIndex(viewerCoord, chunkCoord, mode);
 
-        if (mode == FoliageRepresentationMode.GPUInstancedWithCollision ||
-            mode == FoliageRepresentationMode.GPUInstancedNoCollision)
-        {
-            runtime.FoliageRuntime.DrawTreeGpuLOD(
-                gpuLODIndex,
-                treeSettings.castTreeShadows,
-                treeSettings.receiveTreeShadows);
-        }
-        else if (mode == FoliageRepresentationMode.GPUInstancedBillboard)
+        if (mode == FoliageRepresentationMode.GPUInstancedBillboard)
         {
             runtime.FoliageRuntime.DrawTreeBillboards(
                 treeSettings.castTreeShadows,
@@ -350,36 +328,13 @@ public class FoliageManager
         }
     }
 
-    private void RebuildTreeGpuMatrices(ChunkRuntime runtime, ChunkRecord record)
-    {
-        ChunkFoliageRuntime foliageRuntime = runtime.FoliageRuntime;
-        ChunkFoliageData data = record.FoliageData;
-
-        List<Matrix4x4> worldMatrices = new List<Matrix4x4>();
-        Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
-
-        for (int i = 0; i < data.treeCubeInstances.Count; i++)
-        {
-            TreeInstanceData instance = data.treeCubeInstances[i];
-
-            Matrix4x4 localMatrix = Matrix4x4.TRS(
-                instance.localPosition,
-                instance.localRotation,
-                instance.localScale);
-
-            Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
-            worldMatrices.Add(worldMatrix);
-        }
-
-        foliageRuntime.CacheTreeGpuMatrices(worldMatrices);
-    }
-
     private void RebuildTreeBillboardMatrices(ChunkRuntime runtime, ChunkRecord record)
     {
         ChunkFoliageRuntime foliageRuntime = runtime.FoliageRuntime;
         ChunkFoliageData data = record.FoliageData;
 
-        List<Matrix4x4> worldMatrices = new List<Matrix4x4>();
+        List<Matrix4x4> mapleWorldMatrices = new List<Matrix4x4>();
+        List<Matrix4x4> spruceWorldMatrices = new List<Matrix4x4>();
         Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
 
         for (int i = 0; i < data.treeCubeInstances.Count; i++)
@@ -392,10 +347,14 @@ public class FoliageManager
                 instance.localScale);
 
             Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
-            worldMatrices.Add(worldMatrix);
+
+            if (instance.variant == WorldFeatureVariant.SpruceTree)
+                spruceWorldMatrices.Add(worldMatrix);
+            else
+                mapleWorldMatrices.Add(worldMatrix);
         }
 
-        foliageRuntime.CacheTreeBillboardMatrices(worldMatrices);
+        foliageRuntime.CacheTreeBillboardMatrices(mapleWorldMatrices, spruceWorldMatrices);
     }
 
     private void RebuildFlowerBatches(ChunkRuntime runtime, ChunkRecord record)
@@ -439,7 +398,7 @@ public class FoliageManager
             return;
 
         List<Matrix4x4> worldMatrices = new List<Matrix4x4>();
-        List<Matrix4x4> forestWorldMatrices = new List<Matrix4x4>();
+        List<Vector4> instanceData = new List<Vector4>();
         Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
 
         int subChunksPerChunk = data.subChunksPerChunk;
@@ -478,16 +437,13 @@ public class FoliageManager
                         instance.localScale);
 
                     Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
-
-                    if (instance.biome == BiomeType.Forest)
-                        forestWorldMatrices.Add(worldMatrix);
-                    else
-                        worldMatrices.Add(worldMatrix);
+                    worldMatrices.Add(worldMatrix);
+                    instanceData.Add(new Vector4(instance.forestBlend, 0f, 0f, 0f));
                 }
             }
         }
 
-        foliageRuntime.CacheGrassMatrices(worldMatrices, forestWorldMatrices);
+        foliageRuntime.CacheGrassMatrices(worldMatrices, instanceData);
     }
 
     private void RebuildBillboardMatrices(
@@ -502,7 +458,7 @@ public class FoliageManager
             return;
 
         List<Matrix4x4> worldMatrices = new List<Matrix4x4>();
-        List<Matrix4x4> forestWorldMatrices = new List<Matrix4x4>();
+        List<Vector4> instanceData = new List<Vector4>();
         Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
 
         int chunkRing = GetChunkRingDistance(viewerCoord, record.ChunkCoord);
@@ -565,16 +521,13 @@ public class FoliageManager
                         scaledScale);
 
                     Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
-
-                    if (instance.biome == BiomeType.Forest)
-                        forestWorldMatrices.Add(worldMatrix);
-                    else
-                        worldMatrices.Add(worldMatrix);
+                    worldMatrices.Add(worldMatrix);
+                    instanceData.Add(new Vector4(instance.forestBlend, 0f, 0f, 0f));
                 }
             }
         }
 
-        foliageRuntime.CacheBillboardMatrices(worldMatrices, forestWorldMatrices);
+        foliageRuntime.CacheBillboardMatrices(worldMatrices, instanceData);
     }
 
     private FoliageRepresentationMode GetTreeRepresentationMode(
@@ -586,31 +539,7 @@ public class FoliageManager
         if (ring <= treeSettings.gameObjectTreeChunkRingRadius)
             return FoliageRepresentationMode.GameObjectWithCollision;
 
-        if (ring <= treeSettings.gpuInstancedTreeChunkRingRadius)
-            return FoliageRepresentationMode.GPUInstancedNoCollision;
-
         return FoliageRepresentationMode.GPUInstancedBillboard;
-    }
-
-    private int GetTreeGpuLODIndex(
-        ChunkCoord viewerCoord,
-        ChunkCoord targetCoord,
-        FoliageRepresentationMode mode)
-    {
-        if (mode != FoliageRepresentationMode.GPUInstancedWithCollision &&
-            mode != FoliageRepresentationMode.GPUInstancedNoCollision)
-        {
-            return -1;
-        }
-
-        int ring = GetChunkRingDistance(viewerCoord, targetCoord);
-        int firstGpuRing = treeSettings.gameObjectTreeChunkRingRadius + 1;
-        int lodIndex = ring - firstGpuRing;
-
-        if (treeGpuLODs.Count == 0)
-            return -1;
-
-        return Mathf.Clamp(lodIndex, 0, treeGpuLODs.Count - 1);
     }
 
     private bool IsWithinTreeRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
@@ -734,12 +663,11 @@ public class FoliageManager
 
         chunkRuntime.FoliageRuntime.grassMesh = grassMesh;
         chunkRuntime.FoliageRuntime.grassMaterial = grassMaterial;
-        chunkRuntime.FoliageRuntime.forestGrassDarkColorPropertyId = forestGrassDarkColorPropertyId;
-        chunkRuntime.FoliageRuntime.forestGrassMidColorPropertyId = forestGrassMidColorPropertyId;
-        chunkRuntime.FoliageRuntime.forestGrassLightColorPropertyId = forestGrassLightColorPropertyId;
-        chunkRuntime.FoliageRuntime.forestGrassDarkColor = grassSettings.forestDarkGrassColor;
-        chunkRuntime.FoliageRuntime.forestGrassMidColor = grassSettings.forestMidGrassColor;
-        chunkRuntime.FoliageRuntime.forestGrassLightColor = grassSettings.forestLightGrassColor;
+        chunkRuntime.FoliageRuntime.receiveGrassShadows = grassSettings.receiveGrassShadows;
+        chunkRuntime.FoliageRuntime.grassInstanceDataPropertyId = grassInstanceDataPropertyId;
+        chunkRuntime.FoliageRuntime.forestDarkGrassColor = grassSettings.forestDarkGrassColor;
+        chunkRuntime.FoliageRuntime.forestMidGrassColor = grassSettings.forestMidGrassColor;
+        chunkRuntime.FoliageRuntime.forestLightGrassColor = grassSettings.forestLightGrassColor;
 
         chunkRuntime.FoliageRuntime.billboardMesh = billboardGrassMesh;
         chunkRuntime.FoliageRuntime.billboardMaterial = billboardGrassMaterial;
@@ -748,26 +676,23 @@ public class FoliageManager
         chunkRuntime.FoliageRuntime.flowerMaterial = flowerMaterial;
         chunkRuntime.FoliageRuntime.flowerPetalColorPropertyId = flowerPetalColorPropertyId;
 
-        chunkRuntime.FoliageRuntime.treeGpuLODs = treeGpuLODs;
-        chunkRuntime.FoliageRuntime.treeBillboardMesh = treeBillboardMesh;
-        chunkRuntime.FoliageRuntime.treeBillboardMaterial = treeBillboardMaterial;
+        chunkRuntime.FoliageRuntime.mapleTreePrefab = treeSettings.mapleTreePrefab;
+        chunkRuntime.FoliageRuntime.spruceTreePrefab = treeSettings.spruceTreePrefab;
+        chunkRuntime.FoliageRuntime.fallbackTreePrefab = treeSettings.treeLOD0GameObjectPrefab;
+        chunkRuntime.FoliageRuntime.mapleTreeBillboard = mapleTreeBillboard;
+        chunkRuntime.FoliageRuntime.spruceTreeBillboard = spruceTreeBillboard;
+        chunkRuntime.FoliageRuntime.fallbackTreeBillboard = fallbackTreeBillboard;
 
         chunkRuntime.FoliageRuntime.SetVisible(false);
     }
 
     private void ResolveGrassRenderAssets()
     {
-        forestGrassDarkColorPropertyId = Shader.PropertyToID(GetGrassColorPropertyName(
-            grassSettings.darkGrassColorPropertyName,
-            "_DarkGrassColor"));
+        string instanceDataPropertyName = string.IsNullOrEmpty(grassSettings.grassInstanceDataPropertyName)
+            ? "_GrassInstanceData"
+            : grassSettings.grassInstanceDataPropertyName;
 
-        forestGrassMidColorPropertyId = Shader.PropertyToID(GetGrassColorPropertyName(
-            grassSettings.midGrassColorPropertyName,
-            "_MidGrassColor"));
-
-        forestGrassLightColorPropertyId = Shader.PropertyToID(GetGrassColorPropertyName(
-            grassSettings.lightGrassColorPropertyName,
-            "_LightGrassColor"));
+        grassInstanceDataPropertyId = Shader.PropertyToID(instanceDataPropertyName);
 
         if (grassSettings.grassPrefab == null)
         {
@@ -826,13 +751,6 @@ public class FoliageManager
         }
     }
 
-    private static string GetGrassColorPropertyName(string configuredName, string fallbackName)
-    {
-        return string.IsNullOrEmpty(configuredName)
-            ? fallbackName
-            : configuredName;
-    }
-
     private void ResolveFlowerRenderAssets()
     {
         if (!IsFlowerSystemEnabled())
@@ -875,73 +793,56 @@ public class FoliageManager
 
     private void ResolveTreeRenderAssets()
     {
-        treeGpuLODs.Clear();
-
-        if (treeSettings.treeLOD0GameObjectPrefab == null)
+        if (treeSettings.mapleTreePrefab == null && treeSettings.treeLOD0GameObjectPrefab == null)
         {
-            Debug.LogError("Tree LOD0 GameObject prefab is missing.");
+            Debug.LogWarning("Maple tree prefab is missing and no fallback tree prefab is assigned.");
         }
 
-        if (treeSettings.treeGPUInstancedLODPrefabs == null ||
-            treeSettings.treeGPUInstancedLODPrefabs.Length == 0)
+        if (treeSettings.spruceTreePrefab == null && treeSettings.treeLOD0GameObjectPrefab == null)
         {
-            Debug.LogError("No GPU-instanced tree LOD prefabs assigned.");
-        }
-        else
-        {
-            for (int i = 0; i < treeSettings.treeGPUInstancedLODPrefabs.Length; i++)
-            {
-                GameObject prefab = treeSettings.treeGPUInstancedLODPrefabs[i];
-
-                if (prefab == null)
-                {
-                    Debug.LogError($"Tree GPU LOD prefab at index {i} is missing.");
-                    continue;
-                }
-
-                MeshFilter meshFilter = prefab.GetComponent<MeshFilter>();
-                MeshRenderer meshRenderer = prefab.GetComponent<MeshRenderer>();
-
-                if (meshFilter == null || meshFilter.sharedMesh == null)
-                {
-                    Debug.LogError($"Tree GPU LOD prefab at index {i} must have a MeshFilter with a mesh on the root.");
-                    continue;
-                }
-
-                if (meshRenderer == null || meshRenderer.sharedMaterial == null)
-                {
-                    Debug.LogError($"Tree GPU LOD prefab at index {i} must have a MeshRenderer with one shared material on the root.");
-                    continue;
-                }
-
-                treeGpuLODs.Add(new TreeGpuLODRenderData(
-                    meshFilter.sharedMesh,
-                    meshRenderer.sharedMaterial));
-            }
+            Debug.LogWarning("Spruce tree prefab is missing and no fallback tree prefab is assigned.");
         }
 
-        if (treeSettings.treeBillboardPrefab != null)
+        fallbackTreeBillboard = ResolveTreeBillboardRenderData(
+            treeSettings.treeBillboardPrefab,
+            "fallback tree billboard");
+
+        mapleTreeBillboard = ResolveTreeBillboardRenderData(
+            treeSettings.mapleTreeBillboardPrefab,
+            "maple tree billboard");
+
+        spruceTreeBillboard = ResolveTreeBillboardRenderData(
+            treeSettings.spruceTreeBillboardPrefab,
+            "spruce tree billboard");
+
+        if (mapleTreeBillboard.mesh == null)
+            mapleTreeBillboard = fallbackTreeBillboard;
+
+        if (spruceTreeBillboard.mesh == null)
+            spruceTreeBillboard = fallbackTreeBillboard;
+    }
+
+    private TreeBillboardRenderData ResolveTreeBillboardRenderData(GameObject prefab, string label)
+    {
+        if (prefab == null)
+            return new TreeBillboardRenderData(null, null);
+
+        MeshFilter meshFilter = prefab.GetComponent<MeshFilter>();
+        MeshRenderer meshRenderer = prefab.GetComponent<MeshRenderer>();
+
+        if (meshFilter == null || meshFilter.sharedMesh == null)
         {
-            MeshFilter meshFilter = treeSettings.treeBillboardPrefab.GetComponent<MeshFilter>();
-            MeshRenderer meshRenderer = treeSettings.treeBillboardPrefab.GetComponent<MeshRenderer>();
-
-            if (meshFilter == null || meshFilter.sharedMesh == null)
-            {
-                Debug.LogError("Tree billboard prefab must have a MeshFilter with a mesh on the root.");
-            }
-            else
-            {
-                treeBillboardMesh = meshFilter.sharedMesh;
-            }
-
-            if (meshRenderer == null || meshRenderer.sharedMaterial == null)
-            {
-                Debug.LogError("Tree billboard prefab must have a MeshRenderer with one shared material on the root.");
-            }
-            else
-            {
-                treeBillboardMaterial = meshRenderer.sharedMaterial;
-            }
+            Debug.LogError($"{label} prefab must have a MeshFilter with a mesh on the root.");
+            return new TreeBillboardRenderData(null, null);
         }
+
+        if (meshRenderer == null || meshRenderer.sharedMaterial == null)
+        {
+            Debug.LogError($"{label} prefab must have a MeshRenderer with one shared material on the root.");
+            return new TreeBillboardRenderData(null, null);
+        }
+
+        meshRenderer.sharedMaterial.enableInstancing = true;
+        return new TreeBillboardRenderData(meshFilter.sharedMesh, meshRenderer.sharedMaterial);
     }
 }

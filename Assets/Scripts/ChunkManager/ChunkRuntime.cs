@@ -96,6 +96,9 @@ public class ChunkRuntime
 
         if (controlMaps.Length > 1)
             runtimeTerrainMaterial.SetTexture("_ControlMap1", controlMaps[1]);
+
+        if (controlMaps.Length > 2)
+            runtimeTerrainMaterial.SetTexture("_ControlMap2", controlMaps[2]);
     }
 
     public void SetMeshes(Mesh terrainMesh, Mesh lakeMesh, Mesh riverMesh, int lod)
