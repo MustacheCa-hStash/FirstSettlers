@@ -547,10 +547,10 @@ MonoBehaviour:
       - {r: 0.72, g: 0.82, b: 1, a: 1}
       - {r: 0.9, g: 0.72, b: 1, a: 1}
   treeSettings:
-    mapleTreePrefab: {fileID: 2892109097563917780, guid: 40fc0a45dc34f4443860b3ac9df1ef46, type: 3}
+    mapleTreePrefab: {fileID: 527248759270487890, guid: 6dce9affdb4c8da45b098e90df4ad2c1, type: 3}
     spruceTreePrefab: {fileID: 388576432251072559, guid: b0c142caf0e1898418b3b6ff947f009c, type: 3}
     treeLOD0GameObjectPrefab: {fileID: 2892109097563917780, guid: 40fc0a45dc34f4443860b3ac9df1ef46, type: 3}
-    mapleTreeBillboardPrefab: {fileID: 2065088187390408184, guid: 30aa48ad464964846b008c0cfdf4dc40, type: 3}
+    mapleTreeBillboardPrefab: {fileID: 2111572226825985944, guid: 555a957109ef7834db50df03fe81454b, type: 3}
     spruceTreeBillboardPrefab: {fileID: 9195837373271529818, guid: c19b3e1250464fe4a9a8410b50d88d95, type: 3}
     treeBillboardPrefab: {fileID: 2383747344034210308, guid: c19b3e1250464fe4a9a8410b50d88d95, type: 3}
     treeCellSize: 12
