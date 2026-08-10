@@ -17,6 +17,8 @@ public class ChunkRecord
     private float[,] riverMaskMap;
     private Texture2D[] controlMapData;
     private ChunkFoliageData foliageData;
+    private Mesh farTerrainMesh;
+    private Texture2D[] farTerrainControlMapData;
 
     private Dictionary<int, Mesh> LODTerrainMeshes = new Dictionary<int, Mesh>();
     private Dictionary<int, Mesh> LODLakeMeshes = new Dictionary<int, Mesh>();
@@ -32,6 +34,10 @@ public class ChunkRecord
 
     private bool terrainDataRequestInFlight;
     private int terrainDataRequestVersion;
+
+    private bool farTerrainRequestInFlight;
+    private int farTerrainRequestVersion;
+    private bool farTerrainReady;
 
     private Dictionary<int, int> meshRequestVersionsByLOD = new Dictionary<int, int>();
     private HashSet<int> meshRequestsInFlight = new HashSet<int>();
@@ -62,12 +68,16 @@ public class ChunkRecord
     public WorldFeaturePlan WorldFeaturePlan => worldFeaturePlan;
     public float[,] RiverMaskMap => riverMaskMap;
     public Texture2D[] ControlMapData => controlMapData;
+    public Texture2D[] FarTerrainControlMapData => farTerrainControlMapData;
     public ChunkFoliageData FoliageData {
         get => foliageData;
         set => foliageData = value;
     }
     public bool IsTerrainDataRequestInFlight => terrainDataRequestInFlight;
     public int TerrainDataRequestVersion => terrainDataRequestVersion;
+    public bool IsFarTerrainRequestInFlight => farTerrainRequestInFlight;
+    public int FarTerrainRequestVersion => farTerrainRequestVersion;
+    public bool HasFarTerrain => farTerrainReady && farTerrainMesh != null && farTerrainControlMapData != null;
 
     public bool ColliderRequestInFlight => colliderRequestInFlight;
     public bool ColliderReady => colliderReady;
@@ -216,6 +226,46 @@ public class ChunkRecord
 
         terrainDataRequestInFlight = false;
         return true;
+    }
+
+    public int BeginFarTerrainRequest()
+    {
+        farTerrainRequestVersion++;
+        farTerrainRequestInFlight = true;
+        return farTerrainRequestVersion;
+    }
+
+    public void CancelFarTerrainRequest(int requestVersion)
+    {
+        if (farTerrainRequestVersion == requestVersion)
+        {
+            farTerrainRequestInFlight = false;
+        }
+    }
+
+    public bool TryCompleteFarTerrainRequest(
+        int requestVersion,
+        Mesh returnedFarTerrainMesh,
+        Texture2D[] returnedFarTerrainControlMapData)
+    {
+        if (!farTerrainRequestInFlight)
+            return false;
+
+        if (requestVersion != farTerrainRequestVersion)
+            return false;
+
+        farTerrainMesh = returnedFarTerrainMesh;
+        farTerrainControlMapData = returnedFarTerrainControlMapData;
+        farTerrainReady = farTerrainMesh != null && farTerrainControlMapData != null;
+        farTerrainRequestInFlight = false;
+
+        return true;
+    }
+
+    public bool TryGetFarTerrainMesh(out Mesh mesh)
+    {
+        mesh = farTerrainMesh;
+        return HasFarTerrain;
     }
 
     public bool IsMeshRequestInFlight(int lod)

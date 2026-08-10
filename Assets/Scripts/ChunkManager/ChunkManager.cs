@@ -3,10 +3,17 @@ using UnityEngine;
 
 public class ChunkManager
 {
+    private const int FarTerrainLOD = 5;
+
     private readonly int subChunksPerChunk = 10;
 
     private readonly int viewDistance;
     private readonly int colliderDistance;
+    private readonly bool enableFarTerrain;
+    private readonly int farTerrainStartRing;
+    private readonly int farTerrainHeightGridResolution;
+    private readonly int farTerrainControlMapResolution;
+    private readonly float farTerrainSkirtDepth;
     private readonly int chunkSize;
     private readonly int seed;
     private readonly Transform viewer;
@@ -40,6 +47,11 @@ public class ChunkManager
     public ChunkManager(
         int viewDistance,
         int colliderDistance,
+        bool enableFarTerrain,
+        int farTerrainStartRing,
+        int farTerrainHeightGridResolution,
+        int farTerrainControlMapResolution,
+        float farTerrainSkirtDepth,
         int chunkSize,
         int seed,
         Transform viewer,
@@ -61,6 +73,11 @@ public class ChunkManager
     {
         this.viewDistance = viewDistance;
         this.colliderDistance = colliderDistance;
+        this.enableFarTerrain = enableFarTerrain;
+        this.farTerrainStartRing = Mathf.Max(1, farTerrainStartRing);
+        this.farTerrainHeightGridResolution = Mathf.Max(2, farTerrainHeightGridResolution);
+        this.farTerrainControlMapResolution = Mathf.Max(2, farTerrainControlMapResolution);
+        this.farTerrainSkirtDepth = Mathf.Max(0f, farTerrainSkirtDepth);
         this.chunkSize = chunkSize;
         this.seed = seed;
         this.viewer = viewer;
@@ -157,6 +174,29 @@ public class ChunkManager
             gpuGrassInstanceCount,
             gpuFlowerInstanceCount,
             gpuTreeInstanceCount);
+    }
+
+    public WorldRenderStatsDebugInfo GetVisibleRenderStatsDebugInfo()
+    {
+        WorldRenderStatsDebugInfo stats = new WorldRenderStatsDebugInfo();
+        ChunkCoord viewerCoord = GetViewerChunkCoord();
+
+        for (int i = 0; i < frustumVisibleCoords.Count; i++)
+        {
+            ChunkCoord coord = frustumVisibleCoords[i];
+            if (!loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
+                continue;
+
+            runtime.AccumulateRenderStats(ref stats);
+        }
+
+        foliageManager.AccumulateVisibleFoliageRenderStats(
+            this,
+            viewerCoord,
+            frustumVisibleCoords,
+            ref stats);
+
+        return stats;
     }
 
     private ChunkCoord GetChunkCoordFromWorldPosition(Vector3 worldPosition)
@@ -317,7 +357,7 @@ public class ChunkManager
             if (!runtime.IsVisible)
                 runtime.SetVisible(true);
 
-            EnsureTerrainDataRequested(record);
+            EnsureTerrainVisualRequested(record, viewerCoord, targetCoord);
         }
 
         foreach (ChunkCoord coord in activeLastUpdate)
@@ -356,21 +396,33 @@ public class ChunkManager
             if (!chunkRecords.TryGetValue(coord, out ChunkRecord record))
                 continue;
 
-            EnsureTerrainDataRequested(record);
-
             int dx = coord.x - viewerCoord.x;
             int dz = coord.z - viewerCoord.z;
             int sqrDistance = dx * dx + dz * dz;
+            bool useFarTerrain = ShouldUseFarTerrain(viewerCoord, coord);
 
-            int lod = ChunkRingLODPolicy.GetLOD(viewerCoord, coord);
+            if (useFarTerrain)
+            {
+                EnsureFarTerrainRequested(record);
+                TryApplyFarTerrain(record, runtime);
+            }
+            else
+            {
+                EnsureTerrainDataRequested(record);
 
-            EnsureLODMeshRequested(record, lod);
-            TryApplyLODMesh(record, runtime, lod);
+                int lod = ChunkRingLODPolicy.GetLOD(viewerCoord, coord);
+
+                EnsureLODMeshRequested(record, lod);
+                TryApplyLODMesh(record, runtime, lod);
+
+                if (!record.HasTerrainData)
+                    TryApplyFarTerrain(record, runtime);
+            }
 
             bool colliderDesired = sqrDistance <= sqrColliderRadius;
             record.ColliderDesired = colliderDesired;
 
-            if (colliderDesired)
+            if (colliderDesired && !useFarTerrain)
             {
                 EnsureColliderRequested(record);
                 TryApplyCollider(record, runtime);
@@ -463,6 +515,63 @@ public class ChunkManager
         return runtime;
     }
 
+    private void EnsureTerrainVisualRequested(ChunkRecord record, ChunkCoord viewerCoord, ChunkCoord targetCoord)
+    {
+        if (ShouldUseFarTerrain(viewerCoord, targetCoord))
+        {
+            EnsureFarTerrainRequested(record);
+        }
+        else
+        {
+            EnsureTerrainDataRequested(record);
+        }
+    }
+
+    private bool ShouldUseFarTerrain(ChunkCoord viewerCoord, ChunkCoord targetCoord)
+    {
+        if (!enableFarTerrain)
+            return false;
+
+        int ring = GetChunkRingDistance(viewerCoord, targetCoord);
+        return ring >= farTerrainStartRing;
+    }
+
+    private int GetChunkRingDistance(ChunkCoord viewerCoord, ChunkCoord targetCoord)
+    {
+        int dx = Mathf.Abs(targetCoord.x - viewerCoord.x);
+        int dz = Mathf.Abs(targetCoord.z - viewerCoord.z);
+        return Mathf.Max(dx, dz);
+    }
+
+    private void EnsureFarTerrainRequested(ChunkRecord record)
+    {
+        if (record.HasFarTerrain)
+            return;
+
+        if (record.IsFarTerrainRequestInFlight)
+            return;
+
+        int requestVersion = record.BeginFarTerrainRequest();
+
+        bool submitted = terrainRequestManager.RequestFarTerrainData(
+            record.ChunkCoord,
+            requestVersion,
+            chunkSize,
+            seed,
+            sampleScale,
+            meshHeightMultiplier,
+            worldScale,
+            farTerrainHeightGridResolution,
+            farTerrainControlMapResolution,
+            farTerrainSkirtDepth
+        );
+
+        if (!submitted)
+        {
+            record.CancelFarTerrainRequest(requestVersion);
+        }
+    }
+
     private void EnsureTerrainDataRequested(ChunkRecord record)
     {
         if (record.HasTerrainData)
@@ -489,6 +598,18 @@ public class ChunkManager
         {
             record.CancelTerrainDataRequest(requestVersion);
         }
+    }
+
+    private void TryApplyFarTerrain(ChunkRecord record, ChunkRuntime runtime)
+    {
+        if (!record.TryGetFarTerrainMesh(out Mesh terrainMesh))
+            return;
+
+        if (runtime.IsShowingLOD(FarTerrainLOD))
+            return;
+
+        runtime.SetControlMaps(record.FarTerrainControlMapData);
+        runtime.SetMeshes(terrainMesh, null, null, FarTerrainLOD);
     }
 
     private void EnsureColliderRequested(ChunkRecord record)
@@ -592,6 +713,21 @@ public class ChunkManager
                 terrainResult.GroundCoverMap,
                 terrainResult.WorldFeaturePlan,
                 terrainResult.RiverMaskMap,
+                controlMaps
+            );
+        }
+
+        while (terrainRequestManager.TryDequeueFarTerrainResult(out FarTerrainRequestResult farTerrainResult))
+        {
+            if (!chunkRecords.TryGetValue(farTerrainResult.ChunkCoord, out ChunkRecord record))
+                continue;
+
+            Texture2D[] controlMaps = CreateControlMapTextures(farTerrainResult.ControlMapsRawData);
+            Mesh terrainMesh = farTerrainResult.TerrainMeshData.CreateMesh();
+
+            record.TryCompleteFarTerrainRequest(
+                farTerrainResult.RequestVersion,
+                terrainMesh,
                 controlMaps
             );
         }

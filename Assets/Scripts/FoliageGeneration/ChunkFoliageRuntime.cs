@@ -202,6 +202,36 @@ public class ChunkFoliageRuntime
         return bushGameObjects.Count > 0;
     }
 
+    public void AccumulateGrassRenderStats(ref WorldRenderStatsDebugInfo stats)
+    {
+        AccumulateGrassStats(grassMesh, grassRenderBatches, ref stats.Grass);
+    }
+
+    public void AccumulateBillboardGrassRenderStats(ref WorldRenderStatsDebugInfo stats)
+    {
+        AccumulateGrassStats(billboardMesh, billboardRenderBatches, ref stats.BillboardGrass);
+    }
+
+    public void AccumulateFlowerRenderStats(ref WorldRenderStatsDebugInfo stats)
+    {
+        AccumulateFlowerStats(ref stats.Flowers);
+    }
+
+    public void AccumulateTreeBillboardRenderStats(ref WorldRenderStatsDebugInfo stats)
+    {
+        AccumulateTreeBillboardStats(ref stats.TreeBillboards);
+    }
+
+    public void AccumulateTreeGameObjectRenderStats(ref WorldRenderStatsDebugInfo stats)
+    {
+        AccumulateGameObjectStats(treeGameObjects, ref stats.TreeGameObjects);
+    }
+
+    public void AccumulateBushGameObjectRenderStats(ref WorldRenderStatsDebugInfo stats)
+    {
+        AccumulateGameObjectStats(bushGameObjects, ref stats.BushGameObjects);
+    }
+
     public void CacheGrassMatrices(List<Matrix4x4> worldMatrices, List<Vector4> instanceData)
     {
         CacheGrassRenderBatches(worldMatrices, instanceData, grassRenderBatches);
@@ -361,6 +391,81 @@ public class ChunkFoliageRuntime
         }
 
         return count;
+    }
+
+    private void AccumulateGrassStats(
+        Mesh mesh,
+        List<GrassRenderBatch> batches,
+        ref RenderGeometryStats stats)
+    {
+        if (mesh == null)
+            return;
+
+        for (int i = 0; i < batches.Count; i++)
+        {
+            if (batches[i].matrices == null)
+                continue;
+
+            stats.AddMeshInstances(mesh, batches[i].matrices.Length);
+        }
+    }
+
+    private void AccumulateFlowerStats(ref RenderGeometryStats stats)
+    {
+        if (flowerMesh == null)
+            return;
+
+        for (int i = 0; i < flowerRenderBatches.Count; i++)
+        {
+            if (flowerRenderBatches[i].matrices == null)
+                continue;
+
+            stats.AddMeshInstances(flowerMesh, flowerRenderBatches[i].matrices.Length);
+        }
+    }
+
+    private void AccumulateTreeBillboardStats(ref RenderGeometryStats stats)
+    {
+        AccumulateTreeBillboardBatchStats(mapleTreeBillboard, mapleTreeBillboardMatrixBatches, ref stats);
+        AccumulateTreeBillboardBatchStats(sugarMapleTreeBillboard, sugarMapleTreeBillboardMatrixBatches, ref stats);
+        AccumulateTreeBillboardBatchStats(birchAspenTreeBillboard, birchAspenTreeBillboardMatrixBatches, ref stats);
+        AccumulateTreeBillboardBatchStats(beechTreeBillboard, beechTreeBillboardMatrixBatches, ref stats);
+        AccumulateTreeBillboardBatchStats(spruceTreeBillboard, spruceTreeBillboardMatrixBatches, ref stats);
+        AccumulateTreeBillboardBatchStats(whitePineTreeBillboard, whitePineTreeBillboardMatrixBatches, ref stats);
+        AccumulateTreeBillboardBatchStats(oakTreeBillboard, oakTreeBillboardMatrixBatches, ref stats);
+    }
+
+    private void AccumulateTreeBillboardBatchStats(
+        TreeBillboardRenderData renderData,
+        List<Matrix4x4[]> batches,
+        ref RenderGeometryStats stats)
+    {
+        if (renderData.mesh == null)
+            return;
+
+        for (int i = 0; i < batches.Count; i++)
+        {
+            if (batches[i] == null)
+                continue;
+
+            stats.AddMeshInstances(renderData.mesh, batches[i].Length);
+        }
+    }
+
+    private void AccumulateGameObjectStats(List<GameObject> gameObjects, ref RenderGeometryStats stats)
+    {
+        for (int i = 0; i < gameObjects.Count; i++)
+        {
+            GameObject gameObject = gameObjects[i];
+            if (gameObject == null || !gameObject.activeInHierarchy)
+                continue;
+
+            MeshFilter[] meshFilters = gameObject.GetComponentsInChildren<MeshFilter>();
+            for (int meshIndex = 0; meshIndex < meshFilters.Length; meshIndex++)
+            {
+                stats.AddMesh(meshFilters[meshIndex].sharedMesh);
+            }
+        }
     }
 
     public void RebuildTreeGameObjects(

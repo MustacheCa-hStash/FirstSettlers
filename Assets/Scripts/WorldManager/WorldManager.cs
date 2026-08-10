@@ -5,6 +5,11 @@ public class WorldManager : MonoBehaviour
     [SerializeField] int worldSeed = 12345;
     [SerializeField] int viewDistance = 4;
     [SerializeField] int colliderDistance = 3;
+    [SerializeField] bool enableFarTerrain = true;
+    [SerializeField] int farTerrainStartRing = 8;
+    [SerializeField] int farTerrainHeightGridResolution = 9;
+    [SerializeField] int farTerrainControlMapResolution = 16;
+    [SerializeField] float farTerrainSkirtDepth = 6f;
     [SerializeField] int chunkSize = 128;
     [SerializeField] Transform viewer;
     [SerializeField] Camera viewerCamera;
@@ -28,7 +33,9 @@ public class WorldManager : MonoBehaviour
 
     void Awake()
     {
-        chunkManager = new ChunkManager(viewDistance, colliderDistance, chunkSize, worldSeed, viewer, viewerCamera, 
+        chunkManager = new ChunkManager(viewDistance, colliderDistance, enableFarTerrain, farTerrainStartRing,
+            farTerrainHeightGridResolution, farTerrainControlMapResolution, farTerrainSkirtDepth,
+            chunkSize, worldSeed, viewer, viewerCamera,
             chunkParent, foliageParent, grassSettings, flowerSettings, treeSettings, sampleScale, worldScale, octaves, persistence, 
             lacunarity, erosionStrength, meshHeightMultiplier, terrainMaterial, waterMaterial);
     }
@@ -46,5 +53,10 @@ public class WorldManager : MonoBehaviour
     public WorldDebugInfo GetDebugInfoAtWorldPosition(Vector3 worldPosition)
     {
         return chunkManager.GetDebugInfoAtWorldPosition(worldPosition);
+    }
+
+    public WorldRenderStatsDebugInfo GetVisibleRenderStatsDebugInfo()
+    {
+        return chunkManager.GetVisibleRenderStatsDebugInfo();
     }
 }

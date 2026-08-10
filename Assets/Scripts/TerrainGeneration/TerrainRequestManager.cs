@@ -5,18 +5,22 @@ using UnityEngine;
 public class TerrainRequestManager
 {
     private readonly Queue<TerrainDataRequestResult> completedTerrainDataResults = new Queue<TerrainDataRequestResult>();
+    private readonly Queue<FarTerrainRequestResult> completedFarTerrainResults = new Queue<FarTerrainRequestResult>();
     private readonly Queue<MeshRequestResult> completedMeshResults = new Queue<MeshRequestResult>();
     private readonly Queue<ColliderRequestResult> completedColliderResults = new();
 
     private readonly object terrainDataResultsLock = new object();
+    private readonly object farTerrainResultsLock = new object();
     private readonly object meshResultsLock = new object();
     private readonly object colliderResultsLock = new();
 
     private static int activeTerrainDataJobs;
+    private static int activeFarTerrainJobs;
     private static int activeMeshJobs;
     private static int activeColliderJobs;
 
     private const int MaxActiveTerrainDataJobs = 6;
+    private const int MaxActiveFarTerrainJobs = 8;
 
     public bool RequestTerrainData(
         ChunkCoord chunkCoord,
@@ -115,6 +119,60 @@ public class TerrainRequestManager
         return true;
     }
 
+    public bool RequestFarTerrainData(
+        ChunkCoord chunkCoord,
+        int requestVersion,
+        int chunkSize,
+        int seed,
+        float sampleScale,
+        float meshHeightMultiplier,
+        float worldScale,
+        int heightGridResolution,
+        int controlMapResolution,
+        float skirtDepth)
+    {
+        if (Interlocked.CompareExchange(ref activeFarTerrainJobs, 0, 0) >= MaxActiveFarTerrainJobs)
+            return false;
+
+        Interlocked.Increment(ref activeFarTerrainJobs);
+
+        ThreadPool.QueueUserWorkItem(_ =>
+        {
+            try
+            {
+                FarTerrainRequestResult result = FarTerrainGenerator.Generate(
+                    chunkCoord,
+                    requestVersion,
+                    chunkSize,
+                    seed,
+                    sampleScale,
+                    meshHeightMultiplier,
+                    worldScale,
+                    heightGridResolution,
+                    controlMapResolution,
+                    skirtDepth);
+
+                lock (farTerrainResultsLock)
+                {
+                    completedFarTerrainResults.Enqueue(result);
+                }
+            }
+            catch (ThreadAbortException)
+            {
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Far terrain request failed for chunk={chunkCoord}, version={requestVersion}\n{ex}");
+            }
+            finally
+            {
+                Interlocked.Decrement(ref activeFarTerrainJobs);
+            }
+        });
+
+        return true;
+    }
+
     public void RequestLODMesh(ChunkCoord chunkCoord, int lod, int requestVersion, float[,] heightMap, 
         BiomeType[,] biomeMap, SurfaceType[,] surfaceTypeMap, WaterState[,] waterStateMap, float meshHeightMultiplier, 
         int stepIncrement, float worldScale, float[,] riverMaskMap)
@@ -206,6 +264,21 @@ public class TerrainRequestManager
             if (completedTerrainDataResults.Count > 0)
             {
                 result = completedTerrainDataResults.Dequeue();
+                return true;
+            }
+        }
+
+        result = null;
+        return false;
+    }
+
+    public bool TryDequeueFarTerrainResult(out FarTerrainRequestResult result)
+    {
+        lock (farTerrainResultsLock)
+        {
+            if (completedFarTerrainResults.Count > 0)
+            {
+                result = completedFarTerrainResults.Dequeue();
                 return true;
             }
         }

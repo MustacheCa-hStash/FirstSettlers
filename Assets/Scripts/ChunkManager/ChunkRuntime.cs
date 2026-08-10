@@ -190,6 +190,28 @@ public class ChunkRuntime
         return currentLOD == lod;
     }
 
+    public void AccumulateRenderStats(ref WorldRenderStatsDebugInfo stats)
+    {
+        stats.VisibleChunkCount++;
+        stats.AddLOD(currentLOD);
+
+        Mesh terrainMesh = terrainMeshFilter != null ? terrainMeshFilter.sharedMesh : null;
+        if (terrainMesh != null)
+        {
+            stats.VisibleChunkWithTerrainMeshCount++;
+            stats.Terrain.AddMesh(terrainMesh);
+        }
+
+        Mesh lakeMesh = lakeMeshFilter != null ? lakeMeshFilter.sharedMesh : null;
+        if (lakeRoot != null && lakeRoot.activeSelf && lakeMesh != null)
+            stats.Lake.AddMesh(lakeMesh);
+
+        Mesh riverMesh = riverMeshFilter != null ? riverMeshFilter.sharedMesh : null;
+        if (riverRoot != null && riverRoot.activeSelf && riverMesh != null)
+            stats.River.AddMesh(riverMesh);
+
+    }
+
     public void SetRenderVisible(bool visible)
     {
         terrainMeshRenderer.enabled = visible;

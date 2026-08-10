@@ -275,6 +275,58 @@ public class FoliageManager
         }
     }
 
+    public void AccumulateVisibleFoliageRenderStats(
+        ChunkManager chunkManager,
+        ChunkCoord viewerCoord,
+        List<ChunkCoord> orderedActiveCoords,
+        ref WorldRenderStatsDebugInfo stats)
+    {
+        for (int i = 0; i < orderedActiveCoords.Count; i++)
+        {
+            ChunkCoord coord = orderedActiveCoords[i];
+            ChunkRecord record = chunkManager.GetChunkRecord(coord);
+            ChunkRuntime runtime = chunkManager.GetChunkRuntime(record);
+
+            if (record == null || runtime == null || runtime.FoliageRuntime == null)
+                continue;
+
+            bool useNearGrass = IsWithinNearGrass(viewerCoord, coord);
+            bool useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
+            bool useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
+            bool useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
+            bool useBushes = IsWithinBushRenderRange(viewerCoord, coord);
+            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useTrees || useBushes;
+
+            if (!HasRequiredTerrainData(record) || !useFoliage)
+                continue;
+
+            if (useNearGrass)
+            {
+                runtime.FoliageRuntime.AccumulateGrassRenderStats(ref stats);
+            }
+            else if (useBillboardGrass)
+            {
+                runtime.FoliageRuntime.AccumulateBillboardGrassRenderStats(ref stats);
+            }
+
+            if (useFlowers && HasFlowerRenderAssets())
+                runtime.FoliageRuntime.AccumulateFlowerRenderStats(ref stats);
+
+            if (useTrees)
+            {
+                FoliageRepresentationMode mode = GetTreeRepresentationMode(viewerCoord, coord);
+
+                if (mode == FoliageRepresentationMode.GPUInstancedBillboard)
+                    runtime.FoliageRuntime.AccumulateTreeBillboardRenderStats(ref stats);
+                else if (mode == FoliageRepresentationMode.GameObjectWithCollision)
+                    runtime.FoliageRuntime.AccumulateTreeGameObjectRenderStats(ref stats);
+            }
+
+            if (useBushes)
+                runtime.FoliageRuntime.AccumulateBushGameObjectRenderStats(ref stats);
+        }
+    }
+
     private void EnsureTreesGenerated(ChunkRecord record)
     {
         if (record.FoliageData == null || !record.FoliageData.treeCubesGenerated)

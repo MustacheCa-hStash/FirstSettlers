@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public static class MeshGenerator
@@ -13,47 +14,39 @@ public static class MeshGenerator
         float worldScale,
         float[,] riverMaskMap)
     {
-        float textureTileSize = 2f;
-
         int paddedWidth = heightMap.GetLength(0);
         int chunkSize = paddedWidth - 3;
 
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;
 
-        float chunkWorldCenterX = (chunkCoord.x * chunkSize + chunkSize * 0.5f) * worldScale;
-        float chunkWorldCenterZ = (chunkCoord.z * chunkSize + chunkSize * 0.5f) * worldScale;
+        MeshData meshData = new MeshData(EstimateTerrainVertexCapacity(chunkSize, stepIncrement));
+        Dictionary<int, int> vertexIndicesByGridCoordinate = new Dictionary<int, int>(meshData.VertexCapacity);
+        int gridVerticesPerLine = chunkSize + 1;
 
-        int verticesPerLine = chunkSize + 1;
-        MeshData meshData = new MeshData(verticesPerLine, verticesPerLine);
-
-        for (int z = 0; z <= chunkSize; z++)
+        int GetVertexIndex(int x, int z)
         {
-            for (int x = 0; x <= chunkSize; x++)
-            {
-                int paddedX = x + 1;
-                int paddedZ = z + 1;
+            int key = z * gridVerticesPerLine + x;
+            if (vertexIndicesByGridCoordinate.TryGetValue(key, out int existingIndex))
+                return existingIndex;
 
-                float localWorldX = (topLeftX + x) * worldScale;
-                float localWorldZ = (bottomLeftZ + z) * worldScale;
+            int paddedX = x + 1;
+            int paddedZ = z + 1;
 
-                float worldX = chunkWorldCenterX + localWorldX;
-                float worldZ = chunkWorldCenterZ + localWorldZ;
+            float localWorldX = (topLeftX + x) * worldScale;
+            float localWorldZ = (bottomLeftZ + z) * worldScale;
+            float h = heightMap[paddedX, paddedZ] * heightMultiplier * worldScale;
 
-                float h = heightMap[paddedX, paddedZ] * heightMultiplier * worldScale;
-
-                int i = z * verticesPerLine + x;
-
-                meshData.vertices[i] = new Vector3(localWorldX, h, localWorldZ);
-                //meshData.uvs[i] = new Vector2(worldX / textureTileSize, worldZ / textureTileSize);
-                meshData.uvs[i] = new Vector2((float)x / chunkSize, (float)z / chunkSize);
-
-                meshData.colors[i] = SurfaceTypeClassifier.GenerateColor(
+            int vertexIndex = meshData.AddVertex(
+                new Vector3(localWorldX, h, localWorldZ),
+                CalculateHeightMapNormal(heightMap, paddedX, paddedZ, heightMultiplier),
+                new Vector2((float)x / chunkSize, (float)z / chunkSize),
+                SurfaceTypeClassifier.GenerateColor(
                     surfaceTypeMap[paddedX, paddedZ],
-                    waterStateMap[paddedX, paddedZ]);
+                    waterStateMap[paddedX, paddedZ]));
 
-                meshData.normals[i] = CalculateHeightMapNormal(heightMap, paddedX, paddedZ, heightMultiplier);
-            }
+            vertexIndicesByGridCoordinate.Add(key, vertexIndex);
+            return vertexIndex;
         }
 
         int strip = Mathf.Max(1, stepIncrement);
@@ -64,10 +57,10 @@ public static class MeshGenerator
         {
             for (int x = interiorMin; x < interiorMax; x += stepIncrement)
             {
-                int a = Index(x, z, verticesPerLine);
-                int b = Index(x, z + stepIncrement, verticesPerLine);
-                int c = Index(x + stepIncrement, z + stepIncrement, verticesPerLine);
-                int d = Index(x + stepIncrement, z, verticesPerLine);
+                int a = GetVertexIndex(x, z);
+                int b = GetVertexIndex(x, z + stepIncrement);
+                int c = GetVertexIndex(x + stepIncrement, z + stepIncrement);
+                int d = GetVertexIndex(x + stepIncrement, z);
 
                 meshData.AddTriangle(a, b, c);
                 meshData.AddTriangle(a, c, d);
@@ -78,18 +71,18 @@ public static class MeshGenerator
         {
             int x1 = Mathf.Min(x0 + stepIncrement, chunkSize);
 
-            int anchor = Index(x0, 0, verticesPerLine);
+            int anchor = GetVertexIndex(x0, 0);
 
-            int prev = Index(x0 + 1, 0, verticesPerLine);
+            int prev = GetVertexIndex(x0 + 1, 0);
             for (int x = x0 + 2; x <= x1; x++)
             {
-                int next = Index(x, 0, verticesPerLine);
+                int next = GetVertexIndex(x, 0);
                 meshData.AddTriangle(anchor, next, prev);
                 prev = next;
             }
 
-            int innerRight = Index(x1, strip, verticesPerLine);
-            int innerLeft = Index(x0, strip, verticesPerLine);
+            int innerRight = GetVertexIndex(x1, strip);
+            int innerLeft = GetVertexIndex(x0, strip);
 
             meshData.AddTriangle(anchor, innerRight, prev);
             meshData.AddTriangle(anchor, innerLeft, innerRight);
@@ -99,17 +92,17 @@ public static class MeshGenerator
         {
             int x1 = Mathf.Min(x0 + stepIncrement, chunkSize);
 
-            int anchor = Index(x0, chunkSize - strip, verticesPerLine);
+            int anchor = GetVertexIndex(x0, chunkSize - strip);
 
-            int prev = Index(x0, chunkSize, verticesPerLine);
+            int prev = GetVertexIndex(x0, chunkSize);
             for (int x = x0 + 1; x <= x1; x++)
             {
-                int next = Index(x, chunkSize, verticesPerLine);
+                int next = GetVertexIndex(x, chunkSize);
                 meshData.AddTriangle(anchor, prev, next);
                 prev = next;
             }
 
-            int innerRight = Index(x1, chunkSize - strip, verticesPerLine);
+            int innerRight = GetVertexIndex(x1, chunkSize - strip);
             meshData.AddTriangle(anchor, prev, innerRight);
         }
 
@@ -117,18 +110,18 @@ public static class MeshGenerator
         {
             int z1 = Mathf.Min(z0 + stepIncrement, chunkSize - strip);
 
-            int anchor = Index(0, z0, verticesPerLine);
+            int anchor = GetVertexIndex(0, z0);
 
-            int prev = Index(0, z0 + 1, verticesPerLine);
+            int prev = GetVertexIndex(0, z0 + 1);
             for (int z = z0 + 2; z <= z1; z++)
             {
-                int next = Index(0, z, verticesPerLine);
+                int next = GetVertexIndex(0, z);
                 meshData.AddTriangle(anchor, prev, next);
                 prev = next;
             }
 
-            int innerBottom = Index(strip, z1, verticesPerLine);
-            int innerTop = Index(strip, z0, verticesPerLine);
+            int innerBottom = GetVertexIndex(strip, z1);
+            int innerTop = GetVertexIndex(strip, z0);
 
             meshData.AddTriangle(anchor, prev, innerBottom);
             meshData.AddTriangle(anchor, innerBottom, innerTop);
@@ -138,17 +131,17 @@ public static class MeshGenerator
         {
             int z1 = Mathf.Min(z0 + stepIncrement, chunkSize - strip);
 
-            int anchor = Index(chunkSize - strip, z0, verticesPerLine);
+            int anchor = GetVertexIndex(chunkSize - strip, z0);
 
-            int prev = Index(chunkSize - strip, z1, verticesPerLine);
+            int prev = GetVertexIndex(chunkSize - strip, z1);
 
-            int first = Index(chunkSize, z1, verticesPerLine);
+            int first = GetVertexIndex(chunkSize, z1);
             meshData.AddTriangle(anchor, prev, first);
             prev = first;
 
             for (int z = z1 - 1; z >= z0; z--)
             {
-                int next = Index(chunkSize, z, verticesPerLine);
+                int next = GetVertexIndex(chunkSize, z);
                 meshData.AddTriangle(anchor, prev, next);
                 prev = next;
             }
@@ -157,9 +150,15 @@ public static class MeshGenerator
         return meshData;
     }
 
-    private static int Index(int x, int z, int size)
+    private static int EstimateTerrainVertexCapacity(int chunkSize, int stepIncrement)
     {
-        return z * size + x;
+        if (stepIncrement <= 1)
+            return (chunkSize + 1) * (chunkSize + 1);
+
+        int coarseVerticesPerLine = chunkSize / stepIncrement + 1;
+        int coarseInteriorEstimate = coarseVerticesPerLine * coarseVerticesPerLine;
+        int stitchedBorderEstimate = (chunkSize + 1) * 4;
+        return Mathf.Min((chunkSize + 1) * (chunkSize + 1), coarseInteriorEstimate + stitchedBorderEstimate);
     }
 
     private static Vector3 CalculateHeightMapNormal(float[,] heightMap, int x, int z, float heightMultiplier)
@@ -181,36 +180,83 @@ public class MeshData
     public Vector3[] vertices;
     public Vector3[] normals;
     public Vector2[] uvs;
-    public int[] triangles;
     public Color[] colors;
 
-    private int triangleIndex;
+    private readonly List<Vector3> vertexList;
+    private readonly List<Vector3> normalList;
+    private readonly List<Vector2> uvList;
+    private readonly List<Color> colorList;
+    private readonly List<int> triangles;
+
+    public int VertexCapacity => vertexList != null ? vertexList.Capacity : vertices.Length;
 
     public MeshData(int meshWidth, int meshHeight)
     {
         vertices = new Vector3[meshWidth * meshHeight];
         normals = new Vector3[meshWidth * meshHeight];
         uvs = new Vector2[meshWidth * meshHeight];
-        triangles = new int[(meshWidth - 1) * (meshHeight - 1) * 6];
         colors = new Color[meshWidth * meshHeight];
+        triangles = new List<int>((meshWidth - 1) * (meshHeight - 1) * 6);
+    }
+
+    public MeshData(int initialVertexCapacity)
+    {
+        int safeVertexCapacity = Mathf.Max(4, initialVertexCapacity);
+        vertexList = new List<Vector3>(safeVertexCapacity);
+        normalList = new List<Vector3>(safeVertexCapacity);
+        uvList = new List<Vector2>(safeVertexCapacity);
+        colorList = new List<Color>(safeVertexCapacity);
+        triangles = new List<int>(safeVertexCapacity * 6);
+    }
+
+    public int AddVertex(Vector3 vertex, Vector3 normal, Vector2 uv, Color color)
+    {
+        if (vertexList == null)
+            throw new System.InvalidOperationException("AddVertex requires dynamic MeshData.");
+
+        int index = vertexList.Count;
+        vertexList.Add(vertex);
+        normalList.Add(normal);
+        uvList.Add(uv);
+        colorList.Add(color);
+        return index;
+    }
+
+    public Vector3 GetVertex(int index)
+    {
+        if (vertexList != null)
+            return vertexList[index];
+
+        return vertices[index];
     }
 
     public void AddTriangle(int a, int b, int c)
     {
-        triangles[triangleIndex] = a;
-        triangles[triangleIndex + 1] = b;
-        triangles[triangleIndex + 2] = c;
-        triangleIndex += 3;
+        triangles.Add(a);
+        triangles.Add(b);
+        triangles.Add(c);
     }
 
     public Mesh CreateMesh()
     {
         Mesh mesh = new Mesh();
-        mesh.vertices = vertices;
-        mesh.normals = normals;
-        mesh.uv = uvs;
-        mesh.triangles = triangles;
-        mesh.colors = colors;
+
+        if (vertexList != null)
+        {
+            mesh.SetVertices(vertexList);
+            mesh.SetNormals(normalList);
+            mesh.SetUVs(0, uvList);
+            mesh.SetColors(colorList);
+        }
+        else
+        {
+            mesh.vertices = vertices;
+            mesh.normals = normals;
+            mesh.uv = uvs;
+            mesh.colors = colors;
+        }
+
+        mesh.SetTriangles(triangles, 0);
         mesh.RecalculateBounds();
         return mesh;
     }
