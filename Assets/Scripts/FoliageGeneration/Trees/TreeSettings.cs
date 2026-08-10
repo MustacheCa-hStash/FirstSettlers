@@ -4,17 +4,27 @@ using UnityEngine;
 public class TreeSettings
 {
     [Header("Tree Prefabs")]
+    [Tooltip("Generic maple / red maple near tree prefab.")]
     public GameObject mapleTreePrefab;
+    public GameObject sugarMapleTreePrefab;
+    public GameObject birchAspenTreePrefab;
+    public GameObject beechTreePrefab;
     public GameObject spruceTreePrefab;
+    public GameObject whitePineTreePrefab;
+    public GameObject oakTreePrefab;
 
     [Tooltip("Fallback near tree prefab used when a species prefab is not assigned.")]
     public GameObject treeLOD0GameObjectPrefab;
 
-    [Tooltip("Optional merged billboard prefab for maple trees.")]
+    [Header("Tree Billboard Prefabs")]
+    [Tooltip("Optional merged billboard prefab for generic maple / red maple trees.")]
     public GameObject mapleTreeBillboardPrefab;
-
-    [Tooltip("Optional merged billboard prefab for spruce trees.")]
+    public GameObject sugarMapleTreeBillboardPrefab;
+    public GameObject birchAspenTreeBillboardPrefab;
+    public GameObject beechTreeBillboardPrefab;
     public GameObject spruceTreeBillboardPrefab;
+    public GameObject whitePineTreeBillboardPrefab;
+    public GameObject oakTreeBillboardPrefab;
 
     [Tooltip("Fallback merged billboard tree prefab used when a species billboard is not assigned.")]
     public GameObject treeBillboardPrefab;

@@ -548,11 +548,21 @@ MonoBehaviour:
       - {r: 0.9, g: 0.72, b: 1, a: 1}
   treeSettings:
     mapleTreePrefab: {fileID: 527248759270487890, guid: 6dce9affdb4c8da45b098e90df4ad2c1, type: 3}
+    sugarMapleTreePrefab: {fileID: 8817000922965959629, guid: b5c5b1e8616cc2c4dabd881e2e81febe, type: 3}
+    birchAspenTreePrefab: {fileID: 0}
+    beechTreePrefab: {fileID: 0}
     spruceTreePrefab: {fileID: 388576432251072559, guid: b0c142caf0e1898418b3b6ff947f009c, type: 3}
+    whitePineTreePrefab: {fileID: 0}
+    oakTreePrefab: {fileID: 0}
     treeLOD0GameObjectPrefab: {fileID: 2892109097563917780, guid: 40fc0a45dc34f4443860b3ac9df1ef46, type: 3}
     mapleTreeBillboardPrefab: {fileID: 2111572226825985944, guid: 555a957109ef7834db50df03fe81454b, type: 3}
+    sugarMapleTreeBillboardPrefab: {fileID: 7816776188045512820, guid: 086afa9b8e0e20c4aa0eb0ccba01066e, type: 3}
+    birchAspenTreeBillboardPrefab: {fileID: 0}
+    beechTreeBillboardPrefab: {fileID: 0}
     spruceTreeBillboardPrefab: {fileID: 9195837373271529818, guid: c19b3e1250464fe4a9a8410b50d88d95, type: 3}
-    treeBillboardPrefab: {fileID: 2383747344034210308, guid: c19b3e1250464fe4a9a8410b50d88d95, type: 3}
+    whitePineTreeBillboardPrefab: {fileID: 0}
+    oakTreeBillboardPrefab: {fileID: 0}
+    treeBillboardPrefab: {fileID: 2111572226825985944, guid: 555a957109ef7834db50df03fe81454b, type: 3}
     treeCellSize: 12
     treeSpawnChance: 0.03
     treeMinDistance: 9

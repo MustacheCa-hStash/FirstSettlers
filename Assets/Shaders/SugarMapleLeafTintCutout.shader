@@ -1,0 +1,165 @@
+Shader "Custom/SugarMapleLeafTintCutout"
+{
+    Properties
+    {
+        [MainTexture] _BaseMap("Sugar Maple Leaf Atlas / Alpha", 2D) = "white" {}
+        _SummerLeafColor("Summer Leaf Color", Color) = (0.16, 0.45, 0.12, 1.0)
+        [MainColor] _AutumnRedColor("Autumn Red Color", Color) = (0.72, 0.08, 0.055, 1.0)
+        _AutumnOrangeColor("Autumn Orange Color", Color) = (0.95, 0.32, 0.06, 1.0)
+        _AutumnYellowColor("Autumn Yellow Color", Color) = (1.0, 0.62, 0.12, 1.0)
+        _LeafShadowColor("Leaf Shadow Color", Color) = (0.30, 0.035, 0.025, 1.0)
+        _SeasonAutumnAmount("Season Autumn Amount", Range(0, 1)) = 1.0
+        _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.42
+        _ColorVariationStrength("Color Variation Strength", Range(0, 1)) = 0.55
+        _LeafContrast("Leaf Card Contrast", Range(0, 1)) = 0.32
+        _VerticalGradientStrength("Vertical Gradient Strength", Range(0, 1)) = 0.28
+        _CardVariationStrength("Card Variation Strength", Range(0, 1)) = 0.20
+        _AmbientStrength("Ambient Strength", Range(0, 1)) = 0.42
+        _LightWrap("Leaf Light Wrap", Range(0, 1)) = 0.62
+        [Toggle] _UseVertexColor("Use Vertex Color", Float) = 0
+    }
+
+    SubShader
+    {
+        Tags
+        {
+            "RenderType" = "TransparentCutout"
+            "RenderPipeline" = "UniversalPipeline"
+            "Queue" = "AlphaTest"
+            "IgnoreProjector" = "True"
+        }
+
+        LOD 100
+        Cull Off
+        ZWrite On
+        ZTest LEqual
+        AlphaToMask On
+
+        Pass
+        {
+            Name "ForwardLeaf"
+            Tags { "LightMode" = "UniversalForward" }
+
+            HLSLPROGRAM
+            #pragma target 3.0
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_instancing
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+
+            TEXTURE2D(_BaseMap);
+            SAMPLER(sampler_BaseMap);
+
+            CBUFFER_START(UnityPerMaterial)
+                float4 _BaseMap_ST;
+                half4 _SummerLeafColor;
+                half4 _AutumnRedColor;
+                half4 _AutumnOrangeColor;
+                half4 _AutumnYellowColor;
+                half4 _LeafShadowColor;
+                half _SeasonAutumnAmount;
+                half _Cutoff;
+                half _ColorVariationStrength;
+                half _LeafContrast;
+                half _VerticalGradientStrength;
+                half _CardVariationStrength;
+                half _AmbientStrength;
+                half _LightWrap;
+                half _UseVertexColor;
+            CBUFFER_END
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+                float2 uv : TEXCOORD0;
+                half4 color : COLOR;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float3 positionWS : TEXCOORD0;
+                half3 normalWS : TEXCOORD1;
+                float2 uv : TEXCOORD2;
+                half4 color : COLOR;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            half Hash12(float2 p)
+            {
+                half3 p3 = frac(half3(p.xyx) * half3(0.1031h, 0.1030h, 0.0973h));
+                p3 += dot(p3, p3.yzx + 33.33h);
+                return frac((p3.x + p3.y) * p3.z);
+            }
+
+            Varyings vert(Attributes IN)
+            {
+                Varyings OUT;
+
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
+
+                VertexPositionInputs positionInputs = GetVertexPositionInputs(IN.positionOS.xyz);
+                VertexNormalInputs normalInputs = GetVertexNormalInputs(IN.normalOS);
+
+                OUT.positionCS = positionInputs.positionCS;
+                OUT.positionWS = positionInputs.positionWS;
+                OUT.normalWS = normalInputs.normalWS;
+                OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
+                OUT.color = IN.color;
+
+                return OUT;
+            }
+
+            half3 EvaluateAutumnColor(float2 uv, float3 positionWS)
+            {
+                half leafNoise = Hash12(floor(positionWS.xz * 0.45h) + floor(uv * 8.0h));
+                half fineNoise = Hash12(floor(positionWS.xz * 1.25h) + floor(uv * 19.0h));
+
+                half orangeMix = smoothstep(0.22h, 0.78h, leafNoise);
+                half yellowMix = smoothstep(0.66h, 0.96h, fineNoise) * _ColorVariationStrength;
+
+                half3 autumnColor = lerp(_AutumnRedColor.rgb, _AutumnOrangeColor.rgb, orangeMix * _ColorVariationStrength);
+                autumnColor = lerp(autumnColor, _AutumnYellowColor.rgb, yellowMix);
+
+                return autumnColor;
+            }
+
+            half4 frag(Varyings IN) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+
+                half4 atlas = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
+                clip(atlas.a - _Cutoff);
+
+                half alphaCoverage = saturate((atlas.a - _Cutoff) / max(1.0h - _Cutoff, 0.001h));
+                half atlasLuma = dot(atlas.rgb, half3(0.299h, 0.587h, 0.114h));
+
+                half3 autumnColor = EvaluateAutumnColor(IN.uv, IN.positionWS);
+                half3 leafColor = lerp(_SummerLeafColor.rgb, autumnColor, saturate(_SeasonAutumnAmount));
+
+                half bottomShade = saturate((1.0h - IN.uv.y) * _VerticalGradientStrength);
+                leafColor = lerp(leafColor, _LeafShadowColor.rgb, bottomShade);
+
+                half leafDetail = lerp(1.0h - _LeafContrast, 1.0h + _LeafContrast, alphaCoverage * atlasLuma);
+                half cardNoise = Hash12(floor(IN.positionWS.xz * 0.72h) + floor(IN.uv * 5.0h));
+                half cardVariation = lerp(1.0h - _CardVariationStrength, 1.0h + _CardVariationStrength, cardNoise);
+                leafColor *= leafDetail * cardVariation;
+                leafColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
+
+                Light mainLight = GetMainLight();
+                half3 normalWS = normalize(IN.normalWS);
+                half wrappedNdotL = saturate((dot(normalWS, mainLight.direction) + _LightWrap) / (1.0h + _LightWrap));
+                half3 ambient = SampleSH(normalWS);
+                half3 lighting = max(ambient, _AmbientStrength.xxx) + mainLight.color * wrappedNdotL;
+
+                return half4(leafColor * lighting, atlas.a);
+            }
+            ENDHLSL
+        }
+    }
+}

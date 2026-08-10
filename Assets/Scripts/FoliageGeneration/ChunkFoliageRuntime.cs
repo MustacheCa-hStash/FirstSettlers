@@ -53,10 +53,20 @@ public class ChunkFoliageRuntime
     public int flowerPetalColorPropertyId;
 
     public GameObject mapleTreePrefab;
+    public GameObject sugarMapleTreePrefab;
+    public GameObject birchAspenTreePrefab;
+    public GameObject beechTreePrefab;
     public GameObject spruceTreePrefab;
+    public GameObject whitePineTreePrefab;
+    public GameObject oakTreePrefab;
     public GameObject fallbackTreePrefab;
     public TreeBillboardRenderData mapleTreeBillboard;
+    public TreeBillboardRenderData sugarMapleTreeBillboard;
+    public TreeBillboardRenderData birchAspenTreeBillboard;
+    public TreeBillboardRenderData beechTreeBillboard;
     public TreeBillboardRenderData spruceTreeBillboard;
+    public TreeBillboardRenderData whitePineTreeBillboard;
+    public TreeBillboardRenderData oakTreeBillboard;
     public TreeBillboardRenderData fallbackTreeBillboard;
 
     public bool isVisible;
@@ -68,7 +78,12 @@ public class ChunkFoliageRuntime
     private readonly MaterialPropertyBlock flowerPropertyBlock = new MaterialPropertyBlock();
 
     private readonly List<Matrix4x4[]> mapleTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
+    private readonly List<Matrix4x4[]> sugarMapleTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
+    private readonly List<Matrix4x4[]> birchAspenTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
+    private readonly List<Matrix4x4[]> beechTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
     private readonly List<Matrix4x4[]> spruceTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
+    private readonly List<Matrix4x4[]> whitePineTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
+    private readonly List<Matrix4x4[]> oakTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
 
     private GameObject treeGameObjectRoot;
     private readonly List<GameObject> treeGameObjects = new List<GameObject>();
@@ -83,7 +98,12 @@ public class ChunkFoliageRuntime
     public int GpuFlowerInstanceCount => CountFlowerInstances();
     public int GpuTreeInstanceCount =>
         CountMatrices(mapleTreeBillboardMatrixBatches) +
-        CountMatrices(spruceTreeBillboardMatrixBatches);
+        CountMatrices(sugarMapleTreeBillboardMatrixBatches) +
+        CountMatrices(birchAspenTreeBillboardMatrixBatches) +
+        CountMatrices(beechTreeBillboardMatrixBatches) +
+        CountMatrices(spruceTreeBillboardMatrixBatches) +
+        CountMatrices(whitePineTreeBillboardMatrixBatches) +
+        CountMatrices(oakTreeBillboardMatrixBatches);
 
     public bool HasCurrentTreeRepresentation(FoliageRepresentationMode mode)
     {
@@ -108,7 +128,12 @@ public class ChunkFoliageRuntime
         billboardRenderBatches.Clear();
         flowerRenderBatches.Clear();
         mapleTreeBillboardMatrixBatches.Clear();
+        sugarMapleTreeBillboardMatrixBatches.Clear();
+        birchAspenTreeBillboardMatrixBatches.Clear();
+        beechTreeBillboardMatrixBatches.Clear();
         spruceTreeBillboardMatrixBatches.Clear();
+        whitePineTreeBillboardMatrixBatches.Clear();
+        oakTreeBillboardMatrixBatches.Clear();
         ClearTreeGameObjects();
         ClearCurrentTreeRepresentation();
     }
@@ -145,7 +170,12 @@ public class ChunkFoliageRuntime
     public bool HasValidTreeBillboardRenderData()
     {
         return HasValidBillboardBatch(mapleTreeBillboard, mapleTreeBillboardMatrixBatches) ||
-               HasValidBillboardBatch(spruceTreeBillboard, spruceTreeBillboardMatrixBatches);
+               HasValidBillboardBatch(sugarMapleTreeBillboard, sugarMapleTreeBillboardMatrixBatches) ||
+               HasValidBillboardBatch(birchAspenTreeBillboard, birchAspenTreeBillboardMatrixBatches) ||
+               HasValidBillboardBatch(beechTreeBillboard, beechTreeBillboardMatrixBatches) ||
+               HasValidBillboardBatch(spruceTreeBillboard, spruceTreeBillboardMatrixBatches) ||
+               HasValidBillboardBatch(whitePineTreeBillboard, whitePineTreeBillboardMatrixBatches) ||
+               HasValidBillboardBatch(oakTreeBillboard, oakTreeBillboardMatrixBatches);
     }
 
     public bool HasTreeGameObjects()
@@ -236,10 +266,20 @@ public class ChunkFoliageRuntime
 
     public void CacheTreeBillboardMatrices(
         List<Matrix4x4> mapleWorldMatrices,
-        List<Matrix4x4> spruceWorldMatrices)
+        List<Matrix4x4> sugarMapleWorldMatrices,
+        List<Matrix4x4> birchAspenWorldMatrices,
+        List<Matrix4x4> beechWorldMatrices,
+        List<Matrix4x4> spruceWorldMatrices,
+        List<Matrix4x4> whitePineWorldMatrices,
+        List<Matrix4x4> oakWorldMatrices)
     {
         CacheMatrices(mapleWorldMatrices, mapleTreeBillboardMatrixBatches);
+        CacheMatrices(sugarMapleWorldMatrices, sugarMapleTreeBillboardMatrixBatches);
+        CacheMatrices(birchAspenWorldMatrices, birchAspenTreeBillboardMatrixBatches);
+        CacheMatrices(beechWorldMatrices, beechTreeBillboardMatrixBatches);
         CacheMatrices(spruceWorldMatrices, spruceTreeBillboardMatrixBatches);
+        CacheMatrices(whitePineWorldMatrices, whitePineTreeBillboardMatrixBatches);
+        CacheMatrices(oakWorldMatrices, oakTreeBillboardMatrixBatches);
     }
 
     private void CacheMatrices(List<Matrix4x4> worldMatrices, List<Matrix4x4[]> targetBatches)
@@ -360,7 +400,12 @@ public class ChunkFoliageRuntime
     public void ClearTreeBillboardMatrices()
     {
         mapleTreeBillboardMatrixBatches.Clear();
+        sugarMapleTreeBillboardMatrixBatches.Clear();
+        birchAspenTreeBillboardMatrixBatches.Clear();
+        beechTreeBillboardMatrixBatches.Clear();
         spruceTreeBillboardMatrixBatches.Clear();
+        whitePineTreeBillboardMatrixBatches.Clear();
+        oakTreeBillboardMatrixBatches.Clear();
     }
 
     public void DrawGrass()
@@ -446,7 +491,12 @@ public class ChunkFoliageRuntime
             : ShadowCastingMode.Off;
 
         DrawTreeBillboardBatches(mapleTreeBillboard, mapleTreeBillboardMatrixBatches, shadowMode, receiveShadows);
+        DrawTreeBillboardBatches(sugarMapleTreeBillboard, sugarMapleTreeBillboardMatrixBatches, shadowMode, receiveShadows);
+        DrawTreeBillboardBatches(birchAspenTreeBillboard, birchAspenTreeBillboardMatrixBatches, shadowMode, receiveShadows);
+        DrawTreeBillboardBatches(beechTreeBillboard, beechTreeBillboardMatrixBatches, shadowMode, receiveShadows);
         DrawTreeBillboardBatches(spruceTreeBillboard, spruceTreeBillboardMatrixBatches, shadowMode, receiveShadows);
+        DrawTreeBillboardBatches(whitePineTreeBillboard, whitePineTreeBillboardMatrixBatches, shadowMode, receiveShadows);
+        DrawTreeBillboardBatches(oakTreeBillboard, oakTreeBillboardMatrixBatches, shadowMode, receiveShadows);
     }
 
     private void DrawTreeBillboardBatches(
@@ -485,8 +535,23 @@ public class ChunkFoliageRuntime
         if (variant == WorldFeatureVariant.MapleTree && mapleTreePrefab != null)
             return mapleTreePrefab;
 
+        if (variant == WorldFeatureVariant.SugarMapleTree && sugarMapleTreePrefab != null)
+            return sugarMapleTreePrefab;
+
+        if (variant == WorldFeatureVariant.BirchAspenTree && birchAspenTreePrefab != null)
+            return birchAspenTreePrefab;
+
+        if (variant == WorldFeatureVariant.BeechTree && beechTreePrefab != null)
+            return beechTreePrefab;
+
         if (variant == WorldFeatureVariant.SpruceTree && spruceTreePrefab != null)
             return spruceTreePrefab;
+
+        if (variant == WorldFeatureVariant.WhitePineTree && whitePineTreePrefab != null)
+            return whitePineTreePrefab;
+
+        if (variant == WorldFeatureVariant.OakTree && oakTreePrefab != null)
+            return oakTreePrefab;
 
         return fallbackTreePrefab;
     }

@@ -9,6 +9,7 @@ public static class WorldFeaturePlanGenerator
     private const float ForestFineBreakupScale = 0.067f;
     private const float ForestOrganicFloorBlobScale = 0.014f;
     private const float ForestOrganicFloorBreakupScale = 0.043f;
+    private const float ForestSpeciesPatchScale = 0.019f;
 
     private const int TreeCandidateCellsPerAxis = 9;
     private const int MaxForestTreesPerChunk = 18;
@@ -241,27 +242,26 @@ public static class WorldFeaturePlanGenerator
                 continue;
 
             WorldFeatureVariant variant = ChooseForestTreeVariant(
+                chunkCoord,
+                chunkSize,
+                seed,
+                sampleX,
+                sampleZ,
                 fields.DampShadeMap[paddedX, paddedZ],
                 moistureMap[paddedX, paddedZ],
                 temperatureMap[paddedX, paddedZ],
+                clearing,
                 cluster,
                 hash);
 
             float yaw = Hash01(hash + 79) * 360f;
-            float uniformScale = variant == WorldFeatureVariant.SpruceTree
-                ? Mathf.Lerp(1.85f, 2.45f, Hash01(hash + 97))
-                : Mathf.Lerp(1.65f, 2.2f, Hash01(hash + 97));
-
-            float exclusionRadius = variant == WorldFeatureVariant.SpruceTree
-                ? Mathf.Lerp(6.4f, 8.2f, Hash01(hash + 131))
-                : Mathf.Lerp(7.4f, 9.2f, Hash01(hash + 131));
+            float uniformScale = GetForestTreeScale(variant, Hash01(hash + 97));
+            float exclusionRadius = GetForestTreeExclusionRadius(variant, Hash01(hash + 131));
 
             if (IntersectsExistingPlacement(plan, sampleX, sampleZ, exclusionRadius))
                 continue;
 
-            float influenceRadius = variant == WorldFeatureVariant.SpruceTree
-                ? Mathf.Lerp(16f, 22f, Hash01(hash + 149))
-                : Mathf.Lerp(18f, 25f, Hash01(hash + 149));
+            float influenceRadius = GetForestTreeInfluenceRadius(variant, Hash01(hash + 149));
 
             plan.Placements.Add(new WorldFeaturePlacement(
                 WorldFeatureType.Tree,
@@ -278,17 +278,151 @@ public static class WorldFeaturePlanGenerator
     }
 
     private static WorldFeatureVariant ChooseForestTreeVariant(
+        ChunkCoord chunkCoord,
+        int chunkSize,
+        int seed,
+        float sampleX,
+        float sampleZ,
         float dampShade,
         float moisture,
         float temperature,
+        float clearing,
         float cluster,
         int hash)
     {
-        float spruceAffinity = dampShade * 0.45f + moisture * 0.25f + (1f - temperature) * 0.2f + cluster * 0.1f;
-        float spruceThreshold = Mathf.Lerp(0.42f, 0.68f, Hash01(hash + 173));
-        return spruceAffinity > spruceThreshold
-            ? WorldFeatureVariant.SpruceTree
-            : WorldFeatureVariant.MapleTree;
+        float worldX = chunkCoord.x * chunkSize + sampleX;
+        float worldZ = chunkCoord.z * chunkSize + sampleZ;
+        float coolness = 1f - temperature;
+        float dryness = 1f - moisture;
+        float closedCanopy = 1f - clearing;
+
+        float sugarMapleWeight = 0.28f *
+            Mathf.Lerp(0.82f, 1.34f, dampShade) *
+            Mathf.Lerp(1.18f, 0.88f, Mathf.Clamp01(Mathf.Abs(temperature - 0.55f) * 2f)) *
+            SpeciesPatch(worldX, worldZ, seed, 6210);
+
+        float mapleWeight = 0.18f *
+            Mathf.Lerp(0.88f, 1.30f, moisture) *
+            Mathf.Lerp(0.92f, 1.14f, dampShade) *
+            SpeciesPatch(worldX, worldZ, seed, 6211);
+
+        float birchAspenWeight = 0.14f *
+            Mathf.Lerp(0.84f, 1.38f, clearing) *
+            Mathf.Lerp(0.92f, 1.22f, coolness) *
+            SpeciesPatch(worldX, worldZ, seed, 6212);
+
+        float beechWeight = 0.10f *
+            Mathf.Lerp(0.82f, 1.35f, closedCanopy) *
+            Mathf.Lerp(0.90f, 1.20f, dampShade) *
+            SpeciesPatch(worldX, worldZ, seed, 6213);
+
+        float spruceWeight = 0.18f *
+            Mathf.Lerp(0.78f, 1.42f, dampShade) *
+            Mathf.Lerp(0.85f, 1.26f, coolness) *
+            Mathf.Lerp(0.92f, 1.14f, cluster) *
+            SpeciesPatch(worldX, worldZ, seed, 6214);
+
+        float whitePineWeight = 0.08f *
+            Mathf.Lerp(0.92f, 1.28f, dryness) *
+            Mathf.Lerp(0.88f, 1.22f, clearing) *
+            SpeciesPatch(worldX, worldZ, seed, 6215);
+
+        float oakWeight = 0.04f *
+            Mathf.Lerp(0.90f, 1.38f, dryness) *
+            Mathf.Lerp(0.86f, 1.32f, temperature) *
+            Mathf.Lerp(0.92f, 1.24f, clearing) *
+            SpeciesPatch(worldX, worldZ, seed, 6216);
+
+        float totalWeight =
+            sugarMapleWeight +
+            mapleWeight +
+            birchAspenWeight +
+            beechWeight +
+            spruceWeight +
+            whitePineWeight +
+            oakWeight;
+
+        float roll = Hash01(hash + 173) * totalWeight;
+
+        if ((roll -= sugarMapleWeight) <= 0f)
+            return WorldFeatureVariant.SugarMapleTree;
+
+        if ((roll -= mapleWeight) <= 0f)
+            return WorldFeatureVariant.MapleTree;
+
+        if ((roll -= birchAspenWeight) <= 0f)
+            return WorldFeatureVariant.BirchAspenTree;
+
+        if ((roll -= beechWeight) <= 0f)
+            return WorldFeatureVariant.BeechTree;
+
+        if ((roll -= spruceWeight) <= 0f)
+            return WorldFeatureVariant.SpruceTree;
+
+        if ((roll -= whitePineWeight) <= 0f)
+            return WorldFeatureVariant.WhitePineTree;
+
+        return WorldFeatureVariant.OakTree;
+    }
+
+    private static float SpeciesPatch(float worldX, float worldZ, int seed, int seedOffset)
+    {
+        float broadPatch = Sample01(worldX, worldZ, ForestSpeciesPatchScale, seed + seedOffset);
+        float fineBreakup = Sample01(worldX, worldZ, ForestFineBreakupScale, seed + seedOffset + 100);
+        return Mathf.Lerp(0.62f, 1.48f, broadPatch) * Mathf.Lerp(0.88f, 1.12f, fineBreakup);
+    }
+
+    private static float GetForestTreeScale(WorldFeatureVariant variant, float roll)
+    {
+        switch (variant)
+        {
+            case WorldFeatureVariant.BirchAspenTree:
+                return Mathf.Lerp(1.45f, 2.0f, roll);
+            case WorldFeatureVariant.BeechTree:
+                return Mathf.Lerp(1.65f, 2.15f, roll);
+            case WorldFeatureVariant.SpruceTree:
+                return Mathf.Lerp(1.85f, 2.45f, roll);
+            case WorldFeatureVariant.WhitePineTree:
+                return Mathf.Lerp(2.05f, 2.75f, roll);
+            case WorldFeatureVariant.OakTree:
+                return Mathf.Lerp(1.75f, 2.25f, roll);
+            default:
+                return Mathf.Lerp(1.65f, 2.2f, roll);
+        }
+    }
+
+    private static float GetForestTreeExclusionRadius(WorldFeatureVariant variant, float roll)
+    {
+        switch (variant)
+        {
+            case WorldFeatureVariant.BirchAspenTree:
+                return Mathf.Lerp(6.2f, 7.8f, roll);
+            case WorldFeatureVariant.SpruceTree:
+                return Mathf.Lerp(6.4f, 8.2f, roll);
+            case WorldFeatureVariant.WhitePineTree:
+                return Mathf.Lerp(8.0f, 10.5f, roll);
+            case WorldFeatureVariant.OakTree:
+                return Mathf.Lerp(8.8f, 11.5f, roll);
+            default:
+                return Mathf.Lerp(7.2f, 9.4f, roll);
+        }
+    }
+
+    private static float GetForestTreeInfluenceRadius(WorldFeatureVariant variant, float roll)
+    {
+        switch (variant)
+        {
+            case WorldFeatureVariant.BirchAspenTree:
+                return Mathf.Lerp(15f, 21f, roll);
+            case WorldFeatureVariant.SpruceTree:
+                return Mathf.Lerp(16f, 22f, roll);
+            case WorldFeatureVariant.WhitePineTree:
+                return Mathf.Lerp(20f, 28f, roll);
+            case WorldFeatureVariant.OakTree:
+                return Mathf.Lerp(22f, 30f, roll);
+            default:
+                return Mathf.Lerp(18f, 25f, roll);
+        }
     }
 
     private static bool IsValidForestLandSample(
@@ -448,11 +582,11 @@ public static class WorldFeaturePlanGenerator
             if (placement.featureType != WorldFeatureType.Tree)
                 continue;
 
-            float radius = placement.variant == WorldFeatureVariant.MapleTree
+            float radius = IsDeciduousForestTree(placement.variant)
                 ? placement.influenceRadius * 0.72f
                 : placement.influenceRadius * 0.52f;
 
-            float strength = placement.variant == WorldFeatureVariant.MapleTree ? 0.16f : 0.08f;
+            float strength = IsDeciduousForestTree(placement.variant) ? 0.16f : 0.08f;
 
             AddOrganicFloorTreeInfluence(
                 fields,
@@ -463,6 +597,21 @@ public static class WorldFeaturePlanGenerator
                 placement.sampleZ,
                 radius,
                 strength);
+        }
+    }
+
+    private static bool IsDeciduousForestTree(WorldFeatureVariant variant)
+    {
+        switch (variant)
+        {
+            case WorldFeatureVariant.MapleTree:
+            case WorldFeatureVariant.SugarMapleTree:
+            case WorldFeatureVariant.BirchAspenTree:
+            case WorldFeatureVariant.BeechTree:
+            case WorldFeatureVariant.OakTree:
+                return true;
+            default:
+                return false;
         }
     }
 

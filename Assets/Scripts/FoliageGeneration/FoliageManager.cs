@@ -24,7 +24,12 @@ public class FoliageManager
     private int flowerPetalColorPropertyId;
 
     private TreeBillboardRenderData mapleTreeBillboard;
+    private TreeBillboardRenderData sugarMapleTreeBillboard;
+    private TreeBillboardRenderData birchAspenTreeBillboard;
+    private TreeBillboardRenderData beechTreeBillboard;
     private TreeBillboardRenderData spruceTreeBillboard;
+    private TreeBillboardRenderData whitePineTreeBillboard;
+    private TreeBillboardRenderData oakTreeBillboard;
     private TreeBillboardRenderData fallbackTreeBillboard;
 
     public FoliageManager(Transform foliageParent, GrassSettings grassSettings, FlowerSettings flowerSettings, TreeSettings treeSettings, int worldSeed,
@@ -334,7 +339,12 @@ public class FoliageManager
         ChunkFoliageData data = record.FoliageData;
 
         List<Matrix4x4> mapleWorldMatrices = new List<Matrix4x4>();
+        List<Matrix4x4> sugarMapleWorldMatrices = new List<Matrix4x4>();
+        List<Matrix4x4> birchAspenWorldMatrices = new List<Matrix4x4>();
+        List<Matrix4x4> beechWorldMatrices = new List<Matrix4x4>();
         List<Matrix4x4> spruceWorldMatrices = new List<Matrix4x4>();
+        List<Matrix4x4> whitePineWorldMatrices = new List<Matrix4x4>();
+        List<Matrix4x4> oakWorldMatrices = new List<Matrix4x4>();
         Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
 
         for (int i = 0; i < data.treeCubeInstances.Count; i++)
@@ -348,13 +358,63 @@ public class FoliageManager
 
             Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
 
-            if (instance.variant == WorldFeatureVariant.SpruceTree)
-                spruceWorldMatrices.Add(worldMatrix);
-            else
-                mapleWorldMatrices.Add(worldMatrix);
+            AddTreeBillboardMatrix(
+                instance.variant,
+                worldMatrix,
+                mapleWorldMatrices,
+                sugarMapleWorldMatrices,
+                birchAspenWorldMatrices,
+                beechWorldMatrices,
+                spruceWorldMatrices,
+                whitePineWorldMatrices,
+                oakWorldMatrices);
         }
 
-        foliageRuntime.CacheTreeBillboardMatrices(mapleWorldMatrices, spruceWorldMatrices);
+        foliageRuntime.CacheTreeBillboardMatrices(
+            mapleWorldMatrices,
+            sugarMapleWorldMatrices,
+            birchAspenWorldMatrices,
+            beechWorldMatrices,
+            spruceWorldMatrices,
+            whitePineWorldMatrices,
+            oakWorldMatrices);
+    }
+
+    private void AddTreeBillboardMatrix(
+        WorldFeatureVariant variant,
+        Matrix4x4 worldMatrix,
+        List<Matrix4x4> mapleWorldMatrices,
+        List<Matrix4x4> sugarMapleWorldMatrices,
+        List<Matrix4x4> birchAspenWorldMatrices,
+        List<Matrix4x4> beechWorldMatrices,
+        List<Matrix4x4> spruceWorldMatrices,
+        List<Matrix4x4> whitePineWorldMatrices,
+        List<Matrix4x4> oakWorldMatrices)
+    {
+        switch (variant)
+        {
+            case WorldFeatureVariant.SugarMapleTree:
+                sugarMapleWorldMatrices.Add(worldMatrix);
+                break;
+            case WorldFeatureVariant.BirchAspenTree:
+                birchAspenWorldMatrices.Add(worldMatrix);
+                break;
+            case WorldFeatureVariant.BeechTree:
+                beechWorldMatrices.Add(worldMatrix);
+                break;
+            case WorldFeatureVariant.SpruceTree:
+                spruceWorldMatrices.Add(worldMatrix);
+                break;
+            case WorldFeatureVariant.WhitePineTree:
+                whitePineWorldMatrices.Add(worldMatrix);
+                break;
+            case WorldFeatureVariant.OakTree:
+                oakWorldMatrices.Add(worldMatrix);
+                break;
+            default:
+                mapleWorldMatrices.Add(worldMatrix);
+                break;
+        }
     }
 
     private void RebuildFlowerBatches(ChunkRuntime runtime, ChunkRecord record)
@@ -677,10 +737,20 @@ public class FoliageManager
         chunkRuntime.FoliageRuntime.flowerPetalColorPropertyId = flowerPetalColorPropertyId;
 
         chunkRuntime.FoliageRuntime.mapleTreePrefab = treeSettings.mapleTreePrefab;
+        chunkRuntime.FoliageRuntime.sugarMapleTreePrefab = treeSettings.sugarMapleTreePrefab;
+        chunkRuntime.FoliageRuntime.birchAspenTreePrefab = treeSettings.birchAspenTreePrefab;
+        chunkRuntime.FoliageRuntime.beechTreePrefab = treeSettings.beechTreePrefab;
         chunkRuntime.FoliageRuntime.spruceTreePrefab = treeSettings.spruceTreePrefab;
+        chunkRuntime.FoliageRuntime.whitePineTreePrefab = treeSettings.whitePineTreePrefab;
+        chunkRuntime.FoliageRuntime.oakTreePrefab = treeSettings.oakTreePrefab;
         chunkRuntime.FoliageRuntime.fallbackTreePrefab = treeSettings.treeLOD0GameObjectPrefab;
         chunkRuntime.FoliageRuntime.mapleTreeBillboard = mapleTreeBillboard;
+        chunkRuntime.FoliageRuntime.sugarMapleTreeBillboard = sugarMapleTreeBillboard;
+        chunkRuntime.FoliageRuntime.birchAspenTreeBillboard = birchAspenTreeBillboard;
+        chunkRuntime.FoliageRuntime.beechTreeBillboard = beechTreeBillboard;
         chunkRuntime.FoliageRuntime.spruceTreeBillboard = spruceTreeBillboard;
+        chunkRuntime.FoliageRuntime.whitePineTreeBillboard = whitePineTreeBillboard;
+        chunkRuntime.FoliageRuntime.oakTreeBillboard = oakTreeBillboard;
         chunkRuntime.FoliageRuntime.fallbackTreeBillboard = fallbackTreeBillboard;
 
         chunkRuntime.FoliageRuntime.SetVisible(false);
@@ -793,15 +863,13 @@ public class FoliageManager
 
     private void ResolveTreeRenderAssets()
     {
-        if (treeSettings.mapleTreePrefab == null && treeSettings.treeLOD0GameObjectPrefab == null)
-        {
-            Debug.LogWarning("Maple tree prefab is missing and no fallback tree prefab is assigned.");
-        }
-
-        if (treeSettings.spruceTreePrefab == null && treeSettings.treeLOD0GameObjectPrefab == null)
-        {
-            Debug.LogWarning("Spruce tree prefab is missing and no fallback tree prefab is assigned.");
-        }
+        WarnMissingTreePrefab(treeSettings.mapleTreePrefab, "Maple");
+        WarnMissingTreePrefab(treeSettings.sugarMapleTreePrefab, "Sugar maple");
+        WarnMissingTreePrefab(treeSettings.birchAspenTreePrefab, "Birch/aspen");
+        WarnMissingTreePrefab(treeSettings.beechTreePrefab, "Beech");
+        WarnMissingTreePrefab(treeSettings.spruceTreePrefab, "Spruce");
+        WarnMissingTreePrefab(treeSettings.whitePineTreePrefab, "White pine");
+        WarnMissingTreePrefab(treeSettings.oakTreePrefab, "Oak");
 
         fallbackTreeBillboard = ResolveTreeBillboardRenderData(
             treeSettings.treeBillboardPrefab,
@@ -811,15 +879,58 @@ public class FoliageManager
             treeSettings.mapleTreeBillboardPrefab,
             "maple tree billboard");
 
+        sugarMapleTreeBillboard = ResolveTreeBillboardRenderData(
+            treeSettings.sugarMapleTreeBillboardPrefab,
+            "sugar maple tree billboard");
+
+        birchAspenTreeBillboard = ResolveTreeBillboardRenderData(
+            treeSettings.birchAspenTreeBillboardPrefab,
+            "birch/aspen tree billboard");
+
+        beechTreeBillboard = ResolveTreeBillboardRenderData(
+            treeSettings.beechTreeBillboardPrefab,
+            "beech tree billboard");
+
         spruceTreeBillboard = ResolveTreeBillboardRenderData(
             treeSettings.spruceTreeBillboardPrefab,
             "spruce tree billboard");
 
+        whitePineTreeBillboard = ResolveTreeBillboardRenderData(
+            treeSettings.whitePineTreeBillboardPrefab,
+            "white pine tree billboard");
+
+        oakTreeBillboard = ResolveTreeBillboardRenderData(
+            treeSettings.oakTreeBillboardPrefab,
+            "oak tree billboard");
+
         if (mapleTreeBillboard.mesh == null)
             mapleTreeBillboard = fallbackTreeBillboard;
 
+        if (sugarMapleTreeBillboard.mesh == null)
+            sugarMapleTreeBillboard = fallbackTreeBillboard;
+
+        if (birchAspenTreeBillboard.mesh == null)
+            birchAspenTreeBillboard = fallbackTreeBillboard;
+
+        if (beechTreeBillboard.mesh == null)
+            beechTreeBillboard = fallbackTreeBillboard;
+
         if (spruceTreeBillboard.mesh == null)
             spruceTreeBillboard = fallbackTreeBillboard;
+
+        if (whitePineTreeBillboard.mesh == null)
+            whitePineTreeBillboard = fallbackTreeBillboard;
+
+        if (oakTreeBillboard.mesh == null)
+            oakTreeBillboard = fallbackTreeBillboard;
+    }
+
+    private void WarnMissingTreePrefab(GameObject prefab, string label)
+    {
+        if (prefab == null && treeSettings.treeLOD0GameObjectPrefab == null)
+        {
+            Debug.LogWarning($"{label} tree prefab is missing and no fallback tree prefab is assigned.");
+        }
     }
 
     private TreeBillboardRenderData ResolveTreeBillboardRenderData(GameObject prefab, string label)
