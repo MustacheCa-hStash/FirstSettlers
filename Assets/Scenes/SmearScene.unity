@@ -555,6 +555,11 @@ MonoBehaviour:
     whitePineTreePrefab: {fileID: 0}
     oakTreePrefab: {fileID: 0}
     treeLOD0GameObjectPrefab: {fileID: 2892109097563917780, guid: 40fc0a45dc34f4443860b3ac9df1ef46, type: 3}
+    blueberryBushPrefab: {fileID: 2095120421312505866, guid: 90b14277c549b58408d186345b97dfbe, type: 3}
+    raspberryBushPrefab: {fileID: 0}
+    strawberryBushPrefab: {fileID: 0}
+    blackberryBushPrefab: {fileID: 0}
+    fallbackBushPrefab: {fileID: 2095120421312505866, guid: 90b14277c549b58408d186345b97dfbe, type: 3}
     mapleTreeBillboardPrefab: {fileID: 2111572226825985944, guid: 555a957109ef7834db50df03fe81454b, type: 3}
     sugarMapleTreeBillboardPrefab: {fileID: 7816776188045512820, guid: 086afa9b8e0e20c4aa0eb0ccba01066e, type: 3}
     birchAspenTreeBillboardPrefab: {fileID: 0}
@@ -568,9 +573,11 @@ MonoBehaviour:
     treeMinDistance: 9
     treeUniformScaleRange: {x: 1.5, y: 2}
     grassExclusionRadius: 0.5
+    bushGrassExclusionRadius: 0.45
     seedOffset: 12000
     gameObjectTreeChunkRingRadius: 2
     billboardTreeChunkRingRadius: 15
+    gameObjectBushChunkRingRadius: 3
     castTreeShadows: 0
     receiveTreeShadows: 0
   sampleScale: 600
@@ -655,7 +662,7 @@ Transform:
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 72, y: 100, z: -420}
+  m_LocalPosition: {x: -400, y: 100, z: -1700}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

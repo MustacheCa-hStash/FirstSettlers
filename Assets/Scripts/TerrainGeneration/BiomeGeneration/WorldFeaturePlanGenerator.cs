@@ -10,11 +10,15 @@ public static class WorldFeaturePlanGenerator
     private const float ForestOrganicFloorBlobScale = 0.014f;
     private const float ForestOrganicFloorBreakupScale = 0.043f;
     private const float ForestSpeciesPatchScale = 0.019f;
+    private const float ForestBerryPatchScale = 0.021f;
+    private const float ForestBerryFineBreakupScale = 0.073f;
 
     private const int TreeCandidateCellsPerAxis = 9;
     private const int MaxForestTreesPerChunk = 18;
     private const int BoulderCandidateCellsPerAxis = 4;
     private const int MaxForestBouldersPerChunk = 2;
+    private const float BerryPatchCellSize = 24f;
+    private const int MaxForestBerryBushesPerChunk = 30;
 
     public static WorldFeaturePlan Generate(
         ChunkCoord chunkCoord,
@@ -55,6 +59,18 @@ public static class WorldFeaturePlanGenerator
         BuildRockInfluenceMap(plan, chunkSize);
 
         AddForestTrees(
+            plan,
+            chunkCoord,
+            chunkSize,
+            seed,
+            biomeMap,
+            surfaceTypeMap,
+            moistureMap,
+            temperatureMap,
+            slopeMap,
+            riverMaskMap);
+
+        AddForestBerryBushes(
             plan,
             chunkCoord,
             chunkSize,
@@ -363,6 +379,222 @@ public static class WorldFeaturePlanGenerator
             return WorldFeatureVariant.WhitePineTree;
 
         return WorldFeatureVariant.OakTree;
+    }
+
+    private static void AddForestBerryBushes(
+        WorldFeaturePlan plan,
+        ChunkCoord chunkCoord,
+        int chunkSize,
+        int seed,
+        BiomeType[,] biomeMap,
+        SurfaceType[,] surfaceTypeMap,
+        float[,] moistureMap,
+        float[,] temperatureMap,
+        float[,] slopeMap,
+        float[,] riverMaskMap)
+    {
+        int placed = 0;
+        float chunkSampleMinX = chunkCoord.x * chunkSize;
+        float chunkSampleMinZ = chunkCoord.z * chunkSize;
+        float chunkSampleMaxX = chunkSampleMinX + chunkSize;
+        float chunkSampleMaxZ = chunkSampleMinZ + chunkSize;
+
+        float maxPatchRadius = 12f;
+        float padding = BerryPatchCellSize + maxPatchRadius;
+
+        int globalCellMinX = Mathf.FloorToInt((chunkSampleMinX - padding) / BerryPatchCellSize);
+        int globalCellMaxX = Mathf.FloorToInt((chunkSampleMaxX + padding) / BerryPatchCellSize);
+        int globalCellMinZ = Mathf.FloorToInt((chunkSampleMinZ - padding) / BerryPatchCellSize);
+        int globalCellMaxZ = Mathf.FloorToInt((chunkSampleMaxZ + padding) / BerryPatchCellSize);
+
+        for (int globalCellZ = globalCellMinZ; globalCellZ <= globalCellMaxZ; globalCellZ++)
+        {
+            for (int globalCellX = globalCellMinX; globalCellX <= globalCellMaxX; globalCellX++)
+            {
+                if (placed >= MaxForestBerryBushesPerChunk)
+                    return;
+
+                int patchHash = Hash(seed, globalCellX, globalCellZ, 6401);
+                float centerGlobalSampleX = (globalCellX + Hash01(patchHash + 19)) * BerryPatchCellSize;
+                float centerGlobalSampleZ = (globalCellZ + Hash01(patchHash + 43)) * BerryPatchCellSize;
+
+                float localCenterX = centerGlobalSampleX - chunkSampleMinX;
+                float localCenterZ = centerGlobalSampleZ - chunkSampleMinZ;
+                int centerMapX = Mathf.Clamp(Mathf.RoundToInt(localCenterX), 0, chunkSize);
+                int centerMapZ = Mathf.Clamp(Mathf.RoundToInt(localCenterZ), 0, chunkSize);
+                int centerPaddedX = centerMapX + 1;
+                int centerPaddedZ = centerMapZ + 1;
+
+                if (!IsValidForestLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, centerPaddedX, centerPaddedZ, 0.13f, 0.68f))
+                    continue;
+
+                ForestStructureFields fields = plan.ForestStructure;
+                float worldPatchNoise = Sample01(centerGlobalSampleX, centerGlobalSampleZ, ForestBerryPatchScale, seed + 6402);
+                float fineBreakup = Sample01(centerGlobalSampleX, centerGlobalSampleZ, ForestBerryFineBreakupScale, seed + 6403);
+                float understory = fields.UnderstoryDensityMap[centerPaddedX, centerPaddedZ];
+                float clearing = fields.ClearingMap[centerPaddedX, centerPaddedZ];
+                float rockInfluence = fields.RockInfluenceMap[centerPaddedX, centerPaddedZ];
+
+                float patchIntent =
+                    worldPatchNoise * 0.36f +
+                    fineBreakup * 0.14f +
+                    understory * 0.34f +
+                    clearing * 0.10f +
+                    moistureMap[centerPaddedX, centerPaddedZ] * 0.06f;
+
+                patchIntent *= 1f - rockInfluence * 0.55f;
+                patchIntent = Mathf.Clamp01(patchIntent);
+
+                if (Hash01(patchHash + 71) > Mathf.InverseLerp(0.48f, 0.86f, patchIntent) * 0.82f)
+                    continue;
+
+                WorldFeatureVariant variant = ChooseForestBerryBushVariant(
+                    centerGlobalSampleX,
+                    centerGlobalSampleZ,
+                    seed,
+                    moistureMap[centerPaddedX, centerPaddedZ],
+                    temperatureMap[centerPaddedX, centerPaddedZ],
+                    fields.DampShadeMap[centerPaddedX, centerPaddedZ],
+                    clearing,
+                    patchHash);
+
+                int minBushes = variant == WorldFeatureVariant.StrawberryBush ? 3 : 4;
+                int maxBushes = variant == WorldFeatureVariant.StrawberryBush ? 8 : 9;
+                int bushesInPatch = GetDeterministicCount(minBushes, maxBushes, patchHash + 101);
+                float patchRadius = Mathf.Lerp(5.5f, maxPatchRadius, Hash01(patchHash + 127));
+
+                for (int bushIndex = 0; bushIndex < bushesInPatch; bushIndex++)
+                {
+                    if (placed >= MaxForestBerryBushesPerChunk)
+                        return;
+
+                    int bushHash = Hash(seed, globalCellX, globalCellZ, bushIndex, 6411);
+                    float angle = Hash01(bushHash + 17) * Mathf.PI * 2f;
+                    float radius = Mathf.Sqrt(Hash01(bushHash + 37)) * patchRadius;
+
+                    float globalSampleX = centerGlobalSampleX + Mathf.Cos(angle) * radius;
+                    float globalSampleZ = centerGlobalSampleZ + Mathf.Sin(angle) * radius;
+
+                    if (globalSampleX < chunkSampleMinX || globalSampleX > chunkSampleMaxX ||
+                        globalSampleZ < chunkSampleMinZ || globalSampleZ > chunkSampleMaxZ)
+                    {
+                        continue;
+                    }
+
+                    float sampleX = globalSampleX - chunkSampleMinX;
+                    float sampleZ = globalSampleZ - chunkSampleMinZ;
+                    int mapX = Mathf.Clamp(Mathf.RoundToInt(sampleX), 0, chunkSize);
+                    int mapZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize);
+                    int paddedX = mapX + 1;
+                    int paddedZ = mapZ + 1;
+
+                    if (!IsValidForestLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, 0.13f, 0.68f))
+                        continue;
+
+                    float localUnderstory = fields.UnderstoryDensityMap[paddedX, paddedZ];
+                    float localRockInfluence = fields.RockInfluenceMap[paddedX, paddedZ];
+                    if (Hash01(bushHash + 61) > Mathf.Lerp(0.35f, 0.95f, localUnderstory) * (1f - localRockInfluence * 0.6f))
+                        continue;
+
+                    float uniformScale = GetForestBerryBushScale(variant, Hash01(bushHash + 89));
+                    float exclusionRadius = GetForestBerryBushExclusionRadius(variant, Hash01(bushHash + 113));
+
+                    if (IntersectsExistingPlacement(plan, sampleX, sampleZ, exclusionRadius))
+                        continue;
+
+                    float yaw = Hash01(bushHash + 139) * 360f;
+
+                    plan.Placements.Add(new WorldFeaturePlacement(
+                        WorldFeatureType.Bush,
+                        variant,
+                        sampleX,
+                        sampleZ,
+                        Quaternion.Euler(0f, yaw, 0f),
+                        Vector3.one * uniformScale,
+                        exclusionRadius,
+                        exclusionRadius + 1.5f));
+
+                    placed++;
+                }
+            }
+        }
+    }
+
+    private static WorldFeatureVariant ChooseForestBerryBushVariant(
+        float worldX,
+        float worldZ,
+        int seed,
+        float moisture,
+        float temperature,
+        float dampShade,
+        float clearing,
+        int hash)
+    {
+        float coolness = 1f - temperature;
+        float dryness = 1f - moisture;
+
+        float blueberryWeight = 0.36f *
+            Mathf.Lerp(0.88f, 1.34f, dampShade) *
+            Mathf.Lerp(0.90f, 1.22f, coolness) *
+            SpeciesPatch(worldX, worldZ, seed, 6410);
+
+        float raspberryWeight = 0.28f *
+            Mathf.Lerp(0.86f, 1.36f, clearing) *
+            Mathf.Lerp(0.92f, 1.18f, moisture) *
+            SpeciesPatch(worldX, worldZ, seed, 6411);
+
+        float blackberryWeight = 0.22f *
+            Mathf.Lerp(0.86f, 1.34f, clearing) *
+            Mathf.Lerp(0.90f, 1.24f, temperature) *
+            Mathf.Lerp(0.92f, 1.18f, dryness) *
+            SpeciesPatch(worldX, worldZ, seed, 6412);
+
+        float strawberryWeight = 0.14f *
+            Mathf.Lerp(0.92f, 1.42f, clearing) *
+            Mathf.Lerp(0.88f, 1.16f, dryness) *
+            SpeciesPatch(worldX, worldZ, seed, 6413);
+
+        float totalWeight = blueberryWeight + raspberryWeight + blackberryWeight + strawberryWeight;
+        float roll = Hash01(hash + 167) * totalWeight;
+
+        if ((roll -= blueberryWeight) <= 0f)
+            return WorldFeatureVariant.BlueberryBush;
+
+        if ((roll -= raspberryWeight) <= 0f)
+            return WorldFeatureVariant.RaspberryBush;
+
+        if ((roll -= blackberryWeight) <= 0f)
+            return WorldFeatureVariant.BlackberryBush;
+
+        return WorldFeatureVariant.StrawberryBush;
+    }
+
+    private static float GetForestBerryBushScale(WorldFeatureVariant variant, float roll)
+    {
+        switch (variant)
+        {
+            case WorldFeatureVariant.StrawberryBush:
+                return Mathf.Lerp(0.45f, 0.7f, roll);
+            case WorldFeatureVariant.BlueberryBush:
+                return Mathf.Lerp(0.75f, 1.15f, roll);
+            case WorldFeatureVariant.BlackberryBush:
+                return Mathf.Lerp(0.95f, 1.45f, roll);
+            default:
+                return Mathf.Lerp(0.85f, 1.3f, roll);
+        }
+    }
+
+    private static float GetForestBerryBushExclusionRadius(WorldFeatureVariant variant, float roll)
+    {
+        switch (variant)
+        {
+            case WorldFeatureVariant.StrawberryBush:
+                return Mathf.Lerp(0.9f, 1.35f, roll);
+            case WorldFeatureVariant.BlackberryBush:
+                return Mathf.Lerp(1.7f, 2.4f, roll);
+            default:
+                return Mathf.Lerp(1.35f, 2.0f, roll);
+        }
     }
 
     private static float SpeciesPatch(float worldX, float worldZ, int seed, int seedOffset)
@@ -738,5 +970,15 @@ public static class WorldFeaturePlanGenerator
 
             return value / 4294967295f;
         }
+    }
+
+    private static int GetDeterministicCount(int minCount, int maxCount, int hash)
+    {
+        if (maxCount <= minCount)
+            return minCount;
+
+        int range = maxCount - minCount + 1;
+        int offset = Mathf.FloorToInt(Hash01(hash) * range);
+        return Mathf.Clamp(minCount + offset, minCount, maxCount);
     }
 }

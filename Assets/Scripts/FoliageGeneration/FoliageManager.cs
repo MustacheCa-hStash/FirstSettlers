@@ -70,7 +70,8 @@ public class FoliageManager
             bool useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
             bool useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
             bool useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
-            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useTrees;
+            bool useBushes = IsWithinBushRenderRange(viewerCoord, coord);
+            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useTrees || useBushes;
 
             if (!HasRequiredTerrainData(record))
             {
@@ -96,6 +97,16 @@ public class FoliageManager
                 runtime.FoliageRuntime.ClearTreeGameObjects();
                 runtime.FoliageRuntime.ClearTreeBillboardMatrices();
                 runtime.FoliageRuntime.ClearCurrentTreeRepresentation();
+            }
+
+            if (useBushes)
+            {
+                EnsureBushesGenerated(record);
+                RebuildBushGameObjectsIfNeeded(runtime, record);
+            }
+            else
+            {
+                runtime.FoliageRuntime.ClearBushGameObjects();
             }
 
             if (useFlowers && HasFlowerRenderAssets())
@@ -135,6 +146,7 @@ public class FoliageManager
                     FoliageGenerator.GenerateBillboardGrassForChunk(
                         record,
                         grassSettings,
+                        treeSettings,
                         worldSeed,
                         chunkSize,
                         worldScale,
@@ -167,7 +179,8 @@ public class FoliageManager
             bool useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
             bool useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
             bool useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
-            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useTrees;
+            bool useBushes = IsWithinBushRenderRange(viewerCoord, coord);
+            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useTrees || useBushes;
 
             if (!HasRequiredTerrainData(record))
             {
@@ -185,6 +198,16 @@ public class FoliageManager
             {
                 EnsureTreesGenerated(record);
                 RebuildTreeRepresentationIfNeeded(runtime, record, viewerCoord);
+            }
+
+            if (useBushes)
+            {
+                EnsureBushesGenerated(record);
+                RebuildBushGameObjectsIfNeeded(runtime, record);
+            }
+            else
+            {
+                runtime.FoliageRuntime.ClearBushGameObjects();
             }
 
             if (useNearGrass)
@@ -216,6 +239,7 @@ public class FoliageManager
                     FoliageGenerator.GenerateBillboardGrassForChunk(
                         record,
                         grassSettings,
+                        treeSettings,
                         worldSeed,
                         chunkSize,
                         worldScale,
@@ -287,6 +311,20 @@ public class FoliageManager
         }
     }
 
+    private void EnsureBushesGenerated(ChunkRecord record)
+    {
+        if (record.FoliageData == null || !record.FoliageData.bushesGenerated)
+        {
+            FoliageGenerator.GenerateBushesForChunk(
+                record,
+                treeSettings,
+                worldSeed,
+                chunkSize,
+                worldScale,
+                meshHeightMultiplier);
+        }
+    }
+
     private void RebuildTreeRepresentationIfNeeded(
         ChunkRuntime runtime,
         ChunkRecord record,
@@ -313,6 +351,18 @@ public class FoliageManager
         }
 
         foliageRuntime.SetCurrentTreeRepresentation(mode);
+    }
+
+    private void RebuildBushGameObjectsIfNeeded(ChunkRuntime runtime, ChunkRecord record)
+    {
+        ChunkFoliageRuntime foliageRuntime = runtime.FoliageRuntime;
+
+        if (foliageRuntime == null || foliageRuntime.HasCurrentBushRepresentation())
+            return;
+
+        foliageRuntime.RebuildBushGameObjects(
+            record.FoliageData.bushInstances,
+            runtime.RootTransform);
     }
 
     private void DrawTreesForChunk(
@@ -608,6 +658,12 @@ public class FoliageManager
         return ring <= treeSettings.billboardTreeChunkRingRadius;
     }
 
+    private bool IsWithinBushRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
+    {
+        int ring = GetChunkRingDistance(viewerCoord, targetCoord);
+        return ring <= treeSettings.gameObjectBushChunkRingRadius;
+    }
+
     private int GetChunkRingDistance(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
         int dx = Mathf.Abs(targetCoord.x - viewerCoord.x);
@@ -744,6 +800,11 @@ public class FoliageManager
         chunkRuntime.FoliageRuntime.whitePineTreePrefab = treeSettings.whitePineTreePrefab;
         chunkRuntime.FoliageRuntime.oakTreePrefab = treeSettings.oakTreePrefab;
         chunkRuntime.FoliageRuntime.fallbackTreePrefab = treeSettings.treeLOD0GameObjectPrefab;
+        chunkRuntime.FoliageRuntime.blueberryBushPrefab = treeSettings.blueberryBushPrefab;
+        chunkRuntime.FoliageRuntime.raspberryBushPrefab = treeSettings.raspberryBushPrefab;
+        chunkRuntime.FoliageRuntime.strawberryBushPrefab = treeSettings.strawberryBushPrefab;
+        chunkRuntime.FoliageRuntime.blackberryBushPrefab = treeSettings.blackberryBushPrefab;
+        chunkRuntime.FoliageRuntime.fallbackBushPrefab = treeSettings.fallbackBushPrefab;
         chunkRuntime.FoliageRuntime.mapleTreeBillboard = mapleTreeBillboard;
         chunkRuntime.FoliageRuntime.sugarMapleTreeBillboard = sugarMapleTreeBillboard;
         chunkRuntime.FoliageRuntime.birchAspenTreeBillboard = birchAspenTreeBillboard;
@@ -870,6 +931,10 @@ public class FoliageManager
         WarnMissingTreePrefab(treeSettings.spruceTreePrefab, "Spruce");
         WarnMissingTreePrefab(treeSettings.whitePineTreePrefab, "White pine");
         WarnMissingTreePrefab(treeSettings.oakTreePrefab, "Oak");
+        WarnMissingBushPrefab(treeSettings.blueberryBushPrefab, "Blueberry");
+        WarnMissingBushPrefab(treeSettings.raspberryBushPrefab, "Raspberry");
+        WarnMissingBushPrefab(treeSettings.strawberryBushPrefab, "Strawberry");
+        WarnMissingBushPrefab(treeSettings.blackberryBushPrefab, "Blackberry");
 
         fallbackTreeBillboard = ResolveTreeBillboardRenderData(
             treeSettings.treeBillboardPrefab,
@@ -930,6 +995,14 @@ public class FoliageManager
         if (prefab == null && treeSettings.treeLOD0GameObjectPrefab == null)
         {
             Debug.LogWarning($"{label} tree prefab is missing and no fallback tree prefab is assigned.");
+        }
+    }
+
+    private void WarnMissingBushPrefab(GameObject prefab, string label)
+    {
+        if (prefab == null && treeSettings.fallbackBushPrefab == null)
+        {
+            Debug.LogWarning($"{label} bush prefab is missing and no fallback bush prefab is assigned.");
         }
     }
 

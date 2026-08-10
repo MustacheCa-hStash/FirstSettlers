@@ -15,6 +15,9 @@ public class ChunkFoliageData
     public bool treeCubesGenerated;
     public List<TreeInstanceData> treeCubeInstances = new List<TreeInstanceData>();
 
+    public bool bushesGenerated;
+    public List<TreeInstanceData> bushInstances = new List<TreeInstanceData>();
+
     public void InitializeNearGrass(int subChunksPerChunk)
     {
         this.subChunksPerChunk = subChunksPerChunk;
@@ -63,12 +66,19 @@ public class ChunkFoliageData
         treeCubeInstances.Clear();
     }
 
+    public void ClearBushes()
+    {
+        bushesGenerated = false;
+        bushInstances.Clear();
+    }
+
     public void ClearAll()
     {
         ClearNearGrass();
         ClearBillboards();
         ClearFlowers();
         ClearTreeCubes();
+        ClearBushes();
     }
 
     public int GetTotalNearGrassInstanceCount()
@@ -102,5 +112,10 @@ public class ChunkFoliageData
     public int GetTotalTreeCubeInstanceCount()
     {
         return treeCubeInstances != null ? treeCubeInstances.Count : 0;
+    }
+
+    public int GetTotalBushInstanceCount()
+    {
+        return bushInstances != null ? bushInstances.Count : 0;
     }
 }

@@ -43,6 +43,8 @@ public static class FoliageGenerator
 
         float treeExclusionRadiusSqr =
             treeSettings.grassExclusionRadius * treeSettings.grassExclusionRadius;
+        float bushExclusionRadiusSqr =
+            treeSettings.bushGrassExclusionRadius * treeSettings.bushGrassExclusionRadius;
 
         for (int cellZ = 0; cellZ < cellsPerAxis; cellZ++)
         {
@@ -82,7 +84,12 @@ public static class FoliageGenerator
                     localX,
                     localZ,
                     foliageData.treeCubeInstances,
-                    treeExclusionRadiusSqr))
+                    treeExclusionRadiusSqr) ||
+                    IsInsideTreeExclusion(
+                        localX,
+                        localZ,
+                        foliageData.bushInstances,
+                        bushExclusionRadiusSqr))
                 {
                     continue;
                 }
@@ -152,6 +159,7 @@ public static class FoliageGenerator
     public static void GenerateBillboardGrassForChunk(
         ChunkRecord record,
         GrassSettings grassSettings,
+        TreeSettings treeSettings,
         int worldSeed,
         int chunkSize,
         float worldScale,
@@ -173,6 +181,13 @@ public static class FoliageGenerator
 
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;
+        float bushExclusionRadiusSqr = 0f;
+
+        if (treeSettings != null)
+        {
+            bushExclusionRadiusSqr =
+                treeSettings.bushGrassExclusionRadius * treeSettings.bushGrassExclusionRadius;
+        }
 
         for (int cellZ = 0; cellZ < cellsPerAxis; cellZ++)
         {
@@ -220,6 +235,16 @@ public static class FoliageGenerator
                 float localX = (topLeftX + sampleX) * worldScale;
                 float localZ = (bottomLeftZ + sampleZ) * worldScale;
                 float localY = height * meshHeightMultiplier * worldScale;
+
+                if (treeSettings != null &&
+                    IsInsideTreeExclusion(
+                        localX,
+                        localZ,
+                        foliageData.bushInstances,
+                        bushExclusionRadiusSqr))
+                {
+                    continue;
+                }
 
                 float yaw = 0f;
                 if (grassSettings.randomizeBillboardYaw)
@@ -502,6 +527,72 @@ public static class FoliageGenerator
         }
 
         foliageData.treeCubesGenerated = true;
+    }
+
+    public static void GenerateBushesForChunk(
+        ChunkRecord record,
+        TreeSettings treeSettings,
+        int worldSeed,
+        int chunkSize,
+        float worldScale,
+        float meshHeightMultiplier)
+    {
+        if (record.FoliageData == null)
+        {
+            record.FoliageData = new ChunkFoliageData();
+        }
+
+        ChunkFoliageData foliageData = record.FoliageData;
+        foliageData.ClearBushes();
+
+        if (record.SurfaceTypeMap == null || record.HeightMap == null || record.WorldFeaturePlan == null)
+        {
+            foliageData.bushesGenerated = true;
+            return;
+        }
+
+        float topLeftX = chunkSize / -2f;
+        float bottomLeftZ = chunkSize / -2f;
+
+        for (int i = 0; i < record.WorldFeaturePlan.Placements.Count; i++)
+        {
+            WorldFeaturePlacement placement = record.WorldFeaturePlan.Placements[i];
+
+            if (placement.featureType != WorldFeatureType.Bush)
+                continue;
+
+            if (placement.sampleX < 0f || placement.sampleX > chunkSize ||
+                placement.sampleZ < 0f || placement.sampleZ > chunkSize)
+                continue;
+
+            int mapX = Mathf.Clamp(Mathf.RoundToInt(placement.sampleX), 0, chunkSize);
+            int mapZ = Mathf.Clamp(Mathf.RoundToInt(placement.sampleZ), 0, chunkSize);
+
+            int paddedX = mapX + 1;
+            int paddedZ = mapZ + 1;
+
+            if (record.SurfaceTypeMap[paddedX, paddedZ] != SurfaceType.Grass)
+                continue;
+
+            float height = SampleHeightBilinear(
+                record.HeightMap,
+                placement.sampleX,
+                placement.sampleZ,
+                chunkSize);
+
+            Vector3 finalLocalPosition = new Vector3(
+                (topLeftX + placement.sampleX) * worldScale,
+                height * meshHeightMultiplier * worldScale,
+                (bottomLeftZ + placement.sampleZ) * worldScale);
+
+            foliageData.bushInstances.Add(new TreeInstanceData(
+                finalLocalPosition,
+                placement.rotation,
+                placement.scale,
+                placement.variant));
+        }
+
+        foliageData.bushesGenerated = true;
     }
 
     private static bool IsInsideTreeExclusion(

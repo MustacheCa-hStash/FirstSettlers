@@ -16,6 +16,15 @@ public class TreeSettings
     [Tooltip("Fallback near tree prefab used when a species prefab is not assigned.")]
     public GameObject treeLOD0GameObjectPrefab;
 
+    [Header("Berry Bush Prefabs")]
+    public GameObject blueberryBushPrefab;
+    public GameObject raspberryBushPrefab;
+    public GameObject strawberryBushPrefab;
+    public GameObject blackberryBushPrefab;
+
+    [Tooltip("Fallback bush prefab used when a berry-specific prefab is not assigned.")]
+    public GameObject fallbackBushPrefab;
+
     [Header("Tree Billboard Prefabs")]
     [Tooltip("Optional merged billboard prefab for generic maple / red maple trees.")]
     public GameObject mapleTreeBillboardPrefab;
@@ -39,6 +48,7 @@ public class TreeSettings
     public Vector2 treeUniformScaleRange = new Vector2(2f, 2f);
 
     public float grassExclusionRadius = 1.5f;
+    public float bushGrassExclusionRadius = 0.45f;
 
     public int seedOffset = 12000;
 
@@ -48,6 +58,10 @@ public class TreeSettings
 
     [Tooltip("Maximum chunk-ring radius for billboard trees.")]
     public int billboardTreeChunkRingRadius = 8;
+
+    [Header("Berry Bush Rendering")]
+    [Tooltip("Chunk-ring radius for berry bush GameObjects. Bushes do not currently use billboards.")]
+    public int gameObjectBushChunkRingRadius = 3;
 
     [Header("Tree Rendering")]
     public bool castTreeShadows = true;

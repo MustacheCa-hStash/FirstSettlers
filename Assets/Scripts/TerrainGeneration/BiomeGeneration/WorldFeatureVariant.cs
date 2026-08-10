@@ -8,5 +8,9 @@ public enum WorldFeatureVariant
     SpruceTree,
     WhitePineTree,
     OakTree,
+    BlueberryBush,
+    RaspberryBush,
+    StrawberryBush,
+    BlackberryBush,
     Boulder
 }

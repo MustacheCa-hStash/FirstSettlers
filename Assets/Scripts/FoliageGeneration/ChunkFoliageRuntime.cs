@@ -60,6 +60,11 @@ public class ChunkFoliageRuntime
     public GameObject whitePineTreePrefab;
     public GameObject oakTreePrefab;
     public GameObject fallbackTreePrefab;
+    public GameObject blueberryBushPrefab;
+    public GameObject raspberryBushPrefab;
+    public GameObject strawberryBushPrefab;
+    public GameObject blackberryBushPrefab;
+    public GameObject fallbackBushPrefab;
     public TreeBillboardRenderData mapleTreeBillboard;
     public TreeBillboardRenderData sugarMapleTreeBillboard;
     public TreeBillboardRenderData birchAspenTreeBillboard;
@@ -87,9 +92,12 @@ public class ChunkFoliageRuntime
 
     private GameObject treeGameObjectRoot;
     private readonly List<GameObject> treeGameObjects = new List<GameObject>();
+    private GameObject bushGameObjectRoot;
+    private readonly List<GameObject> bushGameObjects = new List<GameObject>();
 
     private FoliageRepresentationMode currentTreeRepresentationMode;
     private bool hasCurrentTreeRepresentation;
+    private bool hasCurrentBushRepresentation;
 
     public bool IsCreated => root != null;
     public int GpuGrassInstanceCount =>
@@ -122,6 +130,11 @@ public class ChunkFoliageRuntime
         hasCurrentTreeRepresentation = false;
     }
 
+    public bool HasCurrentBushRepresentation()
+    {
+        return hasCurrentBushRepresentation;
+    }
+
     public void ClearCachedBatches()
     {
         grassRenderBatches.Clear();
@@ -135,6 +148,7 @@ public class ChunkFoliageRuntime
         whitePineTreeBillboardMatrixBatches.Clear();
         oakTreeBillboardMatrixBatches.Clear();
         ClearTreeGameObjects();
+        ClearBushGameObjects();
         ClearCurrentTreeRepresentation();
     }
 
@@ -181,6 +195,11 @@ public class ChunkFoliageRuntime
     public bool HasTreeGameObjects()
     {
         return treeGameObjects.Count > 0;
+    }
+
+    public bool HasBushGameObjects()
+    {
+        return bushGameObjects.Count > 0;
     }
 
     public void CacheGrassMatrices(List<Matrix4x4> worldMatrices, List<Vector4> instanceData)
@@ -373,6 +392,37 @@ public class ChunkFoliageRuntime
         }
     }
 
+    public void RebuildBushGameObjects(
+        List<TreeInstanceData> instances,
+        Transform chunkRoot)
+    {
+        ClearBushGameObjects();
+
+        if (instances == null || chunkRoot == null || root == null)
+            return;
+
+        bushGameObjectRoot = new GameObject("BerryBush_GameObjects");
+        bushGameObjectRoot.transform.SetParent(root, false);
+
+        for (int i = 0; i < instances.Count; i++)
+        {
+            TreeInstanceData instance = instances[i];
+            GameObject prefab = GetBushPrefab(instance.variant);
+
+            if (prefab == null)
+                continue;
+
+            GameObject bushObject = Object.Instantiate(prefab, bushGameObjectRoot.transform);
+            bushObject.transform.localPosition = instance.localPosition;
+            bushObject.transform.localRotation = instance.localRotation;
+            bushObject.transform.localScale = instance.localScale;
+
+            bushGameObjects.Add(bushObject);
+        }
+
+        hasCurrentBushRepresentation = true;
+    }
+
     public void ClearTreeGameObjects()
     {
         for (int i = 0; i < treeGameObjects.Count; i++)
@@ -390,6 +440,27 @@ public class ChunkFoliageRuntime
             Object.Destroy(treeGameObjectRoot);
             treeGameObjectRoot = null;
         }
+    }
+
+    public void ClearBushGameObjects()
+    {
+        for (int i = 0; i < bushGameObjects.Count; i++)
+        {
+            if (bushGameObjects[i] != null)
+            {
+                Object.Destroy(bushGameObjects[i]);
+            }
+        }
+
+        bushGameObjects.Clear();
+
+        if (bushGameObjectRoot != null)
+        {
+            Object.Destroy(bushGameObjectRoot);
+            bushGameObjectRoot = null;
+        }
+
+        hasCurrentBushRepresentation = false;
     }
 
     public void ClearFlowerBatches()
@@ -554,5 +625,22 @@ public class ChunkFoliageRuntime
             return oakTreePrefab;
 
         return fallbackTreePrefab;
+    }
+
+    private GameObject GetBushPrefab(WorldFeatureVariant variant)
+    {
+        if (variant == WorldFeatureVariant.BlueberryBush && blueberryBushPrefab != null)
+            return blueberryBushPrefab;
+
+        if (variant == WorldFeatureVariant.RaspberryBush && raspberryBushPrefab != null)
+            return raspberryBushPrefab;
+
+        if (variant == WorldFeatureVariant.StrawberryBush && strawberryBushPrefab != null)
+            return strawberryBushPrefab;
+
+        if (variant == WorldFeatureVariant.BlackberryBush && blackberryBushPrefab != null)
+            return blackberryBushPrefab;
+
+        return fallbackBushPrefab;
     }
 }
