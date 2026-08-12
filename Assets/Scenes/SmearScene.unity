@@ -552,12 +552,12 @@ MonoBehaviour:
       - {r: 0.72, g: 0.82, b: 1, a: 1}
       - {r: 0.9, g: 0.72, b: 1, a: 1}
   treeSettings:
-    mapleTreePrefab: {fileID: 9167976221399298968, guid: 272060f130eda5545b5b78e8a9ef33d1, type: 3}
-    sugarMapleTreePrefab: {fileID: 8817000922965959629, guid: b5c5b1e8616cc2c4dabd881e2e81febe, type: 3}
+    mapleTreePrefab: {fileID: 0}
+    sugarMapleTreePrefab: {fileID: 8959362317222411645, guid: d83b7cf60ca70de4c84b168dd59ed8cf, type: 3}
     birchAspenTreePrefab: {fileID: 0}
     beechTreePrefab: {fileID: 0}
     spruceTreePrefab: {fileID: 7646694047763373140, guid: 2ce6d38af2fc32d4593a6ac07664f29a, type: 3}
-    whitePineTreePrefab: {fileID: 0}
+    whitePineTreePrefab: {fileID: 9167976221399298968, guid: 272060f130eda5545b5b78e8a9ef33d1, type: 3}
     oakTreePrefab: {fileID: 0}
     treeLOD0GameObjectPrefab: {fileID: 7646694047763373140, guid: 2ce6d38af2fc32d4593a6ac07664f29a, type: 3}
     blueberryBushPrefab: {fileID: 2095120421312505866, guid: 90b14277c549b58408d186345b97dfbe, type: 3}
@@ -565,12 +565,12 @@ MonoBehaviour:
     strawberryBushPrefab: {fileID: 0}
     blackberryBushPrefab: {fileID: 0}
     fallbackBushPrefab: {fileID: 2095120421312505866, guid: 90b14277c549b58408d186345b97dfbe, type: 3}
-    mapleTreeBillboardPrefab: {fileID: 2111572226825985944, guid: 555a957109ef7834db50df03fe81454b, type: 3}
+    mapleTreeBillboardPrefab: {fileID: 0}
     sugarMapleTreeBillboardPrefab: {fileID: 7816776188045512820, guid: 086afa9b8e0e20c4aa0eb0ccba01066e, type: 3}
     birchAspenTreeBillboardPrefab: {fileID: 0}
     beechTreeBillboardPrefab: {fileID: 0}
     spruceTreeBillboardPrefab: {fileID: 9195837373271529818, guid: c19b3e1250464fe4a9a8410b50d88d95, type: 3}
-    whitePineTreeBillboardPrefab: {fileID: 0}
+    whitePineTreeBillboardPrefab: {fileID: 2111572226825985944, guid: 555a957109ef7834db50df03fe81454b, type: 3}
     oakTreeBillboardPrefab: {fileID: 0}
     treeBillboardPrefab: {fileID: 9195837373271529818, guid: c19b3e1250464fe4a9a8410b50d88d95, type: 3}
     treeCellSize: 12
