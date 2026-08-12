@@ -16,7 +16,6 @@ public static class WorldFeaturePlanGenerator
     private const int TreeCandidateCellsPerAxis = 9;
     private const int MaxForestTreesPerChunk = 18;
     private const int BoulderCandidateCellsPerAxis = 4;
-    private const int MaxForestBouldersPerChunk = 2;
     private const float BerryPatchCellSize = 24f;
     private const int MaxForestBerryBushesPerChunk = 30;
 
@@ -29,7 +28,8 @@ public static class WorldFeaturePlanGenerator
         float[,] moistureMap,
         float[,] temperatureMap,
         float[,] slopeMap,
-        float[,] riverMaskMap)
+        float[,] riverMaskMap,
+        WorldFeatureGenerationSettings settings)
     {
         int width = biomeMap.GetLength(0);
         int height = biomeMap.GetLength(1);
@@ -54,7 +54,8 @@ public static class WorldFeaturePlanGenerator
             biomeMap,
             surfaceTypeMap,
             slopeMap,
-            riverMaskMap);
+            riverMaskMap,
+            settings);
 
         BuildRockInfluenceMap(plan, chunkSize);
 
@@ -153,16 +154,30 @@ public static class WorldFeaturePlanGenerator
         BiomeType[,] biomeMap,
         SurfaceType[,] surfaceTypeMap,
         float[,] slopeMap,
-        float[,] riverMaskMap)
+        float[,] riverMaskMap,
+        WorldFeatureGenerationSettings settings)
     {
+        int maxForestBouldersPerChunk = Mathf.Max(0, settings.maxForestRocksPerChunk);
+        if (maxForestBouldersPerChunk == 0)
+            return;
+
         int placed = 0;
         float cellSize = chunkSize / (float)BoulderCandidateCellsPerAxis;
         int totalCandidates = BoulderCandidateCellsPerAxis * BoulderCandidateCellsPerAxis;
         int candidateOffset = Mathf.Abs(Hash(seed, chunkCoord.x, chunkCoord.z, 6211)) % totalCandidates;
+        float minScale = Mathf.Min(settings.forestRockUniformScaleRange.x, settings.forestRockUniformScaleRange.y);
+        float maxScale = Mathf.Max(settings.forestRockUniformScaleRange.x, settings.forestRockUniformScaleRange.y);
+        minScale = Mathf.Max(0.1f, minScale);
+        maxScale = Mathf.Max(minScale, maxScale);
+
+        float minPitch = Mathf.Min(settings.forestRockPitchRange.x, settings.forestRockPitchRange.y);
+        float maxPitch = Mathf.Max(settings.forestRockPitchRange.x, settings.forestRockPitchRange.y);
+        minPitch = Mathf.Clamp(minPitch, -30f, 30f);
+        maxPitch = Mathf.Clamp(maxPitch, -30f, 30f);
 
         for (int candidateIndex = 0; candidateIndex < totalCandidates; candidateIndex++)
         {
-            if (placed >= MaxForestBouldersPerChunk)
+            if (placed >= maxForestBouldersPerChunk)
                 return;
 
             int shuffledIndex = (candidateIndex * 5 + candidateOffset) % totalCandidates;
@@ -185,8 +200,13 @@ public static class WorldFeaturePlanGenerator
             if (Hash01(hash + 53) > chance)
                 continue;
 
-            float uniformScale = Mathf.Lerp(0.75f, 1.45f, Hash01(hash + 79));
-            float exclusionRadius = Mathf.Lerp(4.8f, 7.4f, Mathf.InverseLerp(0.75f, 1.45f, uniformScale));
+            float uniformScale = Mathf.Lerp(minScale, maxScale, Hash01(hash + 79));
+            float exclusionRadius = Mathf.Lerp(4.8f, 7.4f, Mathf.InverseLerp(minScale, maxScale, uniformScale));
+            int prefabCount = Mathf.Max(0, settings.forestRockPrefabCount);
+            int prefabIndex = prefabCount > 0
+                ? Mathf.Min(prefabCount - 1, Mathf.FloorToInt(Hash01(hash + 89) * prefabCount))
+                : 0;
+            float pitch = Mathf.Lerp(minPitch, maxPitch, Hash01(hash + 113));
             float yaw = Hash01(hash + 97) * 360f;
 
             if (IntersectsExistingPlacement(plan, sampleX, sampleZ, exclusionRadius))
@@ -197,10 +217,11 @@ public static class WorldFeaturePlanGenerator
                 WorldFeatureVariant.Boulder,
                 sampleX,
                 sampleZ,
-                Quaternion.Euler(0f, yaw, 0f),
+                Quaternion.Euler(pitch, yaw, 0f),
                 Vector3.one * uniformScale,
                 exclusionRadius,
-                exclusionRadius + 8.5f));
+                exclusionRadius + 8.5f,
+                prefabIndex));
 
             placed++;
         }

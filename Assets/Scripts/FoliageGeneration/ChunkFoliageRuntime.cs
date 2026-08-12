@@ -65,6 +65,7 @@ public class ChunkFoliageRuntime
     public GameObject strawberryBushPrefab;
     public GameObject blackberryBushPrefab;
     public GameObject fallbackBushPrefab;
+    public GameObject[] forestRockPrefabs;
     public TreeBillboardRenderData mapleTreeBillboard;
     public TreeBillboardRenderData sugarMapleTreeBillboard;
     public TreeBillboardRenderData birchAspenTreeBillboard;
@@ -94,10 +95,13 @@ public class ChunkFoliageRuntime
     private readonly List<GameObject> treeGameObjects = new List<GameObject>();
     private GameObject bushGameObjectRoot;
     private readonly List<GameObject> bushGameObjects = new List<GameObject>();
+    private GameObject rockGameObjectRoot;
+    private readonly List<GameObject> rockGameObjects = new List<GameObject>();
 
     private FoliageRepresentationMode currentTreeRepresentationMode;
     private bool hasCurrentTreeRepresentation;
     private bool hasCurrentBushRepresentation;
+    private bool hasCurrentRockRepresentation;
 
     public bool IsCreated => root != null;
     public int GpuGrassInstanceCount =>
@@ -135,6 +139,11 @@ public class ChunkFoliageRuntime
         return hasCurrentBushRepresentation;
     }
 
+    public bool HasCurrentRockRepresentation()
+    {
+        return hasCurrentRockRepresentation;
+    }
+
     public void ClearCachedBatches()
     {
         grassRenderBatches.Clear();
@@ -149,6 +158,7 @@ public class ChunkFoliageRuntime
         oakTreeBillboardMatrixBatches.Clear();
         ClearTreeGameObjects();
         ClearBushGameObjects();
+        ClearRockGameObjects();
         ClearCurrentTreeRepresentation();
     }
 
@@ -202,6 +212,11 @@ public class ChunkFoliageRuntime
         return bushGameObjects.Count > 0;
     }
 
+    public bool HasRockGameObjects()
+    {
+        return rockGameObjects.Count > 0;
+    }
+
     public void AccumulateGrassRenderStats(ref WorldRenderStatsDebugInfo stats)
     {
         AccumulateGrassStats(grassMesh, grassRenderBatches, ref stats.Grass);
@@ -230,6 +245,11 @@ public class ChunkFoliageRuntime
     public void AccumulateBushGameObjectRenderStats(ref WorldRenderStatsDebugInfo stats)
     {
         AccumulateGameObjectStats(bushGameObjects, ref stats.BushGameObjects);
+    }
+
+    public void AccumulateRockGameObjectRenderStats(ref WorldRenderStatsDebugInfo stats)
+    {
+        AccumulateGameObjectStats(rockGameObjects, ref stats.RockGameObjects);
     }
 
     public void CacheGrassMatrices(List<Matrix4x4> worldMatrices, List<Vector4> instanceData)
@@ -528,6 +548,37 @@ public class ChunkFoliageRuntime
         hasCurrentBushRepresentation = true;
     }
 
+    public void RebuildRockGameObjects(
+        List<RockInstanceData> instances,
+        Transform chunkRoot)
+    {
+        ClearRockGameObjects();
+
+        if (instances == null || chunkRoot == null || root == null)
+            return;
+
+        rockGameObjectRoot = new GameObject("ForestRock_GameObjects");
+        rockGameObjectRoot.transform.SetParent(root, false);
+
+        for (int i = 0; i < instances.Count; i++)
+        {
+            RockInstanceData instance = instances[i];
+            GameObject prefab = GetRockPrefab(instance.prefabIndex);
+
+            if (prefab == null)
+                continue;
+
+            GameObject rockObject = Object.Instantiate(prefab, rockGameObjectRoot.transform);
+            rockObject.transform.localPosition = instance.localPosition;
+            rockObject.transform.localRotation = instance.localRotation;
+            rockObject.transform.localScale = instance.localScale;
+
+            rockGameObjects.Add(rockObject);
+        }
+
+        hasCurrentRockRepresentation = true;
+    }
+
     public void ClearTreeGameObjects()
     {
         for (int i = 0; i < treeGameObjects.Count; i++)
@@ -566,6 +617,27 @@ public class ChunkFoliageRuntime
         }
 
         hasCurrentBushRepresentation = false;
+    }
+
+    public void ClearRockGameObjects()
+    {
+        for (int i = 0; i < rockGameObjects.Count; i++)
+        {
+            if (rockGameObjects[i] != null)
+            {
+                Object.Destroy(rockGameObjects[i]);
+            }
+        }
+
+        rockGameObjects.Clear();
+
+        if (rockGameObjectRoot != null)
+        {
+            Object.Destroy(rockGameObjectRoot);
+            rockGameObjectRoot = null;
+        }
+
+        hasCurrentRockRepresentation = false;
     }
 
     public void ClearFlowerBatches()
@@ -747,5 +819,14 @@ public class ChunkFoliageRuntime
             return blackberryBushPrefab;
 
         return fallbackBushPrefab;
+    }
+
+    private GameObject GetRockPrefab(int prefabIndex)
+    {
+        if (forestRockPrefabs == null || forestRockPrefabs.Length == 0)
+            return null;
+
+        int clampedIndex = Mathf.Clamp(prefabIndex, 0, forestRockPrefabs.Length - 1);
+        return forestRockPrefabs[clampedIndex];
     }
 }

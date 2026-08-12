@@ -43,6 +43,7 @@ public class ChunkManager
 
     private readonly TerrainRequestManager terrainRequestManager;
     private readonly FoliageManager foliageManager;
+    private readonly WorldFeatureGenerationSettings worldFeatureGenerationSettings;
 
     public ChunkManager(
         int viewDistance,
@@ -100,6 +101,7 @@ public class ChunkManager
         orderedActiveCoords = new List<ChunkCoord>(maxChunks);
         frustumVisibleCoords = new List<ChunkCoord>(maxChunks);
 
+        worldFeatureGenerationSettings = BuildWorldFeatureGenerationSettings(treeSettings);
         terrainRequestManager = new TerrainRequestManager();
         foliageManager = new FoliageManager(
             foliageParent,
@@ -591,13 +593,30 @@ public class ChunkManager
             octaves,
             persistence,
             lacunarity,
-            erosionStrength
+            erosionStrength,
+            worldFeatureGenerationSettings
         );
 
         if (!submitted)
         {
             record.CancelTerrainDataRequest(requestVersion);
         }
+    }
+
+    private static WorldFeatureGenerationSettings BuildWorldFeatureGenerationSettings(TreeSettings treeSettings)
+    {
+        WorldFeatureGenerationSettings settings = WorldFeatureGenerationSettings.Default;
+
+        if (treeSettings == null)
+            return settings;
+
+        settings.forestRockPrefabCount =
+            treeSettings.forestRockPrefabs != null ? treeSettings.forestRockPrefabs.Length : 0;
+        settings.maxForestRocksPerChunk = Mathf.Max(0, treeSettings.maxForestRocksPerChunk);
+        settings.forestRockUniformScaleRange = treeSettings.forestRockUniformScaleRange;
+        settings.forestRockPitchRange = treeSettings.forestRockPitchRange;
+
+        return settings;
     }
 
     private void TryApplyFarTerrain(ChunkRecord record, ChunkRuntime runtime)

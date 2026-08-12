@@ -10,6 +10,7 @@ public struct WorldFeaturePlacement
     public Vector3 scale;
     public float exclusionRadius;
     public float influenceRadius;
+    public int prefabIndex;
 
     public WorldFeaturePlacement(
         WorldFeatureType featureType,
@@ -19,7 +20,8 @@ public struct WorldFeaturePlacement
         Quaternion rotation,
         Vector3 scale,
         float exclusionRadius,
-        float influenceRadius)
+        float influenceRadius,
+        int prefabIndex = 0)
     {
         this.featureType = featureType;
         this.variant = variant;
@@ -29,5 +31,6 @@ public struct WorldFeaturePlacement
         this.scale = scale;
         this.exclusionRadius = exclusionRadius;
         this.influenceRadius = influenceRadius;
+        this.prefabIndex = prefabIndex;
     }
 }

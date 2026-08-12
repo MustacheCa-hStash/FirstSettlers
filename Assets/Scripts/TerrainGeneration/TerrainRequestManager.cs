@@ -31,7 +31,8 @@ public class TerrainRequestManager
         int octaves,
         float persistence,
         float lacunarity,
-        float erosionStrength)
+        float erosionStrength,
+        WorldFeatureGenerationSettings worldFeatureGenerationSettings)
     {
         if (Interlocked.CompareExchange(ref activeTerrainDataJobs, 0, 0) >= MaxActiveTerrainDataJobs)
             return false;
@@ -79,7 +80,8 @@ public class TerrainRequestManager
                     moistureMap,
                     temperatureMap,
                     slopeMap,
-                    riverMaskMap);
+                    riverMaskMap,
+                    worldFeatureGenerationSettings);
 
                 GroundCoverType[,] groundCoverMap = GroundCoverMapGenerator.GenerateGroundCoverMap(
                     biomeMap,

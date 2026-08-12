@@ -565,6 +565,12 @@ MonoBehaviour:
     strawberryBushPrefab: {fileID: 0}
     blackberryBushPrefab: {fileID: 0}
     fallbackBushPrefab: {fileID: 2095120421312505866, guid: 90b14277c549b58408d186345b97dfbe, type: 3}
+    forestRockPrefabs:
+    - {fileID: 919132149155446097, guid: dc2508ff42e555c4f89101aed2b38924, type: 3}
+    - {fileID: 919132149155446097, guid: 796e9dfc171fec2408ad08917eac7250, type: 3}
+    - {fileID: 919132149155446097, guid: f1473192a114b2540928d90dc73d736b, type: 3}
+    - {fileID: 919132149155446097, guid: 48f37dcb64d335f42a79c8989710a856, type: 3}
+    - {fileID: 919132149155446097, guid: 63119c7758858084d87fd43bcbed4df4, type: 3}
     mapleTreeBillboardPrefab: {fileID: 0}
     sugarMapleTreeBillboardPrefab: {fileID: 7816776188045512820, guid: 086afa9b8e0e20c4aa0eb0ccba01066e, type: 3}
     birchAspenTreeBillboardPrefab: {fileID: 0}
@@ -583,6 +589,11 @@ MonoBehaviour:
     gameObjectTreeChunkRingRadius: 2
     billboardTreeChunkRingRadius: 15
     gameObjectBushChunkRingRadius: 3
+    maxForestRocksPerChunk: 2
+    forestRockUniformScaleRange: {x: 80, y: 100}
+    forestRockPitchRange: {x: -15, y: 15}
+    rockGrassExclusionRadius: 1.25
+    gameObjectRockChunkRingRadius: 3
     castTreeShadows: 0
     receiveTreeShadows: 0
   sampleScale: 600

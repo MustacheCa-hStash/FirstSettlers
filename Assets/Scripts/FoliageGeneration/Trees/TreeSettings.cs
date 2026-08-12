@@ -25,6 +25,10 @@ public class TreeSettings
     [Tooltip("Fallback bush prefab used when a berry-specific prefab is not assigned.")]
     public GameObject fallbackBushPrefab;
 
+    [Header("Forest Rock Prefabs")]
+    [Tooltip("Forest rock and boulder prefabs sampled deterministically from the world seed and rock location.")]
+    public GameObject[] forestRockPrefabs;
+
     [Header("Tree Billboard Prefabs")]
     [Tooltip("Optional merged billboard prefab for generic maple / red maple trees.")]
     public GameObject mapleTreeBillboardPrefab;
@@ -62,6 +66,20 @@ public class TreeSettings
     [Header("Berry Bush Rendering")]
     [Tooltip("Chunk-ring radius for berry bush GameObjects. Bushes do not currently use billboards.")]
     public int gameObjectBushChunkRingRadius = 3;
+
+    [Header("Forest Rock Placement")]
+    [Tooltip("Maximum planned rock or boulder placements in a forest chunk.")]
+    public int maxForestRocksPerChunk = 2;
+
+    public Vector2 forestRockUniformScaleRange = new Vector2(0.75f, 1.45f);
+    public Vector2 forestRockPitchRange = new Vector2(-15f, 15f);
+
+    [Tooltip("Grass exclusion radius around instantiated forest rocks.")]
+    public float rockGrassExclusionRadius = 1.25f;
+
+    [Header("Forest Rock Rendering")]
+    [Tooltip("Chunk-ring radius for forest rock GameObjects.")]
+    public int gameObjectRockChunkRingRadius = 3;
 
     [Header("Tree Rendering")]
     public bool castTreeShadows = true;

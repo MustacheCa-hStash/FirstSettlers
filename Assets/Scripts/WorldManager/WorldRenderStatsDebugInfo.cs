@@ -17,6 +17,7 @@ public struct WorldRenderStatsDebugInfo
     public RenderGeometryStats TreeBillboards;
     public RenderGeometryStats TreeGameObjects;
     public RenderGeometryStats BushGameObjects;
+    public RenderGeometryStats RockGameObjects;
 
     public long TotalVertices =>
         Terrain.vertices +
@@ -27,7 +28,8 @@ public struct WorldRenderStatsDebugInfo
         Flowers.vertices +
         TreeBillboards.vertices +
         TreeGameObjects.vertices +
-        BushGameObjects.vertices;
+        BushGameObjects.vertices +
+        RockGameObjects.vertices;
 
     public long TotalTriangles =>
         Terrain.triangles +
@@ -38,7 +40,8 @@ public struct WorldRenderStatsDebugInfo
         Flowers.triangles +
         TreeBillboards.triangles +
         TreeGameObjects.triangles +
-        BushGameObjects.triangles;
+        BushGameObjects.triangles +
+        RockGameObjects.triangles;
 
     public void AddLOD(int lod)
     {

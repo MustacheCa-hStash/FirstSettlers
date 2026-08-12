@@ -163,6 +163,7 @@ public class RenderStatsDebugOverlay : MonoBehaviour
         AppendCategory("Tree Billboards", stats.TreeBillboards);
         AppendCategory("Tree GameObjects", stats.TreeGameObjects);
         AppendCategory("Bush GameObjects", stats.BushGameObjects);
+        AppendCategory("Rock GameObjects", stats.RockGameObjects);
 
         debugText.text = builder.ToString();
     }

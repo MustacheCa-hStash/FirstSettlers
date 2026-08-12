@@ -41,10 +41,15 @@ public static class FoliageGenerator
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;
 
-        float treeExclusionRadiusSqr =
-            treeSettings.grassExclusionRadius * treeSettings.grassExclusionRadius;
-        float bushExclusionRadiusSqr =
-            treeSettings.bushGrassExclusionRadius * treeSettings.bushGrassExclusionRadius;
+        float treeExclusionRadiusSqr = treeSettings != null
+            ? treeSettings.grassExclusionRadius * treeSettings.grassExclusionRadius
+            : 0f;
+        float bushExclusionRadiusSqr = treeSettings != null
+            ? treeSettings.bushGrassExclusionRadius * treeSettings.bushGrassExclusionRadius
+            : 0f;
+        float rockExclusionRadiusSqr = treeSettings != null
+            ? treeSettings.rockGrassExclusionRadius * treeSettings.rockGrassExclusionRadius
+            : 0f;
 
         for (int cellZ = 0; cellZ < cellsPerAxis; cellZ++)
         {
@@ -80,16 +85,21 @@ public static class FoliageGenerator
                 float localX = (topLeftX + sampleX) * worldScale;
                 float localZ = (bottomLeftZ + sampleZ) * worldScale;
 
-                if (IsInsideTreeExclusion(
+                if ((treeExclusionRadiusSqr > 0f && IsInsideTreeExclusion(
                     localX,
                     localZ,
                     foliageData.treeCubeInstances,
-                    treeExclusionRadiusSqr) ||
-                    IsInsideTreeExclusion(
+                    treeExclusionRadiusSqr)) ||
+                    (bushExclusionRadiusSqr > 0f && IsInsideTreeExclusion(
                         localX,
                         localZ,
                         foliageData.bushInstances,
-                        bushExclusionRadiusSqr))
+                        bushExclusionRadiusSqr)) ||
+                    (rockExclusionRadiusSqr > 0f && IsInsideRockExclusion(
+                        localX,
+                        localZ,
+                        foliageData.rockInstances,
+                        rockExclusionRadiusSqr)))
                 {
                     continue;
                 }
@@ -182,11 +192,14 @@ public static class FoliageGenerator
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;
         float bushExclusionRadiusSqr = 0f;
+        float rockExclusionRadiusSqr = 0f;
 
         if (treeSettings != null)
         {
             bushExclusionRadiusSqr =
                 treeSettings.bushGrassExclusionRadius * treeSettings.bushGrassExclusionRadius;
+            rockExclusionRadiusSqr =
+                treeSettings.rockGrassExclusionRadius * treeSettings.rockGrassExclusionRadius;
         }
 
         for (int cellZ = 0; cellZ < cellsPerAxis; cellZ++)
@@ -237,11 +250,16 @@ public static class FoliageGenerator
                 float localY = height * meshHeightMultiplier * worldScale;
 
                 if (treeSettings != null &&
-                    IsInsideTreeExclusion(
+                    ((bushExclusionRadiusSqr > 0f && IsInsideTreeExclusion(
                         localX,
                         localZ,
                         foliageData.bushInstances,
-                        bushExclusionRadiusSqr))
+                        bushExclusionRadiusSqr)) ||
+                     (rockExclusionRadiusSqr > 0f && IsInsideRockExclusion(
+                        localX,
+                        localZ,
+                        foliageData.rockInstances,
+                        rockExclusionRadiusSqr))))
                 {
                     continue;
                 }
@@ -595,6 +613,72 @@ public static class FoliageGenerator
         foliageData.bushesGenerated = true;
     }
 
+    public static void GenerateRocksForChunk(
+        ChunkRecord record,
+        TreeSettings treeSettings,
+        int worldSeed,
+        int chunkSize,
+        float worldScale,
+        float meshHeightMultiplier)
+    {
+        if (record.FoliageData == null)
+        {
+            record.FoliageData = new ChunkFoliageData();
+        }
+
+        ChunkFoliageData foliageData = record.FoliageData;
+        foliageData.ClearRocks();
+
+        if (record.SurfaceTypeMap == null || record.HeightMap == null || record.WorldFeaturePlan == null)
+        {
+            foliageData.rocksGenerated = true;
+            return;
+        }
+
+        float topLeftX = chunkSize / -2f;
+        float bottomLeftZ = chunkSize / -2f;
+
+        for (int i = 0; i < record.WorldFeaturePlan.Placements.Count; i++)
+        {
+            WorldFeaturePlacement placement = record.WorldFeaturePlan.Placements[i];
+
+            if (placement.featureType != WorldFeatureType.Boulder)
+                continue;
+
+            if (placement.sampleX < 0f || placement.sampleX > chunkSize ||
+                placement.sampleZ < 0f || placement.sampleZ > chunkSize)
+                continue;
+
+            int mapX = Mathf.Clamp(Mathf.RoundToInt(placement.sampleX), 0, chunkSize);
+            int mapZ = Mathf.Clamp(Mathf.RoundToInt(placement.sampleZ), 0, chunkSize);
+
+            int paddedX = mapX + 1;
+            int paddedZ = mapZ + 1;
+
+            if (record.SurfaceTypeMap[paddedX, paddedZ] != SurfaceType.Grass)
+                continue;
+
+            float height = SampleHeightBilinear(
+                record.HeightMap,
+                placement.sampleX,
+                placement.sampleZ,
+                chunkSize);
+
+            Vector3 finalLocalPosition = new Vector3(
+                (topLeftX + placement.sampleX) * worldScale,
+                height * meshHeightMultiplier * worldScale,
+                (bottomLeftZ + placement.sampleZ) * worldScale);
+
+            foliageData.rockInstances.Add(new RockInstanceData(
+                finalLocalPosition,
+                placement.rotation,
+                placement.scale,
+                placement.prefabIndex));
+        }
+
+        foliageData.rocksGenerated = true;
+    }
+
     private static bool IsInsideTreeExclusion(
         float localX,
         float localZ,
@@ -607,6 +691,28 @@ public static class FoliageGenerator
 
             float dx = localX - tree.localPosition.x;
             float dz = localZ - tree.localPosition.z;
+
+            float distSqr = dx * dx + dz * dz;
+
+            if (distSqr < exclusionRadiusSqr)
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsInsideRockExclusion(
+        float localX,
+        float localZ,
+        List<RockInstanceData> rockInstances,
+        float exclusionRadiusSqr)
+    {
+        for (int i = 0; i < rockInstances.Count; i++)
+        {
+            RockInstanceData rock = rockInstances[i];
+
+            float dx = localX - rock.localPosition.x;
+            float dz = localZ - rock.localPosition.z;
 
             float distSqr = dx * dx + dz * dz;
 

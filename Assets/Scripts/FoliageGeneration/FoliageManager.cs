@@ -71,7 +71,8 @@ public class FoliageManager
             bool useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
             bool useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
             bool useBushes = IsWithinBushRenderRange(viewerCoord, coord);
-            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useTrees || useBushes;
+            bool useRocks = IsWithinRockRenderRange(viewerCoord, coord);
+            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useTrees || useBushes || useRocks;
 
             if (!HasRequiredTerrainData(record))
             {
@@ -109,6 +110,16 @@ public class FoliageManager
                 runtime.FoliageRuntime.ClearBushGameObjects();
             }
 
+            if (useRocks)
+            {
+                EnsureRocksGenerated(record);
+                RebuildRockGameObjectsIfNeeded(runtime, record);
+            }
+            else
+            {
+                runtime.FoliageRuntime.ClearRockGameObjects();
+            }
+
             if (useFlowers && HasFlowerRenderAssets())
             {
                 if (record.FoliageData == null || !record.FoliageData.flowersGenerated)
@@ -127,6 +138,8 @@ public class FoliageManager
             {
                 if (record.FoliageData == null || !record.FoliageData.nearGrassGenerated)
                 {
+                    EnsureRocksGenerated(record);
+
                     FoliageGenerator.GenerateGrassForChunk(
                         record,
                         grassSettings,
@@ -143,6 +156,8 @@ public class FoliageManager
             {
                 if (record.FoliageData == null || !record.FoliageData.billboardGenerated)
                 {
+                    EnsureRocksGenerated(record);
+
                     FoliageGenerator.GenerateBillboardGrassForChunk(
                         record,
                         grassSettings,
@@ -180,7 +195,8 @@ public class FoliageManager
             bool useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
             bool useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
             bool useBushes = IsWithinBushRenderRange(viewerCoord, coord);
-            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useTrees || useBushes;
+            bool useRocks = IsWithinRockRenderRange(viewerCoord, coord);
+            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useTrees || useBushes || useRocks;
 
             if (!HasRequiredTerrainData(record))
             {
@@ -193,6 +209,8 @@ public class FoliageManager
                 runtime.FoliageRuntime.SetVisible(false);
                 continue;
             }
+
+            runtime.FoliageRuntime.SetVisible(true);
 
             if (useTrees)
             {
@@ -210,10 +228,22 @@ public class FoliageManager
                 runtime.FoliageRuntime.ClearBushGameObjects();
             }
 
+            if (useRocks)
+            {
+                EnsureRocksGenerated(record);
+                RebuildRockGameObjectsIfNeeded(runtime, record);
+            }
+            else
+            {
+                runtime.FoliageRuntime.ClearRockGameObjects();
+            }
+
             if (useNearGrass)
             {
                 if (record.FoliageData == null || !record.FoliageData.nearGrassGenerated)
                 {
+                    EnsureRocksGenerated(record);
+
                     FoliageGenerator.GenerateGrassForChunk(
                         record,
                         grassSettings,
@@ -236,6 +266,8 @@ public class FoliageManager
             {
                 if (record.FoliageData == null || !record.FoliageData.billboardGenerated)
                 {
+                    EnsureRocksGenerated(record);
+
                     FoliageGenerator.GenerateBillboardGrassForChunk(
                         record,
                         grassSettings,
@@ -295,7 +327,8 @@ public class FoliageManager
             bool useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
             bool useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
             bool useBushes = IsWithinBushRenderRange(viewerCoord, coord);
-            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useTrees || useBushes;
+            bool useRocks = IsWithinRockRenderRange(viewerCoord, coord);
+            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useTrees || useBushes || useRocks;
 
             if (!HasRequiredTerrainData(record) || !useFoliage)
                 continue;
@@ -324,6 +357,9 @@ public class FoliageManager
 
             if (useBushes)
                 runtime.FoliageRuntime.AccumulateBushGameObjectRenderStats(ref stats);
+
+            if (useRocks)
+                runtime.FoliageRuntime.AccumulateRockGameObjectRenderStats(ref stats);
         }
     }
 
@@ -377,6 +413,20 @@ public class FoliageManager
         }
     }
 
+    private void EnsureRocksGenerated(ChunkRecord record)
+    {
+        if (record.FoliageData == null || !record.FoliageData.rocksGenerated)
+        {
+            FoliageGenerator.GenerateRocksForChunk(
+                record,
+                treeSettings,
+                worldSeed,
+                chunkSize,
+                worldScale,
+                meshHeightMultiplier);
+        }
+    }
+
     private void RebuildTreeRepresentationIfNeeded(
         ChunkRuntime runtime,
         ChunkRecord record,
@@ -414,6 +464,18 @@ public class FoliageManager
 
         foliageRuntime.RebuildBushGameObjects(
             record.FoliageData.bushInstances,
+            runtime.RootTransform);
+    }
+
+    private void RebuildRockGameObjectsIfNeeded(ChunkRuntime runtime, ChunkRecord record)
+    {
+        ChunkFoliageRuntime foliageRuntime = runtime.FoliageRuntime;
+
+        if (foliageRuntime == null || foliageRuntime.HasCurrentRockRepresentation())
+            return;
+
+        foliageRuntime.RebuildRockGameObjects(
+            record.FoliageData.rockInstances,
             runtime.RootTransform);
     }
 
@@ -716,6 +778,12 @@ public class FoliageManager
         return ring <= treeSettings.gameObjectBushChunkRingRadius;
     }
 
+    private bool IsWithinRockRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
+    {
+        int ring = GetChunkRingDistance(viewerCoord, targetCoord);
+        return ring <= treeSettings.gameObjectRockChunkRingRadius;
+    }
+
     private int GetChunkRingDistance(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
         int dx = Mathf.Abs(targetCoord.x - viewerCoord.x);
@@ -857,6 +925,7 @@ public class FoliageManager
         chunkRuntime.FoliageRuntime.strawberryBushPrefab = treeSettings.strawberryBushPrefab;
         chunkRuntime.FoliageRuntime.blackberryBushPrefab = treeSettings.blackberryBushPrefab;
         chunkRuntime.FoliageRuntime.fallbackBushPrefab = treeSettings.fallbackBushPrefab;
+        chunkRuntime.FoliageRuntime.forestRockPrefabs = treeSettings.forestRockPrefabs;
         chunkRuntime.FoliageRuntime.mapleTreeBillboard = mapleTreeBillboard;
         chunkRuntime.FoliageRuntime.sugarMapleTreeBillboard = sugarMapleTreeBillboard;
         chunkRuntime.FoliageRuntime.birchAspenTreeBillboard = birchAspenTreeBillboard;

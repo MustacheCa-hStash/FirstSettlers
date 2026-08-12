@@ -49,6 +49,14 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -7511558181221131132, guid: eddb5765d54e8044a91f9ec3897c15a6, type: 3}
+      propertyPath: m_ForceMeshLod
+      value: -1
+      objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: eddb5765d54e8044a91f9ec3897c15a6, type: 3}
+      propertyPath: m_MeshLodSelectionBias
+      value: 0.99
+      objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: eddb5765d54e8044a91f9ec3897c15a6, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: 6edc97855d34a6b4cbbe38192cbcc635, type: 2}
@@ -58,7 +66,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 169757bc678034243ab33e00f3bd985c, type: 2}
     - target: {fileID: 919132149155446097, guid: eddb5765d54e8044a91f9ec3897c15a6, type: 3}
       propertyPath: m_Name
-      value: Bush_Blender_001_Berry
+      value: Bush_001_Berry
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
