@@ -170,7 +170,7 @@ public static class FarTerrainGenerator
                     heightGrid[x, z] * meshHeightMultiplier * worldScale,
                     Mathf.Lerp(chunkSize / -2f, chunkSize / 2f, tz) * worldScale);
 
-                Vector3 normal = CalculateNormal(heightGrid, x, z, meshHeightMultiplier);
+                Vector3 normal = CalculateNormal(heightGrid, x, z, chunkSize, meshHeightMultiplier);
                 Color color = SurfaceTypeClassifier.GenerateColor(surfaceMap[x, z], WaterState.Dry);
 
                 vertexIndices[x, z] = meshData.AddVertex(vertex, normal, new Vector2(tx, tz), color);
@@ -269,17 +269,18 @@ public static class FarTerrainGenerator
         return TerrainControlMapBuilder.BuildRaw(surfaceMap, groundCoverMap);
     }
 
-    private static Vector3 CalculateNormal(float[,] heightGrid, int x, int z, float meshHeightMultiplier)
+    private static Vector3 CalculateNormal(float[,] heightGrid, int x, int z, int chunkSize, float meshHeightMultiplier)
     {
         int resolution = heightGrid.GetLength(0);
+        float sampleSpacing = resolution <= 1 ? chunkSize : chunkSize / (float)(resolution - 1);
 
         float left = heightGrid[Mathf.Max(x - 1, 0), z];
         float right = heightGrid[Mathf.Min(x + 1, resolution - 1), z];
         float down = heightGrid[x, Mathf.Max(z - 1, 0)];
         float up = heightGrid[x, Mathf.Min(z + 1, resolution - 1)];
 
-        float dx = (right - left) * meshHeightMultiplier;
-        float dz = (up - down) * meshHeightMultiplier;
+        float dx = (right - left) * meshHeightMultiplier / Mathf.Max(sampleSpacing, 0.0001f);
+        float dz = (up - down) * meshHeightMultiplier / Mathf.Max(sampleSpacing, 0.0001f);
 
         return new Vector3(-dx, 2f, -dz).normalized;
     }
