@@ -552,11 +552,11 @@ MonoBehaviour:
       - {r: 0.72, g: 0.82, b: 1, a: 1}
       - {r: 0.9, g: 0.72, b: 1, a: 1}
   treeSettings:
-    mapleTreePrefab: {fileID: 527248759270487890, guid: 6dce9affdb4c8da45b098e90df4ad2c1, type: 3}
+    mapleTreePrefab: {fileID: 9167976221399298968, guid: 272060f130eda5545b5b78e8a9ef33d1, type: 3}
     sugarMapleTreePrefab: {fileID: 8817000922965959629, guid: b5c5b1e8616cc2c4dabd881e2e81febe, type: 3}
     birchAspenTreePrefab: {fileID: 0}
     beechTreePrefab: {fileID: 0}
-    spruceTreePrefab: {fileID: 388576432251072559, guid: b0c142caf0e1898418b3b6ff947f009c, type: 3}
+    spruceTreePrefab: {fileID: 7646694047763373140, guid: 2ce6d38af2fc32d4593a6ac07664f29a, type: 3}
     whitePineTreePrefab: {fileID: 0}
     oakTreePrefab: {fileID: 0}
     treeLOD0GameObjectPrefab: {fileID: 2892109097563917780, guid: 40fc0a45dc34f4443860b3ac9df1ef46, type: 3}
