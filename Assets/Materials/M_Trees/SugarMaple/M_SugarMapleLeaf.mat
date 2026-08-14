@@ -27,7 +27,7 @@ Material:
   m_ValidKeywords: []
   m_InvalidKeywords: []
   m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
@@ -132,6 +132,13 @@ Material:
     - _Surface: 0
     - _UseVertexColor: 0
     - _VerticalGradientStrength: 0.28
+    - _WindFlutterSpeed: 4.8
+    - _WindFlutterStrength: 0.055
+    - _WindGustScale: 0.18
+    - _WindHeightMax: 7
+    - _WindHeightMin: 0
+    - _WindSpeed: 1.15
+    - _WindStrength: 0.11
     - _WorkflowMode: 1
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1
@@ -145,5 +152,6 @@ Material:
     - _LeafShadowColor: {r: 0.29999998, g: 0.035, b: 0.025, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _SummerLeafColor: {r: 0.15999997, g: 0.45, b: 0.11999995, a: 1}
+    - _WindDirection: {r: 1, g: 0, b: 0.35, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

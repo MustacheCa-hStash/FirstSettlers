@@ -5,6 +5,7 @@ public class ChunkFoliageData
     public bool nearGrassGenerated;
     public int subChunksPerChunk;
     public List<FoliageInstanceData>[,] nearGrassInstancesBySubChunk;
+    public bool[,] nearGrassSubChunkGenerated;
 
     public bool billboardGenerated;
     public List<BillboardFoliageInstanceData> billboardGrassInstances = new List<BillboardFoliageInstanceData>();
@@ -25,6 +26,7 @@ public class ChunkFoliageData
     {
         this.subChunksPerChunk = subChunksPerChunk;
         nearGrassInstancesBySubChunk = new List<FoliageInstanceData>[subChunksPerChunk, subChunksPerChunk];
+        nearGrassSubChunkGenerated = new bool[subChunksPerChunk, subChunksPerChunk];
 
         for (int x = 0; x < subChunksPerChunk; x++)
         {
@@ -47,8 +49,64 @@ public class ChunkFoliageData
             for (int z = 0; z < subChunksPerChunk; z++)
             {
                 nearGrassInstancesBySubChunk[x, z].Clear();
+                if (nearGrassSubChunkGenerated != null)
+                    nearGrassSubChunkGenerated[x, z] = false;
             }
         }
+    }
+
+    public bool IsNearGrassSubChunkGenerated(int localSubChunkX, int localSubChunkZ)
+    {
+        if (!HasValidNearGrassSubChunk(localSubChunkX, localSubChunkZ))
+            return false;
+
+        return nearGrassSubChunkGenerated[localSubChunkX, localSubChunkZ];
+    }
+
+    public void ClearNearGrassSubChunk(int localSubChunkX, int localSubChunkZ)
+    {
+        if (!HasValidNearGrassSubChunk(localSubChunkX, localSubChunkZ))
+            return;
+
+        nearGrassInstancesBySubChunk[localSubChunkX, localSubChunkZ].Clear();
+        nearGrassSubChunkGenerated[localSubChunkX, localSubChunkZ] = false;
+        nearGrassGenerated = false;
+    }
+
+    public void MarkNearGrassSubChunkGenerated(int localSubChunkX, int localSubChunkZ)
+    {
+        if (!HasValidNearGrassSubChunk(localSubChunkX, localSubChunkZ))
+            return;
+
+        nearGrassSubChunkGenerated[localSubChunkX, localSubChunkZ] = true;
+        nearGrassGenerated = AreAllNearGrassSubChunksGenerated();
+    }
+
+    private bool HasValidNearGrassSubChunk(int localSubChunkX, int localSubChunkZ)
+    {
+        return nearGrassInstancesBySubChunk != null &&
+               nearGrassSubChunkGenerated != null &&
+               localSubChunkX >= 0 &&
+               localSubChunkZ >= 0 &&
+               localSubChunkX < subChunksPerChunk &&
+               localSubChunkZ < subChunksPerChunk;
+    }
+
+    private bool AreAllNearGrassSubChunksGenerated()
+    {
+        if (nearGrassSubChunkGenerated == null)
+            return false;
+
+        for (int x = 0; x < subChunksPerChunk; x++)
+        {
+            for (int z = 0; z < subChunksPerChunk; z++)
+            {
+                if (!nearGrassSubChunkGenerated[x, z])
+                    return false;
+            }
+        }
+
+        return true;
     }
 
     public void ClearBillboards()

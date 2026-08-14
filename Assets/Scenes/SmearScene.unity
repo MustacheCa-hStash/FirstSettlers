@@ -475,10 +475,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   worldSeed: 1
-  viewDistance: 25
+  viewDistance: 50
   colliderDistance: 5
   enableFarTerrain: 1
-  farTerrainStartRing: 8
+  farTerrainStartRing: 20
+  farTerrainMacroTileSize: 4
   farTerrainHeightGridResolution: 9
   farTerrainControlMapResolution: 16
   farTerrainSkirtDepth: 6
@@ -493,6 +494,11 @@ MonoBehaviour:
     cellJitter: 1
     activeRingRadius: 1
     subChunksPerChunk: 10
+    activeSubChunkRadius: 0
+    maxSubChunkGenerationsPerFrame: 8
+    subChunkGenerationBudgetMsPerFrame: 1
+    maxRenderBatchRebuildsPerFrame: 1
+    renderBatchRebuildBudgetMsPerFrame: 0.35
     densityRadius3: 1
     densityRadius6: 0.7
     densityRadius10: 0.25
@@ -605,6 +611,22 @@ MonoBehaviour:
   meshHeightMultiplier: 200
   terrainMaterial: {fileID: 2100000, guid: 75e8037765088694c9d1b4d066552b07, type: 2}
   waterMaterial: {fileID: 2100000, guid: 14ca6caf7c7b1af4395d2aad206230ea, type: 2}
+  logTerrainGenerationProfile: 1
+  terrainGenerationProfileLogInterval: 5
+  resetTerrainGenerationProfileAfterLog: 1
+  maxActiveTerrainDataJobs: 4
+  maxActiveFarTerrainJobs: 4
+  maxActiveMeshJobs: 6
+  maxActiveColliderJobs: 2
+  maxTerrainDataResultsAppliedPerFrame: 3
+  maxFarTerrainResultsAppliedPerFrame: 160
+  maxLODMeshResultsAppliedPerFrame: 16
+  maxColliderResultsAppliedPerFrame: 2
+  completedRequestApplyBudgetMsPerFrame: 5
+  terrainDataApplyBudgetMsPerFrame: 1.25
+  farTerrainApplyBudgetMsPerFrame: 2.25
+  lodMeshApplyBudgetMsPerFrame: 1.25
+  colliderApplyBudgetMsPerFrame: 0.35
 --- !u!4 &830849844
 Transform:
   m_ObjectHideFlags: 0

@@ -34,6 +34,12 @@ Shader "Custom/GrassInstancedTerrainTint"
         _BaseUpwardBlend("Base Upward Normal Blend", Range(0, 1)) = 0.39
         _TipUpwardBlend("Tip Upward Normal Blend", Range(0, 1)) = 0.86
         _UpwardNormalBlend("Upward Normal Blend", Range(0, 1)) = 0.65
+        _WindDirection("Wind Direction", Vector) = (1, 0, 0.35, 0)
+        _WindStrength("Wind Bend Strength", Range(0, 1)) = 0.055
+        _WindSpeed("Wind Speed", Range(0, 8)) = 2.2
+        _WindFlutterStrength("Wind Tip Flutter Strength", Range(0, 1)) = 0.018
+        _WindFlutterSpeed("Wind Tip Flutter Speed", Range(0, 16)) = 7.5
+        _WindGustScale("Wind Gust Scale", Range(0.01, 2)) = 0.55
     }
 
     SubShader
@@ -95,6 +101,12 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half _BaseUpwardBlend;
                 half _TipUpwardBlend;
                 half _UpwardNormalBlend;
+                float4 _WindDirection;
+                half _WindStrength;
+                half _WindSpeed;
+                half _WindFlutterStrength;
+                half _WindFlutterSpeed;
+                half _WindGustScale;
             CBUFFER_END
 
             UNITY_INSTANCING_BUFFER_START(GrassInstanceProperties)
@@ -156,6 +168,22 @@ Shader "Custom/GrassInstancedTerrainTint"
                 return lerp(midGrass, lightGrass, (n - 0.5h) * 2.0h);
             }
 
+            float3 ApplyGrassWind(float3 positionWS, float bladeHeight, float instancePhase)
+            {
+                float2 windDir = normalize(_WindDirection.xz + float2(0.0001, 0.0));
+                float bendMask = bladeHeight * bladeHeight;
+                float spatialPhase = dot(positionWS.xz, windDir.yx * float2(0.91, -0.67));
+                float gustPhase = dot(positionWS.xz, windDir) * _WindGustScale + _Time.y * _WindSpeed + instancePhase;
+                float gust = sin(gustPhase + spatialPhase * 0.4);
+                float flutter = sin(_Time.y * _WindFlutterSpeed + spatialPhase * 3.1 + instancePhase * 1.37);
+
+                float bend = gust * _WindStrength * bendMask;
+                float tipFlutter = flutter * _WindFlutterStrength * bladeHeight;
+                float3 offset = float3(windDir.x, 0.0, windDir.y) * (bend + tipFlutter);
+                offset.y = -abs(bend) * 0.18;
+                return positionWS + offset;
+            }
+
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
@@ -163,14 +191,18 @@ Shader "Custom/GrassInstancedTerrainTint"
                 UNITY_SETUP_INSTANCE_ID(IN);
                 UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
 
-                VertexPositionInputs positionInputs = GetVertexPositionInputs(IN.positionOS.xyz);
-                OUT.positionCS = positionInputs.positionCS;
-                OUT.positionWS = positionInputs.positionWS;
+                half4 instanceData = UNITY_ACCESS_INSTANCED_PROP(GrassInstanceProperties, _GrassInstanceData);
+                half bladeHeight = saturate((IN.positionOS.y - _BladeMinY) / max(_BladeMaxY - _BladeMinY, 0.0001h));
+                float instancePhase = instanceData.y * 6.2831853;
+                float3 positionWS = TransformObjectToWorld(IN.positionOS.xyz);
+                positionWS = ApplyGrassWind(positionWS, bladeHeight, instancePhase);
+
+                OUT.positionCS = TransformWorldToHClip(positionWS);
+                OUT.positionWS = positionWS;
                 OUT.baseUV = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.grassUV = TRANSFORM_TEX(IN.uv, _GrassTex);
 
                 half3 normalWS = TransformObjectToWorldNormal(IN.normalOS);
-                half bladeHeight = saturate((IN.positionOS.y - _BladeMinY) / max(_BladeMaxY - _BladeMinY, 0.0001h));
                 half upwardBlend = saturate(lerp(_BaseUpwardBlend, _TipUpwardBlend, bladeHeight) * _UpwardNormalBlend);
                 OUT.normalWS = normalize(lerp(normalWS, half3(0.0h, 1.0h, 0.0h), upwardBlend));
 

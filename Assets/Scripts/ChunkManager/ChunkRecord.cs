@@ -98,6 +98,15 @@ public class ChunkRecord
         colliderRequestVersion++;
         return colliderRequestVersion;
     }
+
+    public void CancelColliderRequest(int requestVersion)
+    {
+        if (colliderRequestVersion == requestVersion)
+        {
+            colliderRequestInFlight = false;
+        }
+    }
+
     public bool TryCompleteColliderRequest(int requestVersion, Mesh mesh)
     {
         if (!colliderRequestInFlight || requestVersion != colliderRequestVersion)
@@ -283,6 +292,15 @@ public class ChunkRecord
         meshRequestVersionsByLOD[lod] = nextVersion;
         meshRequestsInFlight.Add(lod);
         return nextVersion;
+    }
+
+    public void CancelMeshRequest(int lod, int requestVersion)
+    {
+        if (!meshRequestVersionsByLOD.TryGetValue(lod, out int currentVersion))
+            return;
+
+        if (currentVersion == requestVersion)
+            meshRequestsInFlight.Remove(lod);
     }
 
     public bool TryCompleteMeshRequest(int lod, int requestVersion, Mesh terrainMesh, Mesh lakeMesh, Mesh riverMesh)

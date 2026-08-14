@@ -9,6 +9,13 @@ public class GrassSettings
     [Range(0f, 1f)] public float cellJitter = 1.0f;
     public int activeRingRadius = 1;
     public int subChunksPerChunk = 10;
+    public int activeSubChunkRadius = 0;
+    public int maxSubChunkGenerationsPerFrame = 8;
+    public float subChunkGenerationBudgetMsPerFrame = 1.0f;
+
+    [Header("Foliage Work Budgets")]
+    public int maxRenderBatchRebuildsPerFrame = 1;
+    public float renderBatchRebuildBudgetMsPerFrame = 0.35f;
 
     [Range(0f, 1f)] public float densityRadius3 = 1.0f;
     [Range(0f, 1f)] public float densityRadius6 = 0.7f;

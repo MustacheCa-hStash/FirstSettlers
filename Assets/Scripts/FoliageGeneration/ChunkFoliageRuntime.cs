@@ -102,6 +102,9 @@ public class ChunkFoliageRuntime
     private bool hasCurrentTreeRepresentation;
     private bool hasCurrentBushRepresentation;
     private bool hasCurrentRockRepresentation;
+    private bool hasBuiltGrassRenderData;
+    private bool hasBuiltBillboardRenderData;
+    private bool hasBuiltFlowerRenderData;
 
     public bool IsCreated => root != null;
     public int GpuGrassInstanceCount =>
@@ -149,6 +152,9 @@ public class ChunkFoliageRuntime
         grassRenderBatches.Clear();
         billboardRenderBatches.Clear();
         flowerRenderBatches.Clear();
+        hasBuiltGrassRenderData = false;
+        hasBuiltBillboardRenderData = false;
+        hasBuiltFlowerRenderData = false;
         mapleTreeBillboardMatrixBatches.Clear();
         sugarMapleTreeBillboardMatrixBatches.Clear();
         birchAspenTreeBillboardMatrixBatches.Clear();
@@ -176,19 +182,19 @@ public class ChunkFoliageRuntime
     {
         return grassMesh != null &&
                grassMaterial != null &&
-               grassRenderBatches.Count > 0;
+               hasBuiltGrassRenderData;
     }
 
     public bool HasValidBillboardRenderData()
     {
         return billboardMesh != null &&
                billboardMaterial != null &&
-               billboardRenderBatches.Count > 0;
+               hasBuiltBillboardRenderData;
     }
 
     public bool HasValidFlowerRenderData()
     {
-        return flowerMesh != null && flowerMaterial != null && flowerRenderBatches.Count > 0;
+        return flowerMesh != null && flowerMaterial != null && hasBuiltFlowerRenderData;
     }
 
     public bool HasValidTreeBillboardRenderData()
@@ -254,15 +260,20 @@ public class ChunkFoliageRuntime
 
     public void CacheGrassMatrices(List<Matrix4x4> worldMatrices, List<Vector4> instanceData)
     {
-        CacheGrassRenderBatches(worldMatrices, instanceData, grassRenderBatches);
+        hasBuiltGrassRenderData = CacheGrassRenderBatches(worldMatrices, instanceData, grassRenderBatches);
+    }
+
+    public void CacheGrassMatrices(Matrix4x4[] worldMatrices, Vector4[] instanceData)
+    {
+        hasBuiltGrassRenderData = CacheGrassRenderBatches(worldMatrices, instanceData, grassRenderBatches);
     }
 
     public void CacheBillboardMatrices(List<Matrix4x4> worldMatrices, List<Vector4> instanceData)
     {
-        CacheGrassRenderBatches(worldMatrices, instanceData, billboardRenderBatches);
+        hasBuiltBillboardRenderData = CacheGrassRenderBatches(worldMatrices, instanceData, billboardRenderBatches);
     }
 
-    private void CacheGrassRenderBatches(
+    private bool CacheGrassRenderBatches(
         List<Matrix4x4> worldMatrices,
         List<Vector4> instanceData,
         List<GrassRenderBatch> targetBatches)
@@ -270,12 +281,12 @@ public class ChunkFoliageRuntime
         targetBatches.Clear();
 
         if (worldMatrices == null || instanceData == null)
-            return;
+            return true;
 
         if (worldMatrices.Count != instanceData.Count)
         {
             Debug.LogError("Grass matrix and instance data counts must match.");
-            return;
+            return false;
         }
 
         const int maxBatchSize = 1023;
@@ -297,6 +308,44 @@ public class ChunkFoliageRuntime
             targetBatches.Add(new GrassRenderBatch(matrixBatch, instanceDataBatch));
             startIndex += batchCount;
         }
+
+        return true;
+    }
+
+    private bool CacheGrassRenderBatches(
+        Matrix4x4[] worldMatrices,
+        Vector4[] instanceData,
+        List<GrassRenderBatch> targetBatches)
+    {
+        targetBatches.Clear();
+
+        if (worldMatrices == null || instanceData == null)
+            return true;
+
+        if (worldMatrices.Length != instanceData.Length)
+        {
+            Debug.LogError("Grass matrix and instance data counts must match.");
+            return false;
+        }
+
+        const int maxBatchSize = 1023;
+        int totalCount = worldMatrices.Length;
+        int startIndex = 0;
+
+        while (startIndex < totalCount)
+        {
+            int batchCount = Mathf.Min(maxBatchSize, totalCount - startIndex);
+            Matrix4x4[] matrixBatch = new Matrix4x4[batchCount];
+            Vector4[] instanceDataBatch = new Vector4[batchCount];
+
+            System.Array.Copy(worldMatrices, startIndex, matrixBatch, 0, batchCount);
+            System.Array.Copy(instanceData, startIndex, instanceDataBatch, 0, batchCount);
+
+            targetBatches.Add(new GrassRenderBatch(matrixBatch, instanceDataBatch));
+            startIndex += batchCount;
+        }
+
+        return true;
     }
 
     public void CacheFlowerBatches(List<Matrix4x4> worldMatrices, List<Vector4> petalColors)
@@ -304,11 +353,15 @@ public class ChunkFoliageRuntime
         flowerRenderBatches.Clear();
 
         if (worldMatrices == null || petalColors == null)
+        {
+            hasBuiltFlowerRenderData = true;
             return;
+        }
 
         if (worldMatrices.Count != petalColors.Count)
         {
             Debug.LogError("Flower matrix and petal color counts must match.");
+            hasBuiltFlowerRenderData = false;
             return;
         }
 
@@ -331,6 +384,8 @@ public class ChunkFoliageRuntime
             flowerRenderBatches.Add(new FlowerRenderBatch(matrixBatch, petalColorBatch));
             startIndex += batchCount;
         }
+
+        hasBuiltFlowerRenderData = true;
     }
 
     public void CacheTreeBillboardMatrices(
@@ -643,6 +698,7 @@ public class ChunkFoliageRuntime
     public void ClearFlowerBatches()
     {
         flowerRenderBatches.Clear();
+        hasBuiltFlowerRenderData = false;
     }
 
     public void ClearTreeBillboardMatrices()
@@ -658,24 +714,36 @@ public class ChunkFoliageRuntime
 
     public void DrawGrass()
     {
-        if (!isVisible || !HasValidGrassRenderData())
+        if (!isVisible || !HasValidGrassRenderData() || grassRenderBatches.Count == 0)
             return;
+
+        long stageStart = TerrainGenerationProfiler.GetTimestamp();
 
         for (int i = 0; i < grassRenderBatches.Count; i++)
         {
             DrawInstancedBatch(grassMesh, grassMaterial, grassRenderBatches[i]);
         }
+
+        TerrainGenerationProfiler.Record(
+            TerrainGenerationProfileStage.FoliageGrassDraw,
+            stageStart);
     }
 
     public void DrawBillboards()
     {
-        if (!isVisible || !HasValidBillboardRenderData())
+        if (!isVisible || !HasValidBillboardRenderData() || billboardRenderBatches.Count == 0)
             return;
+
+        long stageStart = TerrainGenerationProfiler.GetTimestamp();
 
         for (int i = 0; i < billboardRenderBatches.Count; i++)
         {
             DrawInstancedBatch(billboardMesh, billboardMaterial, billboardRenderBatches[i]);
         }
+
+        TerrainGenerationProfiler.Record(
+            TerrainGenerationProfileStage.FoliageBillboardGrassDraw,
+            stageStart);
     }
 
     private void DrawInstancedBatch(
@@ -703,8 +771,10 @@ public class ChunkFoliageRuntime
 
     public void DrawFlowers()
     {
-        if (!isVisible || !HasValidFlowerRenderData())
+        if (!isVisible || !HasValidFlowerRenderData() || flowerRenderBatches.Count == 0)
             return;
+
+        long stageStart = TerrainGenerationProfiler.GetTimestamp();
 
         for (int i = 0; i < flowerRenderBatches.Count; i++)
         {
@@ -727,12 +797,18 @@ public class ChunkFoliageRuntime
                 true
             );
         }
+
+        TerrainGenerationProfiler.Record(
+            TerrainGenerationProfileStage.FoliageFlowerDraw,
+            stageStart);
     }
 
     public void DrawTreeBillboards(bool castShadows, bool receiveShadows)
     {
         if (!isVisible || !HasValidTreeBillboardRenderData())
             return;
+
+        long stageStart = TerrainGenerationProfiler.GetTimestamp();
 
         ShadowCastingMode shadowMode = castShadows
             ? ShadowCastingMode.On
@@ -745,6 +821,9 @@ public class ChunkFoliageRuntime
         DrawTreeBillboardBatches(spruceTreeBillboard, spruceTreeBillboardMatrixBatches, shadowMode, receiveShadows);
         DrawTreeBillboardBatches(whitePineTreeBillboard, whitePineTreeBillboardMatrixBatches, shadowMode, receiveShadows);
         DrawTreeBillboardBatches(oakTreeBillboard, oakTreeBillboardMatrixBatches, shadowMode, receiveShadows);
+        TerrainGenerationProfiler.Record(
+            TerrainGenerationProfileStage.FoliageTreeBillboardDraw,
+            stageStart);
     }
 
     private void DrawTreeBillboardBatches(

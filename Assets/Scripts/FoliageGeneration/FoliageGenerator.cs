@@ -1,4 +1,8 @@
 using System.Collections.Generic;
+using Unity.Burst;
+using Unity.Collections;
+using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 
 public static class FoliageGenerator
@@ -12,31 +16,69 @@ public static class FoliageGenerator
         float worldScale,
         float meshHeightMultiplier)
     {
-        if (record.FoliageData == null)
+        int subChunksPerChunk = Mathf.Max(1, grassSettings.subChunksPerChunk);
+        EnsureNearGrassStorage(record, subChunksPerChunk);
+
+        for (int localSubChunkX = 0; localSubChunkX < subChunksPerChunk; localSubChunkX++)
         {
-            record.FoliageData = new ChunkFoliageData();
+            for (int localSubChunkZ = 0; localSubChunkZ < subChunksPerChunk; localSubChunkZ++)
+            {
+                GenerateGrassForSubChunk(
+                    record,
+                    grassSettings,
+                    treeSettings,
+                    worldSeed,
+                    chunkSize,
+                    worldScale,
+                    meshHeightMultiplier,
+                    localSubChunkX,
+                    localSubChunkZ);
+            }
         }
+    }
+
+    public static void GenerateGrassForSubChunk(
+        ChunkRecord record,
+        GrassSettings grassSettings,
+        TreeSettings treeSettings,
+        int worldSeed,
+        int chunkSize,
+        float worldScale,
+        float meshHeightMultiplier,
+        int localSubChunkX,
+        int localSubChunkZ)
+    {
+        int subChunksPerChunk = Mathf.Max(1, grassSettings.subChunksPerChunk);
+        EnsureNearGrassStorage(record, subChunksPerChunk);
 
         ChunkFoliageData foliageData = record.FoliageData;
 
-        int subChunksPerChunk = Mathf.Max(1, grassSettings.subChunksPerChunk);
+        localSubChunkX = Mathf.Clamp(localSubChunkX, 0, subChunksPerChunk - 1);
+        localSubChunkZ = Mathf.Clamp(localSubChunkZ, 0, subChunksPerChunk - 1);
 
-        if (foliageData.nearGrassInstancesBySubChunk == null ||
-            foliageData.subChunksPerChunk != subChunksPerChunk)
-        {
-            foliageData.InitializeNearGrass(subChunksPerChunk);
-        }
-        else
-        {
-            foliageData.ClearNearGrass();
-        }
+        foliageData.ClearNearGrassSubChunk(localSubChunkX, localSubChunkZ);
 
         if (record.SurfaceTypeMap == null || record.HeightMap == null || record.BiomeMap == null)
+        {
+            foliageData.MarkNearGrassSubChunkGenerated(localSubChunkX, localSubChunkZ);
             return;
+        }
 
         int cellsPerAxis = Mathf.Max(1, grassSettings.cellsPerAxis);
         float cellSize = (float)chunkSize / cellsPerAxis;
         float subChunkSize = (float)chunkSize / subChunksPerChunk;
+        float subChunkMinX = localSubChunkX * subChunkSize;
+        float subChunkMinZ = localSubChunkZ * subChunkSize;
+        float subChunkMaxX = localSubChunkX == subChunksPerChunk - 1
+            ? chunkSize
+            : subChunkMinX + subChunkSize;
+        float subChunkMaxZ = localSubChunkZ == subChunksPerChunk - 1
+            ? chunkSize
+            : subChunkMinZ + subChunkSize;
+        int startCellX = Mathf.Clamp(Mathf.FloorToInt(subChunkMinX / cellSize) - 1, 0, cellsPerAxis - 1);
+        int endCellX = Mathf.Clamp(Mathf.CeilToInt(subChunkMaxX / cellSize), 0, cellsPerAxis - 1);
+        int startCellZ = Mathf.Clamp(Mathf.FloorToInt(subChunkMinZ / cellSize) - 1, 0, cellsPerAxis - 1);
+        int endCellZ = Mathf.Clamp(Mathf.CeilToInt(subChunkMaxZ / cellSize), 0, cellsPerAxis - 1);
 
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;
@@ -51,119 +93,111 @@ public static class FoliageGenerator
             ? treeSettings.rockGrassExclusionRadius * treeSettings.rockGrassExclusionRadius
             : 0f;
 
-        for (int cellZ = 0; cellZ < cellsPerAxis; cellZ++)
+        int cellCountX = endCellX - startCellX + 1;
+        int cellCountZ = endCellZ - startCellZ + 1;
+        int candidateCount = cellCountX * cellCountZ;
+
+        NativeArray<float> heightMap = FlattenFloatMap(record.HeightMap, Allocator.TempJob, out int heightMapWidth, out int heightMapHeight);
+        NativeArray<SurfaceType> surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.TempJob, out int surfaceMapWidth, out int surfaceMapHeight);
+        NativeArray<BiomeType> biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.TempJob, out int biomeMapWidth, out int biomeMapHeight);
+        NativeArray<GroundCoverType> groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.TempJob, out int groundCoverMapWidth, out int groundCoverMapHeight);
+        NativeArray<float2> treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.TempJob);
+        NativeArray<float2> bushExclusionPositions = CreateTreeExclusionPositions(foliageData.bushInstances, Allocator.TempJob);
+        NativeArray<float2> rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, Allocator.TempJob);
+        NativeArray<GrassSubChunkDiscoveryResult> results =
+            new NativeArray<GrassSubChunkDiscoveryResult>(candidateCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+
+        try
         {
-            for (int cellX = 0; cellX < cellsPerAxis; cellX++)
+            GrassSubChunkDiscoveryJob job = new GrassSubChunkDiscoveryJob
             {
-                int cellHash = Hash(
-                    worldSeed,
-                    grassSettings.seedOffset,
-                    record.ChunkCoord.x,
-                    record.ChunkCoord.z,
-                    cellX,
-                    cellZ,
-                    713);
+                heightMap = heightMap,
+                heightMapWidth = heightMapWidth,
+                heightMapHeight = heightMapHeight,
+                surfaceMap = surfaceMap,
+                surfaceMapWidth = surfaceMapWidth,
+                surfaceMapHeight = surfaceMapHeight,
+                biomeMap = biomeMap,
+                biomeMapWidth = biomeMapWidth,
+                biomeMapHeight = biomeMapHeight,
+                groundCoverMap = groundCoverMap,
+                groundCoverMapWidth = groundCoverMapWidth,
+                groundCoverMapHeight = groundCoverMapHeight,
+                hasGroundCoverMap = record.GroundCoverMap != null,
+                treeExclusionPositions = treeExclusionPositions,
+                bushExclusionPositions = bushExclusionPositions,
+                rockExclusionPositions = rockExclusionPositions,
+                treeExclusionRadiusSqr = treeExclusionRadiusSqr,
+                bushExclusionRadiusSqr = bushExclusionRadiusSqr,
+                rockExclusionRadiusSqr = rockExclusionRadiusSqr,
+                results = results,
+                worldSeed = worldSeed,
+                seedOffset = grassSettings.seedOffset,
+                chunkCoordX = record.ChunkCoord.x,
+                chunkCoordZ = record.ChunkCoord.z,
+                chunkSize = chunkSize,
+                startCellX = startCellX,
+                startCellZ = startCellZ,
+                cellCountX = cellCountX,
+                cellSize = cellSize,
+                cellJitter = Mathf.Clamp01(grassSettings.cellJitter),
+                subChunkMinX = subChunkMinX,
+                subChunkMinZ = subChunkMinZ,
+                subChunkMaxX = subChunkMaxX,
+                subChunkMaxZ = subChunkMaxZ,
+                includeMaxX = localSubChunkX == subChunksPerChunk - 1,
+                includeMaxZ = localSubChunkZ == subChunksPerChunk - 1,
+                topLeftX = topLeftX,
+                bottomLeftZ = bottomLeftZ,
+                worldScale = worldScale,
+                meshHeightMultiplier = meshHeightMultiplier,
+                randomizeYaw = grassSettings.randomizeYaw,
+                minScale = grassSettings.uniformScaleRange.x,
+                maxScale = grassSettings.uniformScaleRange.y
+            };
 
-                float jitterStrength = Mathf.Clamp01(grassSettings.cellJitter);
-                float jitterX = Mathf.Lerp(0.5f, Hash01(cellHash + 31), jitterStrength);
-                float jitterZ = Mathf.Lerp(0.5f, Hash01(cellHash + 67), jitterStrength);
+            JobHandle handle = job.Schedule(candidateCount, 32);
+            handle.Complete();
 
-                float sampleX = (cellX + jitterX) * cellSize;
-                float sampleZ = (cellZ + jitterZ) * cellSize;
+            List<FoliageInstanceData> subChunkInstances =
+                foliageData.nearGrassInstancesBySubChunk[localSubChunkX, localSubChunkZ];
 
-                int mapX = Mathf.Clamp(Mathf.RoundToInt(sampleX), 0, chunkSize);
-                int mapZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize);
-
-                int paddedX = mapX + 1;
-                int paddedZ = mapZ + 1;
-
-                if (!AllowsInstancedGrass(record, paddedX, paddedZ))
+            for (int i = 0; i < results.Length; i++)
+            {
+                GrassSubChunkDiscoveryResult result = results[i];
+                if (result.valid == 0)
                     continue;
 
-                float forestBlend = GetGrassForestBlend(record, paddedX, paddedZ);
-
-                float localX = (topLeftX + sampleX) * worldScale;
-                float localZ = (bottomLeftZ + sampleZ) * worldScale;
-
-                if ((treeExclusionRadiusSqr > 0f && IsInsideTreeExclusion(
-                    localX,
-                    localZ,
-                    foliageData.treeCubeInstances,
-                    treeExclusionRadiusSqr)) ||
-                    (bushExclusionRadiusSqr > 0f && IsInsideTreeExclusion(
-                        localX,
-                        localZ,
-                        foliageData.bushInstances,
-                        bushExclusionRadiusSqr)) ||
-                    (rockExclusionRadiusSqr > 0f && IsInsideRockExclusion(
-                        localX,
-                        localZ,
-                        foliageData.rockInstances,
-                        rockExclusionRadiusSqr)))
-                {
-                    continue;
-                }
-
-                float height = SampleHeightBilinear(
-                    record.HeightMap,
-                    sampleX,
-                    sampleZ,
-                    chunkSize);
-
-                float localY = height * meshHeightMultiplier * worldScale;
-
-                float yaw = 0f;
-                if (grassSettings.randomizeYaw)
-                {
-                    yaw = GetDeterministicYaw(
-                        worldSeed,
-                        grassSettings.seedOffset,
-                        record.ChunkCoord,
-                        cellX,
-                        cellZ);
-                }
-
-                float uniformScale = GetDeterministicScale(
-                    worldSeed,
-                    grassSettings.seedOffset,
-                    record.ChunkCoord,
-                    cellX,
-                    cellZ,
-                    grassSettings.uniformScaleRange);
-
-                uint selectionRank = GetDeterministicSelectionRank(
-                    worldSeed,
-                    grassSettings.seedOffset,
-                    record.ChunkCoord,
-                    cellX,
-                    cellZ);
-
-                Vector3 localPosition = new Vector3(localX, localY, localZ);
-                Quaternion localRotation = Quaternion.Euler(0f, yaw, 0f);
-                Vector3 localScale = Vector3.one * uniformScale;
-
-                int subChunkX = Mathf.Clamp(
-                    Mathf.FloorToInt(sampleX / subChunkSize),
-                    0,
-                    subChunksPerChunk - 1);
-
-                int subChunkZ = Mathf.Clamp(
-                    Mathf.FloorToInt(sampleZ / subChunkSize),
-                    0,
-                    subChunksPerChunk - 1);
-
-                foliageData.nearGrassInstancesBySubChunk[subChunkX, subChunkZ].Add(
-                    new FoliageInstanceData(
-                        localPosition,
-                        localRotation,
-                        localScale,
-                        selectionRank,
-                        forestBlend));
+                subChunkInstances.Add(new FoliageInstanceData(
+                    new Vector3(result.localPosition.x, result.localPosition.y, result.localPosition.z),
+                    Quaternion.Euler(0f, result.yaw, 0f),
+                    Vector3.one * result.uniformScale,
+                    result.selectionRank,
+                    result.forestBlend));
             }
         }
+        finally
+        {
+            if (heightMap.IsCreated)
+                heightMap.Dispose();
+            if (surfaceMap.IsCreated)
+                surfaceMap.Dispose();
+            if (biomeMap.IsCreated)
+                biomeMap.Dispose();
+            if (groundCoverMap.IsCreated)
+                groundCoverMap.Dispose();
+            if (treeExclusionPositions.IsCreated)
+                treeExclusionPositions.Dispose();
+            if (bushExclusionPositions.IsCreated)
+                bushExclusionPositions.Dispose();
+            if (rockExclusionPositions.IsCreated)
+                rockExclusionPositions.Dispose();
+            if (results.IsCreated)
+                results.Dispose();
+        }
 
-        SortSubChunkBucketsBySelectionRank(foliageData);
-        foliageData.nearGrassGenerated = true;
+        SortSubChunkBucketBySelectionRank(foliageData, localSubChunkX, localSubChunkZ);
+        foliageData.MarkNearGrassSubChunkGenerated(localSubChunkX, localSubChunkZ);
     }
 
     public static void GenerateBillboardGrassForChunk(
@@ -813,6 +847,443 @@ public static class FoliageGenerator
                 foliageData.nearGrassInstancesBySubChunk[x, z].Sort((a, b) =>
                     a.selectionRank.CompareTo(b.selectionRank));
             }
+        }
+    }
+
+    private static void SortSubChunkBucketBySelectionRank(
+        ChunkFoliageData foliageData,
+        int localSubChunkX,
+        int localSubChunkZ)
+    {
+        foliageData.nearGrassInstancesBySubChunk[localSubChunkX, localSubChunkZ].Sort((a, b) =>
+            a.selectionRank.CompareTo(b.selectionRank));
+    }
+
+    private static void EnsureNearGrassStorage(ChunkRecord record, int subChunksPerChunk)
+    {
+        if (record.FoliageData == null)
+        {
+            record.FoliageData = new ChunkFoliageData();
+        }
+
+        if (record.FoliageData.nearGrassInstancesBySubChunk == null ||
+            record.FoliageData.nearGrassSubChunkGenerated == null ||
+            record.FoliageData.subChunksPerChunk != subChunksPerChunk)
+        {
+            record.FoliageData.InitializeNearGrass(subChunksPerChunk);
+        }
+    }
+
+    private static bool IsSampleInsideSubChunk(
+        float sampleX,
+        float sampleZ,
+        float minX,
+        float minZ,
+        float maxX,
+        float maxZ,
+        bool includeMaxX,
+        bool includeMaxZ)
+    {
+        bool insideX = includeMaxX
+            ? sampleX >= minX && sampleX <= maxX
+            : sampleX >= minX && sampleX < maxX;
+
+        bool insideZ = includeMaxZ
+            ? sampleZ >= minZ && sampleZ <= maxZ
+            : sampleZ >= minZ && sampleZ < maxZ;
+
+        return insideX && insideZ;
+    }
+
+    private static NativeArray<float> FlattenFloatMap(float[,] source, Allocator allocator, out int width, out int height)
+    {
+        if (source == null)
+        {
+            width = 0;
+            height = 0;
+            return new NativeArray<float>(0, allocator);
+        }
+
+        width = source.GetLength(0);
+        height = source.GetLength(1);
+        NativeArray<float> result = new NativeArray<float>(width * height, allocator, NativeArrayOptions.UninitializedMemory);
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int z = 0; z < height; z++)
+            {
+                result[FlattenIndex(x, z, height)] = source[x, z];
+            }
+        }
+
+        return result;
+    }
+
+    private static NativeArray<SurfaceType> FlattenSurfaceMap(SurfaceType[,] source, Allocator allocator, out int width, out int height)
+    {
+        if (source == null)
+        {
+            width = 0;
+            height = 0;
+            return new NativeArray<SurfaceType>(0, allocator);
+        }
+
+        width = source.GetLength(0);
+        height = source.GetLength(1);
+        NativeArray<SurfaceType> result = new NativeArray<SurfaceType>(width * height, allocator, NativeArrayOptions.UninitializedMemory);
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int z = 0; z < height; z++)
+            {
+                result[FlattenIndex(x, z, height)] = source[x, z];
+            }
+        }
+
+        return result;
+    }
+
+    private static NativeArray<BiomeType> FlattenBiomeMap(BiomeType[,] source, Allocator allocator, out int width, out int height)
+    {
+        if (source == null)
+        {
+            width = 0;
+            height = 0;
+            return new NativeArray<BiomeType>(0, allocator);
+        }
+
+        width = source.GetLength(0);
+        height = source.GetLength(1);
+        NativeArray<BiomeType> result = new NativeArray<BiomeType>(width * height, allocator, NativeArrayOptions.UninitializedMemory);
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int z = 0; z < height; z++)
+            {
+                result[FlattenIndex(x, z, height)] = source[x, z];
+            }
+        }
+
+        return result;
+    }
+
+    private static NativeArray<GroundCoverType> FlattenGroundCoverMap(GroundCoverType[,] source, Allocator allocator, out int width, out int height)
+    {
+        if (source == null)
+        {
+            width = 0;
+            height = 0;
+            return new NativeArray<GroundCoverType>(0, allocator);
+        }
+
+        width = source.GetLength(0);
+        height = source.GetLength(1);
+        NativeArray<GroundCoverType> result = new NativeArray<GroundCoverType>(width * height, allocator, NativeArrayOptions.UninitializedMemory);
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int z = 0; z < height; z++)
+            {
+                result[FlattenIndex(x, z, height)] = source[x, z];
+            }
+        }
+
+        return result;
+    }
+
+    private static NativeArray<float2> CreateTreeExclusionPositions(List<TreeInstanceData> instances, Allocator allocator)
+    {
+        int count = instances != null ? instances.Count : 0;
+        NativeArray<float2> result = new NativeArray<float2>(count, allocator, NativeArrayOptions.UninitializedMemory);
+
+        for (int i = 0; i < count; i++)
+        {
+            Vector3 position = instances[i].localPosition;
+            result[i] = new float2(position.x, position.z);
+        }
+
+        return result;
+    }
+
+    private static NativeArray<float2> CreateRockExclusionPositions(List<RockInstanceData> instances, Allocator allocator)
+    {
+        int count = instances != null ? instances.Count : 0;
+        NativeArray<float2> result = new NativeArray<float2>(count, allocator, NativeArrayOptions.UninitializedMemory);
+
+        for (int i = 0; i < count; i++)
+        {
+            Vector3 position = instances[i].localPosition;
+            result[i] = new float2(position.x, position.z);
+        }
+
+        return result;
+    }
+
+    private static int FlattenIndex(int x, int z, int height)
+    {
+        return x * height + z;
+    }
+
+    private struct GrassSubChunkDiscoveryResult
+    {
+        public byte valid;
+        public float3 localPosition;
+        public float yaw;
+        public float uniformScale;
+        public uint selectionRank;
+        public float forestBlend;
+    }
+
+    [BurstCompile]
+    private struct GrassSubChunkDiscoveryJob : IJobParallelFor
+    {
+        [ReadOnly] public NativeArray<float> heightMap;
+        public int heightMapWidth;
+        public int heightMapHeight;
+        [ReadOnly] public NativeArray<SurfaceType> surfaceMap;
+        public int surfaceMapWidth;
+        public int surfaceMapHeight;
+        [ReadOnly] public NativeArray<BiomeType> biomeMap;
+        public int biomeMapWidth;
+        public int biomeMapHeight;
+        [ReadOnly] public NativeArray<GroundCoverType> groundCoverMap;
+        public int groundCoverMapWidth;
+        public int groundCoverMapHeight;
+        public bool hasGroundCoverMap;
+        [ReadOnly] public NativeArray<float2> treeExclusionPositions;
+        [ReadOnly] public NativeArray<float2> bushExclusionPositions;
+        [ReadOnly] public NativeArray<float2> rockExclusionPositions;
+        public float treeExclusionRadiusSqr;
+        public float bushExclusionRadiusSqr;
+        public float rockExclusionRadiusSqr;
+        [WriteOnly] public NativeArray<GrassSubChunkDiscoveryResult> results;
+        public int worldSeed;
+        public int seedOffset;
+        public int chunkCoordX;
+        public int chunkCoordZ;
+        public int chunkSize;
+        public int startCellX;
+        public int startCellZ;
+        public int cellCountX;
+        public float cellSize;
+        public float cellJitter;
+        public float subChunkMinX;
+        public float subChunkMinZ;
+        public float subChunkMaxX;
+        public float subChunkMaxZ;
+        public bool includeMaxX;
+        public bool includeMaxZ;
+        public float topLeftX;
+        public float bottomLeftZ;
+        public float worldScale;
+        public float meshHeightMultiplier;
+        public bool randomizeYaw;
+        public float minScale;
+        public float maxScale;
+
+        public void Execute(int index)
+        {
+            int cellX = startCellX + index % cellCountX;
+            int cellZ = startCellZ + index / cellCountX;
+
+            int cellHash = Hash7(worldSeed, seedOffset, chunkCoordX, chunkCoordZ, cellX, cellZ, 713);
+            float jitterX = math.lerp(0.5f, Hash01(cellHash + 31), cellJitter);
+            float jitterZ = math.lerp(0.5f, Hash01(cellHash + 67), cellJitter);
+            float sampleX = (cellX + jitterX) * cellSize;
+            float sampleZ = (cellZ + jitterZ) * cellSize;
+
+            if (!IsSampleInsideSubChunk(sampleX, sampleZ))
+            {
+                results[index] = default;
+                return;
+            }
+
+            int mapX = math.clamp((int)math.round(sampleX), 0, chunkSize);
+            int mapZ = math.clamp((int)math.round(sampleZ), 0, chunkSize);
+            int paddedX = mapX + 1;
+            int paddedZ = mapZ + 1;
+
+            if (!AllowsInstancedGrass(paddedX, paddedZ))
+            {
+                results[index] = default;
+                return;
+            }
+
+            float localX = (topLeftX + sampleX) * worldScale;
+            float localZ = (bottomLeftZ + sampleZ) * worldScale;
+            float2 localXZ = new float2(localX, localZ);
+
+            if (IsInsideExclusion(localXZ, treeExclusionPositions, treeExclusionRadiusSqr) ||
+                IsInsideExclusion(localXZ, bushExclusionPositions, bushExclusionRadiusSqr) ||
+                IsInsideExclusion(localXZ, rockExclusionPositions, rockExclusionRadiusSqr))
+            {
+                results[index] = default;
+                return;
+            }
+
+            float height = SampleHeightBilinear(sampleX, sampleZ);
+            float yaw = randomizeYaw
+                ? Hash01(Hash7(worldSeed, seedOffset, chunkCoordX, chunkCoordZ, cellX, cellZ, 17)) * 360f
+                : 0f;
+            float uniformScale = math.lerp(
+                minScale,
+                maxScale,
+                Hash01(Hash7(worldSeed, seedOffset, chunkCoordX, chunkCoordZ, cellX, cellZ, 29)));
+            uint selectionRank = (uint)Hash7(worldSeed, seedOffset, chunkCoordX, chunkCoordZ, cellX, cellZ, 101);
+
+            results[index] = new GrassSubChunkDiscoveryResult
+            {
+                valid = 1,
+                localPosition = new float3(localX, height * meshHeightMultiplier * worldScale, localZ),
+                yaw = yaw,
+                uniformScale = uniformScale,
+                selectionRank = selectionRank,
+                forestBlend = GetGrassForestBlend(paddedX, paddedZ)
+            };
+        }
+
+        private bool IsSampleInsideSubChunk(float sampleX, float sampleZ)
+        {
+            bool insideX = includeMaxX
+                ? sampleX >= subChunkMinX && sampleX <= subChunkMaxX
+                : sampleX >= subChunkMinX && sampleX < subChunkMaxX;
+
+            bool insideZ = includeMaxZ
+                ? sampleZ >= subChunkMinZ && sampleZ <= subChunkMaxZ
+                : sampleZ >= subChunkMinZ && sampleZ < subChunkMaxZ;
+
+            return insideX && insideZ;
+        }
+
+        private bool AllowsInstancedGrass(int paddedX, int paddedZ)
+        {
+            if (ReadSurface(paddedX, paddedZ) != SurfaceType.Grass)
+                return false;
+
+            if (!hasGroundCoverMap)
+                return true;
+
+            GroundCoverType groundCover = ReadGroundCover(paddedX, paddedZ);
+            return groundCover == GroundCoverType.Default ||
+                   groundCover == GroundCoverType.DarkGrass;
+        }
+
+        private float GetGrassForestBlend(int paddedX, int paddedZ)
+        {
+            if (hasGroundCoverMap && ReadGroundCover(paddedX, paddedZ) == GroundCoverType.DarkGrass)
+                return 1f;
+
+            return ReadBiome(paddedX, paddedZ) == BiomeType.Forest ? 1f : 0f;
+        }
+
+        private bool IsInsideExclusion(float2 localXZ, NativeArray<float2> positions, float exclusionRadiusSqr)
+        {
+            if (exclusionRadiusSqr <= 0f)
+                return false;
+
+            for (int i = 0; i < positions.Length; i++)
+            {
+                float2 delta = localXZ - positions[i];
+                if (math.lengthsq(delta) < exclusionRadiusSqr)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private float SampleHeightBilinear(float sampleX, float sampleZ)
+        {
+            float x = math.clamp(sampleX, 0f, chunkSize);
+            float z = math.clamp(sampleZ, 0f, chunkSize);
+
+            int x0 = (int)math.floor(x);
+            int z0 = (int)math.floor(z);
+            int x1 = math.min(x0 + 1, chunkSize);
+            int z1 = math.min(z0 + 1, chunkSize);
+
+            float tx = x - x0;
+            float tz = z - z0;
+
+            int px0 = x0 + 1;
+            int pz0 = z0 + 1;
+            int px1 = x1 + 1;
+            int pz1 = z1 + 1;
+
+            float h00 = ReadHeight(px0, pz0);
+            float h10 = ReadHeight(px1, pz0);
+            float h01 = ReadHeight(px0, pz1);
+            float h11 = ReadHeight(px1, pz1);
+
+            float hx0 = math.lerp(h00, h10, tx);
+            float hx1 = math.lerp(h01, h11, tx);
+
+            return math.lerp(hx0, hx1, tz);
+        }
+
+        private float ReadHeight(int x, int z)
+        {
+            x = math.clamp(x, 0, heightMapWidth - 1);
+            z = math.clamp(z, 0, heightMapHeight - 1);
+            return heightMap[x * heightMapHeight + z];
+        }
+
+        private SurfaceType ReadSurface(int x, int z)
+        {
+            x = math.clamp(x, 0, surfaceMapWidth - 1);
+            z = math.clamp(z, 0, surfaceMapHeight - 1);
+            return surfaceMap[x * surfaceMapHeight + z];
+        }
+
+        private BiomeType ReadBiome(int x, int z)
+        {
+            x = math.clamp(x, 0, biomeMapWidth - 1);
+            z = math.clamp(z, 0, biomeMapHeight - 1);
+            return biomeMap[x * biomeMapHeight + z];
+        }
+
+        private GroundCoverType ReadGroundCover(int x, int z)
+        {
+            x = math.clamp(x, 0, groundCoverMapWidth - 1);
+            z = math.clamp(z, 0, groundCoverMapHeight - 1);
+            return groundCoverMap[x * groundCoverMapHeight + z];
+        }
+
+        private static int Hash7(int v0, int v1, int v2, int v3, int v4, int v5, int v6)
+        {
+            uint hash = 2166136261u;
+            hash = MixHash(hash, v0);
+            hash = MixHash(hash, v1);
+            hash = MixHash(hash, v2);
+            hash = MixHash(hash, v3);
+            hash = MixHash(hash, v4);
+            hash = MixHash(hash, v5);
+            hash = MixHash(hash, v6);
+            return (int)hash;
+        }
+
+        private static uint MixHash(uint hash, int value)
+        {
+            hash ^= (uint)value;
+            hash *= 16777619u;
+            hash ^= hash >> 13;
+            hash *= 1274126177u;
+            hash ^= hash >> 16;
+            return hash;
+        }
+
+        private static float Hash01(int hash)
+        {
+            uint value = (uint)hash;
+
+            value ^= value >> 17;
+            value *= 0xed5ad4bbu;
+            value ^= value >> 11;
+            value *= 0xac4c1b51u;
+            value ^= value >> 15;
+            value *= 0x31848babu;
+            value ^= value >> 14;
+
+            return value / 4294967295f;
         }
     }
 

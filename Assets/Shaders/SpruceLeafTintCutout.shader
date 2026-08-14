@@ -10,6 +10,14 @@ Shader "Custom/SpruceLeafTintCutout"
         _AmbientStrength("Ambient Strength", Range(0, 1)) = 0.35
         _LightWrap("Leaf Light Wrap", Range(0, 1)) = 0.45
         [Toggle] _UseVertexColor("Use Vertex Color", Float) = 0
+        _WindDirection("Wind Direction", Vector) = (1, 0, 0.35, 0)
+        _WindStrength("Wind Canopy Sway Strength", Range(0, 1)) = 0.08
+        _WindSpeed("Wind Canopy Sway Speed", Range(0, 8)) = 1.35
+        _WindFlutterStrength("Wind Needle Flutter Strength", Range(0, 1)) = 0.035
+        _WindFlutterSpeed("Wind Needle Flutter Speed", Range(0, 16)) = 5.5
+        _WindGustScale("Wind Gust Scale", Range(0.01, 2)) = 0.22
+        _WindHeightMin("Wind Height Min", Float) = 0
+        _WindHeightMax("Wind Height Max", Float) = 8
     }
 
     SubShader
@@ -53,6 +61,14 @@ Shader "Custom/SpruceLeafTintCutout"
                 half _AmbientStrength;
                 half _LightWrap;
                 half _UseVertexColor;
+                float4 _WindDirection;
+                half _WindStrength;
+                half _WindSpeed;
+                half _WindFlutterStrength;
+                half _WindFlutterSpeed;
+                half _WindGustScale;
+                half _WindHeightMin;
+                half _WindHeightMax;
             CBUFFER_END
 
             struct Attributes
@@ -73,6 +89,34 @@ Shader "Custom/SpruceLeafTintCutout"
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
+            float Hash12(float2 p)
+            {
+                float3 p3 = frac(float3(p.xyx) * float3(0.1031, 0.1030, 0.0973));
+                p3 += dot(p3, p3.yzx + 33.33);
+                return frac((p3.x + p3.y) * p3.z);
+            }
+
+            float3 ApplyLeafWind(float3 positionWS, float3 positionOS, float2 uv)
+            {
+                float2 windDir = normalize(_WindDirection.xz + float2(0.0001, 0.0));
+                float heightMask = saturate((positionOS.y - _WindHeightMin) / max(_WindHeightMax - _WindHeightMin, 0.0001));
+                heightMask = smoothstep(0.0, 1.0, heightMask);
+
+                float spatialPhase = dot(positionWS.xz, windDir.yx * float2(0.73, -0.61));
+                float gustPhase = dot(positionWS.xz, windDir) * _WindGustScale + _Time.y * _WindSpeed;
+                float gust = sin(gustPhase + spatialPhase * 0.25);
+
+                float cardPhase = Hash12(floor(positionWS.xz * 0.8) + floor(uv * 8.0)) * 6.2831853;
+                float flutter = sin(_Time.y * _WindFlutterSpeed + cardPhase + spatialPhase * 2.1);
+
+                float swayAmount = gust * _WindStrength * heightMask;
+                float flutterAmount = flutter * _WindFlutterStrength * saturate(uv.y + 0.2);
+
+                float3 offset = float3(windDir.x, 0.0, windDir.y) * (swayAmount + flutterAmount);
+                offset.y = flutter * _WindFlutterStrength * 0.18 * heightMask;
+                return positionWS + offset;
+            }
+
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
@@ -80,10 +124,11 @@ Shader "Custom/SpruceLeafTintCutout"
                 UNITY_SETUP_INSTANCE_ID(IN);
                 UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
 
-                VertexPositionInputs positionInputs = GetVertexPositionInputs(IN.positionOS.xyz);
+                float3 positionWS = TransformObjectToWorld(IN.positionOS.xyz);
+                positionWS = ApplyLeafWind(positionWS, IN.positionOS.xyz, IN.uv);
                 VertexNormalInputs normalInputs = GetVertexNormalInputs(IN.normalOS);
 
-                OUT.positionCS = positionInputs.positionCS;
+                OUT.positionCS = TransformWorldToHClip(positionWS);
                 OUT.normalWS = normalInputs.normalWS;
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.color = IN.color;

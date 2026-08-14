@@ -7,6 +7,7 @@ public class WorldManager : MonoBehaviour
     [SerializeField] int colliderDistance = 3;
     [SerializeField] bool enableFarTerrain = true;
     [SerializeField] int farTerrainStartRing = 8;
+    [SerializeField] int farTerrainMacroTileSize = 4;
     [SerializeField] int farTerrainHeightGridResolution = 9;
     [SerializeField] int farTerrainControlMapResolution = 16;
     [SerializeField] float farTerrainSkirtDepth = 6f;
@@ -27,17 +28,43 @@ public class WorldManager : MonoBehaviour
     [SerializeField] float meshHeightMultiplier = 10f;
     [SerializeField] Material terrainMaterial;
     [SerializeField] Material waterMaterial;
+    [Header("Terrain Generation Profiling")]
+    [SerializeField] bool logTerrainGenerationProfile = true;
+    [SerializeField] float terrainGenerationProfileLogInterval = 5f;
+    [SerializeField] bool resetTerrainGenerationProfileAfterLog = true;
+    [Header("Terrain Streaming Budgets")]
+    [SerializeField] int maxActiveTerrainDataJobs = 3;
+    [SerializeField] int maxActiveFarTerrainJobs = 3;
+    [SerializeField] int maxActiveMeshJobs = 4;
+    [SerializeField] int maxActiveColliderJobs = 2;
+    [SerializeField] int maxTerrainDataResultsAppliedPerFrame = 2;
+    [SerializeField] int maxFarTerrainResultsAppliedPerFrame = 96;
+    [SerializeField] int maxLODMeshResultsAppliedPerFrame = 12;
+    [SerializeField] int maxColliderResultsAppliedPerFrame = 2;
+    [SerializeField] float completedRequestApplyBudgetMsPerFrame = 3f;
+    [SerializeField] float terrainDataApplyBudgetMsPerFrame = 0.75f;
+    [SerializeField] float farTerrainApplyBudgetMsPerFrame = 1.5f;
+    [SerializeField] float lodMeshApplyBudgetMsPerFrame = 0.75f;
+    [SerializeField] float colliderApplyBudgetMsPerFrame = 0.25f;
 
     private ChunkManager chunkManager;
     public Transform Viewer => viewer;
 
     void Awake()
     {
+        TerrainGenerationProfiler.SetEnabled(logTerrainGenerationProfile);
+
         chunkManager = new ChunkManager(viewDistance, colliderDistance, enableFarTerrain, farTerrainStartRing,
-            farTerrainHeightGridResolution, farTerrainControlMapResolution, farTerrainSkirtDepth,
+            farTerrainMacroTileSize, farTerrainHeightGridResolution, farTerrainControlMapResolution, farTerrainSkirtDepth,
             chunkSize, worldSeed, viewer, viewerCamera,
             chunkParent, foliageParent, grassSettings, flowerSettings, treeSettings, sampleScale, worldScale, octaves, persistence, 
-            lacunarity, erosionStrength, meshHeightMultiplier, terrainMaterial, waterMaterial);
+            lacunarity, erosionStrength, meshHeightMultiplier, terrainMaterial, waterMaterial,
+            maxActiveTerrainDataJobs, maxActiveFarTerrainJobs, maxActiveMeshJobs,
+            maxActiveColliderJobs, maxTerrainDataResultsAppliedPerFrame,
+            maxFarTerrainResultsAppliedPerFrame, maxLODMeshResultsAppliedPerFrame,
+            maxColliderResultsAppliedPerFrame, completedRequestApplyBudgetMsPerFrame,
+            terrainDataApplyBudgetMsPerFrame, farTerrainApplyBudgetMsPerFrame,
+            lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame);
     }
 
     void Start()
@@ -48,6 +75,10 @@ public class WorldManager : MonoBehaviour
     void Update()
     {
         chunkManager.UpdateActiveChunks();
+        TerrainGenerationProfiler.LogSummaryIfDue(
+            Time.unscaledTime,
+            terrainGenerationProfileLogInterval,
+            resetTerrainGenerationProfileAfterLog);
     }
 
     public WorldDebugInfo GetDebugInfoAtWorldPosition(Vector3 worldPosition)

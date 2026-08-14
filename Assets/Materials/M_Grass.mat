@@ -146,6 +146,11 @@ Material:
     - _Surface: 0
     - _TipUpwardBlend: 0.86
     - _UpwardNormalBlend: 0.65
+    - _WindFlutterSpeed: 7.5
+    - _WindFlutterStrength: 0.018
+    - _WindGustScale: 0.55
+    - _WindSpeed: 2.2
+    - _WindStrength: 0.055
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:
@@ -161,5 +166,6 @@ Material:
     - _LightGrassColor: {r: 0.44, g: 0.78, b: 0.3, a: 1}
     - _MidGrassColor: {r: 0.29, g: 0.62, b: 0.24, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
+    - _WindDirection: {r: 1, g: 0, b: 0.35, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -11,6 +11,7 @@ public class ChunkManager
     private readonly int colliderDistance;
     private readonly bool enableFarTerrain;
     private readonly int farTerrainStartRing;
+    private readonly int farTerrainMacroTileSize;
     private readonly int farTerrainHeightGridResolution;
     private readonly int farTerrainControlMapResolution;
     private readonly float farTerrainSkirtDepth;
@@ -28,14 +29,32 @@ public class ChunkManager
     private readonly float meshHeightMultiplier;
     private readonly Material terrainMaterial;
     private readonly Material waterMaterial;
+    private readonly int maxActiveTerrainDataJobs;
+    private readonly int maxActiveFarTerrainJobs;
+    private readonly int maxActiveMeshJobs;
+    private readonly int maxActiveColliderJobs;
+    private readonly int maxTerrainDataResultsAppliedPerFrame;
+    private readonly int maxFarTerrainResultsAppliedPerFrame;
+    private readonly int maxLODMeshResultsAppliedPerFrame;
+    private readonly int maxColliderResultsAppliedPerFrame;
+    private readonly float completedRequestApplyBudgetMsPerFrame;
+    private readonly float terrainDataApplyBudgetMsPerFrame;
+    private readonly float farTerrainApplyBudgetMsPerFrame;
+    private readonly float lodMeshApplyBudgetMsPerFrame;
+    private readonly float colliderApplyBudgetMsPerFrame;
 
     private readonly Dictionary<ChunkCoord, ChunkRecord> chunkRecords = new();
     private readonly Dictionary<ChunkCoord, ChunkRuntime> loadedChunks = new();
+    private readonly Dictionary<ChunkCoord, FarTerrainTileRecord> farTerrainTileRecords = new();
+    private readonly Dictionary<ChunkCoord, FarTerrainTileRuntime> loadedFarTerrainTiles = new();
 
     private HashSet<ChunkCoord> activeLastUpdate;
     private HashSet<ChunkCoord> activeThisUpdate;
+    private HashSet<ChunkCoord> activeFarTilesLastUpdate;
+    private HashSet<ChunkCoord> activeFarTilesThisUpdate;
     private readonly List<ChunkCoord> orderedActiveCoords;
     private readonly List<ChunkCoord> frustumVisibleCoords;
+    private readonly List<ChunkCoord> orderedActiveFarTileCoords;
     private readonly Plane[] frustumPlanes = new Plane[6];
 
     private ChunkCoord lastUpdateViewerCoord = new ChunkCoord(int.MinValue, int.MinValue);
@@ -50,6 +69,7 @@ public class ChunkManager
         int colliderDistance,
         bool enableFarTerrain,
         int farTerrainStartRing,
+        int farTerrainMacroTileSize,
         int farTerrainHeightGridResolution,
         int farTerrainControlMapResolution,
         float farTerrainSkirtDepth,
@@ -70,12 +90,26 @@ public class ChunkManager
         float erosionStrength,
         float meshHeightMultiplier,
         Material terrainMaterial,
-        Material waterMaterial)
+        Material waterMaterial,
+        int maxActiveTerrainDataJobs,
+        int maxActiveFarTerrainJobs,
+        int maxActiveMeshJobs,
+        int maxActiveColliderJobs,
+        int maxTerrainDataResultsAppliedPerFrame,
+        int maxFarTerrainResultsAppliedPerFrame,
+        int maxLODMeshResultsAppliedPerFrame,
+        int maxColliderResultsAppliedPerFrame,
+        float completedRequestApplyBudgetMsPerFrame,
+        float terrainDataApplyBudgetMsPerFrame,
+        float farTerrainApplyBudgetMsPerFrame,
+        float lodMeshApplyBudgetMsPerFrame,
+        float colliderApplyBudgetMsPerFrame)
     {
         this.viewDistance = viewDistance;
         this.colliderDistance = colliderDistance;
         this.enableFarTerrain = enableFarTerrain;
         this.farTerrainStartRing = Mathf.Max(1, farTerrainStartRing);
+        this.farTerrainMacroTileSize = Mathf.Max(1, farTerrainMacroTileSize);
         this.farTerrainHeightGridResolution = Mathf.Max(2, farTerrainHeightGridResolution);
         this.farTerrainControlMapResolution = Mathf.Max(2, farTerrainControlMapResolution);
         this.farTerrainSkirtDepth = Mathf.Max(0f, farTerrainSkirtDepth);
@@ -93,16 +127,36 @@ public class ChunkManager
         this.meshHeightMultiplier = meshHeightMultiplier;
         this.terrainMaterial = terrainMaterial;
         this.waterMaterial = waterMaterial;
+        this.maxActiveTerrainDataJobs = Mathf.Max(1, maxActiveTerrainDataJobs);
+        this.maxActiveFarTerrainJobs = Mathf.Max(1, maxActiveFarTerrainJobs);
+        this.maxActiveMeshJobs = Mathf.Max(1, maxActiveMeshJobs);
+        this.maxActiveColliderJobs = Mathf.Max(1, maxActiveColliderJobs);
+        this.maxTerrainDataResultsAppliedPerFrame = Mathf.Max(1, maxTerrainDataResultsAppliedPerFrame);
+        this.maxFarTerrainResultsAppliedPerFrame = Mathf.Max(1, maxFarTerrainResultsAppliedPerFrame);
+        this.maxLODMeshResultsAppliedPerFrame = Mathf.Max(1, maxLODMeshResultsAppliedPerFrame);
+        this.maxColliderResultsAppliedPerFrame = Mathf.Max(1, maxColliderResultsAppliedPerFrame);
+        this.completedRequestApplyBudgetMsPerFrame = Mathf.Max(0f, completedRequestApplyBudgetMsPerFrame);
+        this.terrainDataApplyBudgetMsPerFrame = Mathf.Max(0f, terrainDataApplyBudgetMsPerFrame);
+        this.farTerrainApplyBudgetMsPerFrame = Mathf.Max(0f, farTerrainApplyBudgetMsPerFrame);
+        this.lodMeshApplyBudgetMsPerFrame = Mathf.Max(0f, lodMeshApplyBudgetMsPerFrame);
+        this.colliderApplyBudgetMsPerFrame = Mathf.Max(0f, colliderApplyBudgetMsPerFrame);
 
         int maxChunks = ComputeMaxActiveChunkCount(viewDistance);
 
         activeLastUpdate = new HashSet<ChunkCoord>(maxChunks);
         activeThisUpdate = new HashSet<ChunkCoord>(maxChunks);
+        activeFarTilesLastUpdate = new HashSet<ChunkCoord>(maxChunks);
+        activeFarTilesThisUpdate = new HashSet<ChunkCoord>(maxChunks);
         orderedActiveCoords = new List<ChunkCoord>(maxChunks);
         frustumVisibleCoords = new List<ChunkCoord>(maxChunks);
+        orderedActiveFarTileCoords = new List<ChunkCoord>(maxChunks);
 
         worldFeatureGenerationSettings = BuildWorldFeatureGenerationSettings(treeSettings);
-        terrainRequestManager = new TerrainRequestManager();
+        terrainRequestManager = new TerrainRequestManager(
+            this.maxActiveTerrainDataJobs,
+            this.maxActiveFarTerrainJobs,
+            this.maxActiveMeshJobs,
+            this.maxActiveColliderJobs);
         foliageManager = new FoliageManager(
             foliageParent,
             grassSettings,
@@ -187,6 +241,15 @@ public class ChunkManager
         {
             ChunkCoord coord = frustumVisibleCoords[i];
             if (!loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
+                continue;
+
+            runtime.AccumulateRenderStats(ref stats);
+        }
+
+        for (int i = 0; i < orderedActiveFarTileCoords.Count; i++)
+        {
+            ChunkCoord tileCoord = orderedActiveFarTileCoords[i];
+            if (!loadedFarTerrainTiles.TryGetValue(tileCoord, out FarTerrainTileRuntime runtime))
                 continue;
 
             runtime.AccumulateRenderStats(ref stats);
@@ -309,13 +372,16 @@ public class ChunkManager
 
         UpdateVisibleChunkContent(viewerCoord);
 
+        long foliageStart = TerrainGenerationProfiler.GetTimestamp();
+
         if (viewerChunkChanged || viewerSubChunkChanged)
         {
             foliageManager.HandleViewerSubChunkChanged(
                 this,
                 viewerCoord,
                 viewerGlobalSubChunk,
-                orderedActiveCoords);
+                orderedActiveCoords,
+                viewerChunkChanged);
         }
 
         foliageManager.DrawVisibleFoliageEveryFrame(
@@ -324,13 +390,17 @@ public class ChunkManager
             viewerGlobalSubChunk,
             frustumVisibleCoords);
 
+        TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FoliageTotal, foliageStart);
+
         lastViewerGlobalSubChunk = viewerGlobalSubChunk;
     }
 
     private void RebuildActiveChunkSet(ChunkCoord viewerCoord)
     {
         activeThisUpdate.Clear();
+        activeFarTilesThisUpdate.Clear();
         orderedActiveCoords.Clear();
+        orderedActiveFarTileCoords.Clear();
 
         int sqrViewRadius = viewDistance * viewDistance;
 
@@ -344,12 +414,21 @@ public class ChunkManager
 
                 ChunkCoord targetCoord = new ChunkCoord(viewerCoord.x + x, viewerCoord.z + z);
 
+                if (ShouldUseMacroFarTerrain(viewerCoord, targetCoord, out ChunkCoord farTileCoord))
+                {
+                    if (activeFarTilesThisUpdate.Add(farTileCoord))
+                        orderedActiveFarTileCoords.Add(farTileCoord);
+
+                    continue;
+                }
+
                 activeThisUpdate.Add(targetCoord);
                 orderedActiveCoords.Add(targetCoord);
             }
         }
 
         SortOrderedActiveCoords(viewerCoord);
+        SortOrderedActiveFarTileCoords(viewerCoord);
 
         foreach (ChunkCoord targetCoord in orderedActiveCoords)
         {
@@ -360,6 +439,17 @@ public class ChunkManager
                 runtime.SetVisible(true);
 
             EnsureTerrainVisualRequested(record, viewerCoord, targetCoord);
+        }
+
+        foreach (ChunkCoord farTileCoord in orderedActiveFarTileCoords)
+        {
+            FarTerrainTileRecord record = GetOrCreateFarTerrainTileRecord(farTileCoord);
+            FarTerrainTileRuntime runtime = GetOrCreateFarTerrainTileRuntime(record);
+
+            if (!runtime.IsVisible)
+                runtime.SetVisible(true);
+
+            EnsureFarTerrainTileRequested(record);
         }
 
         foreach (ChunkCoord coord in activeLastUpdate)
@@ -374,9 +464,25 @@ public class ChunkManager
             }
         }
 
+        foreach (ChunkCoord farTileCoord in activeFarTilesLastUpdate)
+        {
+            if (!activeFarTilesThisUpdate.Contains(farTileCoord))
+            {
+                if (loadedFarTerrainTiles.TryGetValue(farTileCoord, out FarTerrainTileRuntime runtime))
+                {
+                    runtime.DestroyRuntime();
+                    loadedFarTerrainTiles.Remove(farTileCoord);
+                }
+            }
+        }
+
         var temp = activeLastUpdate;
         activeLastUpdate = activeThisUpdate;
         activeThisUpdate = temp;
+
+        temp = activeFarTilesLastUpdate;
+        activeFarTilesLastUpdate = activeFarTilesThisUpdate;
+        activeFarTilesThisUpdate = temp;
     }
 
     private void UpdateVisibleChunkContent(ChunkCoord viewerCoord)
@@ -446,11 +552,40 @@ public class ChunkManager
                 frustumVisibleCoords.Add(coord);
             }
         }
+
+        UpdateVisibleFarTerrainTiles(viewerCoord);
+    }
+
+    private void UpdateVisibleFarTerrainTiles(ChunkCoord viewerCoord)
+    {
+        foreach (ChunkCoord farTileCoord in orderedActiveFarTileCoords)
+        {
+            if (!farTerrainTileRecords.TryGetValue(farTileCoord, out FarTerrainTileRecord record))
+                continue;
+
+            if (!loadedFarTerrainTiles.TryGetValue(farTileCoord, out FarTerrainTileRuntime runtime))
+                continue;
+
+            EnsureFarTerrainTileRequested(record);
+            TryApplyFarTerrainTile(record, runtime);
+
+            if (!runtime.IsVisible)
+                runtime.SetVisible(true);
+
+            bool renderVisible = viewerCamera == null || IsFarTerrainTileInFrustum(farTileCoord);
+            runtime.SetRenderVisible(renderVisible);
+        }
     }
 
     private bool IsChunkInFrustum(ChunkCoord coord)
     {
         Bounds bounds = GetChunkWorldBounds(coord);
+        return GeometryUtility.TestPlanesAABB(frustumPlanes, bounds);
+    }
+
+    private bool IsFarTerrainTileInFrustum(ChunkCoord farTileCoord)
+    {
+        Bounds bounds = GetFarTerrainTileWorldBounds(farTileCoord);
         return GeometryUtility.TestPlanesAABB(frustumPlanes, bounds);
     }
 
@@ -474,6 +609,28 @@ public class ChunkManager
             boundsHeight,
             chunkWorldSize
         );
+
+        return new Bounds(center, size);
+    }
+
+    private Bounds GetFarTerrainTileWorldBounds(ChunkCoord farTileCoord)
+    {
+        float tileWorldSize = chunkSize * farTerrainMacroTileSize * worldScale;
+
+        float centerX = farTileCoord.x * tileWorldSize + tileWorldSize * 0.5f;
+        float centerZ = farTileCoord.z * tileWorldSize + tileWorldSize * 0.5f;
+
+        float boundsHeight = Mathf.Max(200f, meshHeightMultiplier * 2f + 100f);
+
+        Vector3 center = new Vector3(
+            centerX,
+            boundsHeight * 0.5f,
+            centerZ);
+
+        Vector3 size = new Vector3(
+            tileWorldSize,
+            boundsHeight,
+            tileWorldSize);
 
         return new Bounds(center, size);
     }
@@ -517,6 +674,35 @@ public class ChunkManager
         return runtime;
     }
 
+    private FarTerrainTileRecord GetOrCreateFarTerrainTileRecord(ChunkCoord tileCoord)
+    {
+        if (!farTerrainTileRecords.TryGetValue(tileCoord, out FarTerrainTileRecord record))
+        {
+            record = new FarTerrainTileRecord(tileCoord);
+            farTerrainTileRecords.Add(tileCoord, record);
+        }
+
+        return record;
+    }
+
+    private FarTerrainTileRuntime GetOrCreateFarTerrainTileRuntime(FarTerrainTileRecord record)
+    {
+        ChunkCoord tileCoord = record.TileCoord;
+
+        if (!loadedFarTerrainTiles.TryGetValue(tileCoord, out FarTerrainTileRuntime runtime))
+        {
+            runtime = new FarTerrainTileRuntime(
+                record,
+                chunkSize * farTerrainMacroTileSize,
+                worldScale,
+                chunkParent,
+                terrainMaterial);
+            loadedFarTerrainTiles.Add(tileCoord, runtime);
+        }
+
+        return runtime;
+    }
+
     private void EnsureTerrainVisualRequested(ChunkRecord record, ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
         if (ShouldUseFarTerrain(viewerCoord, targetCoord))
@@ -536,6 +722,60 @@ public class ChunkManager
 
         int ring = GetChunkRingDistance(viewerCoord, targetCoord);
         return ring >= farTerrainStartRing;
+    }
+
+    private bool ShouldUseMacroFarTerrain(
+        ChunkCoord viewerCoord,
+        ChunkCoord targetCoord,
+        out ChunkCoord farTileCoord)
+    {
+        farTileCoord = default;
+
+        if (!ShouldUseFarTerrain(viewerCoord, targetCoord))
+            return false;
+
+        if (farTerrainMacroTileSize <= 1)
+        {
+            farTileCoord = targetCoord;
+            return true;
+        }
+
+        farTileCoord = GetFarTerrainTileCoord(targetCoord);
+        return IsFarTerrainTileFullyFar(viewerCoord, farTileCoord);
+    }
+
+    private ChunkCoord GetFarTerrainTileCoord(ChunkCoord chunkCoord)
+    {
+        return new ChunkCoord(
+            FloorDiv(chunkCoord.x, farTerrainMacroTileSize),
+            FloorDiv(chunkCoord.z, farTerrainMacroTileSize));
+    }
+
+    private bool IsFarTerrainTileFullyFar(ChunkCoord viewerCoord, ChunkCoord farTileCoord)
+    {
+        int originX = farTileCoord.x * farTerrainMacroTileSize;
+        int originZ = farTileCoord.z * farTerrainMacroTileSize;
+        int maxX = originX + farTerrainMacroTileSize - 1;
+        int maxZ = originZ + farTerrainMacroTileSize - 1;
+
+        int closestX = Mathf.Clamp(viewerCoord.x, originX, maxX);
+        int closestZ = Mathf.Clamp(viewerCoord.z, originZ, maxZ);
+        int minRing = Mathf.Max(
+            Mathf.Abs(closestX - viewerCoord.x),
+            Mathf.Abs(closestZ - viewerCoord.z));
+
+        return minRing >= farTerrainStartRing;
+    }
+
+    private static int FloorDiv(int value, int divisor)
+    {
+        int quotient = value / divisor;
+        int remainder = value % divisor;
+
+        if (remainder != 0 && ((remainder > 0) != (divisor > 0)))
+            quotient--;
+
+        return quotient;
     }
 
     private int GetChunkRingDistance(ChunkCoord viewerCoord, ChunkCoord targetCoord)
@@ -572,6 +812,44 @@ public class ChunkManager
         {
             record.CancelFarTerrainRequest(requestVersion);
         }
+    }
+
+    private void EnsureFarTerrainTileRequested(FarTerrainTileRecord record)
+    {
+        if (record.HasTerrain)
+            return;
+
+        if (record.IsRequestInFlight)
+            return;
+
+        int requestVersion = record.BeginRequest();
+        int tileChunkSize = chunkSize * farTerrainMacroTileSize;
+        int tileHeightGridResolution = ScaleFarTerrainResolutionForMacroTile(farTerrainHeightGridResolution);
+        int tileControlMapResolution = ScaleFarTerrainResolutionForMacroTile(farTerrainControlMapResolution);
+
+        bool submitted = terrainRequestManager.RequestFarTerrainData(
+            record.TileCoord,
+            requestVersion,
+            tileChunkSize,
+            seed,
+            sampleScale,
+            meshHeightMultiplier,
+            worldScale,
+            tileHeightGridResolution,
+            tileControlMapResolution,
+            farTerrainSkirtDepth,
+            true);
+
+        if (!submitted)
+            record.CancelRequest(requestVersion);
+    }
+
+    private int ScaleFarTerrainResolutionForMacroTile(int baseResolution)
+    {
+        if (farTerrainMacroTileSize <= 1)
+            return baseResolution;
+
+        return Mathf.Max(2, (baseResolution - 1) * farTerrainMacroTileSize + 1);
     }
 
     private void EnsureTerrainDataRequested(ChunkRecord record)
@@ -631,6 +909,18 @@ public class ChunkManager
         runtime.SetMeshes(terrainMesh, null, null, FarTerrainLOD);
     }
 
+    private void TryApplyFarTerrainTile(FarTerrainTileRecord record, FarTerrainTileRuntime runtime)
+    {
+        if (!record.TryGetTerrainMesh(out Mesh terrainMesh))
+            return;
+
+        if (runtime.IsShowingMesh(terrainMesh))
+            return;
+
+        runtime.SetControlMaps(record.ControlMapData);
+        runtime.SetMesh(terrainMesh);
+    }
+
     private void EnsureColliderRequested(ChunkRecord record)
     {
         if (!record.HasTerrainData)
@@ -644,13 +934,16 @@ public class ChunkManager
 
         int requestVersion = record.BeginColliderRequest();
 
-        terrainRequestManager.RequestColliderMesh(
+        bool submitted = terrainRequestManager.RequestColliderMesh(
             record.ChunkCoord,
             requestVersion,
             record.HeightMap,
             meshHeightMultiplier,
             worldScale
         );
+
+        if (!submitted)
+            record.CancelColliderRequest(requestVersion);
     }
 
     private void TryApplyCollider(ChunkRecord record, ChunkRuntime runtime)
@@ -678,7 +971,7 @@ public class ChunkManager
         int stepIncrement = 1 << lod;
         int requestVersion = record.BeginMeshRequest(lod);
 
-        terrainRequestManager.RequestLODMesh(
+        bool submitted = terrainRequestManager.RequestLODMesh(
             record.ChunkCoord,
             lod,
             requestVersion,
@@ -691,6 +984,9 @@ public class ChunkManager
             worldScale,
             record.RiverMaskMap
         );
+
+        if (!submitted)
+            record.CancelMeshRequest(lod, requestVersion);
     }
 
     private void TryApplyLODMesh(ChunkRecord record, ChunkRuntime runtime, int lod)
@@ -713,12 +1009,40 @@ public class ChunkManager
 
     private void ProcessCompletedRequests()
     {
-        while (terrainRequestManager.TryDequeueTerrainDataResult(out TerrainDataRequestResult terrainResult))
+        long totalStart = TerrainGenerationProfiler.GetTimestamp();
+        long categoryStart = totalStart;
+        bool processedAnyRequest = false;
+
+        TerrainGenerationProfiler.RecordQueueSnapshot(
+            terrainRequestManager.ActiveTerrainDataJobCount,
+            terrainRequestManager.ActiveFarTerrainJobCount,
+            terrainRequestManager.ActiveMeshJobCount,
+            terrainRequestManager.ActiveColliderJobCount,
+            terrainRequestManager.CompletedTerrainDataResultCount,
+            terrainRequestManager.CompletedFarTerrainResultCount,
+            terrainRequestManager.CompletedMeshResultCount,
+            terrainRequestManager.CompletedColliderResultCount);
+
+        int terrainDataResultsApplied = 0;
+        while (CanApplyMoreResults(
+                   terrainDataResultsApplied,
+                   maxTerrainDataResultsAppliedPerFrame,
+                   totalStart,
+                   completedRequestApplyBudgetMsPerFrame,
+                   categoryStart,
+                   terrainDataApplyBudgetMsPerFrame) &&
+               terrainRequestManager.TryDequeueTerrainDataResult(out TerrainDataRequestResult terrainResult))
         {
             if (!chunkRecords.TryGetValue(terrainResult.ChunkCoord, out ChunkRecord record))
                 continue;
 
+            processedAnyRequest = true;
+            terrainDataResultsApplied++;
+            long stageStart = TerrainGenerationProfiler.GetTimestamp();
             Texture2D[] controlMaps = CreateControlMapTextures(terrainResult.ControlMapsRawData);
+            TerrainGenerationProfiler.Record(
+                TerrainGenerationProfileStage.MainTerrainControlMapTextureCreate,
+                stageStart);
 
             record.TryCompleteTerrainDataRequest(
                 terrainResult.RequestVersion,
@@ -736,29 +1060,73 @@ public class ChunkManager
             );
         }
 
-        while (terrainRequestManager.TryDequeueFarTerrainResult(out FarTerrainRequestResult farTerrainResult))
+        int farTerrainResultsApplied = 0;
+        categoryStart = TerrainGenerationProfiler.GetTimestamp();
+        while (CanApplyMoreResults(
+                   farTerrainResultsApplied,
+                   maxFarTerrainResultsAppliedPerFrame,
+                   totalStart,
+                   completedRequestApplyBudgetMsPerFrame,
+                   categoryStart,
+                   farTerrainApplyBudgetMsPerFrame) &&
+               terrainRequestManager.TryDequeueFarTerrainResult(out FarTerrainRequestResult farTerrainResult))
         {
-            if (!chunkRecords.TryGetValue(farTerrainResult.ChunkCoord, out ChunkRecord record))
-                continue;
-
+            processedAnyRequest = true;
+            farTerrainResultsApplied++;
+            long stageStart = TerrainGenerationProfiler.GetTimestamp();
             Texture2D[] controlMaps = CreateControlMapTextures(farTerrainResult.ControlMapsRawData);
-            Mesh terrainMesh = farTerrainResult.TerrainMeshData.CreateMesh();
+            TerrainGenerationProfiler.Record(
+                TerrainGenerationProfileStage.MainFarControlMapTextureCreate,
+                stageStart);
 
-            record.TryCompleteFarTerrainRequest(
-                farTerrainResult.RequestVersion,
-                terrainMesh,
-                controlMaps
-            );
+            stageStart = TerrainGenerationProfiler.GetTimestamp();
+            Mesh terrainMesh = farTerrainResult.TerrainMeshData.CreateMesh();
+            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainFarTerrainMeshCreate, stageStart);
+
+            if (farTerrainResult.IsMacroTile &&
+                farTerrainTileRecords.TryGetValue(farTerrainResult.ChunkCoord, out FarTerrainTileRecord tileRecord))
+            {
+                tileRecord.TryCompleteRequest(
+                    farTerrainResult.RequestVersion,
+                    terrainMesh,
+                    controlMaps);
+            }
+            else if (chunkRecords.TryGetValue(farTerrainResult.ChunkCoord, out ChunkRecord record))
+            {
+                record.TryCompleteFarTerrainRequest(
+                    farTerrainResult.RequestVersion,
+                    terrainMesh,
+                    controlMaps);
+            }
         }
 
-        while (terrainRequestManager.TryDequeueMeshResult(out MeshRequestResult meshResult))
+        int lodMeshResultsApplied = 0;
+        categoryStart = TerrainGenerationProfiler.GetTimestamp();
+        while (CanApplyMoreResults(
+                   lodMeshResultsApplied,
+                   maxLODMeshResultsAppliedPerFrame,
+                   totalStart,
+                   completedRequestApplyBudgetMsPerFrame,
+                   categoryStart,
+                   lodMeshApplyBudgetMsPerFrame) &&
+               terrainRequestManager.TryDequeueMeshResult(out MeshRequestResult meshResult))
         {
             if (!chunkRecords.TryGetValue(meshResult.ChunkCoord, out ChunkRecord record))
                 continue;
 
+            processedAnyRequest = true;
+            lodMeshResultsApplied++;
+            long stageStart = TerrainGenerationProfiler.GetTimestamp();
             Mesh terrainMesh = meshResult.TerrainMeshData.CreateMesh();
+            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainLODTerrainMeshCreate, stageStart);
+
+            stageStart = TerrainGenerationProfiler.GetTimestamp();
             Mesh lakeMesh = meshResult.LakeMeshData.CreateMesh();
+            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainLakeMeshCreate, stageStart);
+
+            stageStart = TerrainGenerationProfiler.GetTimestamp();
             Mesh riverMesh = meshResult.RiverMeshData.CreateMesh();
+            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainRiverMeshCreate, stageStart);
 
             record.TryCompleteMeshRequest(
                 meshResult.LOD,
@@ -769,18 +1137,58 @@ public class ChunkManager
             );
         }
 
-        while (terrainRequestManager.TryDequeueColliderResult(out ColliderRequestResult colliderResult))
+        int colliderResultsApplied = 0;
+        categoryStart = TerrainGenerationProfiler.GetTimestamp();
+        while (CanApplyMoreResults(
+                   colliderResultsApplied,
+                   maxColliderResultsAppliedPerFrame,
+                   totalStart,
+                   completedRequestApplyBudgetMsPerFrame,
+                   categoryStart,
+                   colliderApplyBudgetMsPerFrame) &&
+               terrainRequestManager.TryDequeueColliderResult(out ColliderRequestResult colliderResult))
         {
             if (!chunkRecords.TryGetValue(colliderResult.ChunkCoord, out ChunkRecord record))
                 continue;
 
+            processedAnyRequest = true;
+            colliderResultsApplied++;
+            long stageStart = TerrainGenerationProfiler.GetTimestamp();
             Mesh colliderMesh = colliderResult.ColliderMeshData.CreateMesh();
+            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainColliderMeshCreate, stageStart);
 
             record.TryCompleteColliderRequest(
                 colliderResult.RequestVersion,
                 colliderMesh
             );
         }
+
+        if (processedAnyRequest)
+        {
+            TerrainGenerationProfiler.Record(
+                TerrainGenerationProfileStage.MainProcessCompletedRequestsTotal,
+                totalStart);
+        }
+    }
+
+    private static bool CanApplyMoreResults(
+        int appliedCount,
+        int maxCount,
+        long frameStart,
+        float frameBudgetMs,
+        long categoryStart,
+        float categoryBudgetMs)
+    {
+        if (appliedCount >= maxCount)
+            return false;
+
+        if (frameBudgetMs > 0f && TerrainGenerationProfiler.GetElapsedMilliseconds(frameStart) >= frameBudgetMs)
+            return false;
+
+        if (categoryBudgetMs > 0f && TerrainGenerationProfiler.GetElapsedMilliseconds(categoryStart) >= categoryBudgetMs)
+            return false;
+
+        return true;
     }
 
     private void SortOrderedActiveCoords(ChunkCoord viewerCoord)
@@ -813,6 +1221,27 @@ public class ChunkManager
 
             return aSqrDist.CompareTo(bSqrDist);
         });
+    }
+
+    private void SortOrderedActiveFarTileCoords(ChunkCoord viewerCoord)
+    {
+        orderedActiveFarTileCoords.Sort((a, b) =>
+        {
+            int aDistance = GetFarTerrainTileDistanceSqr(viewerCoord, a);
+            int bDistance = GetFarTerrainTileDistanceSqr(viewerCoord, b);
+            return aDistance.CompareTo(bDistance);
+        });
+    }
+
+    private int GetFarTerrainTileDistanceSqr(ChunkCoord viewerCoord, ChunkCoord farTileCoord)
+    {
+        int originX = farTileCoord.x * farTerrainMacroTileSize;
+        int originZ = farTileCoord.z * farTerrainMacroTileSize;
+        int centerX = originX + farTerrainMacroTileSize / 2;
+        int centerZ = originZ + farTerrainMacroTileSize / 2;
+        int dx = centerX - viewerCoord.x;
+        int dz = centerZ - viewerCoord.z;
+        return dx * dx + dz * dz;
     }
 
     private static int ComputeMaxActiveChunkCount(int viewDistance)

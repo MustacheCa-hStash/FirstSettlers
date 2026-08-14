@@ -12,6 +12,14 @@ Shader "Custom/FlowerInstancedUnlit"
 
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.5
         _MaskSharpness("Mask Sharpness", Range(0.25, 8)) = 1
+        _WindDirection("Wind Direction", Vector) = (1, 0, 0.35, 0)
+        _WindStrength("Wind Stem Bend Strength", Range(0, 1)) = 0.035
+        _WindSpeed("Wind Stem Bend Speed", Range(0, 8)) = 1.9
+        _WindFlutterStrength("Wind Petal Flutter Strength", Range(0, 1)) = 0.012
+        _WindFlutterSpeed("Wind Petal Flutter Speed", Range(0, 16)) = 6.8
+        _WindGustScale("Wind Gust Scale", Range(0.01, 2)) = 0.48
+        _WindHeightMin("Wind Height Min", Float) = 0
+        _WindHeightMax("Wind Height Max", Float) = 0.45
     }
 
     SubShader
@@ -56,6 +64,14 @@ Shader "Custom/FlowerInstancedUnlit"
                 half4 _FlowerCenterColor;
                 half _Cutoff;
                 half _MaskSharpness;
+                float4 _WindDirection;
+                half _WindStrength;
+                half _WindSpeed;
+                half _WindFlutterStrength;
+                half _WindFlutterSpeed;
+                half _WindGustScale;
+                half _WindHeightMin;
+                half _WindHeightMax;
             CBUFFER_END
 
             UNITY_INSTANCING_BUFFER_START(FlowerInstanceProperties)
@@ -77,6 +93,34 @@ Shader "Custom/FlowerInstancedUnlit"
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
+            float Hash12(float2 p)
+            {
+                float3 p3 = frac(float3(p.xyx) * float3(0.1031, 0.1030, 0.0973));
+                p3 += dot(p3, p3.yzx + 33.33);
+                return frac((p3.x + p3.y) * p3.z);
+            }
+
+            float3 ApplyFlowerWind(float3 positionWS, float3 positionOS, float2 uv)
+            {
+                float2 windDir = normalize(_WindDirection.xz + float2(0.0001, 0.0));
+                float heightMask = saturate((positionOS.y - _WindHeightMin) / max(_WindHeightMax - _WindHeightMin, 0.0001));
+                heightMask = heightMask * heightMask;
+
+                float instancePhase = Hash12(floor(positionWS.xz * 0.45)) * 6.2831853;
+                float spatialPhase = dot(positionWS.xz, windDir.yx * float2(0.86, -0.62));
+                float gustPhase = dot(positionWS.xz, windDir) * _WindGustScale + _Time.y * _WindSpeed + instancePhase;
+                float gust = sin(gustPhase + spatialPhase * 0.35);
+                float flutter = sin(_Time.y * _WindFlutterSpeed + spatialPhase * 2.7 + instancePhase * 1.41);
+
+                float bend = gust * _WindStrength * heightMask;
+                float petalMask = saturate(uv.y) * heightMask;
+                float petalFlutter = flutter * _WindFlutterStrength * petalMask;
+
+                float3 offset = float3(windDir.x, 0.0, windDir.y) * (bend + petalFlutter);
+                offset.y = -abs(bend) * 0.12 + petalFlutter * 0.16;
+                return positionWS + offset;
+            }
+
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
@@ -84,8 +128,10 @@ Shader "Custom/FlowerInstancedUnlit"
                 UNITY_SETUP_INSTANCE_ID(IN);
                 UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
 
-                VertexPositionInputs positionInputs = GetVertexPositionInputs(IN.positionOS.xyz);
-                OUT.positionCS = positionInputs.positionCS;
+                float3 positionWS = TransformObjectToWorld(IN.positionOS.xyz);
+                positionWS = ApplyFlowerWind(positionWS, IN.positionOS.xyz, IN.uv);
+
+                OUT.positionCS = TransformWorldToHClip(positionWS);
                 OUT.baseUV = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.maskUV = TRANSFORM_TEX(IN.uv, _MaskMap);
 
