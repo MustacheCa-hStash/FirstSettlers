@@ -1,19 +1,19 @@
-Shader "Custom/SugarMapleBarkUnlit"
+Shader "Custom/RedMapleBarkUnlit"
 {
     Properties
     {
         [MainTexture] _BaseMap("Bark Line Texture", 2D) = "white" {}
-        [MainColor] _BaseColor("Mid Bark Color", Color) = (0.36, 0.35, 0.31, 1.0)
-        _RidgeColor("Dry Ridge Color", Color) = (0.55, 0.52, 0.44, 1.0)
-        _CreviceColor("Dark Crevice Color", Color) = (0.06, 0.055, 0.048, 1.0)
-        _CoolShadowColor("Cool Side Color", Color) = (0.58, 0.60, 0.56, 1.0)
+        [MainColor] _BaseColor("Ash Gray Bark Color", Color) = (0.39, 0.38, 0.34, 1.0)
+        _RidgeColor("Pale Ridge Color", Color) = (0.63, 0.62, 0.56, 1.0)
+        _CreviceColor("Dark Furrow Color", Color) = (0.045, 0.043, 0.038, 1.0)
+        _CoolShadowColor("Cool Side Color", Color) = (0.54, 0.56, 0.54, 1.0)
         _TreeBarkTint("Per Tree Bark Tint", Color) = (1, 1, 1, 1)
-        _CrackThreshold("Crack Threshold", Range(0, 1)) = 0.44
-        _CrackSoftness("Crack Softness", Range(0.001, 0.35)) = 0.08
-        _CrackDarkness("Crack Darkness", Range(0, 1)) = 0.90
-        _RidgeStrength("Ridge Highlight Strength", Range(0, 1)) = 0.30
-        _ColorVariationStrength("Color Variation Strength", Range(0, 1)) = 0.24
-        _VerticalGradientStrength("Vertical Gradient Strength", Range(0, 1)) = 0.16
+        _CrackThreshold("Crack Threshold", Range(0, 1)) = 0.42
+        _CrackSoftness("Crack Softness", Range(0.001, 0.35)) = 0.075
+        _CrackDarkness("Crack Darkness", Range(0, 1)) = 0.92
+        _RidgeStrength("Ridge Highlight Strength", Range(0, 1)) = 0.34
+        _ColorVariationStrength("Color Variation Strength", Range(0, 1)) = 0.28
+        _VerticalGradientStrength("Vertical Gradient Strength", Range(0, 1)) = 0.15
         _FauxSideShadeStrength("Fake Side Shade Strength", Range(0, 1)) = 0.24
         _Brightness("Brightness", Range(0.25, 2)) = 1.0
         [Toggle] _UseVertexColor("Use Vertex Color", Float) = 0
@@ -35,7 +35,7 @@ Shader "Custom/SugarMapleBarkUnlit"
 
         Pass
         {
-            Name "UnlitSugarMapleBark"
+            Name "UnlitRedMapleBark"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
@@ -133,12 +133,12 @@ Shader "Custom/SugarMapleBarkUnlit"
                 half crackMask = 1.0h - smoothstep(_CrackThreshold, _CrackThreshold + _CrackSoftness, barkLuma);
                 half ridgeMask = smoothstep(0.56h, 0.98h, barkLuma);
 
-                half verticalNoise = ValueNoise(IN.uv * float2(7.0, 2.4));
-                half fineNoise = ValueNoise(IN.uv * float2(24.0, 9.5));
-                half worldNoise = ValueNoise(IN.positionWS.xz * 0.50 + IN.uv.yx * 1.9);
-                half variation = verticalNoise * 0.54h + fineNoise * 0.28h + worldNoise * 0.18h;
+                half verticalNoise = ValueNoise(IN.uv * float2(6.5, 2.2));
+                half fineNoise = ValueNoise(IN.uv * float2(26.0, 10.0));
+                half worldNoise = ValueNoise(IN.positionWS.xz * 0.46 + IN.uv.yx * 1.7);
+                half variation = verticalNoise * 0.50h + fineNoise * 0.32h + worldNoise * 0.18h;
 
-                half3 barkColor = lerp(_BaseColor.rgb, _RidgeColor.rgb, ridgeMask * _RidgeStrength * (0.60h + variation * 0.55h));
+                half3 barkColor = lerp(_BaseColor.rgb, _RidgeColor.rgb, ridgeMask * _RidgeStrength * (0.58h + variation * 0.60h));
                 barkColor *= lerp(1.0h - _ColorVariationStrength, 1.0h + _ColorVariationStrength, variation);
 
                 half heightShade = lerp(1.0h - _VerticalGradientStrength, 1.0h + _VerticalGradientStrength, saturate(IN.uv.y));

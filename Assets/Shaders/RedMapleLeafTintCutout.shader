@@ -1,21 +1,20 @@
-Shader "Custom/SugarMapleLeafTintCutout"
+Shader "Custom/RedMapleLeafTintCutout"
 {
     Properties
     {
-        [MainTexture] _BaseMap("Sugar Maple Leaf Atlas / Alpha", 2D) = "white" {}
-        _SummerLeafColor("Summer Leaf Color", Color) = (0.16, 0.45, 0.12, 1.0)
-        [MainColor] _AutumnRedColor("Autumn Red Color", Color) = (0.72, 0.08, 0.055, 1.0)
-        _AutumnOrangeColor("Autumn Orange Color", Color) = (0.95, 0.32, 0.06, 1.0)
-        _AutumnYellowColor("Autumn Yellow Color", Color) = (1.0, 0.62, 0.12, 1.0)
-        _LeafShadowColor("Leaf Shadow Color", Color) = (0.30, 0.035, 0.025, 1.0)
-        _TreeLeafTint("Per Tree Leaf Tint", Color) = (1.0, 0.74, 0.22, 1)
-        _TreeTintStrength("Per Tree Tint Strength", Range(0, 1)) = 0.88
+        [MainTexture] _BaseMap("Red Maple Leaf Atlas / Alpha", 2D) = "white" {}
+        _SummerLeafColor("Summer Leaf Color", Color) = (0.18, 0.42, 0.12, 1.0)
+        [MainColor] _AutumnRedColor("Autumn Scarlet Color", Color) = (0.88, 0.06, 0.035, 1.0)
+        _AutumnCrimsonColor("Autumn Crimson Color", Color) = (0.48, 0.025, 0.04, 1.0)
+        _AutumnOrangeColor("Autumn Orange Color", Color) = (1.0, 0.25, 0.055, 1.0)
+        _LeafShadowColor("Leaf Shadow Color", Color) = (0.16, 0.018, 0.018, 1.0)
+        _TreeLeafTint("Per Tree Leaf Tint", Color) = (1, 1, 1, 1)
         _SeasonAutumnAmount("Season Autumn Amount", Range(0, 1)) = 1.0
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.42
-        _ColorVariationStrength("Color Variation Strength", Range(0, 1)) = 0.55
-        _LeafContrast("Leaf Card Contrast", Range(0, 1)) = 0.32
-        _VerticalGradientStrength("Vertical Gradient Strength", Range(0, 1)) = 0.28
-        _CardVariationStrength("Card Variation Strength", Range(0, 1)) = 0.20
+        _ColorVariationStrength("Color Variation Strength", Range(0, 1)) = 0.62
+        _LeafContrast("Leaf Card Contrast", Range(0, 1)) = 0.34
+        _VerticalGradientStrength("Vertical Gradient Strength", Range(0, 1)) = 0.30
+        _CardVariationStrength("Card Variation Strength", Range(0, 1)) = 0.22
         _AmbientStrength("Ambient Strength", Range(0, 1)) = 0.42
         _LightWrap("Leaf Light Wrap", Range(0, 1)) = 0.62
         [Toggle] _UseVertexColor("Use Vertex Color", Float) = 0
@@ -47,7 +46,7 @@ Shader "Custom/SugarMapleLeafTintCutout"
 
         Pass
         {
-            Name "ForwardLeaf"
+            Name "ForwardRedMapleLeaf"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
@@ -66,11 +65,10 @@ Shader "Custom/SugarMapleLeafTintCutout"
                 float4 _BaseMap_ST;
                 half4 _SummerLeafColor;
                 half4 _AutumnRedColor;
+                half4 _AutumnCrimsonColor;
                 half4 _AutumnOrangeColor;
-                half4 _AutumnYellowColor;
                 half4 _LeafShadowColor;
                 half4 _TreeLeafTint;
-                half _TreeTintStrength;
                 half _SeasonAutumnAmount;
                 half _Cutoff;
                 half _ColorVariationStrength;
@@ -169,13 +167,13 @@ Shader "Custom/SugarMapleLeafTintCutout"
                 half leafNoise = Hash12(floor(positionWS.xz * 0.45h) + floor(uv * 8.0h));
                 half fineNoise = Hash12(floor(positionWS.xz * 1.25h) + floor(uv * 19.0h));
 
-                half orangeMix = smoothstep(0.22h, 0.78h, leafNoise);
-                half yellowMix = smoothstep(0.66h, 0.96h, fineNoise) * _ColorVariationStrength;
-                half russetMix = smoothstep(0.82h, 0.98h, leafNoise + fineNoise * 0.22h);
+                half crimsonMix = smoothstep(0.22h, 0.80h, leafNoise);
+                half orangeMix = smoothstep(0.68h, 0.96h, fineNoise) * _ColorVariationStrength;
+                half shadowMix = smoothstep(0.80h, 1.0h, leafNoise + fineNoise * 0.18h);
 
-                half3 autumnColor = lerp(_AutumnRedColor.rgb, _AutumnOrangeColor.rgb, orangeMix * _ColorVariationStrength);
-                autumnColor = lerp(autumnColor, _AutumnYellowColor.rgb, yellowMix);
-                autumnColor = lerp(autumnColor, _LeafShadowColor.rgb * 1.65h, russetMix * _ColorVariationStrength * 0.18h);
+                half3 autumnColor = lerp(_AutumnRedColor.rgb, _AutumnCrimsonColor.rgb, crimsonMix * _ColorVariationStrength);
+                autumnColor = lerp(autumnColor, _AutumnOrangeColor.rgb, orangeMix * 0.55h);
+                autumnColor = lerp(autumnColor, _LeafShadowColor.rgb * 1.25h, shadowMix * 0.16h);
 
                 return autumnColor;
             }
@@ -192,7 +190,6 @@ Shader "Custom/SugarMapleLeafTintCutout"
 
                 half3 autumnColor = EvaluateAutumnColor(IN.uv, IN.positionWS);
                 half3 leafColor = lerp(_SummerLeafColor.rgb, autumnColor, saturate(_SeasonAutumnAmount));
-                leafColor = lerp(leafColor, _TreeLeafTint.rgb, saturate(_TreeTintStrength * _SeasonAutumnAmount));
 
                 half bottomShade = saturate((1.0h - IN.uv.y) * _VerticalGradientStrength);
                 leafColor = lerp(leafColor, _LeafShadowColor.rgb, bottomShade);
@@ -201,6 +198,7 @@ Shader "Custom/SugarMapleLeafTintCutout"
                 half cardNoise = Hash12(floor(IN.positionWS.xz * 0.72h) + floor(IN.uv * 5.0h));
                 half cardVariation = lerp(1.0h - _CardVariationStrength, 1.0h + _CardVariationStrength, cardNoise);
                 leafColor *= leafDetail * cardVariation;
+                leafColor *= _TreeLeafTint.rgb;
                 leafColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
 
                 Light mainLight = GetMainLight();
@@ -209,7 +207,7 @@ Shader "Custom/SugarMapleLeafTintCutout"
                 half3 ambient = SampleSH(normalWS);
                 half3 lighting = max(ambient, _AmbientStrength.xxx) + mainLight.color * wrappedNdotL;
 
-                return half4(leafColor * lighting, atlas.a);
+                return half4(saturate(leafColor * lighting), atlas.a);
             }
             ENDHLSL
         }

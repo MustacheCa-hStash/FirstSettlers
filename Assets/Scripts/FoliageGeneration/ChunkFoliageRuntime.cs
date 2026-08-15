@@ -33,8 +33,23 @@ public struct GrassRenderBatch
     }
 }
 
+public struct TreeBillboardInstanceBatch
+{
+    public Matrix4x4[] matrices;
+    public Vector4[] leafTints;
+
+    public TreeBillboardInstanceBatch(Matrix4x4[] matrices, Vector4[] leafTints)
+    {
+        this.matrices = matrices;
+        this.leafTints = leafTints;
+    }
+}
+
 public class ChunkFoliageRuntime
 {
+    private static readonly int TreeLeafTintPropertyId = Shader.PropertyToID("_TreeLeafTint");
+    private static readonly int TreeBarkTintPropertyId = Shader.PropertyToID("_TreeBarkTint");
+
     public Transform root;
 
     public Mesh grassMesh;
@@ -83,13 +98,13 @@ public class ChunkFoliageRuntime
     private readonly List<FlowerRenderBatch> flowerRenderBatches = new List<FlowerRenderBatch>();
     private readonly MaterialPropertyBlock flowerPropertyBlock = new MaterialPropertyBlock();
 
-    private readonly List<Matrix4x4[]> mapleTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
-    private readonly List<Matrix4x4[]> sugarMapleTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
-    private readonly List<Matrix4x4[]> birchAspenTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
-    private readonly List<Matrix4x4[]> beechTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
-    private readonly List<Matrix4x4[]> spruceTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
-    private readonly List<Matrix4x4[]> whitePineTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
-    private readonly List<Matrix4x4[]> oakTreeBillboardMatrixBatches = new List<Matrix4x4[]>();
+    private readonly List<TreeBillboardInstanceBatch> mapleTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
+    private readonly List<TreeBillboardInstanceBatch> sugarMapleTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
+    private readonly List<TreeBillboardInstanceBatch> birchAspenTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
+    private readonly List<TreeBillboardInstanceBatch> beechTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
+    private readonly List<TreeBillboardInstanceBatch> spruceTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
+    private readonly List<TreeBillboardInstanceBatch> whitePineTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
+    private readonly List<TreeBillboardInstanceBatch> oakTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
 
     private GameObject treeGameObjectRoot;
     private readonly List<GameObject> treeGameObjects = new List<GameObject>();
@@ -97,6 +112,8 @@ public class ChunkFoliageRuntime
     private readonly List<GameObject> bushGameObjects = new List<GameObject>();
     private GameObject rockGameObjectRoot;
     private readonly List<GameObject> rockGameObjects = new List<GameObject>();
+    private readonly MaterialPropertyBlock treePropertyBlock = new MaterialPropertyBlock();
+    private readonly MaterialPropertyBlock treeBillboardPropertyBlock = new MaterialPropertyBlock();
 
     private FoliageRepresentationMode currentTreeRepresentationMode;
     private bool hasCurrentTreeRepresentation;
@@ -390,25 +407,44 @@ public class ChunkFoliageRuntime
 
     public void CacheTreeBillboardMatrices(
         List<Matrix4x4> mapleWorldMatrices,
+        List<Vector4> mapleLeafTints,
         List<Matrix4x4> sugarMapleWorldMatrices,
+        List<Vector4> sugarMapleLeafTints,
         List<Matrix4x4> birchAspenWorldMatrices,
+        List<Vector4> birchAspenLeafTints,
         List<Matrix4x4> beechWorldMatrices,
+        List<Vector4> beechLeafTints,
         List<Matrix4x4> spruceWorldMatrices,
+        List<Vector4> spruceLeafTints,
         List<Matrix4x4> whitePineWorldMatrices,
-        List<Matrix4x4> oakWorldMatrices)
+        List<Vector4> whitePineLeafTints,
+        List<Matrix4x4> oakWorldMatrices,
+        List<Vector4> oakLeafTints)
     {
-        CacheMatrices(mapleWorldMatrices, mapleTreeBillboardMatrixBatches);
-        CacheMatrices(sugarMapleWorldMatrices, sugarMapleTreeBillboardMatrixBatches);
-        CacheMatrices(birchAspenWorldMatrices, birchAspenTreeBillboardMatrixBatches);
-        CacheMatrices(beechWorldMatrices, beechTreeBillboardMatrixBatches);
-        CacheMatrices(spruceWorldMatrices, spruceTreeBillboardMatrixBatches);
-        CacheMatrices(whitePineWorldMatrices, whitePineTreeBillboardMatrixBatches);
-        CacheMatrices(oakWorldMatrices, oakTreeBillboardMatrixBatches);
+        CacheTreeBillboardBatches(mapleWorldMatrices, mapleLeafTints, mapleTreeBillboardMatrixBatches);
+        CacheTreeBillboardBatches(sugarMapleWorldMatrices, sugarMapleLeafTints, sugarMapleTreeBillboardMatrixBatches);
+        CacheTreeBillboardBatches(birchAspenWorldMatrices, birchAspenLeafTints, birchAspenTreeBillboardMatrixBatches);
+        CacheTreeBillboardBatches(beechWorldMatrices, beechLeafTints, beechTreeBillboardMatrixBatches);
+        CacheTreeBillboardBatches(spruceWorldMatrices, spruceLeafTints, spruceTreeBillboardMatrixBatches);
+        CacheTreeBillboardBatches(whitePineWorldMatrices, whitePineLeafTints, whitePineTreeBillboardMatrixBatches);
+        CacheTreeBillboardBatches(oakWorldMatrices, oakLeafTints, oakTreeBillboardMatrixBatches);
     }
 
-    private void CacheMatrices(List<Matrix4x4> worldMatrices, List<Matrix4x4[]> targetBatches)
+    private void CacheTreeBillboardBatches(
+        List<Matrix4x4> worldMatrices,
+        List<Vector4> leafTints,
+        List<TreeBillboardInstanceBatch> targetBatches)
     {
         targetBatches.Clear();
+
+        if (worldMatrices == null || leafTints == null)
+            return;
+
+        if (worldMatrices.Count != leafTints.Count)
+        {
+            Debug.LogError("Tree billboard matrix and leaf tint counts must match.");
+            return;
+        }
 
         const int maxBatchSize = 1023;
         int totalCount = worldMatrices.Count;
@@ -417,26 +453,28 @@ public class ChunkFoliageRuntime
         while (startIndex < totalCount)
         {
             int batchCount = Mathf.Min(maxBatchSize, totalCount - startIndex);
-            Matrix4x4[] batch = new Matrix4x4[batchCount];
+            Matrix4x4[] matrixBatch = new Matrix4x4[batchCount];
+            Vector4[] leafTintBatch = new Vector4[batchCount];
 
             for (int i = 0; i < batchCount; i++)
             {
-                batch[i] = worldMatrices[startIndex + i];
+                matrixBatch[i] = worldMatrices[startIndex + i];
+                leafTintBatch[i] = leafTints[startIndex + i];
             }
 
-            targetBatches.Add(batch);
+            targetBatches.Add(new TreeBillboardInstanceBatch(matrixBatch, leafTintBatch));
             startIndex += batchCount;
         }
     }
 
-    private int CountMatrices(List<Matrix4x4[]> batches)
+    private int CountMatrices(List<TreeBillboardInstanceBatch> batches)
     {
         int count = 0;
 
         for (int i = 0; i < batches.Count; i++)
         {
-            if (batches[i] != null)
-                count += batches[i].Length;
+            if (batches[i].matrices != null)
+                count += batches[i].matrices.Length;
         }
 
         return count;
@@ -512,7 +550,7 @@ public class ChunkFoliageRuntime
 
     private void AccumulateTreeBillboardBatchStats(
         TreeBillboardRenderData renderData,
-        List<Matrix4x4[]> batches,
+        List<TreeBillboardInstanceBatch> batches,
         ref RenderGeometryStats stats)
     {
         if (renderData.mesh == null)
@@ -520,10 +558,10 @@ public class ChunkFoliageRuntime
 
         for (int i = 0; i < batches.Count; i++)
         {
-            if (batches[i] == null)
+            if (batches[i].matrices == null)
                 continue;
 
-            stats.AddMeshInstances(renderData.mesh, batches[i].Length);
+            stats.AddMeshInstances(renderData.mesh, batches[i].matrices.Length);
         }
     }
 
@@ -568,7 +606,28 @@ public class ChunkFoliageRuntime
             treeObject.transform.localRotation = instance.localRotation;
             treeObject.transform.localScale = instance.localScale;
 
+            ApplyTreeMaterialOverrides(treeObject, instance);
             treeGameObjects.Add(treeObject);
+        }
+    }
+
+    private void ApplyTreeMaterialOverrides(GameObject treeObject, TreeInstanceData instance)
+    {
+        if (treeObject == null)
+            return;
+
+        Renderer[] renderers = treeObject.GetComponentsInChildren<Renderer>();
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null)
+                continue;
+
+            renderer.GetPropertyBlock(treePropertyBlock);
+            treePropertyBlock.SetColor(TreeLeafTintPropertyId, instance.leafTint);
+            treePropertyBlock.SetColor(TreeBarkTintPropertyId, instance.barkTint);
+            renderer.SetPropertyBlock(treePropertyBlock);
         }
     }
 
@@ -828,7 +887,7 @@ public class ChunkFoliageRuntime
 
     private void DrawTreeBillboardBatches(
         TreeBillboardRenderData renderData,
-        List<Matrix4x4[]> batches,
+        List<TreeBillboardInstanceBatch> batches,
         ShadowCastingMode shadowMode,
         bool receiveShadows)
     {
@@ -837,20 +896,28 @@ public class ChunkFoliageRuntime
 
         for (int i = 0; i < batches.Count; i++)
         {
+            TreeBillboardInstanceBatch batch = batches[i];
+
+            if (batch.matrices == null || batch.leafTints == null)
+                continue;
+
+            treeBillboardPropertyBlock.Clear();
+            treeBillboardPropertyBlock.SetVectorArray(TreeLeafTintPropertyId, batch.leafTints);
+
             Graphics.DrawMeshInstanced(
                 renderData.mesh,
                 0,
                 renderData.material,
-                batches[i],
-                batches[i].Length,
-                null,
+                batch.matrices,
+                batch.matrices.Length,
+                treeBillboardPropertyBlock,
                 shadowMode,
                 receiveShadows
             );
         }
     }
 
-    private bool HasValidBillboardBatch(TreeBillboardRenderData renderData, List<Matrix4x4[]> batches)
+    private bool HasValidBillboardBatch(TreeBillboardRenderData renderData, List<TreeBillboardInstanceBatch> batches)
     {
         return renderData.mesh != null &&
                renderData.material != null &&

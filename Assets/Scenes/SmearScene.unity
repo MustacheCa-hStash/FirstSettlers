@@ -178,7 +178,7 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.3
-  far clip plane: 5000
+  far clip plane: 5500
   field of view: 60
   orthographic: 0
   orthographic size: 5
@@ -475,10 +475,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   worldSeed: 1
-  viewDistance: 50
+  viewDistance: 150
   colliderDistance: 5
   enableFarTerrain: 1
-  farTerrainStartRing: 20
+  farTerrainStartRing: 15
   farTerrainMacroTileSize: 4
   farTerrainHeightGridResolution: 9
   farTerrainControlMapResolution: 16
@@ -558,7 +558,7 @@ MonoBehaviour:
       - {r: 0.72, g: 0.82, b: 1, a: 1}
       - {r: 0.9, g: 0.72, b: 1, a: 1}
   treeSettings:
-    mapleTreePrefab: {fileID: 0}
+    mapleTreePrefab: {fileID: 5086927240151322318, guid: 1cfb66a4388e24c46b1f69705b6fd350, type: 3}
     sugarMapleTreePrefab: {fileID: 8959362317222411645, guid: d83b7cf60ca70de4c84b168dd59ed8cf, type: 3}
     birchAspenTreePrefab: {fileID: 0}
     beechTreePrefab: {fileID: 0}
@@ -577,7 +577,7 @@ MonoBehaviour:
     - {fileID: 919132149155446097, guid: f1473192a114b2540928d90dc73d736b, type: 3}
     - {fileID: 919132149155446097, guid: 48f37dcb64d335f42a79c8989710a856, type: 3}
     - {fileID: 919132149155446097, guid: 63119c7758858084d87fd43bcbed4df4, type: 3}
-    mapleTreeBillboardPrefab: {fileID: 0}
+    mapleTreeBillboardPrefab: {fileID: 6916112408692349603, guid: 27da2ddcc3333204aa52ce670c141518, type: 3}
     sugarMapleTreeBillboardPrefab: {fileID: 7816776188045512820, guid: 086afa9b8e0e20c4aa0eb0ccba01066e, type: 3}
     birchAspenTreeBillboardPrefab: {fileID: 0}
     beechTreeBillboardPrefab: {fileID: 0}

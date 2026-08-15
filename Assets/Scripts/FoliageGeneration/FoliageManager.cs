@@ -545,12 +545,19 @@ public class FoliageManager
         ChunkFoliageData data = record.FoliageData;
 
         List<Matrix4x4> mapleWorldMatrices = new List<Matrix4x4>();
+        List<Vector4> mapleLeafTints = new List<Vector4>();
         List<Matrix4x4> sugarMapleWorldMatrices = new List<Matrix4x4>();
+        List<Vector4> sugarMapleLeafTints = new List<Vector4>();
         List<Matrix4x4> birchAspenWorldMatrices = new List<Matrix4x4>();
+        List<Vector4> birchAspenLeafTints = new List<Vector4>();
         List<Matrix4x4> beechWorldMatrices = new List<Matrix4x4>();
+        List<Vector4> beechLeafTints = new List<Vector4>();
         List<Matrix4x4> spruceWorldMatrices = new List<Matrix4x4>();
+        List<Vector4> spruceLeafTints = new List<Vector4>();
         List<Matrix4x4> whitePineWorldMatrices = new List<Matrix4x4>();
+        List<Vector4> whitePineLeafTints = new List<Vector4>();
         List<Matrix4x4> oakWorldMatrices = new List<Matrix4x4>();
+        List<Vector4> oakLeafTints = new List<Vector4>();
         Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
 
         for (int i = 0; i < data.treeCubeInstances.Count; i++)
@@ -567,23 +574,38 @@ public class FoliageManager
             AddTreeBillboardMatrix(
                 instance.variant,
                 worldMatrix,
+                Color32ToLinearVector4(instance.leafTint),
                 mapleWorldMatrices,
+                mapleLeafTints,
                 sugarMapleWorldMatrices,
+                sugarMapleLeafTints,
                 birchAspenWorldMatrices,
+                birchAspenLeafTints,
                 beechWorldMatrices,
+                beechLeafTints,
                 spruceWorldMatrices,
+                spruceLeafTints,
                 whitePineWorldMatrices,
-                oakWorldMatrices);
+                whitePineLeafTints,
+                oakWorldMatrices,
+                oakLeafTints);
         }
 
         foliageRuntime.CacheTreeBillboardMatrices(
             mapleWorldMatrices,
+            mapleLeafTints,
             sugarMapleWorldMatrices,
+            sugarMapleLeafTints,
             birchAspenWorldMatrices,
+            birchAspenLeafTints,
             beechWorldMatrices,
+            beechLeafTints,
             spruceWorldMatrices,
+            spruceLeafTints,
             whitePineWorldMatrices,
-            oakWorldMatrices);
+            whitePineLeafTints,
+            oakWorldMatrices,
+            oakLeafTints);
         TerrainGenerationProfiler.Record(
             TerrainGenerationProfileStage.FoliageTreeBillboardBatchBuild,
             stageStart);
@@ -592,36 +614,51 @@ public class FoliageManager
     private void AddTreeBillboardMatrix(
         WorldFeatureVariant variant,
         Matrix4x4 worldMatrix,
+        Vector4 leafTint,
         List<Matrix4x4> mapleWorldMatrices,
+        List<Vector4> mapleLeafTints,
         List<Matrix4x4> sugarMapleWorldMatrices,
+        List<Vector4> sugarMapleLeafTints,
         List<Matrix4x4> birchAspenWorldMatrices,
+        List<Vector4> birchAspenLeafTints,
         List<Matrix4x4> beechWorldMatrices,
+        List<Vector4> beechLeafTints,
         List<Matrix4x4> spruceWorldMatrices,
+        List<Vector4> spruceLeafTints,
         List<Matrix4x4> whitePineWorldMatrices,
-        List<Matrix4x4> oakWorldMatrices)
+        List<Vector4> whitePineLeafTints,
+        List<Matrix4x4> oakWorldMatrices,
+        List<Vector4> oakLeafTints)
     {
         switch (variant)
         {
             case WorldFeatureVariant.SugarMapleTree:
                 sugarMapleWorldMatrices.Add(worldMatrix);
+                sugarMapleLeafTints.Add(leafTint);
                 break;
             case WorldFeatureVariant.BirchAspenTree:
                 birchAspenWorldMatrices.Add(worldMatrix);
+                birchAspenLeafTints.Add(leafTint);
                 break;
             case WorldFeatureVariant.BeechTree:
                 beechWorldMatrices.Add(worldMatrix);
+                beechLeafTints.Add(leafTint);
                 break;
             case WorldFeatureVariant.SpruceTree:
                 spruceWorldMatrices.Add(worldMatrix);
+                spruceLeafTints.Add(leafTint);
                 break;
             case WorldFeatureVariant.WhitePineTree:
                 whitePineWorldMatrices.Add(worldMatrix);
+                whitePineLeafTints.Add(leafTint);
                 break;
             case WorldFeatureVariant.OakTree:
                 oakWorldMatrices.Add(worldMatrix);
+                oakLeafTints.Add(leafTint);
                 break;
             default:
                 mapleWorldMatrices.Add(worldMatrix);
+                mapleLeafTints.Add(leafTint);
                 break;
         }
     }
@@ -1394,6 +1431,12 @@ public class FoliageManager
             color.g * inv255,
             color.b * inv255,
             color.a * inv255);
+    }
+
+    private static Vector4 Color32ToLinearVector4(Color32 color)
+    {
+        Color linearColor = ((Color)color).linear;
+        return new Vector4(linearColor.r, linearColor.g, linearColor.b, linearColor.a);
     }
 
     private readonly struct GrassSubChunkWorkItem

@@ -571,11 +571,23 @@ public static class FoliageGenerator
                 height * meshHeightMultiplier * worldScale,
                 (bottomLeftZ + placement.sampleZ) * worldScale);
 
+            GetDeterministicTreeColors(
+                placement.variant,
+                worldSeed,
+                treeSettings != null ? treeSettings.seedOffset : 0,
+                record.ChunkCoord,
+                placement.sampleX,
+                placement.sampleZ,
+                out Color32 leafTint,
+                out Color32 barkTint);
+
             foliageData.treeCubeInstances.Add(new TreeInstanceData(
                 finalLocalPosition,
                 placement.rotation,
                 placement.scale,
-                placement.variant));
+                placement.variant,
+                leafTint,
+                barkTint));
         }
 
         foliageData.treeCubesGenerated = true;
@@ -1323,6 +1335,87 @@ public static class FoliageGenerator
         {
             return (uint)Hash(worldSeed, seedOffset, chunkCoord.x, chunkCoord.z, cellX, cellZ, 101);
         }
+    }
+
+    private static void GetDeterministicTreeColors(
+        WorldFeatureVariant variant,
+        int worldSeed,
+        int seedOffset,
+        ChunkCoord chunkCoord,
+        float sampleX,
+        float sampleZ,
+        out Color32 leafTint,
+        out Color32 barkTint)
+    {
+        int cellX = Mathf.RoundToInt(sampleX * 10f);
+        int cellZ = Mathf.RoundToInt(sampleZ * 10f);
+        int variantSeed = (int)variant * 193;
+        int baseHash = Hash(worldSeed, seedOffset, chunkCoord.x, chunkCoord.z, cellX, cellZ, variantSeed, 911);
+
+        if (variant == WorldFeatureVariant.SugarMapleTree)
+        {
+            leafTint = PickWeightedColor(
+                Hash01(baseHash + 17),
+                new Color(1.0f, 0.74f, 0.22f, 1f),
+                new Color(1.0f, 0.52f, 0.18f, 1f),
+                new Color(0.82f, 0.22f, 0.14f, 1f),
+                Hash01(baseHash + 31),
+                0.68f,
+                0.92f);
+
+            barkTint = Color.Lerp(
+                new Color(0.88f, 0.86f, 0.80f, 1f),
+                new Color(1.04f, 1.01f, 0.93f, 1f),
+                Hash01(baseHash + 43));
+            return;
+        }
+
+        if (variant == WorldFeatureVariant.MapleTree)
+        {
+            leafTint = Color.white;
+            barkTint = Color.white;
+            return;
+        }
+
+        leafTint = Color.Lerp(
+            new Color(0.92f, 0.98f, 0.88f, 1f),
+            new Color(1.06f, 1.02f, 0.94f, 1f),
+            Hash01(baseHash + 17));
+        barkTint = Color.Lerp(
+            new Color(0.90f, 0.88f, 0.82f, 1f),
+            new Color(1.05f, 1.00f, 0.92f, 1f),
+            Hash01(baseHash + 43));
+    }
+
+    private static Color32 PickWeightedColor(
+        float selector,
+        Color first,
+        Color second,
+        Color third,
+        float blend,
+        float firstThreshold,
+        float secondThreshold)
+    {
+        Color a;
+        Color b;
+
+        if (selector < firstThreshold)
+        {
+            a = first;
+            b = second;
+        }
+        else if (selector < secondThreshold)
+        {
+            a = second;
+            b = third;
+        }
+        else
+        {
+            a = third;
+            b = first;
+        }
+
+        return (Color32)Color.Lerp(a, b, blend * 0.65f);
     }
 
     private struct TreeCandidateData

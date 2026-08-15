@@ -3,9 +3,13 @@ Shader "Custom/SpruceLeafTintCutout"
     Properties
     {
         [MainTexture] _BaseMap("White Leaf Atlas / Alpha", 2D) = "white" {}
-        [MainColor] _LeafColor("Leaf Color", Color) = (0.10, 0.34, 0.16, 1.0)
-        _TipColor("Tip Color", Color) = (0.36, 0.78, 0.25, 1.0)
-        _TipStrength("Tip Color Strength", Range(0, 1)) = 0.15
+        [MainColor] _LeafColor("Base Needle Color", Color) = (0.18431373, 0.35294118, 0.21176471, 1.0)
+        _CoolNeedleColor("Cool Blue-Green Color", Color) = (0.13, 0.25, 0.22, 1.0)
+        _DeepNeedleColor("Deep Shadow Green", Color) = (0.055, 0.16, 0.09, 1.0)
+        _TipColor("Fresh Tip Color", Color) = (0.30, 0.45, 0.22, 1.0)
+        _ColorVariationStrength("Color Variation Strength", Range(0, 1)) = 0.42
+        _NeedleContrast("Needle Contrast", Range(0, 1)) = 0.22
+        _TipStrength("Tip Color Strength", Range(0, 1)) = 0.10
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.35
         _AmbientStrength("Ambient Strength", Range(0, 1)) = 0.35
         _LightWrap("Leaf Light Wrap", Range(0, 1)) = 0.45
@@ -55,7 +59,11 @@ Shader "Custom/SpruceLeafTintCutout"
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 half4 _LeafColor;
+                half4 _CoolNeedleColor;
+                half4 _DeepNeedleColor;
                 half4 _TipColor;
+                half _ColorVariationStrength;
+                half _NeedleContrast;
                 half _TipStrength;
                 half _Cutoff;
                 half _AmbientStrength;
@@ -83,8 +91,9 @@ Shader "Custom/SpruceLeafTintCutout"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
-                float3 normalWS : TEXCOORD0;
-                float2 uv : TEXCOORD1;
+                float3 positionWS : TEXCOORD0;
+                float3 normalWS : TEXCOORD1;
+                float2 uv : TEXCOORD2;
                 half4 color : COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -129,11 +138,30 @@ Shader "Custom/SpruceLeafTintCutout"
                 VertexNormalInputs normalInputs = GetVertexNormalInputs(IN.normalOS);
 
                 OUT.positionCS = TransformWorldToHClip(positionWS);
+                OUT.positionWS = positionWS;
                 OUT.normalWS = normalInputs.normalWS;
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.color = IN.color;
 
                 return OUT;
+            }
+
+            half3 EvaluateSpruceNeedleColor(float2 uv, float3 positionWS)
+            {
+                half branchNoise = Hash12(floor(positionWS.xz * 0.34h) + floor(uv * 4.0h));
+                half fineNoise = Hash12(floor(positionWS.xz * 1.15h) + floor(uv * 17.0h));
+
+                half coolMix = smoothstep(0.18h, 0.78h, branchNoise) * _ColorVariationStrength;
+                half deepMix = smoothstep(0.74h, 0.98h, 1.0h - fineNoise + branchNoise * 0.18h) * _ColorVariationStrength * 0.65h;
+                half tipMix = smoothstep(0.62h, 0.96h, uv.y + fineNoise * 0.18h) * _TipStrength;
+
+                half3 needleColor = lerp(_LeafColor.rgb, _CoolNeedleColor.rgb, coolMix);
+                needleColor = lerp(needleColor, _DeepNeedleColor.rgb, deepMix);
+                needleColor = lerp(needleColor, _TipColor.rgb, tipMix);
+
+                half contrastNoise = branchNoise * 0.62h + fineNoise * 0.38h;
+                needleColor *= lerp(1.0h - _NeedleContrast, 1.0h + _NeedleContrast, contrastNoise);
+                return needleColor;
             }
 
             half4 frag(Varyings IN) : SV_Target
@@ -143,8 +171,7 @@ Shader "Custom/SpruceLeafTintCutout"
                 half4 atlas = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
                 clip(atlas.a - _Cutoff);
 
-                half tipMask = saturate(IN.uv.y) * _TipStrength;
-                half3 leafColor = lerp(_LeafColor.rgb, _TipColor.rgb, tipMask);
+                half3 leafColor = EvaluateSpruceNeedleColor(IN.uv, IN.positionWS);
                 leafColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
 
                 Light mainLight = GetMainLight();
