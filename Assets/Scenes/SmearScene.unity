@@ -560,7 +560,7 @@ MonoBehaviour:
   treeSettings:
     mapleTreePrefab: {fileID: 5086927240151322318, guid: 1cfb66a4388e24c46b1f69705b6fd350, type: 3}
     sugarMapleTreePrefab: {fileID: 8959362317222411645, guid: d83b7cf60ca70de4c84b168dd59ed8cf, type: 3}
-    birchAspenTreePrefab: {fileID: 0}
+    birchAspenTreePrefab: {fileID: 5726306257339085514, guid: dc3305daa1890e84f84218a22facd756, type: 3}
     beechTreePrefab: {fileID: 0}
     spruceTreePrefab: {fileID: 7646694047763373140, guid: 2ce6d38af2fc32d4593a6ac07664f29a, type: 3}
     whitePineTreePrefab: {fileID: 9167976221399298968, guid: 272060f130eda5545b5b78e8a9ef33d1, type: 3}
@@ -579,7 +579,7 @@ MonoBehaviour:
     - {fileID: 919132149155446097, guid: 63119c7758858084d87fd43bcbed4df4, type: 3}
     mapleTreeBillboardPrefab: {fileID: 6916112408692349603, guid: 27da2ddcc3333204aa52ce670c141518, type: 3}
     sugarMapleTreeBillboardPrefab: {fileID: 7816776188045512820, guid: 086afa9b8e0e20c4aa0eb0ccba01066e, type: 3}
-    birchAspenTreeBillboardPrefab: {fileID: 0}
+    birchAspenTreeBillboardPrefab: {fileID: 5515095018814835153, guid: 7e06b59d6389c6e4eba0246dbb6a80e3, type: 3}
     beechTreeBillboardPrefab: {fileID: 0}
     spruceTreeBillboardPrefab: {fileID: 9195837373271529818, guid: c19b3e1250464fe4a9a8410b50d88d95, type: 3}
     whitePineTreeBillboardPrefab: {fileID: 2111572226825985944, guid: 555a957109ef7834db50df03fe81454b, type: 3}
