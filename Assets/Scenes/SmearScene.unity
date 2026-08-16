@@ -560,7 +560,7 @@ MonoBehaviour:
   treeSettings:
     mapleTreePrefab: {fileID: 5086927240151322318, guid: 1cfb66a4388e24c46b1f69705b6fd350, type: 3}
     sugarMapleTreePrefab: {fileID: 8959362317222411645, guid: d83b7cf60ca70de4c84b168dd59ed8cf, type: 3}
-    birchAspenTreePrefab: {fileID: 5726306257339085514, guid: dc3305daa1890e84f84218a22facd756, type: 3}
+    birchAspenTreePrefab: {fileID: 6389886508054090531, guid: dc3305daa1890e84f84218a22facd756, type: 3}
     beechTreePrefab: {fileID: 0}
     spruceTreePrefab: {fileID: 7646694047763373140, guid: 2ce6d38af2fc32d4593a6ac07664f29a, type: 3}
     whitePineTreePrefab: {fileID: 9167976221399298968, guid: 272060f130eda5545b5b78e8a9ef33d1, type: 3}
@@ -828,6 +828,63 @@ MonoBehaviour:
   toggleKey: 97
   visibleOnStart: 0
   refreshInterval: 0.25
+--- !u!1001 &6121058414787288098
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -9.738247
+      objectReference: {fileID: 0}
+    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 4.394608
+      objectReference: {fileID: 0}
+    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -7.873538
+      objectReference: {fileID: 0}
+    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6389886508054090531, guid: dc3305daa1890e84f84218a22facd756, type: 3}
+      propertyPath: m_Name
+      value: Tree_Blender_011_Birch
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: dc3305daa1890e84f84218a22facd756, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -839,3 +896,4 @@ SceneRoots:
   - {fileID: 1025920260}
   - {fileID: 454788146}
   - {fileID: 1578603182}
+  - {fileID: 6121058414787288098}

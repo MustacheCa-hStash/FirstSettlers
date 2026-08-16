@@ -13,12 +13,12 @@ Shader "Custom/BirchBillboardTintCutout"
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.5
         _LeafWhiteThreshold("Leaf White Threshold", Range(0, 1)) = 0.42
         _LeafWhiteSoftness("Leaf White Softness", Range(0.001, 0.35)) = 0.14
-        _CanopyTintStart("Canopy Tint Start", Range(0, 1)) = 0.18
-        _CanopyTintFade("Canopy Tint Fade", Range(0.001, 0.5)) = 0.12
+        _CanopyTintStart("Canopy Tint Start", Range(0, 1)) = 0.13
+        _CanopyTintFade("Canopy Tint Fade", Range(0.001, 0.5)) = 0.10
         _TrunkProtectCenter("Trunk Protect Center X", Range(0, 1)) = 0.50
-        _TrunkProtectWidth("Trunk Protect Width", Range(0.01, 0.5)) = 0.045
-        _TrunkProtectEnd("Trunk Protect End Y", Range(0, 1)) = 0.48
-        _TrunkProtectFade("Trunk Protect Fade", Range(0.001, 0.5)) = 0.10
+        _TrunkProtectWidth("Trunk Protect Width", Range(0.01, 0.5)) = 0.040
+        _TrunkProtectEnd("Trunk Protect End Y", Range(0, 1)) = 0.45
+        _TrunkProtectFade("Trunk Protect Fade", Range(0.001, 0.5)) = 0.08
         _LeafTintStrength("Leaf Tint Strength", Range(0, 1)) = 1.0
         _ColorVariationStrength("Color Variation Strength", Range(0, 1)) = 0.42
         _InteriorShadeStrength("Interior Canopy Shade", Range(0, 1)) = 0.04

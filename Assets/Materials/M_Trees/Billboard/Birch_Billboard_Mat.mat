@@ -93,8 +93,8 @@ Material:
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _CanopyTintFade: 0.12
-    - _CanopyTintStart: 0.18
+    - _CanopyTintFade: 0.1
+    - _CanopyTintStart: 0.13
     - _ColorVariationStrength: 0.42
     - _Cull: 0
     - _Cutoff: 0.5
@@ -127,9 +127,9 @@ Material:
     - _Brightness: 1
     - _ForceBillboardFacing: 0
     - _TrunkProtectCenter: 0.5
-    - _TrunkProtectEnd: 0.48
-    - _TrunkProtectFade: 0.1
-    - _TrunkProtectWidth: 0.045
+    - _TrunkProtectEnd: 0.45
+    - _TrunkProtectFade: 0.08
+    - _TrunkProtectWidth: 0.04
     - _WindFlutterSpeed: 3.8
     - _WindFlutterStrength: 0.018
     - _WindGustScale: 0.16
