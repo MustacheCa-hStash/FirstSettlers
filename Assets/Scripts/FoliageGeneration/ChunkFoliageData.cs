@@ -17,7 +17,7 @@ public class ChunkFoliageData
     public List<TreeInstanceData> treeCubeInstances = new List<TreeInstanceData>();
 
     public bool bushesGenerated;
-    public List<TreeInstanceData> bushInstances = new List<TreeInstanceData>();
+    public List<BerryBushInstanceData> bushInstances = new List<BerryBushInstanceData>();
 
     public bool rocksGenerated;
     public List<RockInstanceData> rockInstances = new List<RockInstanceData>();

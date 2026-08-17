@@ -102,7 +102,7 @@ public static class FoliageGenerator
         NativeArray<BiomeType> biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.TempJob, out int biomeMapWidth, out int biomeMapHeight);
         NativeArray<GroundCoverType> groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.TempJob, out int groundCoverMapWidth, out int groundCoverMapHeight);
         NativeArray<float2> treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.TempJob);
-        NativeArray<float2> bushExclusionPositions = CreateTreeExclusionPositions(foliageData.bushInstances, Allocator.TempJob);
+        NativeArray<float2> bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, Allocator.TempJob);
         NativeArray<float2> rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, Allocator.TempJob);
         NativeArray<GrassSubChunkDiscoveryResult> results =
             new NativeArray<GrassSubChunkDiscoveryResult>(candidateCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
@@ -284,7 +284,7 @@ public static class FoliageGenerator
                 float localY = height * meshHeightMultiplier * worldScale;
 
                 if (treeSettings != null &&
-                    ((bushExclusionRadiusSqr > 0f && IsInsideTreeExclusion(
+                    ((bushExclusionRadiusSqr > 0f && IsInsideBushExclusion(
                         localX,
                         localZ,
                         foliageData.bushInstances,
@@ -649,7 +649,16 @@ public static class FoliageGenerator
                 height * meshHeightMultiplier * worldScale,
                 (bottomLeftZ + placement.sampleZ) * worldScale);
 
-            foliageData.bushInstances.Add(new TreeInstanceData(
+            ulong bushId = CreateStableBushId(
+                record.ChunkCoord,
+                i,
+                placement.variant,
+                placement.sampleX,
+                placement.sampleZ);
+
+            foliageData.bushInstances.Add(new BerryBushInstanceData(
+                bushId,
+                record.ChunkCoord,
                 finalLocalPosition,
                 placement.rotation,
                 placement.scale,
@@ -737,6 +746,28 @@ public static class FoliageGenerator
 
             float dx = localX - tree.localPosition.x;
             float dz = localZ - tree.localPosition.z;
+
+            float distSqr = dx * dx + dz * dz;
+
+            if (distSqr < exclusionRadiusSqr)
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsInsideBushExclusion(
+        float localX,
+        float localZ,
+        List<BerryBushInstanceData> bushInstances,
+        float exclusionRadiusSqr)
+    {
+        for (int i = 0; i < bushInstances.Count; i++)
+        {
+            BerryBushInstanceData bush = bushInstances[i];
+
+            float dx = localX - bush.localPosition.x;
+            float dz = localZ - bush.localPosition.z;
 
             float distSqr = dx * dx + dz * dz;
 
@@ -1004,6 +1035,20 @@ public static class FoliageGenerator
     }
 
     private static NativeArray<float2> CreateTreeExclusionPositions(List<TreeInstanceData> instances, Allocator allocator)
+    {
+        int count = instances != null ? instances.Count : 0;
+        NativeArray<float2> result = new NativeArray<float2>(count, allocator, NativeArrayOptions.UninitializedMemory);
+
+        for (int i = 0; i < count; i++)
+        {
+            Vector3 position = instances[i].localPosition;
+            result[i] = new float2(position.x, position.z);
+        }
+
+        return result;
+    }
+
+    private static NativeArray<float2> CreateBushExclusionPositions(List<BerryBushInstanceData> instances, Allocator allocator)
     {
         int count = instances != null ? instances.Count : 0;
         NativeArray<float2> result = new NativeArray<float2>(count, allocator, NativeArrayOptions.UninitializedMemory);
@@ -1467,6 +1512,41 @@ public static class FoliageGenerator
             }
 
             return (int)hash;
+        }
+    }
+
+    private static ulong CreateStableBushId(
+        ChunkCoord chunkCoord,
+        int placementIndex,
+        WorldFeatureVariant variant,
+        float sampleX,
+        float sampleZ)
+    {
+        int quantizedSampleX = Mathf.RoundToInt(sampleX * 100f);
+        int quantizedSampleZ = Mathf.RoundToInt(sampleZ * 100f);
+
+        unchecked
+        {
+            ulong hash = 14695981039346656037UL;
+            hash = MixStableBushId(hash, chunkCoord.x);
+            hash = MixStableBushId(hash, chunkCoord.z);
+            hash = MixStableBushId(hash, placementIndex);
+            hash = MixStableBushId(hash, (int)variant);
+            hash = MixStableBushId(hash, quantizedSampleX);
+            hash = MixStableBushId(hash, quantizedSampleZ);
+            return hash;
+        }
+    }
+
+    private static ulong MixStableBushId(ulong hash, int value)
+    {
+        unchecked
+        {
+            hash ^= (uint)value;
+            hash *= 1099511628211UL;
+            hash ^= (uint)(value >> 16);
+            hash *= 1099511628211UL;
+            return hash;
         }
     }
 

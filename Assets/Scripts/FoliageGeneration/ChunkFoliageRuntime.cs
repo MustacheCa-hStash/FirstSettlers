@@ -632,7 +632,7 @@ public class ChunkFoliageRuntime
     }
 
     public void RebuildBushGameObjects(
-        List<TreeInstanceData> instances,
+        List<BerryBushInstanceData> instances,
         Transform chunkRoot)
     {
         ClearBushGameObjects();
@@ -645,7 +645,7 @@ public class ChunkFoliageRuntime
 
         for (int i = 0; i < instances.Count; i++)
         {
-            TreeInstanceData instance = instances[i];
+            BerryBushInstanceData instance = instances[i];
             GameObject prefab = GetBushPrefab(instance.variant);
 
             if (prefab == null)
@@ -655,6 +655,12 @@ public class ChunkFoliageRuntime
             bushObject.transform.localPosition = instance.localPosition;
             bushObject.transform.localRotation = instance.localRotation;
             bushObject.transform.localScale = instance.localScale;
+
+            BerryBushRuntime berryBushRuntime = bushObject.GetComponent<BerryBushRuntime>();
+            if (berryBushRuntime == null)
+                berryBushRuntime = bushObject.AddComponent<BerryBushRuntime>();
+
+            berryBushRuntime.Initialize(instance, BerryBushManager.Instance);
 
             bushGameObjects.Add(bushObject);
         }

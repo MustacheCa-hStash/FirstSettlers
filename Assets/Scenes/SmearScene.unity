@@ -383,6 +383,55 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &398168012
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 398168013}
+  - component: {fileID: 398168014}
+  m_Layer: 0
+  m_Name: BerryBushManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &398168013
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 398168012}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1971578342}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &398168014
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 398168012}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b40a71ab04d47c5ba3d77ac3f27fed2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BerryBushManager
+  definitions:
+  - {fileID: 11400000, guid: ae0d8f1f8e525d74ea339a0abf3b31cf, type: 2}
+  - {fileID: 11400000, guid: 6c0923bba7c06b54da620fff8cb1e218, type: 2}
+  - {fileID: 11400000, guid: 4a8e7e2c912d8da4f95588a5ee51244b, type: 2}
+  - {fileID: 11400000, guid: 072d12be40d7c374b9cb0704bb59e247, type: 2}
 --- !u!1 &454788145
 GameObject:
   m_ObjectHideFlags: 0
@@ -635,12 +684,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 830849842}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -16.02819, y: -14.3207, z: -28.95201}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1971578342}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1025920259
 GameObject:
@@ -828,72 +877,47 @@ MonoBehaviour:
   toggleKey: 97
   visibleOnStart: 0
   refreshInterval: 0.25
---- !u!1001 &6121058414787288098
-PrefabInstance:
+--- !u!1 &1971578341
+GameObject:
   m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1971578342}
+  m_Layer: 0
+  m_Name: WorldSystems
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1971578342
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1971578341}
   serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -9.738247
-      objectReference: {fileID: 0}
-    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 4.394608
-      objectReference: {fileID: 0}
-    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -7.873538
-      objectReference: {fileID: 0}
-    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6045729831676561817, guid: dc3305daa1890e84f84218a22facd756, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6389886508054090531, guid: dc3305daa1890e84f84218a22facd756, type: 3}
-      propertyPath: m_Name
-      value: Tree_Blender_011_Birch
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: dc3305daa1890e84f84218a22facd756, type: 3}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 16.02819, y: 14.3207, z: 28.95201}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 830849844}
+  - {fileID: 398168013}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 163550948}
-  - {fileID: 830849844}
   - {fileID: 1799351265}
   - {fileID: 705461055}
   - {fileID: 1025920260}
   - {fileID: 454788146}
   - {fileID: 1578603182}
-  - {fileID: 6121058414787288098}
+  - {fileID: 1971578342}
