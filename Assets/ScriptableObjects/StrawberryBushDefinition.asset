@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: StrawberryBushDefinition
   m_EditorClassIdentifier: Assembly-CSharp::BerryBushDefinition
   variant: 10
-  fruitVisualPrefab: {fileID: 236106674415841674, guid: b9e3aaac184b6e44ab5fac276d9adafd, type: 3}
+  fruitVisualPrefab: {fileID: 3599959552744731279, guid: d6ad3fcee617a924d94d340c829e0731, type: 3}
   harvestAmount: 1
   regrowCycleLength: 1
   maxHP: 3

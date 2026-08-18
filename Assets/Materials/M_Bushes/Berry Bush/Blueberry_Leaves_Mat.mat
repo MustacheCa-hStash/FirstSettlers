@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Berry_Leaves_Mat
+  m_Name: Blueberry_Leaves_Mat
   m_Shader: {fileID: 4800000, guid: 7fd54b0d9f4c4a4c9e727eb2b2449ad1, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0

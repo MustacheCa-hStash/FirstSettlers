@@ -25,7 +25,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: 5d39375b15c125c4f8cdcd8d266c1faf, type: 3}
+        m_Texture: {fileID: 2800000, guid: e064b0dbc4ccd1e4282e1a9a5c9afead, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
@@ -46,9 +46,9 @@ Material:
     - _VerticalGradientStrength: 0.22
     m_Colors:
     - _EdgeHighlightColor: {r: 0.58, g: 0.74, b: 0.34, a: 1}
-    - _LeafColor: {r: 0.16, g: 0.37, b: 0.10, a: 1}
+    - _LeafColor: {r: 0.16, g: 0.37, b: 0.1, a: 1}
     - _ShadowLeafColor: {r: 0.04, g: 0.13, b: 0.035, a: 1}
-    - _YoungLeafColor: {r: 0.42, g: 0.60, b: 0.20, a: 1}
+    - _YoungLeafColor: {r: 0.42, g: 0.6, b: 0.2, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!114 &3880258526532561116

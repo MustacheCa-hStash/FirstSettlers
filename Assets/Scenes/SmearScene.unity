@@ -617,7 +617,7 @@ MonoBehaviour:
     treeLOD0GameObjectPrefab: {fileID: 7646694047763373140, guid: 2ce6d38af2fc32d4593a6ac07664f29a, type: 3}
     blueberryBushPrefab: {fileID: 2095120421312505866, guid: 90b14277c549b58408d186345b97dfbe, type: 3}
     raspberryBushPrefab: {fileID: 0}
-    strawberryBushPrefab: {fileID: 0}
+    strawberryBushPrefab: {fileID: 6447866110754163726, guid: 083081802f30fd149b46c7105b9698ba, type: 3}
     blackberryBushPrefab: {fileID: 0}
     fallbackBushPrefab: {fileID: 2095120421312505866, guid: 90b14277c549b58408d186345b97dfbe, type: 3}
     forestRockPrefabs:
