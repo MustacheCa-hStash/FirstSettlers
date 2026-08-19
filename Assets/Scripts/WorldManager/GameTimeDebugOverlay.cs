@@ -4,9 +4,9 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-public class RenderStatsDebugOverlay : MonoBehaviour
+public class GameTimeDebugOverlay : MonoBehaviour
 {
-    [SerializeField] WorldManager worldManager;
+    [SerializeField] GameTimeManager timeManager;
     [SerializeField] TextMeshProUGUI debugText;
     [SerializeField] Canvas debugCanvas;
     [SerializeField] Key toggleKey = Key.F4;
@@ -19,6 +19,9 @@ public class RenderStatsDebugOverlay : MonoBehaviour
 
     void Awake()
     {
+        if (timeManager == null)
+            timeManager = GameTimeManager.Instance;
+
         EnsureOverlay();
         isVisible = visibleOnStart;
 
@@ -47,7 +50,7 @@ public class RenderStatsDebugOverlay : MonoBehaviour
             return;
         }
 
-        GameObject canvasObject = new GameObject("Render Stats Debug Canvas");
+        GameObject canvasObject = new GameObject("Game Time Debug Canvas");
         canvasObject.transform.SetParent(transform, false);
 
         debugCanvas = canvasObject.AddComponent<Canvas>();
@@ -69,7 +72,7 @@ public class RenderStatsDebugOverlay : MonoBehaviour
         panelRect.anchorMax = new Vector2(0f, 1f);
         panelRect.pivot = new Vector2(0f, 1f);
         panelRect.anchoredPosition = new Vector2(12f, -12f);
-        panelRect.sizeDelta = new Vector2(520f, 360f);
+        panelRect.sizeDelta = new Vector2(390f, 220f);
 
         Image panelImage = panelObject.AddComponent<Image>();
         panelImage.color = new Color(0f, 0f, 0f, 0.72f);
@@ -94,6 +97,9 @@ public class RenderStatsDebugOverlay : MonoBehaviour
 
     private void HandleToggleInput()
     {
+        if (Keyboard.current == null)
+            return;
+
         if (Keyboard.current[toggleKey].wasPressedThisFrame)
             SetVisible(!isVisible);
     }
@@ -117,91 +123,51 @@ public class RenderStatsDebugOverlay : MonoBehaviour
         if (debugText == null)
             return;
 
-        builder.Clear();
-        builder.AppendLine("Render Stats Debug");
+        if (timeManager == null)
+            timeManager = GameTimeManager.Instance;
 
-        if (worldManager == null)
+        builder.Clear();
+        builder.AppendLine("Game Time Debug");
+
+        if (timeManager == null)
         {
-            builder.AppendLine("World Manager: missing");
+            builder.AppendLine("Time Manager: missing");
             debugText.text = builder.ToString();
             return;
         }
 
-        WorldRenderStatsDebugInfo stats = worldManager.GetVisibleRenderStatsDebugInfo();
+        GameTimeSnapshot snapshot = timeManager.CurrentSnapshot;
 
-        builder.Append("Visible Chunks: ");
-        builder.Append(stats.VisibleChunkCount);
-        builder.Append(" (terrain ");
-        builder.Append(stats.VisibleChunkWithTerrainMeshCount);
-        builder.AppendLine(")");
+        builder.Append("Running: ");
+        builder.AppendLine(timeManager.IsRunning ? "yes" : "no");
 
-        builder.Append("LOD: ");
-        builder.Append("0=");
-        builder.Append(stats.CurrentLOD0ChunkCount);
-        builder.Append(" 1=");
-        builder.Append(stats.CurrentLOD1ChunkCount);
-        builder.Append(" 2=");
-        builder.Append(stats.CurrentLOD2ChunkCount);
-        builder.Append(" 3=");
-        builder.Append(stats.CurrentLOD3ChunkCount);
-        builder.Append(" 4+=");
-        builder.AppendLine(stats.CurrentLOD4PlusChunkCount.ToString());
+        builder.Append("Day: ");
+        builder.AppendLine(snapshot.Day.ToString());
 
-        builder.Append("Total: ");
-        AppendCompactNumber(stats.TotalVertices);
-        builder.Append(" verts / ");
-        AppendCompactNumber(stats.TotalTriangles);
-        builder.AppendLine(" tris");
+        builder.Append("Clock: ");
+        builder.AppendLine(snapshot.ClockText);
 
-        builder.AppendLine();
-        AppendCategory("Terrain", stats.Terrain);
-        AppendCategory("Lake", stats.Lake);
-        AppendCategory("River", stats.River);
-        AppendCategory("Grass", stats.Grass);
-        AppendCategory("Billboard Grass", stats.BillboardGrass);
-        AppendCategory("Flowers", stats.Flowers);
-        AppendCategory("Tree Billboards", stats.TreeBillboards);
-        AppendCategory("Tree GameObjects", stats.TreeGameObjects);
-        AppendCategory("Bush GameObjects", stats.BushGameObjects);
-        AppendCategory("Rock GameObjects", stats.RockGameObjects);
+        builder.Append("Phase: ");
+        builder.AppendLine(snapshot.IsDaylight ? "Daylight" : "Night");
+
+        builder.Append("Phase Progress: ");
+        builder.AppendLine((snapshot.IsDaylight ? snapshot.DaylightProgress : snapshot.NightProgress).ToString("P1"));
+
+        builder.Append("Day Progress: ");
+        builder.AppendLine(snapshot.NormalizedDay.ToString("P1"));
+
+        builder.Append("Total Minutes: ");
+        builder.AppendLine(snapshot.TotalGameMinutes.ToString());
+
+        builder.Append("Exact Minutes: ");
+        builder.AppendLine(snapshot.TotalGameMinutesExact.ToString("0.00"));
+
+        builder.Append("Seconds / Game Hour: ");
+        builder.AppendLine(timeManager.RealSecondsPerGameHour.ToString("0.##"));
+
+        builder.Append("Seconds / Game Minute: ");
+        builder.AppendLine(timeManager.RealSecondsPerGameMinute.ToString("0.###"));
 
         debugText.text = builder.ToString();
-    }
-
-    private void AppendCategory(string label, RenderGeometryStats stats)
-    {
-        builder.Append(label);
-        builder.Append(": ");
-        AppendCompactNumber(stats.vertices);
-        builder.Append("v / ");
-        AppendCompactNumber(stats.triangles);
-        builder.Append("t");
-
-        if (stats.instances > 0)
-        {
-            builder.Append(" / ");
-            AppendCompactNumber(stats.instances);
-            builder.Append(" inst");
-        }
-
-        builder.AppendLine();
-    }
-
-    private void AppendCompactNumber(long value)
-    {
-        if (value >= 1000000)
-        {
-            builder.Append((value / 1000000f).ToString("0.00"));
-            builder.Append("M");
-        }
-        else if (value >= 1000)
-        {
-            builder.Append((value / 1000f).ToString("0.0"));
-            builder.Append("k");
-        }
-        else
-        {
-            builder.Append(value);
-        }
     }
 }

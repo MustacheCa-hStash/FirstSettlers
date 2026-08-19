@@ -10,6 +10,7 @@ public class BerryBushManager : MonoBehaviour
     private readonly Dictionary<WorldFeatureVariant, BerryBushDefinition> definitionsByVariant = new();
     private readonly Dictionary<ulong, BerryBushState> modifiedStatesById = new();
     private readonly List<BerryBushRuntime> activeBushes = new();
+    private GameTimeManager timeManager;
 
     public static BerryBushManager Instance
     {
@@ -42,6 +43,24 @@ public class BerryBushManager : MonoBehaviour
 
         instance = this;
         RebuildDefinitionLookup();
+    }
+
+    private void OnEnable()
+    {
+        TrySubscribeToTimeManager();
+    }
+
+    private void Start()
+    {
+        TrySubscribeToTimeManager();
+    }
+
+    private void OnDisable()
+    {
+        if (timeManager != null)
+            timeManager.DayAdvanced -= HandleDayAdvanced;
+
+        timeManager = null;
     }
 
     private void OnValidate()
@@ -167,5 +186,24 @@ public class BerryBushManager : MonoBehaviour
 
             definitionsByVariant[definition.variant] = definition;
         }
+    }
+
+    private void TrySubscribeToTimeManager()
+    {
+        if (timeManager != null)
+            return;
+
+        timeManager = GameTimeManager.Instance;
+
+        if (timeManager == null)
+            return;
+
+        timeManager.DayAdvanced += HandleDayAdvanced;
+        NotifyBerryRegrowCycleAdvanced(timeManager.CurrentSnapshot.Day);
+    }
+
+    private void HandleDayAdvanced(GameTimeSnapshot snapshot)
+    {
+        NotifyBerryRegrowCycleAdvanced(snapshot.Day);
     }
 }

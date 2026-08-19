@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "First Settlers/Berry Bush Definition")]
+[CreateAssetMenu(menuName = "Foliage/Berry Bush Definition")]
 public class BerryBushDefinition : ScriptableObject
 {
     public WorldFeatureVariant variant;

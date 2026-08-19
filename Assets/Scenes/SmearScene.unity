@@ -178,7 +178,7 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.3
-  far clip plane: 5500
+  far clip plane: 6500
   field of view: 60
   orthographic: 0
   orthographic size: 5
@@ -870,13 +870,68 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d21ef2e0b99466ca8fd20f75e41f2bb, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RenderStatsDebugOverlay
-  worldManager: {fileID: 830849843}
+  m_EditorClassIdentifier: Assembly-CSharp::GameTimeDebugOverlay
+  timeManager: {fileID: 1967121501}
   debugText: {fileID: 0}
   debugCanvas: {fileID: 0}
   toggleKey: 97
   visibleOnStart: 0
   refreshInterval: 0.25
+--- !u!1 &1967121499
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1967121500}
+  - component: {fileID: 1967121501}
+  m_Layer: 0
+  m_Name: GameTimeManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1967121500
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1967121499}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1971578342}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1967121501
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1967121499}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19b12400ff0d48cbacec3f17963d2a10, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameTimeManager
+  startAutomatically: 1
+  useUnscaledDeltaTime: 0
+  realSecondsPerGameHour: 75
+  timeScale: 1
+  daylightHours: 16
+  nighttimeHours: 8
+  daylightStartHour: 6
+  startingDay: 0
+  startingHour: 6
+  startingMinute: 0
+  maxDiscreteMinutesProcessedPerFrame: 360
 --- !u!1 &1971578341
 GameObject:
   m_ObjectHideFlags: 0
@@ -907,6 +962,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 830849844}
+  - {fileID: 1967121500}
   - {fileID: 398168013}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
