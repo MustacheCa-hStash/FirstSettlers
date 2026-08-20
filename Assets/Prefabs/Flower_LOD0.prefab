@@ -10,15 +10,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 92edc792c9b197f42ba3f836c9e7057b, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 700.2064
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 92edc792c9b197f42ba3f836c9e7057b, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.00000004304663
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 92edc792c9b197f42ba3f836c9e7057b, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 701.78595
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 92edc792c9b197f42ba3f836c9e7057b, type: 3}
       propertyPath: m_LocalRotation.w
@@ -54,7 +54,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: b856322fb088d0f46ac4ef809e2ccb5d, type: 2}
     - target: {fileID: 919132149155446097, guid: 92edc792c9b197f42ba3f836c9e7057b, type: 3}
       propertyPath: m_Name
-      value: FlowerBase_000
+      value: Flower_LOD0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

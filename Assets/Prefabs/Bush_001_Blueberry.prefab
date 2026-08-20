@@ -10,15 +10,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: eddb5765d54e8044a91f9ec3897c15a6, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -72.58301
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: eddb5765d54e8044a91f9ec3897c15a6, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.07620444
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: eddb5765d54e8044a91f9ec3897c15a6, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -88.747986
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: eddb5765d54e8044a91f9ec3897c15a6, type: 3}
       propertyPath: m_LocalRotation.w
@@ -66,7 +66,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 169757bc678034243ab33e00f3bd985c, type: 2}
     - target: {fileID: 919132149155446097, guid: eddb5765d54e8044a91f9ec3897c15a6, type: 3}
       propertyPath: m_Name
-      value: Bush_001_Berry
+      value: Bush_001_Blueberry
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

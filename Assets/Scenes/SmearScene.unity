@@ -613,7 +613,7 @@ MonoBehaviour:
     beechTreePrefab: {fileID: 0}
     spruceTreePrefab: {fileID: 7646694047763373140, guid: 2ce6d38af2fc32d4593a6ac07664f29a, type: 3}
     whitePineTreePrefab: {fileID: 9167976221399298968, guid: 272060f130eda5545b5b78e8a9ef33d1, type: 3}
-    oakTreePrefab: {fileID: 0}
+    oakTreePrefab: {fileID: 689681528551111153, guid: 13bdb8ed23f7955478eafc28cf9f8a23, type: 3}
     treeLOD0GameObjectPrefab: {fileID: 7646694047763373140, guid: 2ce6d38af2fc32d4593a6ac07664f29a, type: 3}
     blueberryBushPrefab: {fileID: 2095120421312505866, guid: 90b14277c549b58408d186345b97dfbe, type: 3}
     raspberryBushPrefab: {fileID: 0}
