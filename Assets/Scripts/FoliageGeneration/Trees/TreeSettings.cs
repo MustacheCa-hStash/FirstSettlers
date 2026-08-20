@@ -16,6 +16,15 @@ public class TreeSettings
     [Tooltip("Fallback near tree prefab used when a species prefab is not assigned.")]
     public GameObject treeLOD0GameObjectPrefab;
 
+    [Header("Grassland Tree Prefabs")]
+    public GameObject grasslandMapleTreePrefab;
+    public GameObject grasslandBirchAspenTreePrefab;
+    public GameObject grasslandWhitePineTreePrefab;
+    public GameObject grasslandOakTreePrefab;
+
+    [Tooltip("Fallback grassland tree prefab used when a grassland species prefab is not assigned.")]
+    public GameObject grasslandTreeFallbackPrefab;
+
     [Header("Berry Bush Prefabs")]
     public GameObject blueberryBushPrefab;
     public GameObject raspberryBushPrefab;
@@ -29,6 +38,16 @@ public class TreeSettings
     [Tooltip("Forest rock and boulder prefabs sampled deterministically from the world seed and rock location.")]
     public GameObject[] forestRockPrefabs;
 
+    [Tooltip("Fallback forest rock prefab used when the forest rock list is empty or a sampled slot is unassigned.")]
+    public GameObject forestRockFallbackPrefab;
+
+    [Header("Grassland Rock Prefabs")]
+    [Tooltip("Grassland rock and boulder prefabs sampled deterministically from the world seed and rock location.")]
+    public GameObject[] grasslandRockPrefabs;
+
+    [Tooltip("Fallback grassland rock prefab used when the grassland rock list is empty or a sampled slot is unassigned.")]
+    public GameObject grasslandRockFallbackPrefab;
+
     [Header("Tree Billboard Prefabs")]
     [Tooltip("Optional merged billboard prefab for generic maple / red maple trees.")]
     public GameObject mapleTreeBillboardPrefab;
@@ -41,6 +60,15 @@ public class TreeSettings
 
     [Tooltip("Fallback merged billboard tree prefab used when a species billboard is not assigned.")]
     public GameObject treeBillboardPrefab;
+
+    [Header("Grassland Tree Billboard Prefabs")]
+    public GameObject grasslandMapleTreeBillboardPrefab;
+    public GameObject grasslandBirchAspenTreeBillboardPrefab;
+    public GameObject grasslandWhitePineTreeBillboardPrefab;
+    public GameObject grasslandOakTreeBillboardPrefab;
+
+    [Tooltip("Fallback merged billboard tree prefab used when a grassland species billboard is not assigned.")]
+    public GameObject grasslandTreeBillboardFallbackPrefab;
 
     [Header("Tree Placement")]
     public float treeCellSize = 12f;
@@ -73,6 +101,17 @@ public class TreeSettings
 
     public Vector2 forestRockUniformScaleRange = new Vector2(0.75f, 1.45f);
     public Vector2 forestRockPitchRange = new Vector2(-15f, 15f);
+
+    [Header("Grassland Tree Placement")]
+    [Tooltip("Maximum planned trees in a grassland chunk. Many grassland chunks will still place fewer or none.")]
+    public int maxGrasslandTreesPerChunk = 8;
+
+    [Header("Grassland Rock Placement")]
+    [Tooltip("Maximum planned rock or boulder placements in a grassland chunk.")]
+    public int maxGrasslandRocksPerChunk = 7;
+
+    public Vector2 grasslandRockUniformScaleRange = new Vector2(0.55f, 1.35f);
+    public Vector2 grasslandRockPitchRange = new Vector2(-12f, 12f);
 
     [Tooltip("Grass exclusion radius around instantiated forest rocks.")]
     public float rockGrassExclusionRadius = 1.25f;

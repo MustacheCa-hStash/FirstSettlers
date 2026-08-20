@@ -96,6 +96,7 @@ Material:
     - _ColorVariationStrength: 0.38
     - _Cull: 0
     - _Cutoff: 0.5
+    - _AmbientStrength: 0.56
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
@@ -103,6 +104,7 @@ Material:
     - _EnvironmentReflections: 1
     - _FauxShadeStrength: 0.36
     - _ForceBillboardFacing: 0
+    - _LightWrap: 0.72
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
@@ -118,9 +120,10 @@ Material:
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _SampleGI: 0
-    - _Smoothness: 0.5
+    - _Smoothness: 0.06
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
+    - _SpecularStrength: 0.02
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0

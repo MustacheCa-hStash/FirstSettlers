@@ -216,12 +216,12 @@ Material:
     - _DarkColor: {r: 0.19999996, g: 0.47999996, b: 0.17999998, a: 1}
     - _DarkGrassColor: {r: 0.2, g: 0.48, b: 0.18, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _ForestDarkGrassColor: {r: 0.055, g: 0.18, b: 0.06, a: 1}
-    - _ForestLightGrassColor: {r: 0.18, g: 0.43, b: 0.16, a: 1}
-    - _ForestMidGrassColor: {r: 0.095, g: 0.29, b: 0.1, a: 1}
-    - _GroundDarkGrassColor: {r: 0.045, g: 0.16, b: 0.05, a: 1}
-    - _GroundLightGrassColor: {r: 0.17, g: 0.38, b: 0.14, a: 1}
-    - _GroundMidGrassColor: {r: 0.085, g: 0.25, b: 0.085, a: 1}
+    - _ForestDarkGrassColor: {r: 0.2, g: 0.48, b: 0.18, a: 1}
+    - _ForestLightGrassColor: {r: 0.44, g: 0.78, b: 0.3, a: 1}
+    - _ForestMidGrassColor: {r: 0.29, g: 0.62, b: 0.24, a: 1}
+    - _GroundDarkGrassColor: {r: 0.2, g: 0.48, b: 0.18, a: 1}
+    - _GroundLightGrassColor: {r: 0.44, g: 0.78, b: 0.3, a: 1}
+    - _GroundMidGrassColor: {r: 0.29, g: 0.62, b: 0.24, a: 1}
     - _LeafLitterColor: {r: 0.6603774, g: 0.42252752, b: 0.25127557, a: 1}
     - _LightColor: {r: 0.43999997, g: 0.78, b: 0.29999998, a: 1}
     - _LightGrassColor: {r: 0.44, g: 0.78, b: 0.3, a: 1}

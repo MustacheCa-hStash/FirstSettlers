@@ -728,6 +728,7 @@ public static class FoliageGenerator
                 finalLocalPosition,
                 placement.rotation,
                 placement.scale,
+                placement.variant,
                 placement.prefabIndex));
         }
 
@@ -1419,6 +1420,25 @@ public static class FoliageGenerator
         {
             leafTint = Color.white;
             barkTint = Color.white;
+            return;
+        }
+
+        if (variant == WorldFeatureVariant.GrasslandMapleTree)
+        {
+            leafTint = PickWeightedColor(
+                Hash01(baseHash + 17),
+                new Color(0.42f, 0.68f, 0.32f, 1f),
+                new Color(0.36f, 0.58f, 0.28f, 1f),
+                new Color(0.50f, 0.64f, 0.30f, 1f),
+                Hash01(baseHash + 31),
+                0.55f,
+                0.86f);
+            leafTint.a = 0;
+
+            barkTint = Color.Lerp(
+                new Color(0.88f, 0.86f, 0.80f, 1f),
+                new Color(1.02f, 0.98f, 0.90f, 1f),
+                Hash01(baseHash + 43));
             return;
         }
 

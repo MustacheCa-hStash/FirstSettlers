@@ -1,4 +1,4 @@
-Shader "Custom/WhitePineBarkLit"
+Shader "Custom/WhitePineBarkLegacySimpleLit"
 {
     Properties
     {
@@ -16,6 +16,7 @@ Shader "Custom/WhitePineBarkLit"
         _AmbientStrength("Ambient Strength", Range(0, 1)) = 0.36
         _LightWrap("Bark Light Wrap", Range(0, 1)) = 0.38
         _Smoothness("Smoothness", Range(0, 1)) = 0.12
+        _SpecularStrength("Specular Strength", Range(0, 1)) = 0.06
         [Toggle] _UseVertexColor("Use Vertex Color", Float) = 0
     }
 
@@ -49,6 +50,7 @@ Shader "Custom/WhitePineBarkLit"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Shaders/TreeSimpleLitCommon.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -68,6 +70,7 @@ Shader "Custom/WhitePineBarkLit"
                 half _AmbientStrength;
                 half _LightWrap;
                 half _Smoothness;
+                half _SpecularStrength;
                 half _UseVertexColor;
             CBUFFER_END
 
@@ -151,21 +154,17 @@ Shader "Custom/WhitePineBarkLit"
                 barkColor = lerp(barkColor, _CreviceColor.rgb, saturate(crackMask * _CrackDarkness));
                 barkColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
 
-                Light mainLight = GetMainLight(IN.shadowCoord);
-                half3 normalWS = normalize(IN.normalWS);
-                half ndotl = dot(normalWS, mainLight.direction);
-                half wrappedNdotL = saturate((ndotl + _LightWrap) / (1.0h + _LightWrap));
-                half3 ambient = max(SampleSH(normalWS), _AmbientStrength.xxx);
-                half3 litColor = barkColor * (ambient + mainLight.color * wrappedNdotL * mainLight.shadowAttenuation);
-                half3 viewDirWS = normalize(GetWorldSpaceViewDir(IN.positionWS));
-                half3 halfDir = normalize(mainLight.direction + viewDirWS);
-                half barkSheen = pow(saturate(dot(normalWS, halfDir)), lerp(12.0h, 80.0h, _Smoothness));
-                litColor += mainLight.color * barkSheen * _Smoothness * 0.08h * mainLight.shadowAttenuation;
+                InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);
+                inputData.normalWS = normalize(lerp(inputData.normalWS, half3(0.0h, 1.0h, 0.0h), _LightWrap * 0.18h));
 
-                half shadowSide = saturate(1.0h - wrappedNdotL);
-                litColor = lerp(litColor, litColor * _CoolShadowColor.rgb, shadowSide * 0.35h);
+                SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(barkColor, 1.0h, _Smoothness, _SpecularStrength);
+                half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
 
-                return half4(saturate(litColor), 1.0h);
+                Light mainLight = GetMainLight(inputData.shadowCoord);
+                half shadowSide = saturate(1.0h - dot(inputData.normalWS, mainLight.direction) * 0.5h - 0.5h);
+                color.rgb = lerp(color.rgb, color.rgb * _CoolShadowColor.rgb, shadowSide * 0.18h);
+
+                return half4(saturate(color.rgb), 1.0h);
             }
             ENDHLSL
         }

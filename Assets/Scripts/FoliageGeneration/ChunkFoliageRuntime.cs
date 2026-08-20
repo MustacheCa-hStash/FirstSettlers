@@ -75,12 +75,20 @@ public class ChunkFoliageRuntime
     public GameObject whitePineTreePrefab;
     public GameObject oakTreePrefab;
     public GameObject fallbackTreePrefab;
+    public GameObject grasslandMapleTreePrefab;
+    public GameObject grasslandBirchAspenTreePrefab;
+    public GameObject grasslandWhitePineTreePrefab;
+    public GameObject grasslandOakTreePrefab;
+    public GameObject grasslandFallbackTreePrefab;
     public GameObject blueberryBushPrefab;
     public GameObject raspberryBushPrefab;
     public GameObject strawberryBushPrefab;
     public GameObject blackberryBushPrefab;
     public GameObject fallbackBushPrefab;
     public GameObject[] forestRockPrefabs;
+    public GameObject forestRockFallbackPrefab;
+    public GameObject[] grasslandRockPrefabs;
+    public GameObject grasslandRockFallbackPrefab;
     public TreeBillboardRenderData mapleTreeBillboard;
     public TreeBillboardRenderData sugarMapleTreeBillboard;
     public TreeBillboardRenderData birchAspenTreeBillboard;
@@ -89,6 +97,11 @@ public class ChunkFoliageRuntime
     public TreeBillboardRenderData whitePineTreeBillboard;
     public TreeBillboardRenderData oakTreeBillboard;
     public TreeBillboardRenderData fallbackTreeBillboard;
+    public TreeBillboardRenderData grasslandMapleTreeBillboard;
+    public TreeBillboardRenderData grasslandBirchAspenTreeBillboard;
+    public TreeBillboardRenderData grasslandWhitePineTreeBillboard;
+    public TreeBillboardRenderData grasslandOakTreeBillboard;
+    public TreeBillboardRenderData grasslandFallbackTreeBillboard;
 
     public bool isVisible;
 
@@ -105,6 +118,10 @@ public class ChunkFoliageRuntime
     private readonly List<TreeBillboardInstanceBatch> spruceTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
     private readonly List<TreeBillboardInstanceBatch> whitePineTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
     private readonly List<TreeBillboardInstanceBatch> oakTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
+    private readonly List<TreeBillboardInstanceBatch> grasslandMapleTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
+    private readonly List<TreeBillboardInstanceBatch> grasslandBirchAspenTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
+    private readonly List<TreeBillboardInstanceBatch> grasslandWhitePineTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
+    private readonly List<TreeBillboardInstanceBatch> grasslandOakTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
 
     private GameObject treeGameObjectRoot;
     private readonly List<GameObject> treeGameObjects = new List<GameObject>();
@@ -135,7 +152,11 @@ public class ChunkFoliageRuntime
         CountMatrices(beechTreeBillboardMatrixBatches) +
         CountMatrices(spruceTreeBillboardMatrixBatches) +
         CountMatrices(whitePineTreeBillboardMatrixBatches) +
-        CountMatrices(oakTreeBillboardMatrixBatches);
+        CountMatrices(oakTreeBillboardMatrixBatches) +
+        CountMatrices(grasslandMapleTreeBillboardMatrixBatches) +
+        CountMatrices(grasslandBirchAspenTreeBillboardMatrixBatches) +
+        CountMatrices(grasslandWhitePineTreeBillboardMatrixBatches) +
+        CountMatrices(grasslandOakTreeBillboardMatrixBatches);
 
     public bool HasCurrentTreeRepresentation(FoliageRepresentationMode mode)
     {
@@ -179,6 +200,10 @@ public class ChunkFoliageRuntime
         spruceTreeBillboardMatrixBatches.Clear();
         whitePineTreeBillboardMatrixBatches.Clear();
         oakTreeBillboardMatrixBatches.Clear();
+        grasslandMapleTreeBillboardMatrixBatches.Clear();
+        grasslandBirchAspenTreeBillboardMatrixBatches.Clear();
+        grasslandWhitePineTreeBillboardMatrixBatches.Clear();
+        grasslandOakTreeBillboardMatrixBatches.Clear();
         ClearTreeGameObjects();
         ClearBushGameObjects();
         ClearRockGameObjects();
@@ -222,7 +247,11 @@ public class ChunkFoliageRuntime
                HasValidBillboardBatch(beechTreeBillboard, beechTreeBillboardMatrixBatches) ||
                HasValidBillboardBatch(spruceTreeBillboard, spruceTreeBillboardMatrixBatches) ||
                HasValidBillboardBatch(whitePineTreeBillboard, whitePineTreeBillboardMatrixBatches) ||
-               HasValidBillboardBatch(oakTreeBillboard, oakTreeBillboardMatrixBatches);
+               HasValidBillboardBatch(oakTreeBillboard, oakTreeBillboardMatrixBatches) ||
+               HasValidBillboardBatch(grasslandMapleTreeBillboard, grasslandMapleTreeBillboardMatrixBatches) ||
+               HasValidBillboardBatch(grasslandBirchAspenTreeBillboard, grasslandBirchAspenTreeBillboardMatrixBatches) ||
+               HasValidBillboardBatch(grasslandWhitePineTreeBillboard, grasslandWhitePineTreeBillboardMatrixBatches) ||
+               HasValidBillboardBatch(grasslandOakTreeBillboard, grasslandOakTreeBillboardMatrixBatches);
     }
 
     public bool HasTreeGameObjects()
@@ -419,7 +448,15 @@ public class ChunkFoliageRuntime
         List<Matrix4x4> whitePineWorldMatrices,
         List<Vector4> whitePineLeafTints,
         List<Matrix4x4> oakWorldMatrices,
-        List<Vector4> oakLeafTints)
+        List<Vector4> oakLeafTints,
+        List<Matrix4x4> grasslandMapleWorldMatrices,
+        List<Vector4> grasslandMapleLeafTints,
+        List<Matrix4x4> grasslandBirchAspenWorldMatrices,
+        List<Vector4> grasslandBirchAspenLeafTints,
+        List<Matrix4x4> grasslandWhitePineWorldMatrices,
+        List<Vector4> grasslandWhitePineLeafTints,
+        List<Matrix4x4> grasslandOakWorldMatrices,
+        List<Vector4> grasslandOakLeafTints)
     {
         CacheTreeBillboardBatches(mapleWorldMatrices, mapleLeafTints, mapleTreeBillboardMatrixBatches);
         CacheTreeBillboardBatches(sugarMapleWorldMatrices, sugarMapleLeafTints, sugarMapleTreeBillboardMatrixBatches);
@@ -428,6 +465,10 @@ public class ChunkFoliageRuntime
         CacheTreeBillboardBatches(spruceWorldMatrices, spruceLeafTints, spruceTreeBillboardMatrixBatches);
         CacheTreeBillboardBatches(whitePineWorldMatrices, whitePineLeafTints, whitePineTreeBillboardMatrixBatches);
         CacheTreeBillboardBatches(oakWorldMatrices, oakLeafTints, oakTreeBillboardMatrixBatches);
+        CacheTreeBillboardBatches(grasslandMapleWorldMatrices, grasslandMapleLeafTints, grasslandMapleTreeBillboardMatrixBatches);
+        CacheTreeBillboardBatches(grasslandBirchAspenWorldMatrices, grasslandBirchAspenLeafTints, grasslandBirchAspenTreeBillboardMatrixBatches);
+        CacheTreeBillboardBatches(grasslandWhitePineWorldMatrices, grasslandWhitePineLeafTints, grasslandWhitePineTreeBillboardMatrixBatches);
+        CacheTreeBillboardBatches(grasslandOakWorldMatrices, grasslandOakLeafTints, grasslandOakTreeBillboardMatrixBatches);
     }
 
     private void CacheTreeBillboardBatches(
@@ -546,6 +587,10 @@ public class ChunkFoliageRuntime
         AccumulateTreeBillboardBatchStats(spruceTreeBillboard, spruceTreeBillboardMatrixBatches, ref stats);
         AccumulateTreeBillboardBatchStats(whitePineTreeBillboard, whitePineTreeBillboardMatrixBatches, ref stats);
         AccumulateTreeBillboardBatchStats(oakTreeBillboard, oakTreeBillboardMatrixBatches, ref stats);
+        AccumulateTreeBillboardBatchStats(grasslandMapleTreeBillboard, grasslandMapleTreeBillboardMatrixBatches, ref stats);
+        AccumulateTreeBillboardBatchStats(grasslandBirchAspenTreeBillboard, grasslandBirchAspenTreeBillboardMatrixBatches, ref stats);
+        AccumulateTreeBillboardBatchStats(grasslandWhitePineTreeBillboard, grasslandWhitePineTreeBillboardMatrixBatches, ref stats);
+        AccumulateTreeBillboardBatchStats(grasslandOakTreeBillboard, grasslandOakTreeBillboardMatrixBatches, ref stats);
     }
 
     private void AccumulateTreeBillboardBatchStats(
@@ -683,7 +728,7 @@ public class ChunkFoliageRuntime
         for (int i = 0; i < instances.Count; i++)
         {
             RockInstanceData instance = instances[i];
-            GameObject prefab = GetRockPrefab(instance.prefabIndex);
+            GameObject prefab = GetRockPrefab(instance.variant, instance.prefabIndex);
 
             if (prefab == null)
                 continue;
@@ -775,6 +820,10 @@ public class ChunkFoliageRuntime
         spruceTreeBillboardMatrixBatches.Clear();
         whitePineTreeBillboardMatrixBatches.Clear();
         oakTreeBillboardMatrixBatches.Clear();
+        grasslandMapleTreeBillboardMatrixBatches.Clear();
+        grasslandBirchAspenTreeBillboardMatrixBatches.Clear();
+        grasslandWhitePineTreeBillboardMatrixBatches.Clear();
+        grasslandOakTreeBillboardMatrixBatches.Clear();
     }
 
     public void DrawGrass()
@@ -886,6 +935,10 @@ public class ChunkFoliageRuntime
         DrawTreeBillboardBatches(spruceTreeBillboard, spruceTreeBillboardMatrixBatches, shadowMode, receiveShadows);
         DrawTreeBillboardBatches(whitePineTreeBillboard, whitePineTreeBillboardMatrixBatches, shadowMode, receiveShadows);
         DrawTreeBillboardBatches(oakTreeBillboard, oakTreeBillboardMatrixBatches, shadowMode, receiveShadows);
+        DrawTreeBillboardBatches(grasslandMapleTreeBillboard, grasslandMapleTreeBillboardMatrixBatches, shadowMode, receiveShadows);
+        DrawTreeBillboardBatches(grasslandBirchAspenTreeBillboard, grasslandBirchAspenTreeBillboardMatrixBatches, shadowMode, receiveShadows);
+        DrawTreeBillboardBatches(grasslandWhitePineTreeBillboard, grasslandWhitePineTreeBillboardMatrixBatches, shadowMode, receiveShadows);
+        DrawTreeBillboardBatches(grasslandOakTreeBillboard, grasslandOakTreeBillboardMatrixBatches, shadowMode, receiveShadows);
         TerrainGenerationProfiler.Record(
             TerrainGenerationProfileStage.FoliageTreeBillboardDraw,
             stageStart);
@@ -953,6 +1006,24 @@ public class ChunkFoliageRuntime
         if (variant == WorldFeatureVariant.OakTree && oakTreePrefab != null)
             return oakTreePrefab;
 
+        if (variant == WorldFeatureVariant.GrasslandMapleTree && grasslandMapleTreePrefab != null)
+            return grasslandMapleTreePrefab;
+
+        if (variant == WorldFeatureVariant.GrasslandBirchAspenTree && grasslandBirchAspenTreePrefab != null)
+            return grasslandBirchAspenTreePrefab;
+
+        if (variant == WorldFeatureVariant.GrasslandWhitePineTree && grasslandWhitePineTreePrefab != null)
+            return grasslandWhitePineTreePrefab;
+
+        if (variant == WorldFeatureVariant.GrasslandOakTree && grasslandOakTreePrefab != null)
+            return grasslandOakTreePrefab;
+
+        if (IsGrasslandTreeVariant(variant) && grasslandFallbackTreePrefab != null)
+            return grasslandFallbackTreePrefab;
+
+        if (IsGrasslandTreeVariant(variant))
+            return null;
+
         return fallbackTreePrefab;
     }
 
@@ -973,12 +1044,28 @@ public class ChunkFoliageRuntime
         return fallbackBushPrefab;
     }
 
-    private GameObject GetRockPrefab(int prefabIndex)
+    private GameObject GetRockPrefab(WorldFeatureVariant variant, int prefabIndex)
     {
-        if (forestRockPrefabs == null || forestRockPrefabs.Length == 0)
-            return null;
+        GameObject[] prefabs = variant == WorldFeatureVariant.GrasslandBoulder
+            ? grasslandRockPrefabs
+            : forestRockPrefabs;
 
-        int clampedIndex = Mathf.Clamp(prefabIndex, 0, forestRockPrefabs.Length - 1);
-        return forestRockPrefabs[clampedIndex];
+        GameObject fallbackPrefab = variant == WorldFeatureVariant.GrasslandBoulder
+            ? grasslandRockFallbackPrefab
+            : forestRockFallbackPrefab;
+
+        if (prefabs == null || prefabs.Length == 0)
+            return fallbackPrefab;
+
+        int clampedIndex = Mathf.Clamp(prefabIndex, 0, prefabs.Length - 1);
+        return prefabs[clampedIndex] != null ? prefabs[clampedIndex] : fallbackPrefab;
+    }
+
+    private static bool IsGrasslandTreeVariant(WorldFeatureVariant variant)
+    {
+        return variant == WorldFeatureVariant.GrasslandMapleTree ||
+               variant == WorldFeatureVariant.GrasslandBirchAspenTree ||
+               variant == WorldFeatureVariant.GrasslandWhitePineTree ||
+               variant == WorldFeatureVariant.GrasslandOakTree;
     }
 }

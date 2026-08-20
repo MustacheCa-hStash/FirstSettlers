@@ -93,7 +93,7 @@ Material:
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _ColorVariationStrength: 0.42
+    - _ColorVariationStrength: 0.52
     - _Cull: 0
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
@@ -106,15 +106,16 @@ Material:
     - _GlossyReflections: 0
     - _LightWrap: 0.45
     - _Metallic: 0
-    - _NeedleContrast: 0.22
+    - _NeedleContrast: 0.34
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _SampleGI: 0
-    - _Smoothness: 0.5
+    - _Smoothness: 0.08
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
+    - _SpecularStrength: 0.03
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0

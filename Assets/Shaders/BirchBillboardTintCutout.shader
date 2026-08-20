@@ -1,4 +1,4 @@
-Shader "Custom/BirchBillboardTintCutout"
+Shader "Custom/BirchBillboardSimpleLitCutout"
 {
     Properties
     {
@@ -24,6 +24,10 @@ Shader "Custom/BirchBillboardTintCutout"
         _InteriorShadeStrength("Interior Canopy Shade", Range(0, 1)) = 0.04
         _LowerShadeStrength("Lower Canopy Shade", Range(0, 1)) = 0.06
         _Brightness("Brightness", Range(0.25, 2)) = 1.0
+        _AmbientStrength("Ambient Strength", Range(0, 1)) = 0.56
+        _LightWrap("Billboard Light Softness", Range(0, 1)) = 0.72
+        _Smoothness("Smoothness", Range(0, 1)) = 0.06
+        _SpecularStrength("Specular Strength", Range(0, 1)) = 0.02
         [Toggle] _ForceBillboardFacing("Force Billboard Facing", Float) = 0
         _WindDirection("Wind Direction", Vector) = (1, 0, 0.35, 0)
         _WindStrength("Wind Sway Strength", Range(0, 1)) = 0.07
@@ -59,8 +63,12 @@ Shader "Custom/BirchBillboardTintCutout"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Shaders/TreeSimpleLitCommon.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -88,6 +96,10 @@ Shader "Custom/BirchBillboardTintCutout"
                 half _InteriorShadeStrength;
                 half _LowerShadeStrength;
                 half _Brightness;
+                half _AmbientStrength;
+                half _LightWrap;
+                half _Smoothness;
+                half _SpecularStrength;
                 half _ForceBillboardFacing;
                 float4 _WindDirection;
                 half _WindStrength;
@@ -108,7 +120,10 @@ Shader "Custom/BirchBillboardTintCutout"
             {
                 float4 positionCS : SV_POSITION;
                 float3 instanceOriginWS : TEXCOORD0;
-                float2 uv : TEXCOORD1;
+                float3 positionWS : TEXCOORD1;
+                half3 normalWS : TEXCOORD2;
+                float2 uv : TEXCOORD3;
+                float4 shadowCoord : TEXCOORD4;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -205,9 +220,16 @@ Shader "Custom/BirchBillboardTintCutout"
 #endif
                 float3 finalPositionWS = lerp(normalPositionWS, billboardPositionWS, useBillboardFacing);
                 finalPositionWS = ApplyBillboardWind(finalPositionWS, instanceOriginWS, IN.uv);
+                half3 billboardNormalWS = normalize(_WorldSpaceCameraPos.xyz - instanceOriginWS);
+                billboardNormalWS.y *= 0.25h;
+                billboardNormalWS = normalize(lerp(billboardNormalWS, upWS, _LightWrap * 0.35h));
+
                 OUT.positionCS = TransformWorldToHClip(finalPositionWS);
                 OUT.instanceOriginWS = instanceOriginWS;
+                OUT.positionWS = finalPositionWS;
+                OUT.normalWS = billboardNormalWS;
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
+                OUT.shadowCoord = TransformWorldToShadowCoord(finalPositionWS);
 
                 return OUT;
             }
@@ -246,9 +268,15 @@ Shader "Custom/BirchBillboardTintCutout"
                 leafColor = lerp(leafColor, _LeafShadowColor.rgb, shadeMask);
 
                 half3 color = lerp(baseSample.rgb, leafColor, leafMask * _LeafTintStrength);
-                return half4(saturate(color * _Brightness), baseSample.a * _BaseColor.a);
+                half alpha = baseSample.a * _BaseColor.a;
+                InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);
+                SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(saturate(color * _Brightness), alpha, _Smoothness, _SpecularStrength);
+                half4 litColor = UniversalFragmentBlinnPhong(inputData, surfaceData);
+                return half4(saturate(litColor.rgb), alpha);
             }
             ENDHLSL
         }
     }
+
+    FallBack "Hidden/Universal Render Pipeline/FallbackError"
 }

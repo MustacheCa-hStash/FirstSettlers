@@ -12,5 +12,10 @@ public enum WorldFeatureVariant
     RaspberryBush,
     StrawberryBush,
     BlackberryBush,
-    Boulder
+    Boulder,
+    GrasslandMapleTree,
+    GrasslandBirchAspenTree,
+    GrasslandWhitePineTree,
+    GrasslandOakTree,
+    GrasslandBoulder
 }

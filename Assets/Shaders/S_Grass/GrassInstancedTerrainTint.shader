@@ -13,9 +13,9 @@ Shader "Custom/GrassInstancedTerrainTint"
         _MidGrassColor("Mid Grass Color", Color) = (0.29, 0.62, 0.24, 1)
         _LightGrassColor("Light Grass Color", Color) = (0.44, 0.78, 0.30, 1)
 
-        _ForestDarkGrassColor("Forest Dark Grass Color", Color) = (0.045, 0.16, 0.05, 1)
-        _ForestMidGrassColor("Forest Mid Grass Color", Color) = (0.085, 0.25, 0.085, 1)
-        _ForestLightGrassColor("Forest Light Grass Color", Color) = (0.17, 0.38, 0.14, 1)
+        _ForestDarkGrassColor("Forest Dark Grass Color", Color) = (0.20, 0.48, 0.18, 1)
+        _ForestMidGrassColor("Forest Mid Grass Color", Color) = (0.29, 0.62, 0.24, 1)
+        _ForestLightGrassColor("Forest Light Grass Color", Color) = (0.44, 0.78, 0.30, 1)
 
         [PerRendererData] _GrassInstanceData("Grass Instance Data", Vector) = (0, 0, 0, 0)
 

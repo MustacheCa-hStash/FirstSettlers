@@ -41,6 +41,8 @@ Material:
     - _LeafContrast: 0.42
     - _LeafSeparation: 0.4
     - _LightWrap: 0.65
+    - _Smoothness: 0.08
+    - _SpecularStrength: 0.03
     - _SurfaceHueVariation: 0.12
     - _UseVertexColor: 0
     - _VerticalGradientStrength: 0.25

@@ -1,4 +1,4 @@
-Shader "Custom/OakLeafTintCutout"
+Shader "Custom/OakLeafSimpleLitCutout"
 {
     Properties
     {
@@ -19,6 +19,8 @@ Shader "Custom/OakLeafTintCutout"
         _CardVariationStrength("Card Variation Strength", Range(0, 1)) = 0.18
         _AmbientStrength("Ambient Strength", Range(0, 1)) = 0.44
         _LightWrap("Leaf Light Wrap", Range(0, 1)) = 0.62
+        _Smoothness("Smoothness", Range(0, 1)) = 0.08
+        _SpecularStrength("Specular Strength", Range(0, 1)) = 0.03
         [Toggle] _UseVertexColor("Use Vertex Color", Float) = 0
         _WindDirection("Wind Direction", Vector) = (1, 0, 0.35, 0)
         _WindStrength("Wind Canopy Sway Strength", Range(0, 1)) = 0.10
@@ -56,9 +58,12 @@ Shader "Custom/OakLeafTintCutout"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Shaders/TreeSimpleLitCommon.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -81,6 +86,8 @@ Shader "Custom/OakLeafTintCutout"
                 half _CardVariationStrength;
                 half _AmbientStrength;
                 half _LightWrap;
+                half _Smoothness;
+                half _SpecularStrength;
                 half _UseVertexColor;
                 float4 _WindDirection;
                 half _WindStrength;
@@ -107,6 +114,7 @@ Shader "Custom/OakLeafTintCutout"
                 float3 positionWS : TEXCOORD0;
                 half3 normalWS : TEXCOORD1;
                 float2 uv : TEXCOORD2;
+                float4 shadowCoord : TEXCOORD3;
                 half4 color : COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -173,6 +181,7 @@ Shader "Custom/OakLeafTintCutout"
                 OUT.positionWS = positionWS;
                 OUT.normalWS = normalInputs.normalWS;
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
+                OUT.shadowCoord = TransformWorldToShadowCoord(positionWS);
                 OUT.color = IN.color;
 
                 return OUT;
@@ -182,17 +191,18 @@ Shader "Custom/OakLeafTintCutout"
             {
                 half leafNoise = ValueNoise(positionWS.xz * 0.36 + uv * 1.7);
                 half fineNoise = ValueNoise(positionWS.xz * 0.95 + uv * 3.1 + 19.37);
-                leafNoise = saturate(leafNoise * 0.72h + fineNoise * 0.28h);
+                leafNoise = saturate(leafNoise * 0.62h + fineNoise * 0.38h);
 
-                half youngMix = smoothstep(0.64h, 0.96h, leafNoise) * _ColorVariationStrength * (1.0h - _SeasonAutumnAmount);
-                half ochreMix = smoothstep(0.20h, 0.82h, leafNoise + fineNoise * 0.22h);
-                half goldMix = smoothstep(0.66h, 0.98h, fineNoise) * _ColorVariationStrength;
-                half russetMix = smoothstep(0.56h, 0.98h, leafNoise) * (1.0h - goldMix * 0.45h);
+                half variationStrength = saturate(_ColorVariationStrength * 1.25h);
+                half youngMix = smoothstep(0.54h, 0.96h, leafNoise) * variationStrength * (1.0h - _SeasonAutumnAmount);
+                half ochreMix = smoothstep(0.16h, 0.84h, leafNoise + fineNoise * 0.28h);
+                half goldMix = smoothstep(0.58h, 0.98h, fineNoise) * variationStrength;
+                half russetMix = smoothstep(0.46h, 0.98h, leafNoise) * (1.0h - goldMix * 0.40h);
 
                 half3 summerColor = lerp(_SummerLeafColor.rgb, _YoungLeafColor.rgb, youngMix);
                 half3 autumnColor = lerp(_AutumnRussetColor.rgb, _AutumnOchreColor.rgb, ochreMix);
                 autumnColor = lerp(autumnColor, _AutumnGoldColor.rgb, goldMix);
-                autumnColor = lerp(autumnColor, _LeafShadowColor.rgb * 1.65h, russetMix * _ColorVariationStrength * 0.14h);
+                autumnColor = lerp(autumnColor, _LeafShadowColor.rgb * 1.65h, russetMix * variationStrength * 0.20h);
 
                 half3 leafColor = lerp(summerColor, autumnColor, saturate(_SeasonAutumnAmount));
                 leafColor = lerp(leafColor, leafColor * _TreeLeafTint.rgb, saturate(_TreeTintStrength));
@@ -220,13 +230,12 @@ Shader "Custom/OakLeafTintCutout"
                 leafColor *= leafDetail * cardVariation;
                 leafColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
 
-                Light mainLight = GetMainLight();
-                half3 normalWS = normalize(IN.normalWS);
-                half wrappedNdotL = saturate((dot(normalWS, mainLight.direction) + _LightWrap) / (1.0h + _LightWrap));
-                half3 ambient = SampleSH(normalWS);
-                half3 lighting = max(ambient, _AmbientStrength.xxx) + mainLight.color * wrappedNdotL;
+                InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);
+                inputData.normalWS = normalize(lerp(inputData.normalWS, half3(0.0h, 1.0h, 0.0h), _LightWrap * 0.22h));
 
-                return half4(saturate(leafColor * lighting), atlas.a);
+                SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(leafColor, atlas.a, _Smoothness, _SpecularStrength);
+                half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
+                return half4(saturate(color.rgb), atlas.a);
             }
             ENDHLSL
         }

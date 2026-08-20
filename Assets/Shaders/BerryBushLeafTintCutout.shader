@@ -1,4 +1,4 @@
-Shader "Custom/BerryBushLeafTintCutout"
+Shader "Custom/BerryBushLeafSimpleLitCutout"
 {
     Properties
     {
@@ -16,6 +16,8 @@ Shader "Custom/BerryBushLeafTintCutout"
         _AmbientStrength("Ambient Strength", Range(0, 1)) = 0.45
         _LightWrap("Leaf Light Wrap", Range(0, 1)) = 0.65
         _SurfaceHueVariation("Surface Hue Variation", Range(0, 1)) = 0.10
+        _Smoothness("Smoothness", Range(0, 1)) = 0.08
+        _SpecularStrength("Specular Strength", Range(0, 1)) = 0.03
         [Toggle] _UseVertexColor("Use Vertex Color", Float) = 0
     }
 
@@ -45,9 +47,12 @@ Shader "Custom/BerryBushLeafTintCutout"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Shaders/TreeSimpleLitCommon.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -67,6 +72,8 @@ Shader "Custom/BerryBushLeafTintCutout"
                 half _AmbientStrength;
                 half _LightWrap;
                 half _SurfaceHueVariation;
+                half _Smoothness;
+                half _SpecularStrength;
                 half _UseVertexColor;
             CBUFFER_END
 
@@ -85,6 +92,7 @@ Shader "Custom/BerryBushLeafTintCutout"
                 float3 positionWS : TEXCOORD0;
                 half3 normalWS : TEXCOORD1;
                 float2 uv : TEXCOORD2;
+                float4 shadowCoord : TEXCOORD3;
                 half4 color : COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -120,6 +128,7 @@ Shader "Custom/BerryBushLeafTintCutout"
                 OUT.positionWS = positionInputs.positionWS;
                 OUT.normalWS = normalInputs.normalWS;
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
+                OUT.shadowCoord = TransformWorldToShadowCoord(positionInputs.positionWS);
                 OUT.color = IN.color;
 
                 return OUT;
@@ -155,13 +164,12 @@ Shader "Custom/BerryBushLeafTintCutout"
                 leafColor *= atlasDetail * coverageSeparation * cardVariation;
                 leafColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
 
-                Light mainLight = GetMainLight();
-                half3 normalWS = normalize(IN.normalWS);
-                half wrappedNdotL = saturate((dot(normalWS, mainLight.direction) + _LightWrap) / (1.0h + _LightWrap));
-                half3 ambient = SampleSH(normalWS);
-                half3 lighting = max(ambient, _AmbientStrength.xxx) + mainLight.color * wrappedNdotL;
+                InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);
+                inputData.normalWS = normalize(lerp(inputData.normalWS, half3(0.0h, 1.0h, 0.0h), _LightWrap * 0.20h));
 
-                return half4(leafColor * lighting, atlas.a);
+                SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(leafColor, atlas.a, _Smoothness, _SpecularStrength);
+                half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
+                return half4(saturate(color.rgb), atlas.a);
             }
             ENDHLSL
         }

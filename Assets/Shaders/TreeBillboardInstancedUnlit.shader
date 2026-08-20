@@ -1,10 +1,14 @@
-Shader "Custom/TreeBillboardInstancedUnlit"
+Shader "Custom/TreeBillboardInstancedSimpleLit"
 {
     Properties
     {
         [MainTexture] _BaseMap("Tree Billboard Texture", 2D) = "white" {}
         [MainColor] _BaseColor("Tint", Color) = (1, 1, 1, 1)
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.5
+        _AmbientStrength("Ambient Strength", Range(0, 1)) = 0.58
+        _LightWrap("Billboard Light Softness", Range(0, 1)) = 0.72
+        _Smoothness("Smoothness", Range(0, 1)) = 0.06
+        _SpecularStrength("Specular Strength", Range(0, 1)) = 0.02
         [Toggle] _ForceBillboardFacing("Force Billboard Facing", Float) = 0
     }
 
@@ -25,7 +29,7 @@ Shader "Custom/TreeBillboardInstancedUnlit"
 
         Pass
         {
-            Name "ForwardUnlit"
+            Name "ForwardBillboard"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
@@ -33,8 +37,12 @@ Shader "Custom/TreeBillboardInstancedUnlit"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Shaders/TreeSimpleLitCommon.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -43,6 +51,10 @@ Shader "Custom/TreeBillboardInstancedUnlit"
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
                 half _Cutoff;
+                half _AmbientStrength;
+                half _LightWrap;
+                half _Smoothness;
+                half _SpecularStrength;
                 half _ForceBillboardFacing;
             CBUFFER_END
 
@@ -56,7 +68,10 @@ Shader "Custom/TreeBillboardInstancedUnlit"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
-                float2 uv : TEXCOORD0;
+                float3 positionWS : TEXCOORD0;
+                half3 normalWS : TEXCOORD1;
+                float2 uv : TEXCOORD2;
+                float4 shadowCoord : TEXCOORD3;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -98,8 +113,16 @@ Shader "Custom/TreeBillboardInstancedUnlit"
 #else
                 float useBillboardFacing = step(0.5, _ForceBillboardFacing);
 #endif
-                OUT.positionCS = TransformWorldToHClip(lerp(normalPositionWS, positionWS, useBillboardFacing));
+                float3 finalPositionWS = lerp(normalPositionWS, positionWS, useBillboardFacing);
+                half3 billboardNormalWS = normalize(_WorldSpaceCameraPos.xyz - instanceOriginWS);
+                billboardNormalWS.y *= 0.25h;
+                billboardNormalWS = normalize(lerp(billboardNormalWS, upWS, _LightWrap * 0.35h));
+
+                OUT.positionCS = TransformWorldToHClip(finalPositionWS);
+                OUT.positionWS = finalPositionWS;
+                OUT.normalWS = billboardNormalWS;
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
+                OUT.shadowCoord = TransformWorldToShadowCoord(finalPositionWS);
 
                 return OUT;
             }
@@ -111,9 +134,14 @@ Shader "Custom/TreeBillboardInstancedUnlit"
                 half4 baseSample = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;
                 clip(baseSample.a - _Cutoff);
 
-                return baseSample;
+                InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);
+                SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(baseSample.rgb, baseSample.a, _Smoothness, _SpecularStrength);
+                half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
+                return half4(saturate(color.rgb), baseSample.a);
             }
             ENDHLSL
         }
     }
+
+    FallBack "Hidden/Universal Render Pipeline/FallbackError"
 }

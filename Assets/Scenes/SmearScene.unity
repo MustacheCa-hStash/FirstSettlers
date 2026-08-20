@@ -557,9 +557,9 @@ MonoBehaviour:
     receiveGrassShadows: 0
     seedOffset: 5000
     grassInstanceDataPropertyName: _GrassInstanceData
-    forestDarkGrassColor: {r: 0.045, g: 0.16, b: 0.05, a: 1}
-    forestMidGrassColor: {r: 0.085, g: 0.25, b: 0.085, a: 1}
-    forestLightGrassColor: {r: 0.17, g: 0.38, b: 0.14, a: 1}
+    forestDarkGrassColor: {r: 0.2, g: 0.48, b: 0.18, a: 1}
+    forestMidGrassColor: {r: 0.29, g: 0.62, b: 0.24, a: 1}
+    forestLightGrassColor: {r: 0.44, g: 0.78, b: 0.3, a: 1}
     billboardGrassPrefab: {fileID: 2274311721168609727, guid: e76b7893d4994f848a5f13029dbbffa1, type: 3}
     billboardRingRadius: 3
     billboardCellsPerAxis: 60
@@ -615,6 +615,11 @@ MonoBehaviour:
     whitePineTreePrefab: {fileID: 9167976221399298968, guid: 272060f130eda5545b5b78e8a9ef33d1, type: 3}
     oakTreePrefab: {fileID: 689681528551111153, guid: 13bdb8ed23f7955478eafc28cf9f8a23, type: 3}
     treeLOD0GameObjectPrefab: {fileID: 7646694047763373140, guid: 2ce6d38af2fc32d4593a6ac07664f29a, type: 3}
+    grasslandMapleTreePrefab: {fileID: 5086927240151322318, guid: 1cfb66a4388e24c46b1f69705b6fd350, type: 3}
+    grasslandBirchAspenTreePrefab: {fileID: 6389886508054090531, guid: dc3305daa1890e84f84218a22facd756, type: 3}
+    grasslandWhitePineTreePrefab: {fileID: 9167976221399298968, guid: 272060f130eda5545b5b78e8a9ef33d1, type: 3}
+    grasslandOakTreePrefab: {fileID: 689681528551111153, guid: 13bdb8ed23f7955478eafc28cf9f8a23, type: 3}
+    grasslandTreeFallbackPrefab: {fileID: 689681528551111153, guid: 13bdb8ed23f7955478eafc28cf9f8a23, type: 3}
     blueberryBushPrefab: {fileID: 2095120421312505866, guid: 90b14277c549b58408d186345b97dfbe, type: 3}
     raspberryBushPrefab: {fileID: 0}
     strawberryBushPrefab: {fileID: 6447866110754163726, guid: 083081802f30fd149b46c7105b9698ba, type: 3}
@@ -626,6 +631,14 @@ MonoBehaviour:
     - {fileID: 919132149155446097, guid: f1473192a114b2540928d90dc73d736b, type: 3}
     - {fileID: 919132149155446097, guid: 48f37dcb64d335f42a79c8989710a856, type: 3}
     - {fileID: 919132149155446097, guid: 63119c7758858084d87fd43bcbed4df4, type: 3}
+    forestRockFallbackPrefab: {fileID: 0}
+    grasslandRockPrefabs:
+    - {fileID: 919132149155446097, guid: dc2508ff42e555c4f89101aed2b38924, type: 3}
+    - {fileID: 919132149155446097, guid: 796e9dfc171fec2408ad08917eac7250, type: 3}
+    - {fileID: 919132149155446097, guid: f1473192a114b2540928d90dc73d736b, type: 3}
+    - {fileID: 919132149155446097, guid: 48f37dcb64d335f42a79c8989710a856, type: 3}
+    - {fileID: 919132149155446097, guid: 63119c7758858084d87fd43bcbed4df4, type: 3}
+    grasslandRockFallbackPrefab: {fileID: 0}
     mapleTreeBillboardPrefab: {fileID: 6916112408692349603, guid: 27da2ddcc3333204aa52ce670c141518, type: 3}
     sugarMapleTreeBillboardPrefab: {fileID: 7816776188045512820, guid: 086afa9b8e0e20c4aa0eb0ccba01066e, type: 3}
     birchAspenTreeBillboardPrefab: {fileID: 5515095018814835153, guid: 7e06b59d6389c6e4eba0246dbb6a80e3, type: 3}
@@ -634,6 +647,11 @@ MonoBehaviour:
     whitePineTreeBillboardPrefab: {fileID: 2111572226825985944, guid: 555a957109ef7834db50df03fe81454b, type: 3}
     oakTreeBillboardPrefab: {fileID: 0}
     treeBillboardPrefab: {fileID: 9195837373271529818, guid: c19b3e1250464fe4a9a8410b50d88d95, type: 3}
+    grasslandMapleTreeBillboardPrefab: {fileID: 6916112408692349603, guid: 27da2ddcc3333204aa52ce670c141518, type: 3}
+    grasslandBirchAspenTreeBillboardPrefab: {fileID: 5515095018814835153, guid: 7e06b59d6389c6e4eba0246dbb6a80e3, type: 3}
+    grasslandWhitePineTreeBillboardPrefab: {fileID: 2111572226825985944, guid: 555a957109ef7834db50df03fe81454b, type: 3}
+    grasslandOakTreeBillboardPrefab: {fileID: 0}
+    grasslandTreeBillboardFallbackPrefab: {fileID: 2111572226825985944, guid: 555a957109ef7834db50df03fe81454b, type: 3}
     treeCellSize: 12
     treeSpawnChance: 0.03
     treeMinDistance: 9
@@ -647,6 +665,10 @@ MonoBehaviour:
     maxForestRocksPerChunk: 2
     forestRockUniformScaleRange: {x: 80, y: 100}
     forestRockPitchRange: {x: -15, y: 15}
+    maxGrasslandTreesPerChunk: 6
+    maxGrasslandRocksPerChunk: 5
+    grasslandRockUniformScaleRange: {x: 0.55, y: 1.35}
+    grasslandRockPitchRange: {x: -12, y: 12}
     rockGrassExclusionRadius: 1.25
     gameObjectRockChunkRingRadius: 3
     castTreeShadows: 0

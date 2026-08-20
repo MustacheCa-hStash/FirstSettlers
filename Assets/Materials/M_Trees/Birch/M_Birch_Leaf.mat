@@ -128,9 +128,10 @@ Material:
     - _ReceiveShadows: 1
     - _SampleGI: 0
     - _SeasonAutumnAmount: 0
-    - _Smoothness: 0.5
+    - _Smoothness: 0.08
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
+    - _SpecularStrength: 0.03
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
