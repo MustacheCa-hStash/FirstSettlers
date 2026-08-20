@@ -667,7 +667,7 @@ MonoBehaviour:
     forestRockPitchRange: {x: -15, y: 15}
     maxGrasslandTreesPerChunk: 6
     maxGrasslandRocksPerChunk: 5
-    grasslandRockUniformScaleRange: {x: 0.55, y: 1.35}
+    grasslandRockUniformScaleRange: {x: 60, y: 95}
     grasslandRockPitchRange: {x: -12, y: 12}
     rockGrassExclusionRadius: 1.25
     gameObjectRockChunkRingRadius: 3

@@ -23,7 +23,7 @@ public static class WorldFeaturePlanGenerator
     private const int MaxForestTreesPerChunk = 18;
     private const int BoulderCandidateCellsPerAxis = 4;
     private const int GrasslandTreeCandidateCellsPerAxis = 7;
-    private const int GrasslandRockCandidateCellsPerAxis = 5;
+    private const int GrasslandRockCandidateCellsPerAxis = 7;
     private const float BerryPatchCellSize = 24f;
     private const int MaxForestBerryBushesPerChunk = 30;
 
@@ -311,7 +311,7 @@ public static class WorldFeaturePlanGenerator
                 groveIntent = Mathf.Clamp01(groveIntent + riparian * 0.56f + GetAdjacentForestBlend(biomeMap, x, z) * 0.34f);
                 groveIntent *= slopeSuitability;
 
-                float rockiness = Mathf.Clamp01((rockPatch - 0.54f) * 2.35f);
+                float rockiness = Mathf.Clamp01((rockPatch - 0.50f) * 2.15f);
                 rockiness = Mathf.Clamp01(rockiness + Mathf.InverseLerp(0.045f, 0.12f, slopeMap[x, z]) * 0.34f);
                 rockiness *= Mathf.Lerp(0.76f, 1.14f, rockFine);
                 rockiness *= 1f - riparian * 0.34f;
@@ -369,7 +369,7 @@ public static class WorldFeaturePlanGenerator
 
             GrasslandStructureFields fields = plan.GrasslandStructure;
             float rockiness = fields.RockinessMap[paddedX, paddedZ];
-            float chance = Mathf.InverseLerp(0.30f, 0.82f, rockiness) * 0.82f;
+            float chance = Mathf.InverseLerp(0.22f, 0.78f, rockiness) * 0.88f;
             chance *= Mathf.Lerp(1.08f, 0.68f, fields.RiparianIntentMap[paddedX, paddedZ]);
 
             if (Hash01(hash + 53) > chance)

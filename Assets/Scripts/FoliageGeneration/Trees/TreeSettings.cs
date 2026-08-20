@@ -110,7 +110,7 @@ public class TreeSettings
     [Tooltip("Maximum planned rock or boulder placements in a grassland chunk.")]
     public int maxGrasslandRocksPerChunk = 7;
 
-    public Vector2 grasslandRockUniformScaleRange = new Vector2(0.55f, 1.35f);
+    public Vector2 grasslandRockUniformScaleRange = new Vector2(60f, 95f);
     public Vector2 grasslandRockPitchRange = new Vector2(-12f, 12f);
 
     [Tooltip("Grass exclusion radius around instantiated forest rocks.")]

@@ -20,7 +20,7 @@ public struct WorldFeatureGenerationSettings
         forestRockPitchRange = new Vector2(-15f, 15f),
         grasslandRockPrefabCount = 0,
         maxGrasslandRocksPerChunk = 7,
-        grasslandRockUniformScaleRange = new Vector2(0.55f, 1.35f),
+        grasslandRockUniformScaleRange = new Vector2(60f, 95f),
         grasslandRockPitchRange = new Vector2(-12f, 12f),
         maxGrasslandTreesPerChunk = 8
     };
