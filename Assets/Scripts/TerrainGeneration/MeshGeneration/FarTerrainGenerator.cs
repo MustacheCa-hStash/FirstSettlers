@@ -1,5 +1,6 @@
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
@@ -79,29 +80,66 @@ public static class FarTerrainGenerator
         float[,] heightGrid = new float[resolution, resolution];
         mountainMaskGrid = new float[resolution, resolution];
         riverMaskGrid = new float[resolution, resolution];
+        int sampleCount = resolution * resolution;
 
-        for (int z = 0; z < resolution; z++)
+        NativeArray<float> heights = default;
+        NativeArray<float> mountainMasks = default;
+        NativeArray<float> riverMasks = default;
+        NativeArray<float2> baseLandOffsets = default;
+        NativeArray<float2> mountainMaskOffsets = default;
+        NativeArray<float2> mountainTerrainOffsets = default;
+        NativeArray<float2> mountainRuggedOffsets = default;
+
+        try
         {
-            for (int x = 0; x < resolution; x++)
+            heights = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            mountainMasks = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            riverMasks = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            baseLandOffsets = CreateNativeOffsets(samplingContext.BaseLandOffsets);
+            mountainMaskOffsets = CreateNativeOffsets(samplingContext.MountainMaskOffsets);
+            mountainTerrainOffsets = CreateNativeOffsets(samplingContext.MountainTerrainOffsets);
+            mountainRuggedOffsets = CreateNativeOffsets(samplingContext.MountainRuggedOffsets);
+
+            FarHeightGridSampleJob job = new FarHeightGridSampleJob
             {
-                float tx = resolution == 1 ? 0f : x / (float)(resolution - 1);
-                float tz = resolution == 1 ? 0f : z / (float)(resolution - 1);
+                resolution = resolution,
+                chunkSize = chunkSize,
+                chunkX = chunkCoord.x,
+                chunkZ = chunkCoord.z,
+                sampleScale = sampleScale,
+                riverSeed = samplingContext.RiverSeed,
+                baseLandOffsets = baseLandOffsets,
+                mountainMaskOffsets = mountainMaskOffsets,
+                mountainTerrainOffsets = mountainTerrainOffsets,
+                mountainRuggedOffsets = mountainRuggedOffsets,
+                heights = heights,
+                mountainMasks = mountainMasks,
+                riverMasks = riverMasks
+            };
 
-                float localSampleX = tx * chunkSize;
-                float localSampleZ = tz * chunkSize;
-                float worldX = chunkCoord.x * chunkSize + localSampleX;
-                float worldZ = chunkCoord.z * chunkSize + localSampleZ;
+            JobHandle handle = job.Schedule(sampleCount, 64);
+            handle.Complete();
 
-                TerrainHeightSample sample = HeightMapGenerator.SampleTerrainHeight(
-                    worldX,
-                    worldZ,
-                    sampleScale,
-                    samplingContext);
-
-                heightGrid[x, z] = sample.Height;
-                mountainMaskGrid[x, z] = sample.MountainMask;
-                riverMaskGrid[x, z] = sample.RiverMask;
-            }
+            CopyNativeGridToManaged(heights, heightGrid);
+            CopyNativeGridToManaged(mountainMasks, mountainMaskGrid);
+            CopyNativeGridToManaged(riverMasks, riverMaskGrid);
+        }
+        finally
+        {
+            if (heights.IsCreated)
+                heights.Dispose();
+            if (mountainMasks.IsCreated)
+                mountainMasks.Dispose();
+            if (riverMasks.IsCreated)
+                riverMasks.Dispose();
+            if (baseLandOffsets.IsCreated)
+                baseLandOffsets.Dispose();
+            if (mountainMaskOffsets.IsCreated)
+                mountainMaskOffsets.Dispose();
+            if (mountainTerrainOffsets.IsCreated)
+                mountainTerrainOffsets.Dispose();
+            if (mountainRuggedOffsets.IsCreated)
+                mountainRuggedOffsets.Dispose();
         }
 
         return heightGrid;
@@ -113,20 +151,33 @@ public static class FarTerrainGenerator
         float[,] slopeGrid = new float[resolution, resolution];
         float sampleSpacing = resolution <= 1 ? chunkSize : chunkSize / (float)(resolution - 1);
 
-        for (int z = 0; z < resolution; z++)
+        NativeArray<float> heightSamples = default;
+        NativeArray<float> slopes = default;
+
+        try
         {
-            for (int x = 0; x < resolution; x++)
+            heightSamples = CopyGridToNative(heightGrid);
+            slopes = new NativeArray<float>(heightSamples.Length, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+
+            FarSlopeGridJob job = new FarSlopeGridJob
             {
-                int x0 = Mathf.Max(x - 1, 0);
-                int x1 = Mathf.Min(x + 1, resolution - 1);
-                int z0 = Mathf.Max(z - 1, 0);
-                int z1 = Mathf.Min(z + 1, resolution - 1);
+                resolution = resolution,
+                sampleSpacing = sampleSpacing,
+                heightSamples = heightSamples,
+                slopes = slopes
+            };
 
-                float dx = (heightGrid[x1, z] - heightGrid[x0, z]) / Mathf.Max(sampleSpacing, 0.0001f);
-                float dz = (heightGrid[x, z1] - heightGrid[x, z0]) / Mathf.Max(sampleSpacing, 0.0001f);
+            JobHandle handle = job.Schedule(slopes.Length, 64);
+            handle.Complete();
 
-                slopeGrid[x, z] = Mathf.Sqrt(dx * dx + dz * dz);
-            }
+            CopyNativeGridToManaged(slopes, slopeGrid);
+        }
+        finally
+        {
+            if (heightSamples.IsCreated)
+                heightSamples.Dispose();
+            if (slopes.IsCreated)
+                slopes.Dispose();
         }
 
         return slopeGrid;
@@ -141,22 +192,46 @@ public static class FarTerrainGenerator
         int resolution = heightGrid.GetLength(0);
         SurfaceType[,] surfaceMap = new SurfaceType[resolution, resolution];
 
-        for (int z = 0; z < resolution; z++)
-        {
-            for (int x = 0; x < resolution; x++)
-            {
-                BiomeType biome = ClassifyCrudeBiome(
-                    heightGrid[x, z],
-                    slopeGrid[x, z],
-                    mountainMaskGrid[x, z],
-                    riverMaskGrid[x, z]);
+        NativeArray<float> heightSamples = default;
+        NativeArray<float> slopeSamples = default;
+        NativeArray<float> mountainMaskSamples = default;
+        NativeArray<float> riverMaskSamples = default;
+        NativeArray<SurfaceType> surfaces = default;
 
-                surfaceMap[x, z] = SurfaceTypeClassifier.Classify(
-                    heightGrid[x, z],
-                    slopeGrid[x, z],
-                    riverMaskGrid[x, z],
-                    biome);
-            }
+        try
+        {
+            heightSamples = CopyGridToNative(heightGrid);
+            slopeSamples = CopyGridToNative(slopeGrid);
+            mountainMaskSamples = CopyGridToNative(mountainMaskGrid);
+            riverMaskSamples = CopyGridToNative(riverMaskGrid);
+            surfaces = new NativeArray<SurfaceType>(heightSamples.Length, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+
+            FarSurfaceMapJob job = new FarSurfaceMapJob
+            {
+                heightSamples = heightSamples,
+                slopeSamples = slopeSamples,
+                mountainMaskSamples = mountainMaskSamples,
+                riverMaskSamples = riverMaskSamples,
+                surfaces = surfaces
+            };
+
+            JobHandle handle = job.Schedule(surfaces.Length, 64);
+            handle.Complete();
+
+            CopyNativeGridToManaged(surfaces, surfaceMap);
+        }
+        finally
+        {
+            if (heightSamples.IsCreated)
+                heightSamples.Dispose();
+            if (slopeSamples.IsCreated)
+                slopeSamples.Dispose();
+            if (mountainMaskSamples.IsCreated)
+                mountainMaskSamples.Dispose();
+            if (riverMaskSamples.IsCreated)
+                riverMaskSamples.Dispose();
+            if (surfaces.IsCreated)
+                surfaces.Dispose();
         }
 
         return surfaceMap;
@@ -173,40 +248,115 @@ public static class FarTerrainGenerator
         int resolution = heightGrid.GetLength(0);
         int mainVertexCount = resolution * resolution;
         int skirtVertexEstimate = skirtDepth > 0f ? resolution * 8 : 0;
-        MeshData meshData = new MeshData(mainVertexCount + skirtVertexEstimate);
+        int mainTriangleCount = Mathf.Max(0, resolution - 1) * Mathf.Max(0, resolution - 1) * 6;
+
+        NativeArray<float> heightSamples = default;
+        NativeArray<SurfaceType> surfaceSamples = default;
+        NativeArray<float3> vertices = default;
+        NativeArray<float3> normals = default;
+        NativeArray<float2> uvs = default;
+        NativeArray<float4> colors = default;
+        NativeArray<int> triangles = default;
+
+        try
+        {
+            heightSamples = CopyGridToNative(heightGrid);
+            surfaceSamples = CopyGridToNative(surfaceMap);
+            vertices = new NativeArray<float3>(mainVertexCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            normals = new NativeArray<float3>(mainVertexCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            uvs = new NativeArray<float2>(mainVertexCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            colors = new NativeArray<float4>(mainVertexCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            triangles = new NativeArray<int>(mainTriangleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+
+            FarMeshVertexJob vertexJob = new FarMeshVertexJob
+            {
+                resolution = resolution,
+                chunkSize = chunkSize,
+                worldScale = worldScale,
+                meshHeightMultiplier = meshHeightMultiplier,
+                heightSamples = heightSamples,
+                surfaceSamples = surfaceSamples,
+                vertices = vertices,
+                normals = normals,
+                uvs = uvs,
+                colors = colors
+            };
+            JobHandle vertexHandle = vertexJob.Schedule(mainVertexCount, 64);
+
+            FarMeshTriangleJob triangleJob = new FarMeshTriangleJob
+            {
+                resolution = resolution,
+                triangles = triangles
+            };
+            JobHandle triangleHandle = triangleJob.Schedule(mainTriangleCount / 6, 64);
+            JobHandle.CombineDependencies(vertexHandle, triangleHandle).Complete();
+
+            return CreateFarMeshData(
+                vertices,
+                normals,
+                uvs,
+                colors,
+                triangles,
+                heightGrid,
+                surfaceMap,
+                skirtDepth,
+                mainVertexCount + skirtVertexEstimate);
+        }
+        finally
+        {
+            if (heightSamples.IsCreated)
+                heightSamples.Dispose();
+            if (surfaceSamples.IsCreated)
+                surfaceSamples.Dispose();
+            if (vertices.IsCreated)
+                vertices.Dispose();
+            if (normals.IsCreated)
+                normals.Dispose();
+            if (uvs.IsCreated)
+                uvs.Dispose();
+            if (colors.IsCreated)
+                colors.Dispose();
+            if (triangles.IsCreated)
+                triangles.Dispose();
+        }
+    }
+
+    private static MeshData CreateFarMeshData(
+        NativeArray<float3> nativeVertices,
+        NativeArray<float3> nativeNormals,
+        NativeArray<float2> nativeUvs,
+        NativeArray<float4> nativeColors,
+        NativeArray<int> nativeTriangles,
+        float[,] heightGrid,
+        SurfaceType[,] surfaceMap,
+        float skirtDepth,
+        int vertexCapacity)
+    {
+        int resolution = heightGrid.GetLength(0);
+        MeshData meshData = new MeshData(vertexCapacity);
         int[,] vertexIndices = new int[resolution, resolution];
 
-        for (int z = 0; z < resolution; z++)
+        for (int x = 0; x < resolution; x++)
         {
-            for (int x = 0; x < resolution; x++)
+            for (int z = 0; z < resolution; z++)
             {
-                float tx = resolution == 1 ? 0f : x / (float)(resolution - 1);
-                float tz = resolution == 1 ? 0f : z / (float)(resolution - 1);
+                int index = x * resolution + z;
+                float3 vertex = nativeVertices[index];
+                float3 normal = nativeNormals[index];
+                float2 uv = nativeUvs[index];
+                float4 color = nativeColors[index];
 
-                Vector3 vertex = new Vector3(
-                    Mathf.Lerp(chunkSize / -2f, chunkSize / 2f, tx) * worldScale,
-                    heightGrid[x, z] * meshHeightMultiplier * worldScale,
-                    Mathf.Lerp(chunkSize / -2f, chunkSize / 2f, tz) * worldScale);
-
-                Vector3 normal = CalculateNormal(heightGrid, x, z, chunkSize, meshHeightMultiplier);
-                Color color = SurfaceTypeClassifier.GenerateColor(surfaceMap[x, z], WaterState.Dry);
-
-                vertexIndices[x, z] = meshData.AddVertex(vertex, normal, new Vector2(tx, tz), color);
+                vertexIndices[x, z] = meshData.AddVertex(
+                    new Vector3(vertex.x, vertex.y, vertex.z),
+                    new Vector3(normal.x, normal.y, normal.z),
+                    new Vector2(uv.x, uv.y),
+                    new Color(color.x, color.y, color.z, color.w));
             }
         }
 
-        for (int z = 0; z < resolution - 1; z++)
+        for (int i = 0; i < nativeTriangles.Length; i += 3)
         {
-            for (int x = 0; x < resolution - 1; x++)
-            {
-                int a = vertexIndices[x, z];
-                int b = vertexIndices[x, z + 1];
-                int c = vertexIndices[x + 1, z + 1];
-                int d = vertexIndices[x + 1, z];
-
-                meshData.AddTriangle(a, b, c);
-                meshData.AddTriangle(a, c, d);
-            }
+            meshData.AddTriangle(nativeTriangles[i], nativeTriangles[i + 1], nativeTriangles[i + 2]);
         }
 
         if (skirtDepth > 0f)
@@ -352,6 +502,273 @@ public static class FarTerrainGenerator
         }
 
         return nativeGrid;
+    }
+
+    private static NativeArray<T> CopyGridToNative<T>(T[,] grid)
+        where T : unmanaged
+    {
+        int width = grid.GetLength(0);
+        int height = grid.GetLength(1);
+        NativeArray<T> nativeGrid =
+            new NativeArray<T>(width * height, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+
+        for (int x = 0; x < width; x++)
+        {
+            int rowOffset = x * height;
+
+            for (int z = 0; z < height; z++)
+            {
+                nativeGrid[rowOffset + z] = grid[x, z];
+            }
+        }
+
+        return nativeGrid;
+    }
+
+    private static void CopyNativeGridToManaged(NativeArray<float> source, float[,] target)
+    {
+        int width = target.GetLength(0);
+        int height = target.GetLength(1);
+
+        for (int x = 0; x < width; x++)
+        {
+            int rowOffset = x * height;
+
+            for (int z = 0; z < height; z++)
+            {
+                target[x, z] = source[rowOffset + z];
+            }
+        }
+    }
+
+    private static void CopyNativeGridToManaged<T>(NativeArray<T> source, T[,] target)
+        where T : unmanaged
+    {
+        int width = target.GetLength(0);
+        int height = target.GetLength(1);
+
+        for (int x = 0; x < width; x++)
+        {
+            int rowOffset = x * height;
+
+            for (int z = 0; z < height; z++)
+            {
+                target[x, z] = source[rowOffset + z];
+            }
+        }
+    }
+
+    private static NativeArray<float2> CreateNativeOffsets(Vector2[] source)
+    {
+        NativeArray<float2> result =
+            new NativeArray<float2>(source.Length, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+
+        for (int i = 0; i < source.Length; i++)
+            result[i] = new float2(source[i].x, source[i].y);
+
+        return result;
+    }
+
+    [BurstCompile]
+    private struct FarHeightGridSampleJob : IJobParallelFor
+    {
+        public int resolution;
+        public int chunkSize;
+        public int chunkX;
+        public int chunkZ;
+        public float sampleScale;
+        public int riverSeed;
+
+        [ReadOnly] public NativeArray<float2> baseLandOffsets;
+        [ReadOnly] public NativeArray<float2> mountainMaskOffsets;
+        [ReadOnly] public NativeArray<float2> mountainTerrainOffsets;
+        [ReadOnly] public NativeArray<float2> mountainRuggedOffsets;
+
+        [WriteOnly] public NativeArray<float> heights;
+        [WriteOnly] public NativeArray<float> mountainMasks;
+        [WriteOnly] public NativeArray<float> riverMasks;
+
+        public void Execute(int index)
+        {
+            int x = index / resolution;
+            int z = index - x * resolution;
+            float tx = resolution == 1 ? 0f : x / (float)(resolution - 1);
+            float tz = resolution == 1 ? 0f : z / (float)(resolution - 1);
+
+            float localSampleX = tx * chunkSize;
+            float localSampleZ = tz * chunkSize;
+            float worldX = chunkX * chunkSize + localSampleX;
+            float worldZ = chunkZ * chunkSize + localSampleZ;
+
+            TerrainHeightSample sample = HeightMapGenerator.SampleTerrainHeightNative(
+                worldX,
+                worldZ,
+                sampleScale,
+                baseLandOffsets,
+                mountainMaskOffsets,
+                mountainTerrainOffsets,
+                mountainRuggedOffsets,
+                riverSeed);
+
+            heights[index] = sample.Height;
+            mountainMasks[index] = sample.MountainMask;
+            riverMasks[index] = sample.RiverMask;
+        }
+    }
+
+    [BurstCompile]
+    private struct FarSlopeGridJob : IJobParallelFor
+    {
+        public int resolution;
+        public float sampleSpacing;
+
+        [ReadOnly] public NativeArray<float> heightSamples;
+        [WriteOnly] public NativeArray<float> slopes;
+
+        public void Execute(int index)
+        {
+            int x = index / resolution;
+            int z = index - x * resolution;
+            int x0 = math.max(x - 1, 0);
+            int x1 = math.min(x + 1, resolution - 1);
+            int z0 = math.max(z - 1, 0);
+            int z1 = math.min(z + 1, resolution - 1);
+
+            float dx = (heightSamples[x1 * resolution + z] - heightSamples[x0 * resolution + z]) /
+                       math.max(sampleSpacing, 0.0001f);
+            float dz = (heightSamples[x * resolution + z1] - heightSamples[x * resolution + z0]) /
+                       math.max(sampleSpacing, 0.0001f);
+
+            slopes[index] = math.sqrt(dx * dx + dz * dz);
+        }
+    }
+
+    [BurstCompile]
+    private struct FarSurfaceMapJob : IJobParallelFor
+    {
+        [ReadOnly] public NativeArray<float> heightSamples;
+        [ReadOnly] public NativeArray<float> slopeSamples;
+        [ReadOnly] public NativeArray<float> mountainMaskSamples;
+        [ReadOnly] public NativeArray<float> riverMaskSamples;
+
+        [WriteOnly] public NativeArray<SurfaceType> surfaces;
+
+        public void Execute(int index)
+        {
+            float height = heightSamples[index];
+            float slope = slopeSamples[index];
+            float riverMask = riverMaskSamples[index];
+            BiomeType biome = ClassifyCrudeBiome(
+                height,
+                slope,
+                mountainMaskSamples[index],
+                riverMask);
+
+            surfaces[index] = ClassifySurface(height, slope, riverMask, biome);
+        }
+    }
+
+    [BurstCompile]
+    private struct FarMeshVertexJob : IJobParallelFor
+    {
+        public int resolution;
+        public int chunkSize;
+        public float worldScale;
+        public float meshHeightMultiplier;
+
+        [ReadOnly] public NativeArray<float> heightSamples;
+        [ReadOnly] public NativeArray<SurfaceType> surfaceSamples;
+
+        [WriteOnly] public NativeArray<float3> vertices;
+        [WriteOnly] public NativeArray<float3> normals;
+        [WriteOnly] public NativeArray<float2> uvs;
+        [WriteOnly] public NativeArray<float4> colors;
+
+        public void Execute(int index)
+        {
+            int x = index / resolution;
+            int z = index - x * resolution;
+            float tx = resolution == 1 ? 0f : x / (float)(resolution - 1);
+            float tz = resolution == 1 ? 0f : z / (float)(resolution - 1);
+
+            vertices[index] = new float3(
+                math.lerp(chunkSize / -2f, chunkSize / 2f, tx) * worldScale,
+                heightSamples[index] * meshHeightMultiplier * worldScale,
+                math.lerp(chunkSize / -2f, chunkSize / 2f, tz) * worldScale);
+            normals[index] = CalculateNormal(heightSamples, resolution, x, z, chunkSize, meshHeightMultiplier);
+            uvs[index] = new float2(tx, tz);
+            colors[index] = GenerateColor(surfaceSamples[index]);
+        }
+
+        private static float3 CalculateNormal(
+            NativeArray<float> heightSamples,
+            int resolution,
+            int x,
+            int z,
+            int chunkSize,
+            float meshHeightMultiplier)
+        {
+            float sampleSpacing = resolution <= 1 ? chunkSize : chunkSize / (float)(resolution - 1);
+            float left = heightSamples[math.max(x - 1, 0) * resolution + z];
+            float right = heightSamples[math.min(x + 1, resolution - 1) * resolution + z];
+            float down = heightSamples[x * resolution + math.max(z - 1, 0)];
+            float up = heightSamples[x * resolution + math.min(z + 1, resolution - 1)];
+
+            float dx = (right - left) * meshHeightMultiplier / math.max(sampleSpacing, 0.0001f);
+            float dz = (up - down) * meshHeightMultiplier / math.max(sampleSpacing, 0.0001f);
+
+            return math.normalize(new float3(-dx, 2f, -dz));
+        }
+
+        private static float4 GenerateColor(SurfaceType surfaceType)
+        {
+            switch (surfaceType)
+            {
+                case SurfaceType.Sand:
+                    return new float4(0.80f, 0.75f, 0.55f, 1f);
+                case SurfaceType.Mud:
+                    return new float4(0.42f, 0.32f, 0.22f, 1f);
+                case SurfaceType.Grass:
+                    return new float4(0.1255f, 0.5451f, 0.1569f, 1f);
+                case SurfaceType.Rock:
+                    return new float4(0.45f, 0.45f, 0.45f, 1f);
+                case SurfaceType.Snow:
+                    return new float4(0.92f, 0.94f, 0.98f, 1f);
+                case SurfaceType.Cliff:
+                    return new float4(0.30f, 0.30f, 0.30f, 1f);
+                case SurfaceType.Riverbed:
+                    return new float4(0.35f, 0.30f, 0.24f, 1f);
+                default:
+                    return new float4(1f, 0f, 1f, 1f);
+            }
+        }
+    }
+
+    [BurstCompile]
+    private struct FarMeshTriangleJob : IJobParallelFor
+    {
+        public int resolution;
+
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<int> triangles;
+
+        public void Execute(int cellIndex)
+        {
+            int cellsPerLine = resolution - 1;
+            int x = cellIndex % cellsPerLine;
+            int z = cellIndex / cellsPerLine;
+            int a = x * resolution + z;
+            int b = x * resolution + z + 1;
+            int c = (x + 1) * resolution + z + 1;
+            int d = (x + 1) * resolution + z;
+            int triangleIndex = cellIndex * 6;
+
+            triangles[triangleIndex] = a;
+            triangles[triangleIndex + 1] = b;
+            triangles[triangleIndex + 2] = c;
+            triangles[triangleIndex + 3] = a;
+            triangles[triangleIndex + 4] = c;
+            triangles[triangleIndex + 5] = d;
+        }
     }
 
     [BurstCompile]
@@ -564,5 +981,53 @@ public static class FarTerrainGenerator
             return BiomeType.Rock;
 
         return BiomeType.Grassland;
+    }
+
+    private static SurfaceType ClassifySurface(float height, float slope, float riverMask, BiomeType biome)
+    {
+        const float oceanWaterLevel = TerrainWaterSettings.WaterLevel;
+        const float beachBand = TerrainWaterSettings.BeachLevel - TerrainWaterSettings.WaterLevel;
+        const float riverBankThreshold = 0.69f;
+        const float riverCoreThreshold = 0.72f;
+        const float cliffSlopeThreshold = 0.6f;
+        const float rockSlopeThreshold = 0.42f;
+
+        if (slope >= cliffSlopeThreshold)
+            return SurfaceType.Cliff;
+
+        if (height <= oceanWaterLevel + beachBand)
+            return SurfaceType.Sand;
+
+        if (biome == BiomeType.Rock)
+            return SurfaceType.Rock;
+
+        if (riverMask >= riverCoreThreshold)
+            return SurfaceType.Riverbed;
+
+        if (riverMask >= riverBankThreshold)
+        {
+            if (slope >= rockSlopeThreshold)
+                return SurfaceType.Rock;
+
+            return SurfaceType.Mud;
+        }
+
+        switch (biome)
+        {
+            case BiomeType.Beach:
+            case BiomeType.Desert:
+                return SurfaceType.Sand;
+            case BiomeType.Forest:
+            case BiomeType.Grassland:
+                return SurfaceType.Grass;
+            case BiomeType.Rock:
+                return SurfaceType.Rock;
+            case BiomeType.Snow:
+                return SurfaceType.Snow;
+            case BiomeType.Water:
+                return SurfaceType.Riverbed;
+            default:
+                return SurfaceType.Grass;
+        }
     }
 }

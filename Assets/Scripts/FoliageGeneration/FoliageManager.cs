@@ -573,43 +573,92 @@ public class FoliageManager
         List<Vector4> grasslandOakLeafTints = new List<Vector4>();
         Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
 
-        for (int i = 0; i < data.treeCubeInstances.Count; i++)
+        int instanceCount = data.treeCubeInstances.Count;
+        if (instanceCount > 0)
         {
-            TreeInstanceData instance = data.treeCubeInstances[i];
+            NativeArray<TreeBillboardRenderSourceData> sources =
+                new NativeArray<TreeBillboardRenderSourceData>(instanceCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            NativeArray<float4x4> nativeMatrices =
+                new NativeArray<float4x4>(instanceCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            NativeArray<float4> nativeLeafTints =
+                new NativeArray<float4>(instanceCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 
-            Matrix4x4 localMatrix = Matrix4x4.TRS(
-                instance.localPosition,
-                instance.localRotation,
-                instance.localScale);
+            try
+            {
+                for (int i = 0; i < instanceCount; i++)
+                {
+                    TreeInstanceData instance = data.treeCubeInstances[i];
+                    Vector4 leafTint = Color32ToLinearVector4(instance.leafTint);
 
-            Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
+                    sources[i] = new TreeBillboardRenderSourceData
+                    {
+                        localPosition = new float3(
+                            instance.localPosition.x,
+                            instance.localPosition.y,
+                            instance.localPosition.z),
+                        localRotation = new quaternion(
+                            instance.localRotation.x,
+                            instance.localRotation.y,
+                            instance.localRotation.z,
+                            instance.localRotation.w),
+                        localScale = new float3(
+                            instance.localScale.x,
+                            instance.localScale.y,
+                            instance.localScale.z),
+                        leafTint = new float4(leafTint.x, leafTint.y, leafTint.z, leafTint.w)
+                    };
+                }
 
-            AddTreeBillboardMatrix(
-                instance.variant,
-                worldMatrix,
-                Color32ToLinearVector4(instance.leafTint),
-                mapleWorldMatrices,
-                mapleLeafTints,
-                sugarMapleWorldMatrices,
-                sugarMapleLeafTints,
-                birchAspenWorldMatrices,
-                birchAspenLeafTints,
-                beechWorldMatrices,
-                beechLeafTints,
-                spruceWorldMatrices,
-                spruceLeafTints,
-                whitePineWorldMatrices,
-                whitePineLeafTints,
-                oakWorldMatrices,
-                oakLeafTints,
-                grasslandMapleWorldMatrices,
-                grasslandMapleLeafTints,
-                grasslandBirchAspenWorldMatrices,
-                grasslandBirchAspenLeafTints,
-                grasslandWhitePineWorldMatrices,
-                grasslandWhitePineLeafTints,
-                grasslandOakWorldMatrices,
-                grasslandOakLeafTints);
+                TreeBillboardRenderBatchBuildJob job = new TreeBillboardRenderBatchBuildJob
+                {
+                    sources = sources,
+                    chunkLocalToWorld = ToFloat4x4(chunkLocalToWorld),
+                    matrices = nativeMatrices,
+                    leafTints = nativeLeafTints
+                };
+
+                JobHandle handle = job.Schedule(instanceCount, 64);
+                handle.Complete();
+
+                for (int i = 0; i < instanceCount; i++)
+                {
+                    AddTreeBillboardMatrix(
+                        data.treeCubeInstances[i].variant,
+                        ToMatrix4x4(nativeMatrices[i]),
+                        ToVector4(nativeLeafTints[i]),
+                        mapleWorldMatrices,
+                        mapleLeafTints,
+                        sugarMapleWorldMatrices,
+                        sugarMapleLeafTints,
+                        birchAspenWorldMatrices,
+                        birchAspenLeafTints,
+                        beechWorldMatrices,
+                        beechLeafTints,
+                        spruceWorldMatrices,
+                        spruceLeafTints,
+                        whitePineWorldMatrices,
+                        whitePineLeafTints,
+                        oakWorldMatrices,
+                        oakLeafTints,
+                        grasslandMapleWorldMatrices,
+                        grasslandMapleLeafTints,
+                        grasslandBirchAspenWorldMatrices,
+                        grasslandBirchAspenLeafTints,
+                        grasslandWhitePineWorldMatrices,
+                        grasslandWhitePineLeafTints,
+                        grasslandOakWorldMatrices,
+                        grasslandOakLeafTints);
+                }
+            }
+            finally
+            {
+                if (sources.IsCreated)
+                    sources.Dispose();
+                if (nativeMatrices.IsCreated)
+                    nativeMatrices.Dispose();
+                if (nativeLeafTints.IsCreated)
+                    nativeLeafTints.Dispose();
+            }
         }
 
         foliageRuntime.CacheTreeBillboardMatrices(
@@ -1023,28 +1072,85 @@ public class FoliageManager
             return;
 
         long stageStart = TerrainGenerationProfiler.GetTimestamp();
-        List<Matrix4x4> worldMatrices = new List<Matrix4x4>();
-        List<Vector4> petalColors = new List<Vector4>();
-        Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
+        int instanceCount = data.flowerInstances.Count;
 
-        for (int i = 0; i < data.flowerInstances.Count; i++)
+        if (instanceCount == 0)
         {
-            FlowerInstanceData instance = data.flowerInstances[i];
-
-            Matrix4x4 localMatrix = Matrix4x4.TRS(
-                instance.localPosition,
-                instance.localRotation,
-                instance.localScale);
-
-            Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
-            worldMatrices.Add(worldMatrix);
-            petalColors.Add(Color32ToVector4(instance.petalColor));
+            foliageRuntime.CacheFlowerBatches(Array.Empty<Matrix4x4>(), Array.Empty<Vector4>());
+            TerrainGenerationProfiler.Record(
+                TerrainGenerationProfileStage.FoliageFlowerBatchBuild,
+                stageStart);
+            return;
         }
 
-        foliageRuntime.CacheFlowerBatches(worldMatrices, petalColors);
-        TerrainGenerationProfiler.Record(
-            TerrainGenerationProfileStage.FoliageFlowerBatchBuild,
-            stageStart);
+        Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
+        NativeArray<FlowerRenderSourceData> sources =
+            new NativeArray<FlowerRenderSourceData>(instanceCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+        NativeArray<float4x4> nativeMatrices =
+            new NativeArray<float4x4>(instanceCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+        NativeArray<float4> nativePetalColors =
+            new NativeArray<float4>(instanceCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+
+        try
+        {
+            for (int i = 0; i < instanceCount; i++)
+            {
+                FlowerInstanceData instance = data.flowerInstances[i];
+                Vector4 petalColor = Color32ToVector4(instance.petalColor);
+
+                sources[i] = new FlowerRenderSourceData
+                {
+                    localPosition = new float3(
+                        instance.localPosition.x,
+                        instance.localPosition.y,
+                        instance.localPosition.z),
+                    localRotation = new quaternion(
+                        instance.localRotation.x,
+                        instance.localRotation.y,
+                        instance.localRotation.z,
+                        instance.localRotation.w),
+                    localScale = new float3(
+                        instance.localScale.x,
+                        instance.localScale.y,
+                        instance.localScale.z),
+                    petalColor = new float4(petalColor.x, petalColor.y, petalColor.z, petalColor.w)
+                };
+            }
+
+            FlowerRenderBatchBuildJob job = new FlowerRenderBatchBuildJob
+            {
+                sources = sources,
+                chunkLocalToWorld = ToFloat4x4(chunkLocalToWorld),
+                matrices = nativeMatrices,
+                petalColors = nativePetalColors
+            };
+
+            JobHandle handle = job.Schedule(instanceCount, 64);
+            handle.Complete();
+
+            Matrix4x4[] worldMatrices = new Matrix4x4[instanceCount];
+            Vector4[] petalColors = new Vector4[instanceCount];
+
+            for (int i = 0; i < instanceCount; i++)
+            {
+                worldMatrices[i] = ToMatrix4x4(nativeMatrices[i]);
+                petalColors[i] = ToVector4(nativePetalColors[i]);
+            }
+
+            foliageRuntime.CacheFlowerBatches(worldMatrices, petalColors);
+            TerrainGenerationProfiler.Record(
+                TerrainGenerationProfileStage.FoliageFlowerBatchBuild,
+                stageStart);
+        }
+        finally
+        {
+            if (sources.IsCreated)
+                sources.Dispose();
+            if (nativeMatrices.IsCreated)
+                nativeMatrices.Dispose();
+            if (nativePetalColors.IsCreated)
+                nativePetalColors.Dispose();
+        }
     }
 
     private void RebuildGrassMatricesForViewerSubChunk(
@@ -1230,6 +1336,11 @@ public class FoliageManager
         return result;
     }
 
+    private static Vector4 ToVector4(float4 value)
+    {
+        return new Vector4(value.x, value.y, value.z, value.w);
+    }
+
     private struct GrassRenderSourceData
     {
         public float3 localPosition;
@@ -1267,6 +1378,85 @@ public class FoliageManager
         }
     }
 
+    private struct BillboardGrassRenderSourceData
+    {
+        public float3 localPosition;
+        public quaternion localRotation;
+        public float3 localScale;
+        public float forestBlend;
+    }
+
+    [BurstCompile]
+    private struct BillboardGrassRenderBatchBuildJob : IJobParallelFor
+    {
+        [ReadOnly] public NativeArray<BillboardGrassRenderSourceData> sources;
+        public float4x4 chunkLocalToWorld;
+        public float scaleMultiplier;
+        [WriteOnly] public NativeArray<float4x4> matrices;
+        [WriteOnly] public NativeArray<float4> instanceData;
+
+        public void Execute(int index)
+        {
+            BillboardGrassRenderSourceData source = sources[index];
+            matrices[index] = math.mul(
+                chunkLocalToWorld,
+                float4x4.TRS(source.localPosition, source.localRotation, source.localScale * scaleMultiplier));
+            instanceData[index] = new float4(source.forestBlend, 0f, 0f, 0f);
+        }
+    }
+
+    private struct FlowerRenderSourceData
+    {
+        public float3 localPosition;
+        public quaternion localRotation;
+        public float3 localScale;
+        public float4 petalColor;
+    }
+
+    [BurstCompile]
+    private struct FlowerRenderBatchBuildJob : IJobParallelFor
+    {
+        [ReadOnly] public NativeArray<FlowerRenderSourceData> sources;
+        public float4x4 chunkLocalToWorld;
+        [WriteOnly] public NativeArray<float4x4> matrices;
+        [WriteOnly] public NativeArray<float4> petalColors;
+
+        public void Execute(int index)
+        {
+            FlowerRenderSourceData source = sources[index];
+            matrices[index] = math.mul(
+                chunkLocalToWorld,
+                float4x4.TRS(source.localPosition, source.localRotation, source.localScale));
+            petalColors[index] = source.petalColor;
+        }
+    }
+
+    private struct TreeBillboardRenderSourceData
+    {
+        public float3 localPosition;
+        public quaternion localRotation;
+        public float3 localScale;
+        public float4 leafTint;
+    }
+
+    [BurstCompile]
+    private struct TreeBillboardRenderBatchBuildJob : IJobParallelFor
+    {
+        [ReadOnly] public NativeArray<TreeBillboardRenderSourceData> sources;
+        public float4x4 chunkLocalToWorld;
+        [WriteOnly] public NativeArray<float4x4> matrices;
+        [WriteOnly] public NativeArray<float4> leafTints;
+
+        public void Execute(int index)
+        {
+            TreeBillboardRenderSourceData source = sources[index];
+            matrices[index] = math.mul(
+                chunkLocalToWorld,
+                float4x4.TRS(source.localPosition, source.localRotation, source.localScale));
+            leafTints[index] = source.leafTint;
+        }
+    }
+
     private void RebuildBillboardMatrices(
         ChunkRuntime runtime,
         ChunkRecord record,
@@ -1279,8 +1469,6 @@ public class FoliageManager
             return;
 
         long stageStart = TerrainGenerationProfiler.GetTimestamp();
-        List<Matrix4x4> worldMatrices = new List<Matrix4x4>();
-        List<Vector4> instanceData = new List<Vector4>();
         Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
 
         int chunkRing = GetChunkRingDistance(viewerCoord, record.ChunkCoord);
@@ -1314,6 +1502,8 @@ public class FoliageManager
             cellBuckets[cellX, cellZ].Add(instance);
         }
 
+        List<BillboardFoliageInstanceData> selectedInstances = new List<BillboardFoliageInstanceData>();
+
         for (int cellX = 0; cellX < cellsPerAxis; cellX++)
         {
             for (int cellZ = 0; cellZ < cellsPerAxis; cellZ++)
@@ -1334,25 +1524,87 @@ public class FoliageManager
                 for (int i = 0; i < renderCount; i++)
                 {
                     BillboardFoliageInstanceData instance = bucket[i];
-
-                    Vector3 scaledScale = instance.localScale * scaleMultiplier;
-
-                    Matrix4x4 localMatrix = Matrix4x4.TRS(
-                        instance.localPosition,
-                        instance.localRotation,
-                        scaledScale);
-
-                    Matrix4x4 worldMatrix = chunkLocalToWorld * localMatrix;
-                    worldMatrices.Add(worldMatrix);
-                    instanceData.Add(new Vector4(instance.forestBlend, 0f, 0f, 0f));
+                    selectedInstances.Add(instance);
                 }
             }
         }
 
-        foliageRuntime.CacheBillboardMatrices(worldMatrices, instanceData);
-        TerrainGenerationProfiler.Record(
-            TerrainGenerationProfileStage.FoliageBillboardGrassBatchBuild,
-            stageStart);
+        int selectedCount = selectedInstances.Count;
+        if (selectedCount == 0)
+        {
+            foliageRuntime.CacheBillboardMatrices(Array.Empty<Matrix4x4>(), Array.Empty<Vector4>());
+            TerrainGenerationProfiler.Record(
+                TerrainGenerationProfileStage.FoliageBillboardGrassBatchBuild,
+                stageStart);
+            return;
+        }
+
+        NativeArray<BillboardGrassRenderSourceData> sources =
+            new NativeArray<BillboardGrassRenderSourceData>(selectedCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+        NativeArray<float4x4> nativeMatrices =
+            new NativeArray<float4x4>(selectedCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+        NativeArray<float4> nativeInstanceData =
+            new NativeArray<float4>(selectedCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+
+        try
+        {
+            for (int i = 0; i < selectedCount; i++)
+            {
+                BillboardFoliageInstanceData instance = selectedInstances[i];
+                sources[i] = new BillboardGrassRenderSourceData
+                {
+                    localPosition = new float3(
+                        instance.localPosition.x,
+                        instance.localPosition.y,
+                        instance.localPosition.z),
+                    localRotation = new quaternion(
+                        instance.localRotation.x,
+                        instance.localRotation.y,
+                        instance.localRotation.z,
+                        instance.localRotation.w),
+                    localScale = new float3(
+                        instance.localScale.x,
+                        instance.localScale.y,
+                        instance.localScale.z),
+                    forestBlend = instance.forestBlend
+                };
+            }
+
+            BillboardGrassRenderBatchBuildJob job = new BillboardGrassRenderBatchBuildJob
+            {
+                sources = sources,
+                chunkLocalToWorld = ToFloat4x4(chunkLocalToWorld),
+                scaleMultiplier = scaleMultiplier,
+                matrices = nativeMatrices,
+                instanceData = nativeInstanceData
+            };
+
+            JobHandle handle = job.Schedule(selectedCount, 64);
+            handle.Complete();
+
+            Matrix4x4[] worldMatrices = new Matrix4x4[selectedCount];
+            Vector4[] instanceData = new Vector4[selectedCount];
+
+            for (int i = 0; i < selectedCount; i++)
+            {
+                worldMatrices[i] = ToMatrix4x4(nativeMatrices[i]);
+                instanceData[i] = ToVector4(nativeInstanceData[i]);
+            }
+
+            foliageRuntime.CacheBillboardMatrices(worldMatrices, instanceData);
+            TerrainGenerationProfiler.Record(
+                TerrainGenerationProfileStage.FoliageBillboardGrassBatchBuild,
+                stageStart);
+        }
+        finally
+        {
+            if (sources.IsCreated)
+                sources.Dispose();
+            if (nativeMatrices.IsCreated)
+                nativeMatrices.Dispose();
+            if (nativeInstanceData.IsCreated)
+                nativeInstanceData.Dispose();
+        }
     }
 
     private FoliageRepresentationMode GetTreeRepresentationMode(

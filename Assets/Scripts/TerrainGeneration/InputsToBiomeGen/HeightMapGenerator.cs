@@ -61,6 +61,28 @@ public static class HeightMapGenerator
         return new TerrainHeightSample(sample.Height, sample.MountainMask, sample.RiverMask);
     }
 
+    public static TerrainHeightSample SampleTerrainHeightNative(
+        float worldX,
+        float worldZ,
+        float sampleScale,
+        NativeArray<float2> baseLandOffsets,
+        NativeArray<float2> mountainMaskOffsets,
+        NativeArray<float2> mountainTerrainOffsets,
+        NativeArray<float2> mountainRuggedOffsets,
+        int riverSeed)
+    {
+        TerrainHeightSampleData sample = SampleTerrainHeight(
+            worldX,
+            worldZ,
+            sampleScale,
+            baseLandOffsets,
+            mountainMaskOffsets,
+            mountainTerrainOffsets,
+            mountainRuggedOffsets,
+            riverSeed);
+        return new TerrainHeightSample(sample.Height, sample.MountainMask, sample.RiverMask);
+    }
+
     public static HeightFieldResult GenerateTerrainHeightField(
         int chunkSize,
         int seed,

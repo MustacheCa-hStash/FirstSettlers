@@ -319,6 +319,11 @@ public class ChunkFoliageRuntime
         hasBuiltBillboardRenderData = CacheGrassRenderBatches(worldMatrices, instanceData, billboardRenderBatches);
     }
 
+    public void CacheBillboardMatrices(Matrix4x4[] worldMatrices, Vector4[] instanceData)
+    {
+        hasBuiltBillboardRenderData = CacheGrassRenderBatches(worldMatrices, instanceData, billboardRenderBatches);
+    }
+
     private bool CacheGrassRenderBatches(
         List<Matrix4x4> worldMatrices,
         List<Vector4> instanceData,
@@ -426,6 +431,43 @@ public class ChunkFoliageRuntime
                 matrixBatch[i] = worldMatrices[startIndex + i];
                 petalColorBatch[i] = petalColors[startIndex + i];
             }
+
+            flowerRenderBatches.Add(new FlowerRenderBatch(matrixBatch, petalColorBatch));
+            startIndex += batchCount;
+        }
+
+        hasBuiltFlowerRenderData = true;
+    }
+
+    public void CacheFlowerBatches(Matrix4x4[] worldMatrices, Vector4[] petalColors)
+    {
+        flowerRenderBatches.Clear();
+
+        if (worldMatrices == null || petalColors == null)
+        {
+            hasBuiltFlowerRenderData = true;
+            return;
+        }
+
+        if (worldMatrices.Length != petalColors.Length)
+        {
+            Debug.LogError("Flower matrix and petal color counts must match.");
+            hasBuiltFlowerRenderData = false;
+            return;
+        }
+
+        const int maxBatchSize = 1023;
+        int totalCount = worldMatrices.Length;
+        int startIndex = 0;
+
+        while (startIndex < totalCount)
+        {
+            int batchCount = Mathf.Min(maxBatchSize, totalCount - startIndex);
+            Matrix4x4[] matrixBatch = new Matrix4x4[batchCount];
+            Vector4[] petalColorBatch = new Vector4[batchCount];
+
+            System.Array.Copy(worldMatrices, startIndex, matrixBatch, 0, batchCount);
+            System.Array.Copy(petalColors, startIndex, petalColorBatch, 0, batchCount);
 
             flowerRenderBatches.Add(new FlowerRenderBatch(matrixBatch, petalColorBatch));
             startIndex += batchCount;
