@@ -15,6 +15,7 @@ public static class WorldFeaturePlanGenerator
     private const float GrasslandOpenScale = 0.0065f;
     private const float GrasslandGroveScale = 0.015f;
     private const float GrasslandGroveFineScale = 0.052f;
+    private const float GrasslandRockRegionScale = 0.0035f;
     private const float GrasslandRockPatchScale = 0.011f;
     private const float GrasslandRockFineScale = 0.047f;
     private const float GrasslandSpeciesPatchScale = 0.017f;
@@ -340,18 +341,86 @@ public static class WorldFeaturePlanGenerator
         if (maxRocksPerChunk == 0)
             return;
 
+        float chunkCenterX = chunkCoord.x * chunkSize + chunkSize * 0.5f;
+        float chunkCenterZ = chunkCoord.z * chunkSize + chunkSize * 0.5f;
+        float regionalRockiness = Sample01(chunkCenterX, chunkCenterZ, GrasslandRockRegionScale, seed + 6550);
+        int regionHash = Hash(seed, chunkCoord.x, chunkCoord.z, 6551);
+        float regionalChance = Mathf.InverseLerp(0.48f, 0.84f, regionalRockiness) * 0.72f;
+
+        if (Hash01(regionHash + 7) > regionalChance)
+            return;
+
+        int regionalMaxRocks = Mathf.Clamp(
+            Mathf.CeilToInt(maxRocksPerChunk * Mathf.Lerp(0.35f, 1f, Mathf.Clamp01(regionalChance))),
+            1,
+            maxRocksPerChunk);
+
         int placed = 0;
         float cellSize = chunkSize / (float)GrasslandRockCandidateCellsPerAxis;
         int totalCandidates = GrasslandRockCandidateCellsPerAxis * GrasslandRockCandidateCellsPerAxis;
         int candidateOffset = Mathf.Abs(Hash(seed, chunkCoord.x, chunkCoord.z, 6511)) % totalCandidates;
         float minScale = Mathf.Max(0.1f, Mathf.Min(settings.grasslandRockUniformScaleRange.x, settings.grasslandRockUniformScaleRange.y));
         float maxScale = Mathf.Max(minScale, Mathf.Max(settings.grasslandRockUniformScaleRange.x, settings.grasslandRockUniformScaleRange.y));
+        float minLargeScale = Mathf.Max(0.1f, Mathf.Min(settings.grasslandLargeRockUniformScaleRange.x, settings.grasslandLargeRockUniformScaleRange.y));
+        float maxLargeScale = Mathf.Max(minLargeScale, Mathf.Max(settings.grasslandLargeRockUniformScaleRange.x, settings.grasslandLargeRockUniformScaleRange.y));
         float minPitch = Mathf.Clamp(Mathf.Min(settings.grasslandRockPitchRange.x, settings.grasslandRockPitchRange.y), -30f, 30f);
         float maxPitch = Mathf.Clamp(Mathf.Max(settings.grasslandRockPitchRange.x, settings.grasslandRockPitchRange.y), -30f, 30f);
+        int largePrefabCount = Mathf.Max(0, settings.grasslandLargeRockPrefabCount);
+
+        if (largePrefabCount > 0 && Hash01(regionHash + 17) < Mathf.Lerp(0.18f, 0.64f, Mathf.Clamp01(regionalChance)))
+        {
+            for (int candidateIndex = 0; candidateIndex < totalCandidates && placed < regionalMaxRocks; candidateIndex++)
+            {
+                int shuffledIndex = (candidateIndex * 17 + candidateOffset) % totalCandidates;
+                int cellX = shuffledIndex % GrasslandRockCandidateCellsPerAxis;
+                int cellZ = shuffledIndex / GrasslandRockCandidateCellsPerAxis;
+                int hash = Hash(seed, chunkCoord.x, chunkCoord.z, cellX, cellZ, 6561);
+
+                float sampleX = Mathf.Clamp((cellX + Hash01(hash + 17)) * cellSize, 5f, chunkSize - 5f);
+                float sampleZ = Mathf.Clamp((cellZ + Hash01(hash + 31)) * cellSize, 5f, chunkSize - 5f);
+                int paddedX = Mathf.Clamp(Mathf.RoundToInt(sampleX), 0, chunkSize) + 1;
+                int paddedZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize) + 1;
+
+                if (!IsValidGrasslandLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, 0.13f, 0.80f))
+                    continue;
+
+                GrasslandStructureFields fields = plan.GrasslandStructure;
+                float rockiness = fields.RockinessMap[paddedX, paddedZ];
+                float chance = Mathf.InverseLerp(0.34f, 0.82f, rockiness) * Mathf.Lerp(0.18f, 0.70f, Mathf.Clamp01(regionalChance));
+                chance *= Mathf.Lerp(1.02f, 0.72f, fields.RiparianIntentMap[paddedX, paddedZ]);
+
+                if (Hash01(hash + 53) > chance)
+                    continue;
+
+                float uniformScale = Mathf.Lerp(minLargeScale, maxLargeScale, Hash01(hash + 79));
+                float scaleT = Mathf.InverseLerp(minLargeScale, maxLargeScale, uniformScale);
+                float exclusionRadius = Mathf.Lerp(7.4f, 10.8f, scaleT);
+                int prefabIndex = Mathf.Min(largePrefabCount - 1, Mathf.FloorToInt(Hash01(hash + 89) * largePrefabCount));
+                float pitch = Mathf.Lerp(minPitch, maxPitch, Hash01(hash + 113));
+                float yaw = Hash01(hash + 97) * 360f;
+
+                if (IntersectsExistingPlacement(plan, sampleX, sampleZ, exclusionRadius))
+                    continue;
+
+                plan.Placements.Add(new WorldFeaturePlacement(
+                    WorldFeatureType.Boulder,
+                    WorldFeatureVariant.GrasslandLargeBoulder,
+                    sampleX,
+                    sampleZ,
+                    Quaternion.Euler(pitch, yaw, 0f),
+                    Vector3.one * uniformScale,
+                    exclusionRadius,
+                    exclusionRadius + 20f,
+                    prefabIndex));
+
+                placed++;
+                break;
+            }
+        }
 
         for (int candidateIndex = 0; candidateIndex < totalCandidates; candidateIndex++)
         {
-            if (placed >= maxRocksPerChunk)
+            if (placed >= regionalMaxRocks)
                 return;
 
             int shuffledIndex = (candidateIndex * 11 + candidateOffset) % totalCandidates;
@@ -369,8 +438,14 @@ public static class WorldFeaturePlanGenerator
 
             GrasslandStructureFields fields = plan.GrasslandStructure;
             float rockiness = fields.RockinessMap[paddedX, paddedZ];
-            float chance = Mathf.InverseLerp(0.22f, 0.78f, rockiness) * 0.88f;
+            float chance = Mathf.InverseLerp(0.28f, 0.80f, rockiness) * Mathf.Lerp(0.24f, 0.74f, Mathf.Clamp01(regionalChance));
             chance *= Mathf.Lerp(1.08f, 0.68f, fields.RiparianIntentMap[paddedX, paddedZ]);
+
+            float largeBoulderScatter = GetGrasslandLargeBoulderScatterInfluence(plan, sampleX, sampleZ);
+            if (largeBoulderScatter > 0f && Hash01(hash + 181) < 0.68f)
+            {
+                chance = Mathf.Max(chance, Mathf.Lerp(0.30f, 0.62f, largeBoulderScatter));
+            }
 
             if (Hash01(hash + 53) > chance)
                 continue;
@@ -401,6 +476,32 @@ public static class WorldFeaturePlanGenerator
 
             placed++;
         }
+    }
+
+    private static float GetGrasslandLargeBoulderScatterInfluence(WorldFeaturePlan plan, float sampleX, float sampleZ)
+    {
+        float bestInfluence = 0f;
+
+        for (int i = 0; i < plan.Placements.Count; i++)
+        {
+            WorldFeaturePlacement placement = plan.Placements[i];
+            if (placement.variant != WorldFeatureVariant.GrasslandLargeBoulder)
+                continue;
+
+            float dx = sampleX - placement.sampleX;
+            float dz = sampleZ - placement.sampleZ;
+            float distance = Mathf.Sqrt(dx * dx + dz * dz);
+            float innerRadius = placement.exclusionRadius + 3.5f;
+            float outerRadius = placement.influenceRadius;
+
+            if (distance <= innerRadius || distance >= outerRadius)
+                continue;
+
+            float influence = 1f - Mathf.InverseLerp(innerRadius, outerRadius, distance);
+            bestInfluence = Mathf.Max(bestInfluence, influence);
+        }
+
+        return bestInfluence;
     }
 
     private static void AddForestTrees(
@@ -712,12 +813,18 @@ public static class WorldFeaturePlanGenerator
             Mathf.Lerp(0.90f, 1.24f, riparian) *
             SpeciesPatch(worldX, worldZ, seed, 6544);
 
+        float willowWeight = 0.18f *
+            Mathf.Lerp(0.22f, 1.72f, riparian) *
+            Mathf.Lerp(0.70f, 1.38f, moisture) *
+            Mathf.Lerp(1.12f, 0.82f, dryness) *
+            SpeciesPatch(worldX, worldZ, seed, 6546);
+
         float whitePineWeight = 0.10f *
             Mathf.Lerp(0.82f, 1.38f, dryness) *
             Mathf.Lerp(0.82f, 1.24f, rockiness) *
             SpeciesPatch(worldX, worldZ, seed, 6545);
 
-        float totalWeight = oakWeight + birchAspenWeight + mapleWeight + whitePineWeight;
+        float totalWeight = oakWeight + birchAspenWeight + mapleWeight + willowWeight + whitePineWeight;
         float roll = Hash01(hash + 173) * totalWeight;
 
         if ((roll -= oakWeight) <= 0f)
@@ -728,6 +835,9 @@ public static class WorldFeaturePlanGenerator
 
         if ((roll -= mapleWeight) <= 0f)
             return WorldFeatureVariant.GrasslandMapleTree;
+
+        if ((roll -= willowWeight) <= 0f)
+            return WorldFeatureVariant.GrasslandWillowTree;
 
         return WorldFeatureVariant.GrasslandWhitePineTree;
     }
@@ -1022,6 +1132,8 @@ public static class WorldFeaturePlanGenerator
                 return Mathf.Lerp(1.75f, 2.45f, roll) * groveBoost;
             case WorldFeatureVariant.GrasslandWhitePineTree:
                 return Mathf.Lerp(1.75f, 2.35f, roll);
+            case WorldFeatureVariant.GrasslandWillowTree:
+                return Mathf.Lerp(1.50f, 2.15f, roll) * riparianBoost;
             case WorldFeatureVariant.GrasslandBirchAspenTree:
                 return Mathf.Lerp(1.35f, 1.95f, roll) * riparianBoost;
             default:
@@ -1037,6 +1149,8 @@ public static class WorldFeaturePlanGenerator
                 return Mathf.Lerp(11.5f, 15.5f, roll);
             case WorldFeatureVariant.GrasslandWhitePineTree:
                 return Mathf.Lerp(8.5f, 11.5f, roll);
+            case WorldFeatureVariant.GrasslandWillowTree:
+                return Mathf.Lerp(9.0f, 12.4f, roll);
             case WorldFeatureVariant.GrasslandBirchAspenTree:
                 return Mathf.Lerp(7.2f, 9.4f, roll);
             default:
@@ -1052,6 +1166,8 @@ public static class WorldFeaturePlanGenerator
                 return Mathf.Lerp(24f, 34f, roll);
             case WorldFeatureVariant.GrasslandWhitePineTree:
                 return Mathf.Lerp(18f, 26f, roll);
+            case WorldFeatureVariant.GrasslandWillowTree:
+                return Mathf.Lerp(22f, 32f, roll);
             case WorldFeatureVariant.GrasslandBirchAspenTree:
                 return Mathf.Lerp(16f, 23f, roll);
             default:
@@ -1157,7 +1273,8 @@ public static class WorldFeaturePlanGenerator
             if (placement.featureType != WorldFeatureType.Boulder)
                 continue;
 
-            if (placement.variant == WorldFeatureVariant.GrasslandBoulder)
+            if (placement.variant == WorldFeatureVariant.GrasslandBoulder ||
+                placement.variant == WorldFeatureVariant.GrasslandLargeBoulder)
             {
                 ApplyRadialInfluence(
                     grasslandFields.RockInfluenceMap,

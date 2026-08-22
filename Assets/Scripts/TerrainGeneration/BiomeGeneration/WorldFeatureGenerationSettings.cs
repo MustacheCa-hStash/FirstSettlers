@@ -7,8 +7,10 @@ public struct WorldFeatureGenerationSettings
     public Vector2 forestRockUniformScaleRange;
     public Vector2 forestRockPitchRange;
     public int grasslandRockPrefabCount;
+    public int grasslandLargeRockPrefabCount;
     public int maxGrasslandRocksPerChunk;
     public Vector2 grasslandRockUniformScaleRange;
+    public Vector2 grasslandLargeRockUniformScaleRange;
     public Vector2 grasslandRockPitchRange;
     public int maxGrasslandTreesPerChunk;
 
@@ -19,8 +21,10 @@ public struct WorldFeatureGenerationSettings
         forestRockUniformScaleRange = new Vector2(0.75f, 1.45f),
         forestRockPitchRange = new Vector2(-15f, 15f),
         grasslandRockPrefabCount = 0,
+        grasslandLargeRockPrefabCount = 0,
         maxGrasslandRocksPerChunk = 7,
         grasslandRockUniformScaleRange = new Vector2(60f, 95f),
+        grasslandLargeRockUniformScaleRange = new Vector2(95f, 135f),
         grasslandRockPitchRange = new Vector2(-12f, 12f),
         maxGrasslandTreesPerChunk = 8
     };

@@ -40,6 +40,7 @@ public class FoliageManager
     private TreeBillboardRenderData grasslandBirchAspenTreeBillboard;
     private TreeBillboardRenderData grasslandWhitePineTreeBillboard;
     private TreeBillboardRenderData grasslandOakTreeBillboard;
+    private TreeBillboardRenderData grasslandWillowTreeBillboard;
     private TreeBillboardRenderData grasslandFallbackTreeBillboard;
     private readonly Queue<GrassSubChunkWorkItem> pendingGrassSubChunkWork = new();
     private readonly HashSet<GrassSubChunkWorkKey> queuedGrassSubChunks = new();
@@ -571,6 +572,8 @@ public class FoliageManager
         List<Vector4> grasslandWhitePineLeafTints = new List<Vector4>();
         List<Matrix4x4> grasslandOakWorldMatrices = new List<Matrix4x4>();
         List<Vector4> grasslandOakLeafTints = new List<Vector4>();
+        List<Matrix4x4> grasslandWillowWorldMatrices = new List<Matrix4x4>();
+        List<Vector4> grasslandWillowLeafTints = new List<Vector4>();
         Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
 
         int instanceCount = data.treeCubeInstances.Count;
@@ -647,7 +650,9 @@ public class FoliageManager
                         grasslandWhitePineWorldMatrices,
                         grasslandWhitePineLeafTints,
                         grasslandOakWorldMatrices,
-                        grasslandOakLeafTints);
+                        grasslandOakLeafTints,
+                        grasslandWillowWorldMatrices,
+                        grasslandWillowLeafTints);
                 }
             }
             finally
@@ -683,7 +688,9 @@ public class FoliageManager
             grasslandWhitePineWorldMatrices,
             grasslandWhitePineLeafTints,
             grasslandOakWorldMatrices,
-            grasslandOakLeafTints);
+            grasslandOakLeafTints,
+            grasslandWillowWorldMatrices,
+            grasslandWillowLeafTints);
         TerrainGenerationProfiler.Record(
             TerrainGenerationProfileStage.FoliageTreeBillboardBatchBuild,
             stageStart);
@@ -714,7 +721,9 @@ public class FoliageManager
         List<Matrix4x4> grasslandWhitePineWorldMatrices,
         List<Vector4> grasslandWhitePineLeafTints,
         List<Matrix4x4> grasslandOakWorldMatrices,
-        List<Vector4> grasslandOakLeafTints)
+        List<Vector4> grasslandOakLeafTints,
+        List<Matrix4x4> grasslandWillowWorldMatrices,
+        List<Vector4> grasslandWillowLeafTints)
     {
         switch (variant)
         {
@@ -757,6 +766,10 @@ public class FoliageManager
             case WorldFeatureVariant.GrasslandOakTree:
                 grasslandOakWorldMatrices.Add(worldMatrix);
                 grasslandOakLeafTints.Add(leafTint);
+                break;
+            case WorldFeatureVariant.GrasslandWillowTree:
+                grasslandWillowWorldMatrices.Add(worldMatrix);
+                grasslandWillowLeafTints.Add(leafTint);
                 break;
             default:
                 mapleWorldMatrices.Add(worldMatrix);
@@ -1869,6 +1882,7 @@ public class FoliageManager
         chunkRuntime.FoliageRuntime.grasslandBirchAspenTreePrefab = treeSettings.grasslandBirchAspenTreePrefab;
         chunkRuntime.FoliageRuntime.grasslandWhitePineTreePrefab = treeSettings.grasslandWhitePineTreePrefab;
         chunkRuntime.FoliageRuntime.grasslandOakTreePrefab = treeSettings.grasslandOakTreePrefab;
+        chunkRuntime.FoliageRuntime.grasslandWillowTreePrefab = treeSettings.grasslandWillowTreePrefab;
         chunkRuntime.FoliageRuntime.grasslandFallbackTreePrefab = treeSettings.grasslandTreeFallbackPrefab;
         chunkRuntime.FoliageRuntime.blueberryBushPrefab = treeSettings.blueberryBushPrefab;
         chunkRuntime.FoliageRuntime.raspberryBushPrefab = treeSettings.raspberryBushPrefab;
@@ -1879,6 +1893,8 @@ public class FoliageManager
         chunkRuntime.FoliageRuntime.forestRockFallbackPrefab = treeSettings.forestRockFallbackPrefab;
         chunkRuntime.FoliageRuntime.grasslandRockPrefabs = treeSettings.grasslandRockPrefabs;
         chunkRuntime.FoliageRuntime.grasslandRockFallbackPrefab = treeSettings.grasslandRockFallbackPrefab;
+        chunkRuntime.FoliageRuntime.grasslandLargeRockPrefabs = treeSettings.grasslandLargeRockPrefabs;
+        chunkRuntime.FoliageRuntime.grasslandLargeRockFallbackPrefab = treeSettings.grasslandLargeRockFallbackPrefab;
         chunkRuntime.FoliageRuntime.mapleTreeBillboard = mapleTreeBillboard;
         chunkRuntime.FoliageRuntime.sugarMapleTreeBillboard = sugarMapleTreeBillboard;
         chunkRuntime.FoliageRuntime.birchAspenTreeBillboard = birchAspenTreeBillboard;
@@ -1891,6 +1907,7 @@ public class FoliageManager
         chunkRuntime.FoliageRuntime.grasslandBirchAspenTreeBillboard = grasslandBirchAspenTreeBillboard;
         chunkRuntime.FoliageRuntime.grasslandWhitePineTreeBillboard = grasslandWhitePineTreeBillboard;
         chunkRuntime.FoliageRuntime.grasslandOakTreeBillboard = grasslandOakTreeBillboard;
+        chunkRuntime.FoliageRuntime.grasslandWillowTreeBillboard = grasslandWillowTreeBillboard;
         chunkRuntime.FoliageRuntime.grasslandFallbackTreeBillboard = grasslandFallbackTreeBillboard;
 
         chunkRuntime.FoliageRuntime.SetVisible(false);
@@ -2014,6 +2031,7 @@ public class FoliageManager
         WarnMissingGrasslandTreePrefab(treeSettings.grasslandBirchAspenTreePrefab, "Grassland birch/aspen");
         WarnMissingGrasslandTreePrefab(treeSettings.grasslandWhitePineTreePrefab, "Grassland white pine");
         WarnMissingGrasslandTreePrefab(treeSettings.grasslandOakTreePrefab, "Grassland oak");
+        WarnMissingGrasslandTreePrefab(treeSettings.grasslandWillowTreePrefab, "Grassland willow");
         WarnMissingBushPrefab(treeSettings.blueberryBushPrefab, "Blueberry");
         WarnMissingBushPrefab(treeSettings.raspberryBushPrefab, "Raspberry");
         WarnMissingBushPrefab(treeSettings.strawberryBushPrefab, "Strawberry");
@@ -2071,6 +2089,10 @@ public class FoliageManager
             treeSettings.grasslandOakTreeBillboardPrefab,
             "grassland oak tree billboard");
 
+        grasslandWillowTreeBillboard = ResolveTreeBillboardRenderData(
+            treeSettings.grasslandWillowTreeBillboardPrefab,
+            "grassland willow tree billboard");
+
         if (grasslandFallbackTreeBillboard.mesh == null)
             grasslandFallbackTreeBillboard = fallbackTreeBillboard;
 
@@ -2106,6 +2128,9 @@ public class FoliageManager
 
         if (grasslandOakTreeBillboard.mesh == null)
             grasslandOakTreeBillboard = grasslandFallbackTreeBillboard;
+
+        if (grasslandWillowTreeBillboard.mesh == null)
+            grasslandWillowTreeBillboard = grasslandFallbackTreeBillboard;
     }
 
     private void WarnMissingTreePrefab(GameObject prefab, string label)

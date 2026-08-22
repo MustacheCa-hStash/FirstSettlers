@@ -1959,6 +1959,25 @@ public static class FoliageGenerator
             return;
         }
 
+        if (variant == WorldFeatureVariant.GrasslandWillowTree)
+        {
+            leafTint = PickWeightedColor(
+                Hash01(baseHash + 17),
+                new Color(0.50f, 0.66f, 0.36f, 1f),
+                new Color(0.42f, 0.58f, 0.30f, 1f),
+                new Color(0.62f, 0.70f, 0.42f, 1f),
+                Hash01(baseHash + 31),
+                0.54f,
+                0.84f);
+            leafTint.a = 0;
+
+            barkTint = Color.Lerp(
+                new Color(0.70f, 0.64f, 0.52f, 1f),
+                new Color(0.92f, 0.86f, 0.70f, 1f),
+                Hash01(baseHash + 43));
+            return;
+        }
+
         leafTint = Color.Lerp(
             new Color(0.92f, 0.98f, 0.88f, 1f),
             new Color(1.06f, 1.02f, 0.94f, 1f),

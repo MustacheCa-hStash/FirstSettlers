@@ -21,6 +21,7 @@ public class TreeSettings
     public GameObject grasslandBirchAspenTreePrefab;
     public GameObject grasslandWhitePineTreePrefab;
     public GameObject grasslandOakTreePrefab;
+    public GameObject grasslandWillowTreePrefab;
 
     [Tooltip("Fallback grassland tree prefab used when a grassland species prefab is not assigned.")]
     public GameObject grasslandTreeFallbackPrefab;
@@ -48,6 +49,12 @@ public class TreeSettings
     [Tooltip("Fallback grassland rock prefab used when the grassland rock list is empty or a sampled slot is unassigned.")]
     public GameObject grasslandRockFallbackPrefab;
 
+    [Tooltip("Larger grassland boulder prefabs used as occasional anchors for small rock clusters.")]
+    public GameObject[] grasslandLargeRockPrefabs;
+
+    [Tooltip("Fallback larger grassland boulder prefab used when the larger boulder list is empty or a sampled slot is unassigned.")]
+    public GameObject grasslandLargeRockFallbackPrefab;
+
     [Header("Tree Billboard Prefabs")]
     [Tooltip("Optional merged billboard prefab for generic maple / red maple trees.")]
     public GameObject mapleTreeBillboardPrefab;
@@ -66,6 +73,7 @@ public class TreeSettings
     public GameObject grasslandBirchAspenTreeBillboardPrefab;
     public GameObject grasslandWhitePineTreeBillboardPrefab;
     public GameObject grasslandOakTreeBillboardPrefab;
+    public GameObject grasslandWillowTreeBillboardPrefab;
 
     [Tooltip("Fallback merged billboard tree prefab used when a grassland species billboard is not assigned.")]
     public GameObject grasslandTreeBillboardFallbackPrefab;
@@ -111,6 +119,7 @@ public class TreeSettings
     public int maxGrasslandRocksPerChunk = 7;
 
     public Vector2 grasslandRockUniformScaleRange = new Vector2(60f, 95f);
+    public Vector2 grasslandLargeRockUniformScaleRange = new Vector2(95f, 135f);
     public Vector2 grasslandRockPitchRange = new Vector2(-12f, 12f);
 
     [Tooltip("Grass exclusion radius around instantiated forest rocks.")]

@@ -895,8 +895,13 @@ public class ChunkManager
         settings.forestRockPitchRange = treeSettings.forestRockPitchRange;
         settings.grasslandRockPrefabCount =
             treeSettings.grasslandRockPrefabs != null ? treeSettings.grasslandRockPrefabs.Length : 0;
+        settings.grasslandLargeRockPrefabCount =
+            treeSettings.grasslandLargeRockPrefabs != null ? treeSettings.grasslandLargeRockPrefabs.Length : 0;
+        if (settings.grasslandLargeRockPrefabCount == 0 && treeSettings.grasslandLargeRockFallbackPrefab != null)
+            settings.grasslandLargeRockPrefabCount = 1;
         settings.maxGrasslandRocksPerChunk = Mathf.Max(0, treeSettings.maxGrasslandRocksPerChunk);
         settings.grasslandRockUniformScaleRange = treeSettings.grasslandRockUniformScaleRange;
+        settings.grasslandLargeRockUniformScaleRange = treeSettings.grasslandLargeRockUniformScaleRange;
         settings.grasslandRockPitchRange = treeSettings.grasslandRockPitchRange;
         settings.maxGrasslandTreesPerChunk = Mathf.Max(0, treeSettings.maxGrasslandTreesPerChunk);
 

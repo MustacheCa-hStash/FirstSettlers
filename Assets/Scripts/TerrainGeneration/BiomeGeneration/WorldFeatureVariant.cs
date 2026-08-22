@@ -17,5 +17,7 @@ public enum WorldFeatureVariant
     GrasslandBirchAspenTree,
     GrasslandWhitePineTree,
     GrasslandOakTree,
-    GrasslandBoulder
+    GrasslandBoulder,
+    GrasslandWillowTree,
+    GrasslandLargeBoulder
 }
