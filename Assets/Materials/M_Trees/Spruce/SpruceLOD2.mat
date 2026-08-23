@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: SpruceLOD2
+  m_Shader: {fileID: 4800000, guid: bcbe1729f6b64e4e85424c7ecef0d6bc, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap:
+    RenderType: TransparentCutout
+  disabledShaderPasses:
+  - MOTIONVECTORS
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: dc29379f2fed96943adb931be7401830, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _LeafMask:
+        m_Texture: {fileID: 2800000, guid: 68044876f7e92f247943e3ce19c78330, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AmbientStrength: 0.58
+    - _Brightness: 1
+    - _ColorVariationStrength: 0.36
+    - _Cutoff: 0.38
+    - _InteriorShadeStrength: 0.16
+    - _LeafMaskSoftness: 0.04
+    - _LeafMaskThreshold: 0.25
+    - _LeafTintStrength: 0.95
+    - _LightWrap: 0.62
+    - _LowerShadeStrength: 0.22
+    - _NeedleContrast: 0.18
+    - _Smoothness: 0.05
+    - _SpecularStrength: 0.015
+    - _TipStrength: 0.18
+    m_Colors:
+    - _BarkTint: {r: 1, g: 1, b: 1, a: 1}
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+    - _BaseNeedleColor: {r: 0.18431373, g: 0.3529412, b: 0.21176471, a: 1}
+    - _CoolNeedleColor: {r: 0.13, g: 0.25, b: 0.22, a: 1}
+    - _DeepNeedleColor: {r: 0.055, g: 0.16, b: 0.09, a: 1}
+    - _TipNeedleColor: {r: 0.3, g: 0.45, b: 0.22, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
+--- !u!114 &-7086549217604251651
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Editor::UnityEditor.Rendering.Universal.AssetVersion
+  version: 10

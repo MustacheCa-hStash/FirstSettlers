@@ -51,11 +51,13 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -218,6 +220,10 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 half4 atlas = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
                 clip(atlas.a - _Cutoff);
 
+                #ifdef LOD_FADE_CROSSFADE
+                    LODFadeCrossFade(IN.positionCS);
+                #endif
+
                 half3 leafColor = EvaluateSpruceNeedleColor(IN.uv, IN.positionWS);
                 leafColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
                 leafColor = ApplySpruceNeedleDefinition(atlas, leafColor);
@@ -248,10 +254,12 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -363,6 +371,11 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
 
                 half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
                 clip(alpha - _Cutoff);
+
+                #ifdef LOD_FADE_CROSSFADE
+                    LODFadeCrossFade(IN.positionCS);
+                #endif
+
                 return 0;
             }
             ENDHLSL

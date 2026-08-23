@@ -611,7 +611,7 @@ MonoBehaviour:
     sugarMapleTreePrefab: {fileID: 8959362317222411645, guid: d83b7cf60ca70de4c84b168dd59ed8cf, type: 3}
     birchAspenTreePrefab: {fileID: 6389886508054090531, guid: dc3305daa1890e84f84218a22facd756, type: 3}
     beechTreePrefab: {fileID: 0}
-    spruceTreePrefab: {fileID: 7646694047763373140, guid: 2ce6d38af2fc32d4593a6ac07664f29a, type: 3}
+    spruceTreePrefab: {fileID: 1924954691341669752, guid: 1815886d6db86144a94eab573a359048, type: 3}
     whitePineTreePrefab: {fileID: 9167976221399298968, guid: 272060f130eda5545b5b78e8a9ef33d1, type: 3}
     oakTreePrefab: {fileID: 689681528551111153, guid: 13bdb8ed23f7955478eafc28cf9f8a23, type: 3}
     treeLOD0GameObjectPrefab: {fileID: 7646694047763373140, guid: 2ce6d38af2fc32d4593a6ac07664f29a, type: 3}
@@ -663,7 +663,7 @@ MonoBehaviour:
     grassExclusionRadius: 0.5
     bushGrassExclusionRadius: 0.45
     seedOffset: 12000
-    gameObjectTreeChunkRingRadius: 2
+    gameObjectTreeChunkRingRadius: 3
     billboardTreeChunkRingRadius: 15
     gameObjectBushChunkRingRadius: 3
     maxForestRocksPerChunk: 2
@@ -776,7 +776,7 @@ Transform:
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -147, y: 100, z: -677}
+  m_LocalPosition: {x: -54.02811, y: 50, z: -884.3734}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
