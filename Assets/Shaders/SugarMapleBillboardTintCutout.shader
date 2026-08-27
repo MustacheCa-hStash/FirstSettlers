@@ -5,6 +5,16 @@ Shader "Custom/SugarMapleBillboardSimpleLitCutout"
         [MainTexture] _BaseMap("Sugar Maple Billboard Texture", 2D) = "white" {}
         [MainColor] _BaseColor("Base Tint", Color) = (1, 1, 1, 1)
         [PerRendererData] _TreeLeafTint("Tree Leaf Tint", Color) = (1.0, 0.74, 0.22, 1)
+        _BillboardTintAverageColor("Billboard Average Leaf Tint", Color) = (1.0, 0.70, 0.16, 1)
+        _BillboardTintCompression("Billboard Tint Compression", Range(0, 1)) = 0.0
+        _SummerLeafColor("Summer Leaf Color", Color) = (0.16, 0.45, 0.12, 1.0)
+        _AutumnRedColor("Autumn Red Color", Color) = (0.72, 0.08, 0.055, 1.0)
+        _AutumnOrangeColor("Autumn Orange Color", Color) = (0.95, 0.32, 0.06, 1.0)
+        _AutumnYellowColor("Autumn Yellow Color", Color) = (1.0, 0.62, 0.12, 1.0)
+        _LeafShadowColor("Leaf Shadow Color", Color) = (0.34, 0.24, 0.08, 1.0)
+        _SeasonAutumnAmount("Season Autumn Amount", Range(0, 1)) = 1.0
+        _TreeTintStrength("Per Tree Tint Strength", Range(0, 1)) = 0.88
+        _ColorVariationStrength("Color Variation Strength", Range(0, 1)) = 0.28
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.5
         _LeafMaskThreshold("Leaf White Threshold", Range(0, 1)) = 0.42
         _LeafMaskSoftness("Leaf White Softness", Range(0.001, 0.35)) = 0.14
@@ -65,6 +75,16 @@ Shader "Custom/SugarMapleBillboardSimpleLitCutout"
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
+                half4 _BillboardTintAverageColor;
+                half _BillboardTintCompression;
+                half4 _SummerLeafColor;
+                half4 _AutumnRedColor;
+                half4 _AutumnOrangeColor;
+                half4 _AutumnYellowColor;
+                half4 _LeafShadowColor;
+                half _SeasonAutumnAmount;
+                half _TreeTintStrength;
+                half _ColorVariationStrength;
                 half _Cutoff;
                 half _LeafMaskThreshold;
                 half _LeafMaskSoftness;
@@ -130,6 +150,22 @@ Shader "Custom/SugarMapleBillboardSimpleLitCutout"
                 float sway = gust * _WindStrength * heightMask;
                 float edgeFlutter = flutter * _WindFlutterStrength * heightMask * edgeMask;
                 return positionWS + float3(windDir.x, 0.0, windDir.y) * (sway + edgeFlutter);
+            }
+
+            half3 EvaluateAutumnColor(float2 uv, float3 positionWS)
+            {
+                half leafNoise = Hash12(floor(positionWS.xz * 0.45h) + floor(uv * 8.0h));
+                half fineNoise = Hash12(floor(positionWS.xz * 1.25h) + floor(uv * 19.0h));
+
+                half orangeMix = smoothstep(0.22h, 0.78h, leafNoise);
+                half yellowMix = smoothstep(0.66h, 0.96h, fineNoise) * _ColorVariationStrength;
+                half russetMix = smoothstep(0.82h, 0.98h, leafNoise + fineNoise * 0.22h);
+
+                half3 autumnColor = lerp(_AutumnRedColor.rgb, _AutumnOrangeColor.rgb, orangeMix * _ColorVariationStrength);
+                autumnColor = lerp(autumnColor, _AutumnYellowColor.rgb, yellowMix);
+                autumnColor = lerp(autumnColor, _LeafShadowColor.rgb * 1.65h, russetMix * _ColorVariationStrength * 0.18h);
+
+                return autumnColor;
             }
 
             Varyings vert(Attributes IN)
@@ -208,8 +244,12 @@ Shader "Custom/SugarMapleBillboardSimpleLitCutout"
                 half paleArtifactMask = smoothstep(0.28h, 0.58h, luma) * neutralness * canopyMask * _PaleArtifactStrength;
                 leafMask = max(leafMask, paleArtifactMask);
 
+                half3 autumnColor = EvaluateAutumnColor(IN.uv, IN.positionWS);
+                half3 leafColor = lerp(_SummerLeafColor.rgb, autumnColor, saturate(_SeasonAutumnAmount));
                 half3 treeLeafTint = UNITY_ACCESS_INSTANCED_PROP(TreeBillboardInstanceProperties, _TreeLeafTint).rgb;
-                half3 color = lerp(baseSample.rgb, treeLeafTint, leafMask * _LeafTintStrength);
+                treeLeafTint = lerp(treeLeafTint, _BillboardTintAverageColor.rgb, saturate(_BillboardTintCompression));
+                leafColor = lerp(leafColor, treeLeafTint, saturate(_TreeTintStrength * _SeasonAutumnAmount));
+                half3 color = lerp(baseSample.rgb, leafColor, leafMask * _LeafTintStrength);
                 half alpha = baseSample.a * _BaseColor.a;
                 InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);
                 SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(saturate(color * _Brightness), alpha, _Smoothness, _SpecularStrength);

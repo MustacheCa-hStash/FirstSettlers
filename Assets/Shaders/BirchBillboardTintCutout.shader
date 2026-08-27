@@ -21,6 +21,7 @@ Shader "Custom/BirchBillboardSimpleLitCutout"
         _TrunkProtectFade("Trunk Protect Fade", Range(0.001, 0.5)) = 0.08
         _LeafTintStrength("Leaf Tint Strength", Range(0, 1)) = 1.0
         _ColorVariationStrength("Color Variation Strength", Range(0, 1)) = 0.42
+        _BillboardTintCompression("Billboard Tint Compression", Range(0, 1)) = 0.20
         _InteriorShadeStrength("Interior Canopy Shade", Range(0, 1)) = 0.04
         _LowerShadeStrength("Lower Canopy Shade", Range(0, 1)) = 0.06
         _Brightness("Brightness", Range(0.25, 2)) = 1.0
@@ -93,6 +94,7 @@ Shader "Custom/BirchBillboardSimpleLitCutout"
                 half _TrunkProtectFade;
                 half _LeafTintStrength;
                 half _ColorVariationStrength;
+                half _BillboardTintCompression;
                 half _InteriorShadeStrength;
                 half _LowerShadeStrength;
                 half _Brightness;
@@ -260,6 +262,8 @@ Shader "Custom/BirchBillboardSimpleLitCutout"
 
                 half leafMask = saturate(whiteMask * canopyMask * (1.0h - trunkProtect));
                 half3 leafColor = EvaluateBirchLeafColor(IN.uv, IN.instanceOriginWS);
+                half3 averageLeafColor = lerp(_SummerLeafColor.rgb, _AutumnGoldColor.rgb, saturate(_SeasonAutumnAmount));
+                leafColor = lerp(leafColor, averageLeafColor, saturate(_BillboardTintCompression));
 
                 half2 centeredUv = IN.uv * 2.0h - 1.0h;
                 half interiorMask = 1.0h - saturate(length(centeredUv * half2(0.92h, 1.18h)));

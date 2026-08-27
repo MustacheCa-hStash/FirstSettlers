@@ -6,6 +6,8 @@ Shader "Custom/RedMapleBillboardSimpleLitCutout"
         [MainColor] _BaseColor("Base Tint", Color) = (1, 1, 1, 1)
         _BillboardLeafTint("Billboard Leaf Tint", Color) = (0.88, 0.06, 0.035, 1)
         [PerRendererData] _TreeLeafTint("Tree Leaf Tint Multiplier", Color) = (1, 1, 1, 1)
+        _BillboardTintAverageColor("Billboard Average Leaf Tint", Color) = (0.88, 0.06, 0.035, 1)
+        _BillboardTintCompression("Billboard Tint Compression", Range(0, 1)) = 0.35
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.5
         _LeafMaskThreshold("Leaf White Threshold", Range(0, 1)) = 0.42
         _LeafMaskSoftness("Leaf White Softness", Range(0.001, 0.35)) = 0.14
@@ -67,6 +69,8 @@ Shader "Custom/RedMapleBillboardSimpleLitCutout"
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
                 half4 _BillboardLeafTint;
+                half4 _BillboardTintAverageColor;
+                half _BillboardTintCompression;
                 half _Cutoff;
                 half _LeafMaskThreshold;
                 half _LeafMaskSoftness;
@@ -213,6 +217,8 @@ Shader "Custom/RedMapleBillboardSimpleLitCutout"
                 half4 instanceLeafTint = UNITY_ACCESS_INSTANCED_PROP(TreeBillboardInstanceProperties, _TreeLeafTint);
                 half directTintAmount = 1.0h - saturate(instanceLeafTint.a);
                 half3 treeLeafTint = lerp(_BillboardLeafTint.rgb * instanceLeafTint.rgb, instanceLeafTint.rgb, directTintAmount);
+                half3 compressionTarget = lerp(_BillboardTintAverageColor.rgb, instanceLeafTint.rgb, directTintAmount);
+                treeLeafTint = lerp(treeLeafTint, compressionTarget, saturate(_BillboardTintCompression));
                 half3 color = lerp(baseSample.rgb, treeLeafTint, leafMask * _LeafTintStrength);
                 half alpha = baseSample.a * _BaseColor.a;
                 InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);

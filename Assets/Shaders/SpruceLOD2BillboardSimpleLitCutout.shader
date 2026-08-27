@@ -24,6 +24,12 @@ Shader "Custom/SpruceLOD2BillboardSimpleLitCutout"
         _LightWrap("Billboard Light Softness", Range(0, 1)) = 0.62
         _Smoothness("Smoothness", Range(0, 1)) = 0.05
         _SpecularStrength("Specular Strength", Range(0, 1)) = 0.015
+        _WindDirection("Wind Direction", Vector) = (1, 0, 0.35, 0)
+        _WindStrength("Wind Sway Strength", Range(0, 1)) = 0.045
+        _WindSpeed("Wind Sway Speed", Range(0, 8)) = 1.15
+        _WindFlutterStrength("Wind Edge Flutter Strength", Range(0, 1)) = 0.012
+        _WindFlutterSpeed("Wind Edge Flutter Speed", Range(0, 16)) = 3.2
+        _WindGustScale("Wind Gust Scale", Range(0.01, 2)) = 0.14
     }
 
     SubShader
@@ -89,6 +95,12 @@ Shader "Custom/SpruceLOD2BillboardSimpleLitCutout"
                 half _LightWrap;
                 half _Smoothness;
                 half _SpecularStrength;
+                float4 _WindDirection;
+                half _WindStrength;
+                half _WindSpeed;
+                half _WindFlutterStrength;
+                half _WindFlutterSpeed;
+                half _WindGustScale;
             CBUFFER_END
 
             struct Attributes
@@ -137,25 +149,52 @@ Shader "Custom/SpruceLOD2BillboardSimpleLitCutout"
                 return needleColor;
             }
 
+            float2 GetAtlasViewUv(float2 atlasUv)
+            {
+                return frac(min(atlasUv, 0.9999) * 2.0);
+            }
+
+            float3 ApplyBillboardWind(float3 positionWS, float3 instanceOriginWS, float2 viewUv)
+            {
+                float2 windDir = normalize(_WindDirection.xz + float2(0.0001, 0.0));
+                float heightMask = smoothstep(0.0, 1.0, saturate(viewUv.y));
+                heightMask *= heightMask;
+
+                float instancePhase = Hash12(floor(instanceOriginWS.xz * 0.37)) * 6.2831853;
+                float gustPhase = dot(instanceOriginWS.xz, windDir) * _WindGustScale + _Time.y * _WindSpeed + instancePhase;
+                float gust = sin(gustPhase);
+
+                float edgeMask = abs(viewUv.x - 0.5) * 2.0;
+                float flutter = sin(_Time.y * _WindFlutterSpeed + instancePhase + edgeMask * 2.4);
+
+                float sway = gust * _WindStrength * heightMask;
+                float edgeFlutter = flutter * _WindFlutterStrength * heightMask * edgeMask;
+                return positionWS + float3(windDir.x, 0.0, windDir.y) * (sway + edgeFlutter);
+            }
+
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
                 UNITY_SETUP_INSTANCE_ID(IN);
                 UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
 
-                VertexPositionInputs positionInputs = GetVertexPositionInputs(IN.positionOS.xyz);
+                float3 positionWS = TransformObjectToWorld(IN.positionOS.xyz);
                 VertexNormalInputs normalInputs = GetVertexNormalInputs(IN.normalOS);
+                float3 instanceOriginWS = mul(GetObjectToWorldMatrix(), float4(0.0, 0.0, 0.0, 1.0)).xyz;
+                float2 uv = TRANSFORM_TEX(IN.uv, _BaseMap);
+                float2 viewUv = GetAtlasViewUv(uv);
+                positionWS = ApplyBillboardWind(positionWS, instanceOriginWS, viewUv);
 
                 half3 normalWS = NormalizeNormalPerVertex(normalInputs.normalWS);
                 normalWS = normalize(lerp(normalWS, half3(0.0h, 1.0h, 0.0h), _LightWrap * 0.30h));
 
-                OUT.positionCS = positionInputs.positionCS;
-                OUT.positionWS = positionInputs.positionWS;
+                OUT.positionCS = TransformWorldToHClip(positionWS);
+                OUT.positionWS = positionWS;
                 OUT.normalWS = normalWS;
-                OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
-                OUT.viewUv = frac(OUT.uv * 2.0);
-                OUT.instanceOriginWS = mul(GetObjectToWorldMatrix(), float4(0.0, 0.0, 0.0, 1.0)).xyz;
-                OUT.shadowCoord = TransformWorldToShadowCoord(positionInputs.positionWS);
+                OUT.uv = uv;
+                OUT.viewUv = viewUv;
+                OUT.instanceOriginWS = instanceOriginWS;
+                OUT.shadowCoord = TransformWorldToShadowCoord(positionWS);
                 return OUT;
             }
 
@@ -244,6 +283,12 @@ Shader "Custom/SpruceLOD2BillboardSimpleLitCutout"
                 half _LightWrap;
                 half _Smoothness;
                 half _SpecularStrength;
+                float4 _WindDirection;
+                half _WindStrength;
+                half _WindSpeed;
+                half _WindFlutterStrength;
+                half _WindFlutterSpeed;
+                half _WindGustScale;
             CBUFFER_END
 
             struct Attributes
@@ -260,14 +305,47 @@ Shader "Custom/SpruceLOD2BillboardSimpleLitCutout"
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
+            float Hash12(float2 p)
+            {
+                float3 p3 = frac(float3(p.xyx) * float3(0.1031, 0.1030, 0.0973));
+                p3 += dot(p3, p3.yzx + 33.33);
+                return frac((p3.x + p3.y) * p3.z);
+            }
+
+            float2 GetAtlasViewUv(float2 atlasUv)
+            {
+                return frac(min(atlasUv, 0.9999) * 2.0);
+            }
+
+            float3 ApplyBillboardWind(float3 positionWS, float3 instanceOriginWS, float2 viewUv)
+            {
+                float2 windDir = normalize(_WindDirection.xz + float2(0.0001, 0.0));
+                float heightMask = smoothstep(0.0, 1.0, saturate(viewUv.y));
+                heightMask *= heightMask;
+
+                float instancePhase = Hash12(floor(instanceOriginWS.xz * 0.37)) * 6.2831853;
+                float gustPhase = dot(instanceOriginWS.xz, windDir) * _WindGustScale + _Time.y * _WindSpeed + instancePhase;
+                float gust = sin(gustPhase);
+
+                float edgeMask = abs(viewUv.x - 0.5) * 2.0;
+                float flutter = sin(_Time.y * _WindFlutterSpeed + instancePhase + edgeMask * 2.4);
+
+                float sway = gust * _WindStrength * heightMask;
+                float edgeFlutter = flutter * _WindFlutterStrength * heightMask * edgeMask;
+                return positionWS + float3(windDir.x, 0.0, windDir.y) * (sway + edgeFlutter);
+            }
+
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
                 UNITY_SETUP_INSTANCE_ID(IN);
                 UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
 
-                OUT.positionCS = TransformObjectToHClip(IN.positionOS.xyz);
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
+                float3 instanceOriginWS = mul(GetObjectToWorldMatrix(), float4(0.0, 0.0, 0.0, 1.0)).xyz;
+                float3 positionWS = TransformObjectToWorld(IN.positionOS.xyz);
+                positionWS = ApplyBillboardWind(positionWS, instanceOriginWS, GetAtlasViewUv(OUT.uv));
+                OUT.positionCS = TransformWorldToHClip(positionWS);
                 return OUT;
             }
 

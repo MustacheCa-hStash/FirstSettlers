@@ -57,11 +57,13 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
             #include "Assets/Shaders/TreeSimpleLitCommon.hlsl"
 
             TEXTURE2D(_BaseMap);
@@ -195,6 +197,10 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
 
                 half4 atlas = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
                 clip(atlas.a - _Cutoff);
+
+                #ifdef LOD_FADE_CROSSFADE
+                    LODFadeCrossFade(IN.positionCS);
+                #endif
 
                 half alphaCoverage = saturate((atlas.a - _Cutoff) / max(1.0h - _Cutoff, 0.001h));
                 half atlasLuma = dot(atlas.rgb, half3(0.299h, 0.587h, 0.114h));

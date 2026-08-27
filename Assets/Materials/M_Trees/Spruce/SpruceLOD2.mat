@@ -49,6 +49,11 @@ Material:
     - _Smoothness: 0.05
     - _SpecularStrength: 0.015
     - _TipStrength: 0.18
+    - _WindFlutterSpeed: 3.2
+    - _WindFlutterStrength: 0.012
+    - _WindGustScale: 0.14
+    - _WindSpeed: 1.15
+    - _WindStrength: 0.045
     m_Colors:
     - _BarkTint: {r: 1, g: 1, b: 1, a: 1}
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
@@ -56,6 +61,7 @@ Material:
     - _CoolNeedleColor: {r: 0.13, g: 0.25, b: 0.22, a: 1}
     - _DeepNeedleColor: {r: 0.055, g: 0.16, b: 0.09, a: 1}
     - _TipNeedleColor: {r: 0.3, g: 0.45, b: 0.22, a: 1}
+    - _WindDirection: {r: 1, g: 0, b: 0.35, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!114 &-7086549217604251651

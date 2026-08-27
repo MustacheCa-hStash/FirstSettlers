@@ -10,15 +10,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 505b4420a57adcb44a1d76e8ec8b78e8, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.61612344
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 505b4420a57adcb44a1d76e8ec8b78e8, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -1.5897377
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 505b4420a57adcb44a1d76e8ec8b78e8, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.47986495
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 505b4420a57adcb44a1d76e8ec8b78e8, type: 3}
       propertyPath: m_LocalRotation.w
@@ -30,11 +30,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 505b4420a57adcb44a1d76e8ec8b78e8, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 505b4420a57adcb44a1d76e8ec8b78e8, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 505b4420a57adcb44a1d76e8ec8b78e8, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -49,6 +49,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -7511558181221131132, guid: 505b4420a57adcb44a1d76e8ec8b78e8, type: 3}
+      propertyPath: m_CastShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 505b4420a57adcb44a1d76e8ec8b78e8, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: 53b60d7f9ef660d44bd364cc6fdbfe86, type: 2}
@@ -58,7 +62,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 4ac6e1a01d16fbf44b6f5f890f922459, type: 2}
     - target: {fileID: 919132149155446097, guid: 505b4420a57adcb44a1d76e8ec8b78e8, type: 3}
       propertyPath: m_Name
-      value: Spruce_LOD0_P4292_B1968_L2304_v01
+      value: Spruce_LOD0_v01
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
