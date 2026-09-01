@@ -160,6 +160,7 @@ public static class TerrainGenerationProfiler
     private static int queuedGrassSubChunks;
     private static int dirtyGrassChunks;
     private static int queuedFoliageBatchRebuilds;
+    private static int queuedTreeRepresentationRebuilds;
 
     static TerrainGenerationProfiler()
     {
@@ -245,7 +246,8 @@ public static class TerrainGenerationProfiler
         int pendingGrassWork,
         int queuedGrassKeys,
         int dirtyGrassChunkCount,
-        int foliageBatchRebuildCount = 0)
+        int foliageBatchRebuildCount = 0,
+        int treeRepresentationRebuildCount = -1)
     {
         if (!isEnabled)
             return;
@@ -256,6 +258,8 @@ public static class TerrainGenerationProfiler
             queuedGrassSubChunks = queuedGrassKeys;
             dirtyGrassChunks = dirtyGrassChunkCount;
             queuedFoliageBatchRebuilds = foliageBatchRebuildCount;
+            if (treeRepresentationRebuildCount >= 0)
+                queuedTreeRepresentationRebuilds = treeRepresentationRebuildCount;
         }
     }
 
@@ -306,7 +310,9 @@ public static class TerrainGenerationProfiler
             Builder.Append(" dirtyGrassChunks=");
             Builder.Append(dirtyGrassChunks);
             Builder.Append(" queuedBatchRebuilds=");
-            Builder.AppendLine(queuedFoliageBatchRebuilds.ToString());
+            Builder.Append(queuedFoliageBatchRebuilds);
+            Builder.Append(" queuedTreeRebuilds=");
+            Builder.AppendLine(queuedTreeRepresentationRebuilds.ToString());
             Builder.AppendLine("stage | count | avg ms | max ms | total ms");
 
             for (int i = 0; i < Stages.Length; i++)

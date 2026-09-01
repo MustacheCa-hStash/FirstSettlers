@@ -10,11 +10,15 @@ public readonly struct WorldDebugInfo
     public readonly bool HasFoliageRuntime;
     public readonly BiomeType Biome;
     public readonly SurfaceType SurfaceType;
+    public readonly GroundCoverType GroundCoverType;
     public readonly float WorldHeight;
     public readonly float Slope;
     public readonly float Moisture;
     public readonly float Temperature;
     public readonly float RiverMask;
+    public readonly int PlannedTreeCount;
+    public readonly int GeneratedTreeCount;
+    public readonly int TreeGameObjectCount;
     public readonly int GpuGrassInstanceCount;
     public readonly int GpuFlowerInstanceCount;
     public readonly int GpuTreeInstanceCount;
@@ -28,11 +32,15 @@ public readonly struct WorldDebugInfo
         bool hasFoliageRuntime,
         BiomeType biome,
         SurfaceType surfaceType,
+        GroundCoverType groundCoverType,
         float worldHeight,
         float slope,
         float moisture,
         float temperature,
         float riverMask,
+        int plannedTreeCount,
+        int generatedTreeCount,
+        int treeGameObjectCount,
         int gpuGrassInstanceCount,
         int gpuFlowerInstanceCount,
         int gpuTreeInstanceCount)
@@ -45,11 +53,15 @@ public readonly struct WorldDebugInfo
         HasFoliageRuntime = hasFoliageRuntime;
         Biome = biome;
         SurfaceType = surfaceType;
+        GroundCoverType = groundCoverType;
         WorldHeight = worldHeight;
         Slope = slope;
         Moisture = moisture;
         Temperature = temperature;
         RiverMask = riverMask;
+        PlannedTreeCount = plannedTreeCount;
+        GeneratedTreeCount = generatedTreeCount;
+        TreeGameObjectCount = treeGameObjectCount;
         GpuGrassInstanceCount = gpuGrassInstanceCount;
         GpuFlowerInstanceCount = gpuFlowerInstanceCount;
         GpuTreeInstanceCount = gpuTreeInstanceCount;

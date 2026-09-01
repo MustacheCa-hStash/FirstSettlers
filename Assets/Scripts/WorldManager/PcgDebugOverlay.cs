@@ -165,6 +165,8 @@ public class PcgDebugOverlay : MonoBehaviour
         builder.AppendLine(info.Biome.ToString());
         builder.Append("Surface: ");
         builder.AppendLine(info.SurfaceType.ToString());
+        builder.Append("Ground Cover: ");
+        builder.AppendLine(info.GroundCoverType.ToString());
         builder.Append("World Height: ");
         builder.AppendLine(info.WorldHeight.ToString("0.00"));
         builder.Append("Slope: ");
@@ -175,6 +177,12 @@ public class PcgDebugOverlay : MonoBehaviour
         builder.AppendLine(info.Temperature.ToString("0.000"));
         builder.Append("River Mask: ");
         builder.AppendLine(info.RiverMask.ToString("0.000"));
+        builder.Append("Planned Trees: ");
+        builder.AppendLine(info.PlannedTreeCount.ToString());
+        builder.Append("Generated Trees: ");
+        builder.AppendLine(info.GeneratedTreeCount.ToString());
+        builder.Append("Tree GameObjects: ");
+        builder.AppendLine(info.TreeGameObjectCount.ToString());
         builder.Append("GPU Grass: ");
         builder.AppendLine(info.GpuGrassInstanceCount.ToString());
         builder.Append("GPU Flowers: ");

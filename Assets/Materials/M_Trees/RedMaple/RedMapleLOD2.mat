@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: SugarMapleLOD2
-  m_Shader: {fileID: 4800000, guid: 349e9a4a313246e0956ecf05dcd6cf12, type: 3}
+  m_Name: RedMapleLOD2
+  m_Shader: {fileID: 4800000, guid: e7deaebd9f8542238505db6ff78c8b7a, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -26,11 +26,11 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: ae8f26f9831a5904b894188d470e3847, type: 3}
+        m_Texture: {fileID: 2800000, guid: b4d30d34363ed0e47adc101a188f0003, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _LeafMask:
-        m_Texture: {fileID: 2800000, guid: 044458cbec9fd744cb01df07c1d348a7, type: 3}
+        m_Texture: {fileID: 2800000, guid: 9813008bfc66c684da34a8fabb02b90f, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
@@ -38,39 +38,35 @@ Material:
     - _AmbientStrength: 0.58
     - _BillboardTintCompression: 0
     - _Brightness: 1
-    - _ColorVariationStrength: 0.28
+    - _ColorVariationStrength: 0.16
     - _Cutoff: 0.38
-    - _InteriorShadeStrength: 0.14
-    - _LeafContrast: 0.2
-    - _LeafMaskSoftness: 0.04
-    - _LeafMaskThreshold: 0.25
-    - _LeafSaturation: 0.84
+    - _InteriorShadeStrength: 0.16
+    - _LeafContrast: 0.18
+    - _LeafMaskSoftness: 0.05
+    - _LeafMaskThreshold: 0.18
+    - _LeafSaturation: 0.82
     - _LeafTintStrength: 1
     - _LightWrap: 0.64
     - _LowerShadeStrength: 0.2
     - _SeasonAutumnAmount: 1
     - _Smoothness: 0.05
     - _SpecularStrength: 0.015
+    - _TreeTintStrength: 0.92
     - _WindFlutterSpeed: 3.4
     - _WindFlutterStrength: 0.014
     - _WindGustScale: 0.14
     - _WindSpeed: 1.15
     - _WindStrength: 0.045
-    - _TreeTintStrength: 0.88
     m_Colors:
-    - _AutumnCrimsonColor: {r: 0.54, g: 0.22, b: 0.08, a: 1}
-    - _AutumnGoldColor: {r: 1, g: 0.7, b: 0.16, a: 1}
-    - _AutumnOrangeColor: {r: 0.95, g: 0.32, b: 0.06, a: 1}
-    - _AutumnRedColor: {r: 0.72, g: 0.08, b: 0.055, a: 1}
-    - _AutumnYellowColor: {r: 1, g: 0.62, b: 0.12, a: 1}
+    - _AutumnCrimsonColor: {r: 0.48, g: 0.025, b: 0.04, a: 1}
+    - _AutumnOrangeColor: {r: 1, g: 0.25, b: 0.055, a: 1}
+    - _AutumnRedColor: {r: 0.88, g: 0.06, b: 0.035, a: 1}
     - _BarkTint: {r: 1, g: 1, b: 1, a: 1}
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
-    - _BillboardTintAverageColor: {r: 1, g: 0.7, b: 0.16, a: 1}
-    - _LeafShadowColor: {r: 0.34, g: 0.24, b: 0.08, a: 1}
+    - _BillboardTintAverageColor: {r: 0.84, g: 0.08, b: 0.045, a: 1}
+    - _LeafShadowColor: {r: 0.16, g: 0.018, b: 0.018, a: 1}
     - _SummerLeafColor: {r: 0.18, g: 0.42, b: 0.12, a: 1}
-    - _SummerVariationColor: {r: 0.3, g: 0.52, b: 0.16, a: 1}
-    - _SummerDeepVariationColor: {r: 0.1, g: 0.25, b: 0.07, a: 1}
-    - _TreeLeafTint: {r: 1, g: 0.74, b: 0.22, a: 1}
+    - _TreeLeafTint: {r: 0.88, g: 0.06, b: 0.035, a: 1}
     - _WindDirection: {r: 1, g: 0, b: 0.35, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

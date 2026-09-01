@@ -186,11 +186,15 @@ public class ChunkManager
 
         BiomeType biome = default;
         SurfaceType surfaceType = default;
+        GroundCoverType groundCoverType = default;
         float worldHeight = 0f;
         float slope = 0f;
         float moisture = 0f;
         float temperature = 0f;
         float riverMask = 0f;
+        int plannedTreeCount = 0;
+        int generatedTreeCount = 0;
+        int treeGameObjectCount = 0;
         int gpuGrassInstanceCount = 0;
         int gpuFlowerInstanceCount = 0;
         int gpuTreeInstanceCount = 0;
@@ -199,6 +203,9 @@ public class ChunkManager
         {
             biome = record.BiomeMap[sampleX, sampleZ];
             surfaceType = record.SurfaceTypeMap[sampleX, sampleZ];
+            if (record.GroundCoverMap != null)
+                groundCoverType = record.GroundCoverMap[sampleX, sampleZ];
+
             worldHeight = record.HeightMap[sampleX, sampleZ] * meshHeightMultiplier * worldScale;
             slope = record.SlopeMap[sampleX, sampleZ];
             moisture = record.MoistureMap[sampleX, sampleZ];
@@ -206,8 +213,15 @@ public class ChunkManager
             riverMask = record.RiverMaskMap[sampleX, sampleZ];
         }
 
+        if (hasTerrainData && record.WorldFeaturePlan != null)
+            plannedTreeCount = CountPlannedTrees(record.WorldFeaturePlan);
+
+        if (record != null && record.FoliageData != null && record.FoliageData.treeCubesGenerated)
+            generatedTreeCount = record.FoliageData.GetTotalTreeCubeInstanceCount();
+
         if (hasFoliageRuntime)
         {
+            treeGameObjectCount = runtime.FoliageRuntime.TreeGameObjectCount;
             gpuGrassInstanceCount = runtime.FoliageRuntime.GpuGrassInstanceCount;
             gpuFlowerInstanceCount = runtime.FoliageRuntime.GpuFlowerInstanceCount;
             gpuTreeInstanceCount = runtime.FoliageRuntime.GpuTreeInstanceCount;
@@ -222,14 +236,33 @@ public class ChunkManager
             hasFoliageRuntime,
             biome,
             surfaceType,
+            groundCoverType,
             worldHeight,
             slope,
             moisture,
             temperature,
             riverMask,
+            plannedTreeCount,
+            generatedTreeCount,
+            treeGameObjectCount,
             gpuGrassInstanceCount,
             gpuFlowerInstanceCount,
             gpuTreeInstanceCount);
+    }
+
+    private static int CountPlannedTrees(WorldFeaturePlan plan)
+    {
+        if (plan == null || plan.Placements == null)
+            return 0;
+
+        int count = 0;
+        for (int i = 0; i < plan.Placements.Count; i++)
+        {
+            if (plan.Placements[i].featureType == WorldFeatureType.Tree)
+                count++;
+        }
+
+        return count;
     }
 
     public WorldRenderStatsDebugInfo GetVisibleRenderStatsDebugInfo()

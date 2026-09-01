@@ -102,6 +102,16 @@ public class TreeSettings
     [Tooltip("Maximum chunk-ring radius for billboard trees.")]
     public int billboardTreeChunkRingRadius = 8;
 
+    [Header("Tree Streaming Budgets")]
+    [Tooltip("Maximum tree representation rebuilds applied per frame. This includes near GameObject trees and far tree billboard batches.")]
+    public int maxTreeRepresentationRebuildsPerFrame = 1;
+
+    [Tooltip("Approximate per-frame time budget for tree representation rebuilds. Set to 0 to use only the per-frame count cap.")]
+    public float treeRepresentationRebuildBudgetMsPerFrame = 0.75f;
+
+    [Tooltip("Extra rings beyond the GameObject tree ring where inactive tree GameObjects are retained for reuse instead of destroyed.")]
+    public int treeGameObjectWarmRetainExtraRings = 1;
+
     [Header("Berry Bush Rendering")]
     [Tooltip("Chunk-ring radius for berry bush GameObjects. Bushes do not currently use billboards.")]
     public int gameObjectBushChunkRingRadius = 3;

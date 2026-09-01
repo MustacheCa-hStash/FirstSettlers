@@ -129,7 +129,9 @@ public class ChunkFoliageRuntime
     private readonly List<TreeBillboardInstanceBatch> grasslandWillowTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
 
     private GameObject treeGameObjectRoot;
-    private readonly List<GameObject> treeGameObjects = new List<GameObject>();
+    private readonly List<TreeGameObjectInstance> treeGameObjects = new List<TreeGameObjectInstance>();
+    private readonly Dictionary<GameObject, Stack<TreeGameObjectInstance>> pooledTreeGameObjects =
+        new Dictionary<GameObject, Stack<TreeGameObjectInstance>>();
     private GameObject bushGameObjectRoot;
     private readonly List<GameObject> bushGameObjects = new List<GameObject>();
     private GameObject rockGameObjectRoot;
@@ -163,6 +165,7 @@ public class ChunkFoliageRuntime
         CountMatrices(grasslandWhitePineTreeBillboardMatrixBatches) +
         CountMatrices(grasslandOakTreeBillboardMatrixBatches) +
         CountMatrices(grasslandWillowTreeBillboardMatrixBatches);
+    public int TreeGameObjectCount => treeGameObjects.Count;
 
     public bool HasCurrentTreeRepresentation(FoliageRepresentationMode mode)
     {
@@ -183,9 +186,40 @@ public class ChunkFoliageRuntime
 
     public void ClearTreeRepresentation()
     {
-        ClearTreeGameObjects();
+        ClearTreeRepresentation(false);
+    }
+
+    public void ClearTreeRepresentation(bool retainTreeGameObjectsForReuse)
+    {
+        if (!HasAnyTreeRepresentationData())
+            return;
+
+        if (retainTreeGameObjectsForReuse)
+            ReleaseTreeGameObjectsToPool();
+        else
+            DestroyTreeGameObjectsAndPool();
+
         ClearTreeBillboardMatrices();
         ClearCurrentTreeRepresentation();
+    }
+
+    private bool HasAnyTreeRepresentationData()
+    {
+        return hasCurrentTreeRepresentation ||
+               treeGameObjects.Count > 0 ||
+               pooledTreeGameObjects.Count > 0 ||
+               mapleTreeBillboardMatrixBatches.Count > 0 ||
+               sugarMapleTreeBillboardMatrixBatches.Count > 0 ||
+               birchAspenTreeBillboardMatrixBatches.Count > 0 ||
+               beechTreeBillboardMatrixBatches.Count > 0 ||
+               spruceTreeBillboardMatrixBatches.Count > 0 ||
+               whitePineTreeBillboardMatrixBatches.Count > 0 ||
+               oakTreeBillboardMatrixBatches.Count > 0 ||
+               grasslandMapleTreeBillboardMatrixBatches.Count > 0 ||
+               grasslandBirchAspenTreeBillboardMatrixBatches.Count > 0 ||
+               grasslandWhitePineTreeBillboardMatrixBatches.Count > 0 ||
+               grasslandOakTreeBillboardMatrixBatches.Count > 0 ||
+               grasslandWillowTreeBillboardMatrixBatches.Count > 0;
     }
 
     public bool HasCurrentBushRepresentation()
@@ -218,7 +252,7 @@ public class ChunkFoliageRuntime
         grasslandWhitePineTreeBillboardMatrixBatches.Clear();
         grasslandOakTreeBillboardMatrixBatches.Clear();
         grasslandWillowTreeBillboardMatrixBatches.Clear();
-        ClearTreeGameObjects();
+        DestroyTreeGameObjectsAndPool();
         ClearBushGameObjects();
         ClearRockGameObjects();
         ClearCurrentTreeRepresentation();
@@ -306,7 +340,7 @@ public class ChunkFoliageRuntime
 
     public void AccumulateTreeGameObjectRenderStats(ref WorldRenderStatsDebugInfo stats)
     {
-        AccumulateGameObjectStats(treeGameObjects, ref stats.TreeGameObjects);
+        AccumulateTreeGameObjectStats(ref stats.TreeGameObjects);
     }
 
     public void AccumulateBushGameObjectRenderStats(ref WorldRenderStatsDebugInfo stats)
@@ -687,17 +721,37 @@ public class ChunkFoliageRuntime
         }
     }
 
+    private void AccumulateTreeGameObjectStats(ref RenderGeometryStats stats)
+    {
+        for (int i = 0; i < treeGameObjects.Count; i++)
+        {
+            TreeGameObjectInstance treeObject = treeGameObjects[i];
+            if (treeObject == null)
+                continue;
+
+            GameObject gameObject = treeObject.GameObject;
+            if (gameObject == null || !gameObject.activeInHierarchy || treeObject.MeshFilters == null)
+                continue;
+
+            for (int meshIndex = 0; meshIndex < treeObject.MeshFilters.Length; meshIndex++)
+            {
+                MeshFilter meshFilter = treeObject.MeshFilters[meshIndex];
+                if (meshFilter != null)
+                    stats.AddMesh(meshFilter.sharedMesh);
+            }
+        }
+    }
+
     public void RebuildTreeGameObjects(
         List<TreeInstanceData> instances,
         Transform chunkRoot)
     {
-        ClearTreeGameObjects();
+        ReleaseTreeGameObjectsToPool();
 
         if (instances == null || chunkRoot == null || root == null)
             return;
 
-        treeGameObjectRoot = new GameObject("Tree_GameObjects");
-        treeGameObjectRoot.transform.SetParent(root, false);
+        EnsureTreeGameObjectRoot();
 
         for (int i = 0; i < instances.Count; i++)
         {
@@ -707,26 +761,27 @@ public class ChunkFoliageRuntime
             if (prefab == null)
                 continue;
 
-            GameObject treeObject = Object.Instantiate(prefab, treeGameObjectRoot.transform);
-            treeObject.transform.localPosition = instance.localPosition;
-            treeObject.transform.localRotation = instance.localRotation;
-            treeObject.transform.localScale = instance.localScale;
+            TreeGameObjectInstance treeObject = GetTreeGameObject(prefab);
+            Transform treeTransform = treeObject.GameObject.transform;
+            treeTransform.SetParent(treeGameObjectRoot.transform, false);
+            treeTransform.localPosition = instance.localPosition;
+            treeTransform.localRotation = instance.localRotation;
+            treeTransform.localScale = instance.localScale;
 
             ApplyTreeMaterialOverrides(treeObject, instance);
+            treeObject.GameObject.SetActive(true);
             treeGameObjects.Add(treeObject);
         }
     }
 
-    private void ApplyTreeMaterialOverrides(GameObject treeObject, TreeInstanceData instance)
+    private void ApplyTreeMaterialOverrides(TreeGameObjectInstance treeObject, TreeInstanceData instance)
     {
-        if (treeObject == null)
+        if (treeObject == null || treeObject.Renderers == null)
             return;
 
-        Renderer[] renderers = treeObject.GetComponentsInChildren<Renderer>();
-
-        for (int i = 0; i < renderers.Length; i++)
+        for (int i = 0; i < treeObject.Renderers.Length; i++)
         {
-            Renderer renderer = renderers[i];
+            Renderer renderer = treeObject.Renderers[i];
             if (renderer == null)
                 continue;
 
@@ -735,6 +790,63 @@ public class ChunkFoliageRuntime
             treePropertyBlock.SetColor(TreeBarkTintPropertyId, instance.barkTint);
             renderer.SetPropertyBlock(treePropertyBlock);
         }
+    }
+
+    private void EnsureTreeGameObjectRoot()
+    {
+        if (treeGameObjectRoot != null)
+            return;
+
+        treeGameObjectRoot = new GameObject("Tree_GameObjects");
+        treeGameObjectRoot.transform.SetParent(root, false);
+    }
+
+    private TreeGameObjectInstance GetTreeGameObject(GameObject prefab)
+    {
+        if (pooledTreeGameObjects.TryGetValue(prefab, out Stack<TreeGameObjectInstance> pool))
+        {
+            while (pool.Count > 0)
+            {
+                TreeGameObjectInstance pooled = pool.Pop();
+                if (pooled != null && pooled.GameObject != null)
+                    return pooled;
+            }
+        }
+
+        GameObject instance = Object.Instantiate(prefab, treeGameObjectRoot.transform);
+        return new TreeGameObjectInstance(
+            prefab,
+            instance,
+            instance.GetComponentsInChildren<Renderer>(true),
+            instance.GetComponentsInChildren<MeshFilter>(true));
+    }
+
+    public void ReleaseTreeGameObjectsToPool()
+    {
+        if (treeGameObjects.Count == 0)
+            return;
+
+        EnsureTreeGameObjectRoot();
+
+        for (int i = 0; i < treeGameObjects.Count; i++)
+        {
+            TreeGameObjectInstance treeObject = treeGameObjects[i];
+            if (treeObject == null || treeObject.GameObject == null || treeObject.Prefab == null)
+                continue;
+
+            treeObject.GameObject.SetActive(false);
+            treeObject.GameObject.transform.SetParent(treeGameObjectRoot.transform, false);
+
+            if (!pooledTreeGameObjects.TryGetValue(treeObject.Prefab, out Stack<TreeGameObjectInstance> pool))
+            {
+                pool = new Stack<TreeGameObjectInstance>();
+                pooledTreeGameObjects.Add(treeObject.Prefab, pool);
+            }
+
+            pool.Push(treeObject);
+        }
+
+        treeGameObjects.Clear();
     }
 
     public void RebuildBushGameObjects(
@@ -807,15 +919,34 @@ public class ChunkFoliageRuntime
 
     public void ClearTreeGameObjects()
     {
+        DestroyTreeGameObjectsAndPool();
+    }
+
+    private void DestroyTreeGameObjectsAndPool()
+    {
         for (int i = 0; i < treeGameObjects.Count; i++)
         {
-            if (treeGameObjects[i] != null)
+            TreeGameObjectInstance treeObject = treeGameObjects[i];
+            if (treeObject != null && treeObject.GameObject != null)
             {
-                Object.Destroy(treeGameObjects[i]);
+                Object.Destroy(treeObject.GameObject);
             }
         }
 
         treeGameObjects.Clear();
+
+        foreach (KeyValuePair<GameObject, Stack<TreeGameObjectInstance>> poolPair in pooledTreeGameObjects)
+        {
+            Stack<TreeGameObjectInstance> pool = poolPair.Value;
+            while (pool.Count > 0)
+            {
+                TreeGameObjectInstance treeObject = pool.Pop();
+                if (treeObject != null && treeObject.GameObject != null)
+                    Object.Destroy(treeObject.GameObject);
+            }
+        }
+
+        pooledTreeGameObjects.Clear();
 
         if (treeGameObjectRoot != null)
         {
@@ -1145,5 +1276,25 @@ public class ChunkFoliageRuntime
                variant == WorldFeatureVariant.GrasslandWhitePineTree ||
                variant == WorldFeatureVariant.GrasslandOakTree ||
                variant == WorldFeatureVariant.GrasslandWillowTree;
+    }
+
+    private sealed class TreeGameObjectInstance
+    {
+        public readonly GameObject Prefab;
+        public readonly GameObject GameObject;
+        public readonly Renderer[] Renderers;
+        public readonly MeshFilter[] MeshFilters;
+
+        public TreeGameObjectInstance(
+            GameObject prefab,
+            GameObject gameObject,
+            Renderer[] renderers,
+            MeshFilter[] meshFilters)
+        {
+            Prefab = prefab;
+            GameObject = gameObject;
+            Renderers = renderers;
+            MeshFilters = meshFilters;
+        }
     }
 }

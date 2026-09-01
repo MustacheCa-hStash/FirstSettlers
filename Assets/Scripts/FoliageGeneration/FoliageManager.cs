@@ -47,6 +47,8 @@ public class FoliageManager
     private readonly HashSet<ChunkCoord> dirtyGrassChunks = new();
     private readonly List<FoliageBatchWorkItem> pendingFoliageBatchWork = new();
     private readonly HashSet<FoliageBatchWorkKey> queuedFoliageBatchWork = new();
+    private readonly List<TreeRepresentationWorkItem> pendingTreeRepresentationWork = new();
+    private readonly HashSet<ChunkCoord> queuedTreeRepresentationWork = new();
 
     public FoliageManager(Transform foliageParent, GrassSettings grassSettings, FlowerSettings flowerSettings, TreeSettings treeSettings, int worldSeed,
         int chunkSize, float worldScale, float meshHeightMultiplier)
@@ -109,12 +111,12 @@ public class FoliageManager
 
             if (useTrees)
             {
-                EnsureTreesGenerated(record);
-                RebuildTreeRepresentationIfNeeded(runtime, record, viewerCoord);
+                EnqueueTreeRepresentationRebuildIfNeeded(runtime, record, viewerCoord);
             }
             else
             {
-                runtime.FoliageRuntime.ClearTreeRepresentation();
+                runtime.FoliageRuntime.ClearTreeRepresentation(
+                    ShouldRetainTreeGameObjectsForReuse(viewerCoord, coord));
             }
 
             if (useBushes)
@@ -200,6 +202,7 @@ public class FoliageManager
 
         ProcessPendingGrassSubChunkWork(chunkManager, viewerCoord, viewerGlobalSubChunk);
         ProcessPendingFoliageBatchWork(chunkManager, viewerCoord, viewerGlobalSubChunk);
+        ProcessPendingTreeRepresentationWork(chunkManager, viewerCoord);
 
         for (int i = 0; i < orderedActiveCoords.Count; i++)
         {
@@ -234,12 +237,12 @@ public class FoliageManager
 
             if (useTrees)
             {
-                EnsureTreesGenerated(record);
-                RebuildTreeRepresentationIfNeeded(runtime, record, viewerCoord);
+                EnqueueTreeRepresentationRebuildIfNeeded(runtime, record, viewerCoord);
             }
             else
             {
-                runtime.FoliageRuntime.ClearTreeRepresentation();
+                runtime.FoliageRuntime.ClearTreeRepresentation(
+                    ShouldRetainTreeGameObjectsForReuse(viewerCoord, coord));
             }
 
             if (useBushes)
@@ -475,7 +478,6 @@ public class FoliageManager
         if (foliageRuntime.HasCurrentTreeRepresentation(mode))
             return;
 
-        foliageRuntime.ClearTreeGameObjects();
         foliageRuntime.ClearTreeBillboardMatrices();
 
         if (mode == FoliageRepresentationMode.GameObjectWithCollision)
@@ -490,6 +492,11 @@ public class FoliageManager
         }
         else if (mode == FoliageRepresentationMode.GPUInstancedBillboard)
         {
+            if (ShouldRetainTreeGameObjectsForReuse(viewerCoord, record.ChunkCoord))
+                foliageRuntime.ReleaseTreeGameObjectsToPool();
+            else
+                foliageRuntime.ClearTreeGameObjects();
+
             RebuildTreeBillboardMatrices(runtime, record);
         }
 
@@ -888,6 +895,7 @@ public class FoliageManager
             if (data.IsNearGrassSubChunkGenerated(workItem.Key.LocalSubChunkX, workItem.Key.LocalSubChunkZ))
                 continue;
 
+            EnsureTreesGenerated(record);
             EnsureRocksGenerated(record);
             long discoveryStart = TerrainGenerationProfiler.GetTimestamp();
             FoliageGenerator.GenerateGrassForSubChunk(
@@ -947,6 +955,35 @@ public class FoliageManager
             pendingFoliageBatchWork.Count);
     }
 
+    private void EnqueueTreeRepresentationRebuildIfNeeded(
+        ChunkRuntime runtime,
+        ChunkRecord record,
+        ChunkCoord viewerCoord)
+    {
+        if (runtime == null || record == null || runtime.FoliageRuntime == null)
+            return;
+
+        FoliageRepresentationMode mode = GetTreeRepresentationMode(viewerCoord, record.ChunkCoord);
+        if (runtime.FoliageRuntime.HasCurrentTreeRepresentation(mode))
+            return;
+
+        EnqueueTreeRepresentationRebuild(record);
+    }
+
+    private void EnqueueTreeRepresentationRebuild(ChunkRecord record)
+    {
+        if (record == null || !queuedTreeRepresentationWork.Add(record.ChunkCoord))
+            return;
+
+        pendingTreeRepresentationWork.Add(new TreeRepresentationWorkItem(record.ChunkCoord));
+        TerrainGenerationProfiler.RecordFoliageQueueSnapshot(
+            pendingGrassSubChunkWork.Count,
+            queuedGrassSubChunks.Count,
+            dirtyGrassChunks.Count,
+            pendingFoliageBatchWork.Count,
+            pendingTreeRepresentationWork.Count);
+    }
+
     private void ProcessPendingFoliageBatchWork(
         ChunkManager chunkManager,
         ChunkCoord viewerCoord,
@@ -996,6 +1033,75 @@ public class FoliageManager
             queuedGrassSubChunks.Count,
             dirtyGrassChunks.Count,
             pendingFoliageBatchWork.Count);
+    }
+
+    private void ProcessPendingTreeRepresentationWork(
+        ChunkManager chunkManager,
+        ChunkCoord viewerCoord)
+    {
+        int maxRebuilds = Mathf.Max(1, treeSettings.maxTreeRepresentationRebuildsPerFrame);
+        float budgetMs = Mathf.Max(0f, treeSettings.treeRepresentationRebuildBudgetMsPerFrame);
+        long frameStart = TerrainGenerationProfiler.GetTimestamp();
+        int rebuildCount = 0;
+
+        while (pendingTreeRepresentationWork.Count > 0 && rebuildCount < maxRebuilds)
+        {
+            if (budgetMs > 0f && TerrainGenerationProfiler.GetElapsedMilliseconds(frameStart) >= budgetMs)
+                break;
+
+            TreeRepresentationWorkItem workItem = PopNearestTreeRepresentationWork(viewerCoord);
+            queuedTreeRepresentationWork.Remove(workItem.ChunkCoord);
+
+            ChunkRecord record = chunkManager.GetChunkRecord(workItem.ChunkCoord);
+            ChunkRuntime runtime = chunkManager.GetChunkRuntime(record);
+
+            if (record == null || runtime == null || runtime.FoliageRuntime == null || !HasRequiredTerrainData(record))
+                continue;
+
+            if (!IsWithinTreeRenderRange(viewerCoord, workItem.ChunkCoord))
+            {
+                runtime.FoliageRuntime.ClearTreeRepresentation(
+                    ShouldRetainTreeGameObjectsForReuse(viewerCoord, workItem.ChunkCoord));
+                continue;
+            }
+
+            FoliageRepresentationMode mode = GetTreeRepresentationMode(viewerCoord, workItem.ChunkCoord);
+            if (runtime.FoliageRuntime.HasCurrentTreeRepresentation(mode))
+                continue;
+
+            EnsureTreesGenerated(record);
+            RebuildTreeRepresentationIfNeeded(runtime, record, viewerCoord);
+            rebuildCount++;
+        }
+
+        TerrainGenerationProfiler.RecordFoliageQueueSnapshot(
+            pendingGrassSubChunkWork.Count,
+            queuedGrassSubChunks.Count,
+            dirtyGrassChunks.Count,
+            pendingFoliageBatchWork.Count,
+            pendingTreeRepresentationWork.Count);
+    }
+
+    private TreeRepresentationWorkItem PopNearestTreeRepresentationWork(ChunkCoord viewerCoord)
+    {
+        int bestIndex = 0;
+        int bestDistance = int.MaxValue;
+
+        for (int i = 0; i < pendingTreeRepresentationWork.Count; i++)
+        {
+            TreeRepresentationWorkItem candidate = pendingTreeRepresentationWork[i];
+            int distance = GetChunkRingDistance(viewerCoord, candidate.ChunkCoord);
+
+            if (distance >= bestDistance)
+                continue;
+
+            bestDistance = distance;
+            bestIndex = i;
+        }
+
+        TreeRepresentationWorkItem result = pendingTreeRepresentationWork[bestIndex];
+        pendingTreeRepresentationWork.RemoveAt(bestIndex);
+        return result;
     }
 
     private FoliageBatchWorkItem PopNearestFoliageBatchWork(ChunkCoord viewerCoord)
@@ -1644,6 +1750,19 @@ public class FoliageManager
                IsWithinBillboardTreeRenderRange(ring);
     }
 
+    private bool ShouldRetainTreeGameObjectsForReuse(ChunkCoord viewerCoord, ChunkCoord targetCoord)
+    {
+        int extraRings = treeSettings != null
+            ? Mathf.Max(0, treeSettings.treeGameObjectWarmRetainExtraRings)
+            : 0;
+
+        if (extraRings == 0)
+            return false;
+
+        int ring = GetChunkRingDistance(viewerCoord, targetCoord);
+        return ring <= treeSettings.gameObjectTreeChunkRingRadius + extraRings;
+    }
+
     private bool IsWithinBillboardTreeRenderRange(int ring)
     {
         int billboardStartRing = Mathf.Max(
@@ -1811,6 +1930,16 @@ public class FoliageManager
         public override int GetHashCode()
         {
             return HashCode.Combine(ChunkCoord, LocalSubChunkX, LocalSubChunkZ);
+        }
+    }
+
+    private readonly struct TreeRepresentationWorkItem
+    {
+        public readonly ChunkCoord ChunkCoord;
+
+        public TreeRepresentationWorkItem(ChunkCoord chunkCoord)
+        {
+            ChunkCoord = chunkCoord;
         }
     }
 

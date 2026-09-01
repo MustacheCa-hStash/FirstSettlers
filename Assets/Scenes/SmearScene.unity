@@ -607,7 +607,7 @@ MonoBehaviour:
       - {r: 0.72, g: 0.82, b: 1, a: 1}
       - {r: 0.9, g: 0.72, b: 1, a: 1}
   treeSettings:
-    mapleTreePrefab: {fileID: 2976107693347387651, guid: dfd1529e615555846a057ace387a946e, type: 3}
+    mapleTreePrefab: {fileID: 5742719185016810390, guid: 73725a84115a55c42a0b3d9b18fdb0b1, type: 3}
     sugarMapleTreePrefab: {fileID: 8072720124864646751, guid: 92cc01de156a13640b9a9f2978a6ed7d, type: 3}
     birchAspenTreePrefab: {fileID: 6389886508054090531, guid: dc3305daa1890e84f84218a22facd756, type: 3}
     beechTreePrefab: {fileID: 0}
@@ -615,7 +615,7 @@ MonoBehaviour:
     whitePineTreePrefab: {fileID: 5101446390707208562, guid: 884ba04a3225bae48ab5f799d33f1b1f, type: 3}
     oakTreePrefab: {fileID: 689681528551111153, guid: 13bdb8ed23f7955478eafc28cf9f8a23, type: 3}
     treeLOD0GameObjectPrefab: {fileID: 7646694047763373140, guid: 2ce6d38af2fc32d4593a6ac07664f29a, type: 3}
-    grasslandMapleTreePrefab: {fileID: 2976107693347387651, guid: dfd1529e615555846a057ace387a946e, type: 3}
+    grasslandMapleTreePrefab: {fileID: 5742719185016810390, guid: 73725a84115a55c42a0b3d9b18fdb0b1, type: 3}
     grasslandBirchAspenTreePrefab: {fileID: 6389886508054090531, guid: dc3305daa1890e84f84218a22facd756, type: 3}
     grasslandWhitePineTreePrefab: {fileID: 2055201246171467053, guid: 884ba04a3225bae48ab5f799d33f1b1f, type: 3}
     grasslandOakTreePrefab: {fileID: 689681528551111153, guid: 13bdb8ed23f7955478eafc28cf9f8a23, type: 3}
@@ -666,6 +666,9 @@ MonoBehaviour:
     gameObjectTreeChunkRingRadius: 5
     billboardTreeChunkStartRingRadius: 14
     billboardTreeChunkRingRadius: 15
+    maxTreeRepresentationRebuildsPerFrame: 3
+    treeRepresentationRebuildBudgetMsPerFrame: 1.5
+    treeGameObjectWarmRetainExtraRings: 1
     gameObjectBushChunkRingRadius: 3
     maxForestRocksPerChunk: 2
     forestRockUniformScaleRange: {x: 80, y: 100}
