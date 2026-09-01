@@ -18,7 +18,7 @@ public static class BillboardCaptureTool
         }
 
         int size = 1024;
-        string outputPath = "Assets/Textures/WhitePine_LOD2_Albedo_180d.png";
+        string outputPath = "Assets/Textures/RedMaple_LOD2_Mask_270d.png";
 
         RenderTexture previousTarget = camera.targetTexture;
         RenderTexture previousActive = RenderTexture.active;

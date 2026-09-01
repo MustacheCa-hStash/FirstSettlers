@@ -96,6 +96,9 @@ public class TreeSettings
     [Tooltip("Chunk-ring radius for real GameObject trees. 1 means a 3x3 block around the player.")]
     public int gameObjectTreeChunkRingRadius = 1;
 
+    [Tooltip("First chunk ring where billboard trees are allowed. Values inside the GameObject tree ring are clamped to the next ring.")]
+    public int billboardTreeChunkStartRingRadius = 2;
+
     [Tooltip("Maximum chunk-ring radius for billboard trees.")]
     public int billboardTreeChunkRingRadius = 8;
 

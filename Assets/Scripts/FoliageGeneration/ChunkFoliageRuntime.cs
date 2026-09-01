@@ -181,6 +181,13 @@ public class ChunkFoliageRuntime
         hasCurrentTreeRepresentation = false;
     }
 
+    public void ClearTreeRepresentation()
+    {
+        ClearTreeGameObjects();
+        ClearTreeBillboardMatrices();
+        ClearCurrentTreeRepresentation();
+    }
+
     public bool HasCurrentBushRepresentation()
     {
         return hasCurrentBushRepresentation;

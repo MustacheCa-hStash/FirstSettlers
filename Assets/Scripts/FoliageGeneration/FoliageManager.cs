@@ -114,9 +114,7 @@ public class FoliageManager
             }
             else
             {
-                runtime.FoliageRuntime.ClearTreeGameObjects();
-                runtime.FoliageRuntime.ClearTreeBillboardMatrices();
-                runtime.FoliageRuntime.ClearCurrentTreeRepresentation();
+                runtime.FoliageRuntime.ClearTreeRepresentation();
             }
 
             if (useBushes)
@@ -238,6 +236,10 @@ public class FoliageManager
             {
                 EnsureTreesGenerated(record);
                 RebuildTreeRepresentationIfNeeded(runtime, record, viewerCoord);
+            }
+            else
+            {
+                runtime.FoliageRuntime.ClearTreeRepresentation();
             }
 
             if (useBushes)
@@ -532,6 +534,9 @@ public class FoliageManager
         ChunkCoord chunkCoord)
     {
         if (runtime.FoliageRuntime == null)
+            return;
+
+        if (!IsWithinTreeRenderRange(viewerCoord, chunkCoord))
             return;
 
         FoliageRepresentationMode mode = GetTreeRepresentationMode(viewerCoord, chunkCoord);
@@ -1635,7 +1640,18 @@ public class FoliageManager
     private bool IsWithinTreeRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
         int ring = GetChunkRingDistance(viewerCoord, targetCoord);
-        return ring <= treeSettings.billboardTreeChunkRingRadius;
+        return ring <= treeSettings.gameObjectTreeChunkRingRadius ||
+               IsWithinBillboardTreeRenderRange(ring);
+    }
+
+    private bool IsWithinBillboardTreeRenderRange(int ring)
+    {
+        int billboardStartRing = Mathf.Max(
+            treeSettings.gameObjectTreeChunkRingRadius + 1,
+            treeSettings.billboardTreeChunkStartRingRadius);
+
+        return ring >= billboardStartRing &&
+               ring <= treeSettings.billboardTreeChunkRingRadius;
     }
 
     private bool IsWithinBushRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
