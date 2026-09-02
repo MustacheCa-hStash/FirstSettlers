@@ -523,7 +523,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 8
+  worldSeed: 9
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -672,7 +672,17 @@ MonoBehaviour:
     - {fileID: 919132149155446097, guid: 48f37dcb64d335f42a79c8989710a856, type: 3}
     - {fileID: 919132149155446097, guid: 63119c7758858084d87fd43bcbed4df4, type: 3}
     grasslandRockFallbackPrefab: {fileID: 0}
-    grasslandLargeRockPrefabs: []
+    grasslandLargeRockPrefabs:
+    - {fileID: 5215091863491764800, guid: f4ca189b8839d594d9aae73c01c7cd61, type: 3}
+    - {fileID: 8603439171818855941, guid: f0908a49e8aa556478046637fbc14c31, type: 3}
+    - {fileID: 5617976445590795783, guid: 0add64e772f338c42ad3bcc8ac9aa8fd, type: 3}
+    - {fileID: 869278148090617415, guid: 68e7b7c990b8b614c93b262890ce4864, type: 3}
+    - {fileID: 4141125598104437029, guid: 4b70e7cd7b1c904439856e001ae6451c, type: 3}
+    - {fileID: 6023063466888445313, guid: 716bba450967d284c942936f54ec23d2, type: 3}
+    - {fileID: 5918946592282660831, guid: 86c68384a88305141a9eb3e14d76ef56, type: 3}
+    - {fileID: 1998103615296109997, guid: d858c33e836a3f746a9238e50687a2b0, type: 3}
+    - {fileID: 84383437243448747, guid: 298768191928dee44af9681b94d34074, type: 3}
+    - {fileID: 8050534036156293782, guid: fcff478c2eedf3b4ca05fa36f505f20b, type: 3}
     grasslandLargeRockFallbackPrefab: {fileID: 0}
     mapleTreeBillboardPrefab: {fileID: 3403621320543128518, guid: d96f60ca326eadc41ae355f1226e17f0, type: 3}
     sugarMapleTreeBillboardPrefab: {fileID: 3842789560270380040, guid: 2765c206081e4df4db5876c1fb94f5cf, type: 3}
