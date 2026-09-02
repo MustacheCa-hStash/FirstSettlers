@@ -1,9 +1,45 @@
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
 
 public class ChunkManager
 {
     private const int FarTerrainLOD = 5;
+    private static readonly ProfilerMarker UpdateActiveChunksMarker = new ProfilerMarker("FS.Streaming.ChunkManager.UpdateActiveChunks");
+    private static readonly ProfilerMarker ProcessCompletedRequestsMarker = new ProfilerMarker("FS.Streaming.ProcessCompletedRequests");
+    private static readonly ProfilerMarker ApplyTerrainDataResultsMarker = new ProfilerMarker("FS.Streaming.ApplyTerrainDataResults");
+    private static readonly ProfilerMarker ApplyTerrainDataResultMarker = new ProfilerMarker("FS.Streaming.ApplyTerrainDataResult");
+    private static readonly ProfilerMarker ApplyLodMeshResultsMarker = new ProfilerMarker("FS.Streaming.ApplyLODMeshResults");
+    private static readonly ProfilerMarker ApplyLodMeshResultMarker = new ProfilerMarker("FS.Streaming.ApplyLODMeshResult");
+    private static readonly ProfilerMarker ApplyColliderResultsMarker = new ProfilerMarker("FS.Streaming.ApplyColliderResults");
+    private static readonly ProfilerMarker ApplyColliderResultMarker = new ProfilerMarker("FS.Streaming.ApplyColliderResult");
+    private static readonly ProfilerMarker ApplyFarTerrainResultsMarker = new ProfilerMarker("FS.Streaming.ApplyFarTerrainResults");
+    private static readonly ProfilerMarker ApplyFarTerrainResultMarker = new ProfilerMarker("FS.Streaming.ApplyFarTerrainResult");
+    private static readonly ProfilerMarker RebuildActiveChunkSetMarker = new ProfilerMarker("FS.Streaming.RebuildActiveChunkSet");
+    private static readonly ProfilerMarker UpdateVisibleChunkContentMarker = new ProfilerMarker("FS.Streaming.UpdateVisibleChunkContent");
+    private static readonly ProfilerMarker UpdateVisibleFarTerrainTilesMarker = new ProfilerMarker("FS.Streaming.UpdateVisibleFarTerrainTiles");
+    private static readonly ProfilerMarker CalculateFrustumPlanesMarker = new ProfilerMarker("FS.Streaming.CalculateFrustumPlanes");
+    private static readonly ProfilerMarker VisibleNormalChunkLoopMarker = new ProfilerMarker("FS.Streaming.VisibleNormalChunkLoop");
+    private static readonly ProfilerMarker VisibleChunkFarTerrainPathMarker = new ProfilerMarker("FS.Streaming.VisibleChunk.FarTerrainPath");
+    private static readonly ProfilerMarker VisibleChunkNearTerrainPathMarker = new ProfilerMarker("FS.Streaming.VisibleChunk.NearTerrainPath");
+    private static readonly ProfilerMarker VisibleChunkColliderPathMarker = new ProfilerMarker("FS.Streaming.VisibleChunk.ColliderPath");
+    private static readonly ProfilerMarker VisibleChunkRenderVisibilityMarker = new ProfilerMarker("FS.Streaming.VisibleChunk.RenderVisibility");
+    private static readonly ProfilerMarker VisibleFarTileLoopMarker = new ProfilerMarker("FS.Streaming.VisibleFarTileLoop");
+    private static readonly ProfilerMarker ProcessVisibleChunkContentQueueMarker = new ProfilerMarker("FS.Streaming.ProcessVisibleChunkContentQueue");
+    private static readonly ProfilerMarker RefreshUrgentVisibleChunksMarker = new ProfilerMarker("FS.Streaming.RefreshUrgentVisibleChunks");
+    private static readonly ProfilerMarker RefreshRenderVisibilityMarker = new ProfilerMarker("FS.Streaming.RefreshRenderVisibility");
+    private static readonly ProfilerMarker ProcessFarTerrainTileContentQueueMarker = new ProfilerMarker("FS.Streaming.ProcessFarTerrainTileContentQueue");
+    private static readonly ProfilerMarker RefreshFarTerrainTileVisibilityMarker = new ProfilerMarker("FS.Streaming.RefreshFarTerrainTileVisibility");
+    private static readonly ProfilerMarker EnsureFarTerrainRequestedMarker = new ProfilerMarker("FS.Streaming.EnsureFarTerrainRequested");
+    private static readonly ProfilerMarker EnsureFarTerrainTileRequestedMarker = new ProfilerMarker("FS.Streaming.EnsureFarTerrainTileRequested");
+    private static readonly ProfilerMarker EnsureTerrainDataRequestedMarker = new ProfilerMarker("FS.Streaming.EnsureTerrainDataRequested");
+    private static readonly ProfilerMarker EnsureLodMeshRequestedMarker = new ProfilerMarker("FS.Streaming.EnsureLODMeshRequested");
+    private static readonly ProfilerMarker EnsureColliderRequestedMarker = new ProfilerMarker("FS.Streaming.EnsureColliderRequested");
+    private static readonly ProfilerMarker TryApplyFarTerrainMarker = new ProfilerMarker("FS.Streaming.TryApplyFarTerrain");
+    private static readonly ProfilerMarker TryApplyFarTerrainTileMarker = new ProfilerMarker("FS.Streaming.TryApplyFarTerrainTile");
+    private static readonly ProfilerMarker TryApplyLodMeshMarker = new ProfilerMarker("FS.Streaming.TryApplyLODMesh");
+    private static readonly ProfilerMarker TryApplyColliderMarker = new ProfilerMarker("FS.Streaming.TryApplyCollider");
+    private static readonly ProfilerMarker RemoveColliderMarker = new ProfilerMarker("FS.Streaming.RemoveCollider");
 
     private readonly int subChunksPerChunk = 10;
 
@@ -37,6 +73,13 @@ public class ChunkManager
     private readonly int maxFarTerrainResultsAppliedPerFrame;
     private readonly int maxLODMeshResultsAppliedPerFrame;
     private readonly int maxColliderResultsAppliedPerFrame;
+    private readonly int urgentVisibleChunkRingRadius;
+    private readonly int maxVisibleChunkContentUpdatesPerFrame;
+    private readonly int maxRenderVisibilityChecksPerFrame;
+    private readonly float visibleChunkContentBudgetMsPerFrame;
+    private readonly int maxFarTerrainTileContentUpdatesPerFrame;
+    private readonly int maxFarTerrainTileVisibilityChecksPerFrame;
+    private readonly float farTerrainTileContentBudgetMsPerFrame;
     private readonly float completedRequestApplyBudgetMsPerFrame;
     private readonly float terrainDataApplyBudgetMsPerFrame;
     private readonly float farTerrainApplyBudgetMsPerFrame;
@@ -55,7 +98,16 @@ public class ChunkManager
     private readonly List<ChunkCoord> orderedActiveCoords;
     private readonly List<ChunkCoord> frustumVisibleCoords;
     private readonly List<ChunkCoord> orderedActiveFarTileCoords;
+    private readonly Queue<ChunkCoord> pendingVisibleChunkContentWork;
+    private readonly HashSet<ChunkCoord> queuedVisibleChunkContentCoords;
+    private readonly List<ChunkCoord> deferredVisibleChunkContentRetries;
+    private readonly Queue<ChunkCoord> pendingFarTerrainTileContentWork;
+    private readonly HashSet<ChunkCoord> queuedFarTerrainTileContentCoords;
+    private readonly List<ChunkCoord> deferredFarTerrainTileContentRetries;
+    private readonly HashSet<ChunkCoord> frustumVisibleCoordSet;
     private readonly Plane[] frustumPlanes = new Plane[6];
+    private int renderVisibilityCursor;
+    private int farTerrainTileVisibilityCursor;
 
     private ChunkCoord lastUpdateViewerCoord = new ChunkCoord(int.MinValue, int.MinValue);
     private SubChunkCoord lastViewerGlobalSubChunk = new SubChunkCoord(int.MinValue, int.MinValue);
@@ -100,6 +152,13 @@ public class ChunkManager
         int maxFarTerrainResultsAppliedPerFrame,
         int maxLODMeshResultsAppliedPerFrame,
         int maxColliderResultsAppliedPerFrame,
+        int urgentVisibleChunkRingRadius,
+        int maxVisibleChunkContentUpdatesPerFrame,
+        int maxRenderVisibilityChecksPerFrame,
+        float visibleChunkContentBudgetMsPerFrame,
+        int maxFarTerrainTileContentUpdatesPerFrame,
+        int maxFarTerrainTileVisibilityChecksPerFrame,
+        float farTerrainTileContentBudgetMsPerFrame,
         float completedRequestApplyBudgetMsPerFrame,
         float terrainDataApplyBudgetMsPerFrame,
         float farTerrainApplyBudgetMsPerFrame,
@@ -136,6 +195,13 @@ public class ChunkManager
         this.maxFarTerrainResultsAppliedPerFrame = Mathf.Max(1, maxFarTerrainResultsAppliedPerFrame);
         this.maxLODMeshResultsAppliedPerFrame = Mathf.Max(1, maxLODMeshResultsAppliedPerFrame);
         this.maxColliderResultsAppliedPerFrame = Mathf.Max(1, maxColliderResultsAppliedPerFrame);
+        this.urgentVisibleChunkRingRadius = Mathf.Max(0, urgentVisibleChunkRingRadius);
+        this.maxVisibleChunkContentUpdatesPerFrame = Mathf.Max(1, maxVisibleChunkContentUpdatesPerFrame);
+        this.maxRenderVisibilityChecksPerFrame = Mathf.Max(1, maxRenderVisibilityChecksPerFrame);
+        this.visibleChunkContentBudgetMsPerFrame = Mathf.Max(0f, visibleChunkContentBudgetMsPerFrame);
+        this.maxFarTerrainTileContentUpdatesPerFrame = Mathf.Max(1, maxFarTerrainTileContentUpdatesPerFrame);
+        this.maxFarTerrainTileVisibilityChecksPerFrame = Mathf.Max(1, maxFarTerrainTileVisibilityChecksPerFrame);
+        this.farTerrainTileContentBudgetMsPerFrame = Mathf.Max(0f, farTerrainTileContentBudgetMsPerFrame);
         this.completedRequestApplyBudgetMsPerFrame = Mathf.Max(0f, completedRequestApplyBudgetMsPerFrame);
         this.terrainDataApplyBudgetMsPerFrame = Mathf.Max(0f, terrainDataApplyBudgetMsPerFrame);
         this.farTerrainApplyBudgetMsPerFrame = Mathf.Max(0f, farTerrainApplyBudgetMsPerFrame);
@@ -151,6 +217,13 @@ public class ChunkManager
         orderedActiveCoords = new List<ChunkCoord>(maxChunks);
         frustumVisibleCoords = new List<ChunkCoord>(maxChunks);
         orderedActiveFarTileCoords = new List<ChunkCoord>(maxChunks);
+        pendingVisibleChunkContentWork = new Queue<ChunkCoord>(maxChunks);
+        queuedVisibleChunkContentCoords = new HashSet<ChunkCoord>(maxChunks);
+        deferredVisibleChunkContentRetries = new List<ChunkCoord>(maxChunks);
+        pendingFarTerrainTileContentWork = new Queue<ChunkCoord>(maxChunks);
+        queuedFarTerrainTileContentCoords = new HashSet<ChunkCoord>(maxChunks);
+        deferredFarTerrainTileContentRetries = new List<ChunkCoord>(maxChunks);
+        frustumVisibleCoordSet = new HashSet<ChunkCoord>(maxChunks);
 
         worldFeatureGenerationSettings = BuildWorldFeatureGenerationSettings(treeSettings);
         terrainRequestManager = new TerrainRequestManager(
@@ -399,6 +472,8 @@ public class ChunkManager
 
     public void UpdateActiveChunks()
     {
+        using (UpdateActiveChunksMarker.Auto())
+        {
         ProcessCompletedRequests();
 
         ChunkCoord viewerCoord = GetViewerChunkCoord();
@@ -436,14 +511,21 @@ public class ChunkManager
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FoliageTotal, foliageStart);
 
         lastViewerGlobalSubChunk = viewerGlobalSubChunk;
+        }
     }
 
     private void RebuildActiveChunkSet(ChunkCoord viewerCoord)
     {
+        using (RebuildActiveChunkSetMarker.Auto())
+        {
         activeThisUpdate.Clear();
         activeFarTilesThisUpdate.Clear();
         orderedActiveCoords.Clear();
         orderedActiveFarTileCoords.Clear();
+        pendingVisibleChunkContentWork.Clear();
+        queuedVisibleChunkContentCoords.Clear();
+        pendingFarTerrainTileContentWork.Clear();
+        queuedFarTerrainTileContentCoords.Clear();
 
         int sqrViewRadius = viewDistance * viewDistance;
 
@@ -481,18 +563,16 @@ public class ChunkManager
             if (!runtime.IsVisible)
                 runtime.SetVisible(true);
 
-            EnsureTerrainVisualRequested(record, viewerCoord, targetCoord);
+            if (IsUrgentVisibleChunk(viewerCoord, targetCoord))
+                EnsureTerrainVisualRequested(record, viewerCoord, targetCoord);
+            else
+                QueueVisibleChunkContentWork(targetCoord);
         }
 
         foreach (ChunkCoord farTileCoord in orderedActiveFarTileCoords)
         {
-            FarTerrainTileRecord record = GetOrCreateFarTerrainTileRecord(farTileCoord);
-            FarTerrainTileRuntime runtime = GetOrCreateFarTerrainTileRuntime(record);
-
-            if (!runtime.IsVisible)
-                runtime.SetVisible(true);
-
-            EnsureFarTerrainTileRequested(record);
+            GetOrCreateFarTerrainTileRecord(farTileCoord);
+            QueueFarTerrainTileContentWork(farTileCoord);
         }
 
         foreach (ChunkCoord coord in activeLastUpdate)
@@ -503,6 +583,7 @@ public class ChunkManager
                 {
                     runtime.DestroyRuntime();
                     loadedChunks.Remove(coord);
+                    RemoveFrustumVisibleCoord(coord);
                 }
             }
         }
@@ -526,26 +607,108 @@ public class ChunkManager
         temp = activeFarTilesLastUpdate;
         activeFarTilesLastUpdate = activeFarTilesThisUpdate;
         activeFarTilesThisUpdate = temp;
+        renderVisibilityCursor = 0;
+        farTerrainTileVisibilityCursor = 0;
+        }
     }
 
     private void UpdateVisibleChunkContent(ChunkCoord viewerCoord)
     {
+        using (UpdateVisibleChunkContentMarker.Auto())
+        {
         int sqrColliderRadius = colliderDistance * colliderDistance;
-
-        frustumVisibleCoords.Clear();
 
         if (viewerCamera != null)
         {
-            GeometryUtility.CalculateFrustumPlanes(viewerCamera, frustumPlanes);
+            using (CalculateFrustumPlanesMarker.Auto())
+            {
+                GeometryUtility.CalculateFrustumPlanes(viewerCamera, frustumPlanes);
+            }
         }
 
-        foreach (ChunkCoord coord in orderedActiveCoords)
+        long budgetStart = TerrainGenerationProfiler.GetTimestamp();
+        RefreshUrgentVisibleChunks(viewerCoord, sqrColliderRadius, budgetStart);
+        ProcessVisibleChunkContentQueue(viewerCoord, sqrColliderRadius, budgetStart);
+        RefreshRenderVisibility(viewerCoord, budgetStart);
+
+        UpdateVisibleFarTerrainTiles(viewerCoord);
+        }
+    }
+
+    private void RefreshUrgentVisibleChunks(
+        ChunkCoord viewerCoord,
+        int sqrColliderRadius,
+        long budgetStart)
+    {
+        using (RefreshUrgentVisibleChunksMarker.Auto())
+        {
+            for (int i = 0; i < orderedActiveCoords.Count; i++)
+            {
+                ChunkCoord coord = orderedActiveCoords[i];
+                if (!IsUrgentVisibleChunk(viewerCoord, coord))
+                    break;
+
+                ProcessVisibleChunkContent(coord, viewerCoord, sqrColliderRadius);
+                if (!HasVisibleChunkContentBudgetRemaining(budgetStart))
+                    break;
+            }
+        }
+    }
+
+    private void ProcessVisibleChunkContentQueue(
+        ChunkCoord viewerCoord,
+        int sqrColliderRadius,
+        long budgetStart)
+    {
+        using (ProcessVisibleChunkContentQueueMarker.Auto())
+        {
+            deferredVisibleChunkContentRetries.Clear();
+            int processedCount = 0;
+            while (pendingVisibleChunkContentWork.Count > 0 &&
+                   processedCount < maxVisibleChunkContentUpdatesPerFrame &&
+                   HasVisibleChunkContentBudgetRemaining(budgetStart))
+            {
+                ChunkCoord coord = pendingVisibleChunkContentWork.Dequeue();
+                queuedVisibleChunkContentCoords.Remove(coord);
+
+                if (!activeLastUpdate.Contains(coord))
+                    continue;
+
+                if (IsUrgentVisibleChunk(viewerCoord, coord))
+                    continue;
+
+                ProcessVisibleChunkContent(coord, viewerCoord, sqrColliderRadius);
+                if (ChunkNeedsVisibleContentWork(coord, viewerCoord, sqrColliderRadius))
+                    deferredVisibleChunkContentRetries.Add(coord);
+
+                processedCount++;
+            }
+
+            for (int i = 0; i < deferredVisibleChunkContentRetries.Count; i++)
+                QueueVisibleChunkContentWork(deferredVisibleChunkContentRetries[i]);
+
+            deferredVisibleChunkContentRetries.Clear();
+        }
+    }
+
+    private void ProcessVisibleChunkContent(
+        ChunkCoord coord,
+        ChunkCoord viewerCoord,
+        int sqrColliderRadius)
+    {
+        using (VisibleNormalChunkLoopMarker.Auto())
         {
             if (!loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
-                continue;
+            {
+                RemoveFrustumVisibleCoord(coord);
+                return;
+            }
 
             if (!chunkRecords.TryGetValue(coord, out ChunkRecord record))
-                continue;
+            {
+                RemoveFrustumVisibleCoord(coord);
+                return;
+            }
 
             int dx = coord.x - viewerCoord.x;
             int dz = coord.z - viewerCoord.z;
@@ -554,36 +717,85 @@ public class ChunkManager
 
             if (useFarTerrain)
             {
-                EnsureFarTerrainRequested(record);
-                TryApplyFarTerrain(record, runtime);
+                using (VisibleChunkFarTerrainPathMarker.Auto())
+                {
+                    EnsureFarTerrainRequested(record);
+                    TryApplyFarTerrain(record, runtime);
+                }
             }
             else
             {
-                EnsureTerrainDataRequested(record);
+                using (VisibleChunkNearTerrainPathMarker.Auto())
+                {
+                    EnsureTerrainDataRequested(record);
 
-                int lod = ChunkRingLODPolicy.GetLOD(viewerCoord, coord);
+                    int lod = ChunkRingLODPolicy.GetLOD(viewerCoord, coord);
 
-                EnsureLODMeshRequested(record, lod);
-                TryApplyLODMesh(record, runtime, lod);
+                    EnsureLODMeshRequested(record, lod);
+                    TryApplyLODMesh(record, runtime, lod);
 
-                if (!record.HasTerrainData)
-                    TryApplyFarTerrain(record, runtime);
+                    if (!record.HasTerrainData)
+                        TryApplyFarTerrain(record, runtime);
+                }
             }
 
-            bool colliderDesired = sqrDistance <= sqrColliderRadius;
-            record.ColliderDesired = colliderDesired;
-
-            if (colliderDesired && !useFarTerrain)
+            using (VisibleChunkColliderPathMarker.Auto())
             {
-                EnsureColliderRequested(record);
-                TryApplyCollider(record, runtime);
-            }
-            else if (runtime.HasCollider())
-            {
-                runtime.RemoveCollider();
-                record.ClearColliderMesh();
+                bool colliderDesired = sqrDistance <= sqrColliderRadius;
+                record.ColliderDesired = colliderDesired;
+
+                if (colliderDesired && !useFarTerrain)
+                {
+                    EnsureColliderRequested(record);
+                    TryApplyCollider(record, runtime);
+                }
+                else if (runtime.HasCollider())
+                {
+                    using (RemoveColliderMarker.Auto())
+                    {
+                        runtime.RemoveCollider();
+                        record.ClearColliderMesh();
+                    }
+                }
             }
 
+            UpdateChunkRenderVisibility(coord, runtime);
+        }
+    }
+
+    private void RefreshRenderVisibility(ChunkCoord viewerCoord, long budgetStart)
+    {
+        using (RefreshRenderVisibilityMarker.Auto())
+        {
+            if (orderedActiveCoords.Count == 0)
+                return;
+
+            int checksThisFrame = Mathf.Min(maxRenderVisibilityChecksPerFrame, orderedActiveCoords.Count);
+            for (int checkedCount = 0;
+                 checkedCount < checksThisFrame && HasVisibleChunkContentBudgetRemaining(budgetStart);
+                 checkedCount++)
+            {
+                if (renderVisibilityCursor >= orderedActiveCoords.Count)
+                    renderVisibilityCursor = 0;
+
+                ChunkCoord coord = orderedActiveCoords[renderVisibilityCursor];
+                renderVisibilityCursor++;
+
+                if (IsUrgentVisibleChunk(viewerCoord, coord))
+                    continue;
+
+                if (loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
+                    UpdateChunkRenderVisibility(coord, runtime);
+                else
+                    RemoveFrustumVisibleCoord(coord);
+            }
+        }
+    }
+
+    private void UpdateChunkRenderVisibility(ChunkCoord coord, ChunkRuntime runtime)
+    {
+        using (VisibleChunkRenderVisibilityMarker.Auto())
+        {
             if (!runtime.IsVisible)
                 runtime.SetVisible(true);
 
@@ -591,33 +803,206 @@ public class ChunkManager
             runtime.SetRenderVisible(renderVisible);
 
             if (renderVisible)
-            {
-                frustumVisibleCoords.Add(coord);
-            }
+                AddFrustumVisibleCoord(coord);
+            else
+                RemoveFrustumVisibleCoord(coord);
+        }
+    }
+
+    private void QueueVisibleChunkContentWork(ChunkCoord coord)
+    {
+        if (queuedVisibleChunkContentCoords.Add(coord))
+            pendingVisibleChunkContentWork.Enqueue(coord);
+    }
+
+    private bool ChunkNeedsVisibleContentWork(
+        ChunkCoord coord,
+        ChunkCoord viewerCoord,
+        int sqrColliderRadius)
+    {
+        if (!activeLastUpdate.Contains(coord))
+            return false;
+
+        if (!loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
+            return false;
+
+        if (!chunkRecords.TryGetValue(coord, out ChunkRecord record))
+            return false;
+
+        bool useFarTerrain = ShouldUseFarTerrain(viewerCoord, coord);
+        if (useFarTerrain)
+        {
+            if (record.HasFarTerrain)
+                return !runtime.IsShowingLOD(FarTerrainLOD);
+
+            return !record.IsFarTerrainRequestInFlight;
         }
 
-        UpdateVisibleFarTerrainTiles(viewerCoord);
+        if (!record.HasTerrainData)
+            return !record.IsTerrainDataRequestInFlight;
+
+        int lod = ChunkRingLODPolicy.GetLOD(viewerCoord, coord);
+        if (!record.TryGetLODTerrainMesh(lod, out _))
+            return !record.IsMeshRequestInFlight(lod);
+
+        if (!runtime.IsShowingLOD(lod))
+            return true;
+
+        int dx = coord.x - viewerCoord.x;
+        int dz = coord.z - viewerCoord.z;
+        bool colliderDesired = dx * dx + dz * dz <= sqrColliderRadius;
+
+        if (colliderDesired)
+        {
+            if (!record.ColliderReady)
+                return !record.ColliderRequestInFlight;
+
+            return !runtime.HasCollider();
+        }
+
+        return runtime.HasCollider();
+    }
+
+    private void AddFrustumVisibleCoord(ChunkCoord coord)
+    {
+        if (frustumVisibleCoordSet.Add(coord))
+            frustumVisibleCoords.Add(coord);
+    }
+
+    private void RemoveFrustumVisibleCoord(ChunkCoord coord)
+    {
+        if (!frustumVisibleCoordSet.Remove(coord))
+            return;
+
+        frustumVisibleCoords.Remove(coord);
+    }
+
+    private bool IsUrgentVisibleChunk(ChunkCoord viewerCoord, ChunkCoord coord)
+    {
+        return GetChunkRingDistance(viewerCoord, coord) <= urgentVisibleChunkRingRadius;
+    }
+
+    private bool HasVisibleChunkContentBudgetRemaining(long budgetStart)
+    {
+        return visibleChunkContentBudgetMsPerFrame <= 0f ||
+               TerrainGenerationProfiler.GetElapsedMilliseconds(budgetStart) < visibleChunkContentBudgetMsPerFrame;
     }
 
     private void UpdateVisibleFarTerrainTiles(ChunkCoord viewerCoord)
     {
-        foreach (ChunkCoord farTileCoord in orderedActiveFarTileCoords)
+        using (UpdateVisibleFarTerrainTilesMarker.Auto())
         {
-            if (!farTerrainTileRecords.TryGetValue(farTileCoord, out FarTerrainTileRecord record))
-                continue;
-
-            if (!loadedFarTerrainTiles.TryGetValue(farTileCoord, out FarTerrainTileRuntime runtime))
-                continue;
-
-            EnsureFarTerrainTileRequested(record);
-            TryApplyFarTerrainTile(record, runtime);
-
-            if (!runtime.IsVisible)
-                runtime.SetVisible(true);
-
-            bool renderVisible = viewerCamera == null || IsFarTerrainTileInFrustum(farTileCoord);
-            runtime.SetRenderVisible(renderVisible);
+            long budgetStart = TerrainGenerationProfiler.GetTimestamp();
+            ProcessFarTerrainTileContentQueue(viewerCoord, budgetStart);
+            RefreshFarTerrainTileVisibility(budgetStart);
         }
+    }
+
+    private void ProcessFarTerrainTileContentQueue(ChunkCoord viewerCoord, long budgetStart)
+    {
+        using (ProcessFarTerrainTileContentQueueMarker.Auto())
+        using (VisibleFarTileLoopMarker.Auto())
+        {
+            deferredFarTerrainTileContentRetries.Clear();
+            int processedCount = 0;
+
+            while (pendingFarTerrainTileContentWork.Count > 0 &&
+                   processedCount < maxFarTerrainTileContentUpdatesPerFrame &&
+                   HasFarTerrainTileContentBudgetRemaining(budgetStart))
+            {
+                ChunkCoord farTileCoord = pendingFarTerrainTileContentWork.Dequeue();
+                queuedFarTerrainTileContentCoords.Remove(farTileCoord);
+
+                if (!activeFarTilesLastUpdate.Contains(farTileCoord))
+                    continue;
+
+                FarTerrainTileRecord record = GetOrCreateFarTerrainTileRecord(farTileCoord);
+                FarTerrainTileRuntime runtime = GetOrCreateFarTerrainTileRuntime(record);
+
+                EnsureFarTerrainTileRequested(record);
+                TryApplyFarTerrainTile(record, runtime);
+
+                if (!runtime.IsVisible)
+                    runtime.SetVisible(true);
+
+                UpdateFarTerrainTileRenderVisibility(farTileCoord, runtime);
+
+                if (FarTerrainTileNeedsContentWork(farTileCoord))
+                    deferredFarTerrainTileContentRetries.Add(farTileCoord);
+
+                processedCount++;
+            }
+
+            for (int i = 0; i < deferredFarTerrainTileContentRetries.Count; i++)
+                QueueFarTerrainTileContentWork(deferredFarTerrainTileContentRetries[i]);
+
+            deferredFarTerrainTileContentRetries.Clear();
+        }
+    }
+
+    private void RefreshFarTerrainTileVisibility(long budgetStart)
+    {
+        using (RefreshFarTerrainTileVisibilityMarker.Auto())
+        {
+            if (orderedActiveFarTileCoords.Count == 0)
+                return;
+
+            int checksThisFrame = Mathf.Min(
+                maxFarTerrainTileVisibilityChecksPerFrame,
+                orderedActiveFarTileCoords.Count);
+
+            for (int checkedCount = 0;
+                 checkedCount < checksThisFrame && HasFarTerrainTileContentBudgetRemaining(budgetStart);
+                 checkedCount++)
+            {
+                if (farTerrainTileVisibilityCursor >= orderedActiveFarTileCoords.Count)
+                    farTerrainTileVisibilityCursor = 0;
+
+                ChunkCoord farTileCoord = orderedActiveFarTileCoords[farTerrainTileVisibilityCursor];
+                farTerrainTileVisibilityCursor++;
+
+                if (loadedFarTerrainTiles.TryGetValue(farTileCoord, out FarTerrainTileRuntime runtime))
+                    UpdateFarTerrainTileRenderVisibility(farTileCoord, runtime);
+            }
+        }
+    }
+
+    private void UpdateFarTerrainTileRenderVisibility(ChunkCoord farTileCoord, FarTerrainTileRuntime runtime)
+    {
+        if (!runtime.IsVisible)
+            runtime.SetVisible(true);
+
+        bool renderVisible = viewerCamera == null || IsFarTerrainTileInFrustum(farTileCoord);
+        runtime.SetRenderVisible(renderVisible);
+    }
+
+    private void QueueFarTerrainTileContentWork(ChunkCoord farTileCoord)
+    {
+        if (queuedFarTerrainTileContentCoords.Add(farTileCoord))
+            pendingFarTerrainTileContentWork.Enqueue(farTileCoord);
+    }
+
+    private bool FarTerrainTileNeedsContentWork(ChunkCoord farTileCoord)
+    {
+        if (!activeFarTilesLastUpdate.Contains(farTileCoord))
+            return false;
+
+        if (!farTerrainTileRecords.TryGetValue(farTileCoord, out FarTerrainTileRecord record))
+            return true;
+
+        if (!record.HasTerrain)
+            return !record.IsRequestInFlight;
+
+        if (!loadedFarTerrainTiles.TryGetValue(farTileCoord, out FarTerrainTileRuntime runtime))
+            return true;
+
+        return record.TryGetTerrainMesh(out Mesh terrainMesh) && !runtime.IsShowingMesh(terrainMesh);
+    }
+
+    private bool HasFarTerrainTileContentBudgetRemaining(long budgetStart)
+    {
+        return farTerrainTileContentBudgetMsPerFrame <= 0f ||
+               TerrainGenerationProfiler.GetElapsedMilliseconds(budgetStart) < farTerrainTileContentBudgetMsPerFrame;
     }
 
     private bool IsChunkInFrustum(ChunkCoord coord)
@@ -830,6 +1215,8 @@ public class ChunkManager
 
     private void EnsureFarTerrainRequested(ChunkRecord record)
     {
+        using var ensureFarTerrainRequestedScope = EnsureFarTerrainRequestedMarker.Auto();
+
         if (record.HasFarTerrain)
             return;
 
@@ -862,6 +1249,8 @@ public class ChunkManager
 
     private void EnsureFarTerrainTileRequested(FarTerrainTileRecord record)
     {
+        using var ensureFarTerrainTileRequestedScope = EnsureFarTerrainTileRequestedMarker.Auto();
+
         if (record.HasTerrain)
             return;
 
@@ -903,6 +1292,8 @@ public class ChunkManager
 
     private void EnsureTerrainDataRequested(ChunkRecord record)
     {
+        using var ensureTerrainDataRequestedScope = EnsureTerrainDataRequestedMarker.Auto();
+
         if (record.HasTerrainData)
             return;
 
@@ -959,6 +1350,8 @@ public class ChunkManager
 
     private void TryApplyFarTerrain(ChunkRecord record, ChunkRuntime runtime)
     {
+        using var tryApplyFarTerrainScope = TryApplyFarTerrainMarker.Auto();
+
         if (!record.TryGetFarTerrainMesh(out Mesh terrainMesh))
             return;
 
@@ -971,6 +1364,8 @@ public class ChunkManager
 
     private void TryApplyFarTerrainTile(FarTerrainTileRecord record, FarTerrainTileRuntime runtime)
     {
+        using var tryApplyFarTerrainTileScope = TryApplyFarTerrainTileMarker.Auto();
+
         if (!record.TryGetTerrainMesh(out Mesh terrainMesh))
             return;
 
@@ -983,6 +1378,8 @@ public class ChunkManager
 
     private void EnsureColliderRequested(ChunkRecord record)
     {
+        using var ensureColliderRequestedScope = EnsureColliderRequestedMarker.Auto();
+
         if (!record.HasTerrainData)
             return;
 
@@ -1008,6 +1405,8 @@ public class ChunkManager
 
     private void TryApplyCollider(ChunkRecord record, ChunkRuntime runtime)
     {
+        using var tryApplyColliderScope = TryApplyColliderMarker.Auto();
+
         if (!record.TryGetColliderMesh(out Mesh colliderMesh))
             return;
 
@@ -1019,6 +1418,8 @@ public class ChunkManager
 
     private void EnsureLODMeshRequested(ChunkRecord record, int lod)
     {
+        using var ensureLodMeshRequestedScope = EnsureLodMeshRequestedMarker.Auto();
+
         if (!record.HasTerrainData)
             return;
 
@@ -1051,6 +1452,8 @@ public class ChunkManager
 
     private void TryApplyLODMesh(ChunkRecord record, ChunkRuntime runtime, int lod)
     {
+        using var tryApplyLodMeshScope = TryApplyLodMeshMarker.Auto();
+
         if (!record.TryGetLODTerrainMesh(lod, out Mesh terrainMesh))
             return;
 
@@ -1069,6 +1472,7 @@ public class ChunkManager
 
     private void ProcessCompletedRequests()
     {
+        using var processCompletedRequestsScope = ProcessCompletedRequestsMarker.Auto();
         long totalStart = TerrainGenerationProfiler.GetTimestamp();
         long categoryStart = totalStart;
         bool processedAnyRequest = false;
@@ -1083,137 +1487,180 @@ public class ChunkManager
             terrainRequestManager.CompletedMeshResultCount,
             terrainRequestManager.CompletedColliderResultCount);
 
-        int terrainDataResultsApplied = 0;
-        while (CanApplyMoreResults(
-                   terrainDataResultsApplied,
-                   maxTerrainDataResultsAppliedPerFrame,
-                   totalStart,
-                   completedRequestApplyBudgetMsPerFrame,
-                   categoryStart,
-                   terrainDataApplyBudgetMsPerFrame) &&
-               terrainRequestManager.TryDequeueTerrainDataResult(out TerrainDataRequestResult terrainResult))
+        using (ApplyTerrainDataResultsMarker.Auto())
         {
-            if (!chunkRecords.TryGetValue(terrainResult.ChunkCoord, out ChunkRecord record))
-                continue;
+            int terrainDataResultsApplied = 0;
+            while (CanApplyMoreResults(
+                       terrainDataResultsApplied,
+                       maxTerrainDataResultsAppliedPerFrame,
+                       totalStart,
+                       completedRequestApplyBudgetMsPerFrame,
+                       categoryStart,
+                       terrainDataApplyBudgetMsPerFrame) &&
+                   terrainRequestManager.TryDequeueTerrainDataResult(out TerrainDataRequestResult terrainResult))
+            {
+                if (!chunkRecords.TryGetValue(terrainResult.ChunkCoord, out ChunkRecord record))
+                    continue;
 
-            processedAnyRequest = true;
-            terrainDataResultsApplied++;
-            long stageStart = TerrainGenerationProfiler.GetTimestamp();
-            Texture2D[] controlMaps = CreateControlMapTextures(terrainResult.ControlMapsRawData);
-            TerrainGenerationProfiler.Record(
-                TerrainGenerationProfileStage.MainTerrainControlMapTextureCreate,
-                stageStart);
+                using (ApplyTerrainDataResultMarker.Auto())
+                {
+                    processedAnyRequest = true;
+                    terrainDataResultsApplied++;
+                    long stageStart = TerrainGenerationProfiler.GetTimestamp();
+                    Texture2D[] controlMaps = CreateControlMapTextures(terrainResult.ControlMapsRawData);
+                    TerrainGenerationProfiler.Record(
+                        TerrainGenerationProfileStage.MainTerrainControlMapTextureCreate,
+                        stageStart);
 
-            record.TryCompleteTerrainDataRequest(
-                terrainResult.RequestVersion,
-                terrainResult.HeightMap,
-                terrainResult.SlopeMap,
-                terrainResult.MoistureMap,
-                terrainResult.TemperatureMap,
-                terrainResult.BiomeMap,
-                terrainResult.SurfaceTypeMap,
-                terrainResult.WaterStateMap,
-                terrainResult.GroundCoverMap,
-                terrainResult.WorldFeaturePlan,
-                terrainResult.RiverMaskMap,
-                controlMaps
-            );
+                    bool completed = record.TryCompleteTerrainDataRequest(
+                        terrainResult.RequestVersion,
+                        terrainResult.HeightMap,
+                        terrainResult.SlopeMap,
+                        terrainResult.MoistureMap,
+                        terrainResult.TemperatureMap,
+                        terrainResult.BiomeMap,
+                        terrainResult.SurfaceTypeMap,
+                        terrainResult.WaterStateMap,
+                        terrainResult.GroundCoverMap,
+                        terrainResult.WorldFeaturePlan,
+                        terrainResult.RiverMaskMap,
+                        controlMaps
+                    );
+
+                    if (completed)
+                        QueueVisibleChunkContentWork(record.ChunkCoord);
+                }
+            }
         }
 
-        int lodMeshResultsApplied = 0;
         categoryStart = TerrainGenerationProfiler.GetTimestamp();
-        while (CanApplyMoreResults(
-                   lodMeshResultsApplied,
-                   maxLODMeshResultsAppliedPerFrame,
-                   totalStart,
-                   completedRequestApplyBudgetMsPerFrame,
-                   categoryStart,
-                   lodMeshApplyBudgetMsPerFrame) &&
-               terrainRequestManager.TryDequeueMeshResult(out MeshRequestResult meshResult))
+        using (ApplyLodMeshResultsMarker.Auto())
         {
-            if (!chunkRecords.TryGetValue(meshResult.ChunkCoord, out ChunkRecord record))
-                continue;
+            int lodMeshResultsApplied = 0;
+            while (CanApplyMoreResults(
+                       lodMeshResultsApplied,
+                       maxLODMeshResultsAppliedPerFrame,
+                       totalStart,
+                       completedRequestApplyBudgetMsPerFrame,
+                       categoryStart,
+                       lodMeshApplyBudgetMsPerFrame) &&
+                   terrainRequestManager.TryDequeueMeshResult(out MeshRequestResult meshResult))
+            {
+                if (!chunkRecords.TryGetValue(meshResult.ChunkCoord, out ChunkRecord record))
+                    continue;
 
-            processedAnyRequest = true;
-            lodMeshResultsApplied++;
-            long stageStart = TerrainGenerationProfiler.GetTimestamp();
-            Mesh terrainMesh = meshResult.TerrainMeshData.CreateMesh();
-            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainLODTerrainMeshCreate, stageStart);
+                using (ApplyLodMeshResultMarker.Auto())
+                {
+                    processedAnyRequest = true;
+                    lodMeshResultsApplied++;
+                    long stageStart = TerrainGenerationProfiler.GetTimestamp();
+                    Mesh terrainMesh = meshResult.TerrainMeshData.CreateMesh();
+                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainLODTerrainMeshCreate, stageStart);
 
-            stageStart = TerrainGenerationProfiler.GetTimestamp();
-            Mesh lakeMesh = meshResult.LakeMeshData.CreateMesh();
-            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainLakeMeshCreate, stageStart);
+                    stageStart = TerrainGenerationProfiler.GetTimestamp();
+                    Mesh lakeMesh = meshResult.LakeMeshData.CreateMesh();
+                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainLakeMeshCreate, stageStart);
 
-            stageStart = TerrainGenerationProfiler.GetTimestamp();
-            Mesh riverMesh = meshResult.RiverMeshData.CreateMesh();
-            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainRiverMeshCreate, stageStart);
+                    stageStart = TerrainGenerationProfiler.GetTimestamp();
+                    Mesh riverMesh = meshResult.RiverMeshData.CreateMesh();
+                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainRiverMeshCreate, stageStart);
 
-            record.TryCompleteMeshRequest(
-                meshResult.LOD,
-                meshResult.RequestVersion,
-                terrainMesh,
-                lakeMesh,
-                riverMesh
-            );
+                    bool completed = record.TryCompleteMeshRequest(
+                        meshResult.LOD,
+                        meshResult.RequestVersion,
+                        terrainMesh,
+                        lakeMesh,
+                        riverMesh
+                    );
+
+                    if (completed)
+                        QueueVisibleChunkContentWork(record.ChunkCoord);
+                }
+            }
         }
 
-        int colliderResultsApplied = 0;
         categoryStart = TerrainGenerationProfiler.GetTimestamp();
-        while (CanApplyMoreResults(
-                   colliderResultsApplied,
-                   maxColliderResultsAppliedPerFrame,
-                   totalStart,
-                   completedRequestApplyBudgetMsPerFrame,
-                   categoryStart,
-                   colliderApplyBudgetMsPerFrame) &&
-               terrainRequestManager.TryDequeueColliderResult(out ColliderRequestResult colliderResult))
+        using (ApplyColliderResultsMarker.Auto())
         {
-            if (!chunkRecords.TryGetValue(colliderResult.ChunkCoord, out ChunkRecord record))
-                continue;
+            int colliderResultsApplied = 0;
+            while (CanApplyMoreResults(
+                       colliderResultsApplied,
+                       maxColliderResultsAppliedPerFrame,
+                       totalStart,
+                       completedRequestApplyBudgetMsPerFrame,
+                       categoryStart,
+                       colliderApplyBudgetMsPerFrame) &&
+                   terrainRequestManager.TryDequeueColliderResult(out ColliderRequestResult colliderResult))
+            {
+                if (!chunkRecords.TryGetValue(colliderResult.ChunkCoord, out ChunkRecord record))
+                    continue;
 
-            processedAnyRequest = true;
-            colliderResultsApplied++;
-            long stageStart = TerrainGenerationProfiler.GetTimestamp();
-            Mesh colliderMesh = colliderResult.ColliderMeshData.CreateMesh();
-            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainColliderMeshCreate, stageStart);
+                using (ApplyColliderResultMarker.Auto())
+                {
+                    processedAnyRequest = true;
+                    colliderResultsApplied++;
+                    long stageStart = TerrainGenerationProfiler.GetTimestamp();
+                    Mesh colliderMesh = colliderResult.ColliderMeshData.CreateMesh();
+                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainColliderMeshCreate, stageStart);
 
-            record.TryCompleteColliderRequest(
-                colliderResult.RequestVersion,
-                colliderMesh
-            );
+                    bool completed = record.TryCompleteColliderRequest(
+                        colliderResult.RequestVersion,
+                        colliderMesh
+                    );
+
+                    if (completed)
+                        QueueVisibleChunkContentWork(record.ChunkCoord);
+                }
+            }
         }
 
-        int farTerrainResultsApplied = 0;
         categoryStart = TerrainGenerationProfiler.GetTimestamp();
         ChunkCoord viewerCoord = GetViewerChunkCoord();
-        while (!HasHigherPriorityCompletedTerrainResults() &&
-               CanApplyMoreResults(
-                   farTerrainResultsApplied,
-                   maxFarTerrainResultsAppliedPerFrame,
-                   totalStart,
-                   completedRequestApplyBudgetMsPerFrame,
-                   categoryStart,
-                   farTerrainApplyBudgetMsPerFrame) &&
-               terrainRequestManager.TryDequeueFarTerrainResult(out FarTerrainRequestResult farTerrainResult))
+        using (ApplyFarTerrainResultsMarker.Auto())
         {
-            if (!IsFarTerrainResultStillWanted(farTerrainResult, viewerCoord))
-                continue;
+            int farTerrainResultsApplied = 0;
+            while (!HasHigherPriorityCompletedTerrainResults() &&
+                   CanApplyMoreResults(
+                       farTerrainResultsApplied,
+                       maxFarTerrainResultsAppliedPerFrame,
+                       totalStart,
+                       completedRequestApplyBudgetMsPerFrame,
+                       categoryStart,
+                       farTerrainApplyBudgetMsPerFrame) &&
+                   terrainRequestManager.TryDequeueFarTerrainResult(out FarTerrainRequestResult farTerrainResult))
+            {
+                if (!IsFarTerrainResultStillWanted(farTerrainResult, viewerCoord))
+                    continue;
 
-            processedAnyRequest = true;
-            farTerrainResultsApplied++;
-            long stageStart = TerrainGenerationProfiler.GetTimestamp();
-            Texture2D[] controlMaps = CreateControlMapTextures(farTerrainResult.ControlMapsRawData);
-            TerrainGenerationProfiler.Record(
-                TerrainGenerationProfileStage.MainFarControlMapTextureCreate,
-                stageStart);
+                using (ApplyFarTerrainResultMarker.Auto())
+                {
+                    processedAnyRequest = true;
+                    farTerrainResultsApplied++;
+                    long stageStart = TerrainGenerationProfiler.GetTimestamp();
+                    Texture2D[] controlMaps = CreateControlMapTextures(farTerrainResult.ControlMapsRawData);
+                    TerrainGenerationProfiler.Record(
+                        TerrainGenerationProfileStage.MainFarControlMapTextureCreate,
+                        stageStart);
 
-            stageStart = TerrainGenerationProfiler.GetTimestamp();
-            Mesh terrainMesh = farTerrainResult.TerrainMeshData.CreateMesh();
-            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainFarTerrainMeshCreate, stageStart);
+                    stageStart = TerrainGenerationProfiler.GetTimestamp();
+                    Mesh terrainMesh = farTerrainResult.TerrainMeshData.CreateMesh();
+                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainFarTerrainMeshCreate, stageStart);
 
-            bool accepted = TryCompleteFarTerrainResult(farTerrainResult, terrainMesh, controlMaps);
-            if (!accepted)
-                DestroyFarTerrainAssets(terrainMesh, controlMaps);
+                    bool accepted = TryCompleteFarTerrainResult(farTerrainResult, terrainMesh, controlMaps);
+                    if (!accepted)
+                    {
+                        DestroyFarTerrainAssets(terrainMesh, controlMaps);
+                    }
+                    else if (farTerrainResult.IsMacroTile)
+                    {
+                        QueueFarTerrainTileContentWork(farTerrainResult.ChunkCoord);
+                    }
+                    else
+                    {
+                        QueueVisibleChunkContentWork(farTerrainResult.ChunkCoord);
+                    }
+                }
+            }
         }
 
         if (processedAnyRequest)

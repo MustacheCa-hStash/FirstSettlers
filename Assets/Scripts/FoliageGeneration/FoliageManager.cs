@@ -4,10 +4,32 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.Profiling;
 using UnityEngine;
 
 public class FoliageManager
 {
+    private static readonly ProfilerMarker HandleViewerSubChunkChangedMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleViewerSubChunkChanged");
+    private static readonly ProfilerMarker HandleSubChunkLoopMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunkLoop");
+    private static readonly ProfilerMarker HandleSubChunkEnsureRuntimeMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.EnsureRuntime");
+    private static readonly ProfilerMarker HandleSubChunkRangeChecksMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.RangeChecks");
+    private static readonly ProfilerMarker HandleSubChunkClearInactiveMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.ClearInactive");
+    private static readonly ProfilerMarker HandleSubChunkTreesMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Trees");
+    private static readonly ProfilerMarker HandleSubChunkBushesMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Bushes");
+    private static readonly ProfilerMarker HandleSubChunkRocksMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Rocks");
+    private static readonly ProfilerMarker HandleSubChunkFlowersMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Flowers");
+    private static readonly ProfilerMarker HandleSubChunkCloverMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Clover");
+    private static readonly ProfilerMarker HandleSubChunkGrassMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Grass");
+    private static readonly ProfilerMarker HandleSubChunkBillboardGrassMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.BillboardGrass");
+    private static readonly ProfilerMarker HandleSubChunkSetVisibleMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.SetVisible");
+    private static readonly ProfilerMarker DrawVisibleFoliageEveryFrameMarker = new ProfilerMarker("FS.Streaming.Foliage.DrawVisibleEveryFrame");
+    private static readonly ProfilerMarker PruneStaleFoliageQueuesMarker = new ProfilerMarker("FS.Streaming.Foliage.PruneStaleQueues");
+    private static readonly ProfilerMarker CompleteActiveGrassJobsMarker = new ProfilerMarker("FS.Streaming.Foliage.CompleteActiveGrassJobs");
+    private static readonly ProfilerMarker ProcessGroundFoliageGenerationMarker = new ProfilerMarker("FS.Streaming.Foliage.ProcessGroundGenerationQueue");
+    private static readonly ProfilerMarker ProcessGrassSubChunkQueueMarker = new ProfilerMarker("FS.Streaming.Foliage.ProcessGrassSubChunkQueue");
+    private static readonly ProfilerMarker ProcessFoliageBatchQueueMarker = new ProfilerMarker("FS.Streaming.Foliage.ProcessBatchQueue");
+    private static readonly ProfilerMarker ProcessTreeRepresentationQueueMarker = new ProfilerMarker("FS.Streaming.Foliage.ProcessTreeRepresentationQueue");
+
     private readonly Transform foliageParent;
     private readonly GrassSettings grassSettings;
     private readonly FlowerSettings flowerSettings;
@@ -116,8 +138,12 @@ public class FoliageManager
         List<ChunkCoord> orderedActiveCoords,
         bool viewerChunkChanged)
     {
+        using (HandleViewerSubChunkChangedMarker.Auto())
+        {
         long stageStart = TerrainGenerationProfiler.GetTimestamp();
 
+        using (HandleSubChunkLoopMarker.Auto())
+        {
         for (int i = 0; i < orderedActiveCoords.Count; i++)
         {
             ChunkCoord coord = orderedActiveCoords[i];
@@ -127,32 +153,55 @@ public class FoliageManager
             if (record == null || runtime == null)
                 continue;
 
-            EnsureFoliageRuntimeExists(runtime, record);
+            using (HandleSubChunkEnsureRuntimeMarker.Auto())
+            {
+                EnsureFoliageRuntimeExists(runtime, record);
+            }
 
-            bool useNearGrass = IsWithinNearGrass(viewerCoord, coord);
-            bool useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
-            bool useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
-            bool useClover = IsWithinCloverRenderRange(viewerCoord, coord);
-            bool preGenerateClover = IsWithinCloverGenerationRange(viewerCoord, coord);
-            bool useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
-            bool useBushes = IsWithinBushRenderRange(viewerCoord, coord);
-            bool useRocks = IsWithinRockRenderRange(viewerCoord, coord);
-            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useClover || preGenerateClover || useTrees || useBushes || useRocks;
+            bool useNearGrass;
+            bool useBillboardGrass;
+            bool useFlowers;
+            bool useClover;
+            bool preGenerateClover;
+            bool useTrees;
+            bool useBushes;
+            bool useRocks;
+            bool useFoliage;
+            using (HandleSubChunkRangeChecksMarker.Auto())
+            {
+                useNearGrass = IsWithinNearGrass(viewerCoord, coord);
+                useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
+                useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
+                useClover = IsWithinCloverRenderRange(viewerCoord, coord);
+                preGenerateClover = IsWithinCloverGenerationRange(viewerCoord, coord);
+                useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
+                useBushes = IsWithinBushRenderRange(viewerCoord, coord);
+                useRocks = IsWithinRockRenderRange(viewerCoord, coord);
+                useFoliage = useNearGrass || useBillboardGrass || useFlowers || useClover || preGenerateClover || useTrees || useBushes || useRocks;
+            }
 
             if (!HasRequiredTerrainData(record))
             {
-                runtime.FoliageRuntime.ClearCachedBatches();
-                runtime.FoliageRuntime.SetVisible(false);
+                using (HandleSubChunkClearInactiveMarker.Auto())
+                {
+                    runtime.FoliageRuntime.ClearCachedBatches();
+                    runtime.FoliageRuntime.SetVisible(false);
+                }
                 continue;
             }
 
             if (!useFoliage)
             {
-                runtime.FoliageRuntime.ClearCachedBatches();
-                runtime.FoliageRuntime.SetVisible(false);
+                using (HandleSubChunkClearInactiveMarker.Auto())
+                {
+                    runtime.FoliageRuntime.ClearCachedBatches();
+                    runtime.FoliageRuntime.SetVisible(false);
+                }
                 continue;
             }
 
+            using (HandleSubChunkTreesMarker.Auto())
+            {
             if (useTrees)
             {
                 EnqueueTreeRepresentationRebuildIfNeeded(runtime, record, viewerCoord);
@@ -162,7 +211,10 @@ public class FoliageManager
                 runtime.FoliageRuntime.ClearTreeRepresentation(
                     ShouldRetainTreeGameObjectsForReuse(viewerCoord, coord));
             }
+            }
 
+            using (HandleSubChunkBushesMarker.Auto())
+            {
             if (useBushes)
             {
                 EnsureBushesGenerated(record);
@@ -172,7 +224,10 @@ public class FoliageManager
             {
                 runtime.FoliageRuntime.ClearBushGameObjects();
             }
+            }
 
+            using (HandleSubChunkRocksMarker.Auto())
+            {
             if (useRocks)
             {
                 EnsureRocksGenerated(record);
@@ -182,7 +237,10 @@ public class FoliageManager
             {
                 runtime.FoliageRuntime.ClearRockGameObjects();
             }
+            }
 
+            using (HandleSubChunkFlowersMarker.Auto())
+            {
             if (useFlowers && HasFlowerRenderAssets())
             {
                 if (record.FoliageData == null || !record.FoliageData.flowersGenerated)
@@ -198,7 +256,10 @@ public class FoliageManager
             {
                 runtime.FoliageRuntime.ClearFlowerBatches();
             }
+            }
 
+            using (HandleSubChunkCloverMarker.Auto())
+            {
             if (useClover && HasCloverRenderAssets())
             {
                 if (record.FoliageData == null || !record.FoliageData.cloverGenerated)
@@ -220,7 +281,10 @@ public class FoliageManager
             {
                 EnqueueGroundFoliageGeneration(record, GroundFoliageGenerationType.Clover);
             }
+            }
 
+            using (HandleSubChunkGrassMarker.Auto())
+            {
             if (useNearGrass)
             {
                 EnsureRocksGenerated(record);
@@ -236,7 +300,11 @@ public class FoliageManager
                     runtime.FoliageRuntime.ClearGrassBatches();
                 }
             }
-            else if (useBillboardGrass)
+            }
+
+            using (HandleSubChunkBillboardGrassMarker.Auto())
+            {
+            if (!useNearGrass && useBillboardGrass)
             {
                 if (record.FoliageData == null || !record.FoliageData.billboardGenerated)
                 {
@@ -259,13 +327,19 @@ public class FoliageManager
                 if (viewerChunkChanged || !runtime.FoliageRuntime.HasValidBillboardRenderData())
                     EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.BillboardGrass);
             }
+            }
 
-            runtime.FoliageRuntime.SetVisible(true);
+            using (HandleSubChunkSetVisibleMarker.Auto())
+            {
+                runtime.FoliageRuntime.SetVisible(true);
+            }
+        }
         }
 
         TerrainGenerationProfiler.Record(
             TerrainGenerationProfileStage.FoliageHandleSubChunkChanged,
             stageStart);
+        }
     }
 
     public void DrawVisibleFoliageEveryFrame(
@@ -274,6 +348,8 @@ public class FoliageManager
         SubChunkCoord viewerGlobalSubChunk,
         List<ChunkCoord> orderedActiveCoords)
     {
+        using (DrawVisibleFoliageEveryFrameMarker.Auto())
+        {
         long stageStart = TerrainGenerationProfiler.GetTimestamp();
         long workBudgetStart = TerrainGenerationProfiler.GetTimestamp();
         float foregroundBudgetMs = Mathf.Max(0f, grassSettings.foregroundFoliageWorkBudgetMsPerFrame);
@@ -452,6 +528,7 @@ public class FoliageManager
         TerrainGenerationProfiler.Record(
             TerrainGenerationProfileStage.FoliageDrawVisibleEveryFrame,
             stageStart);
+        }
     }
 
     public void AccumulateVisibleFoliageRenderStats(
@@ -1029,6 +1106,8 @@ public class FoliageManager
         long sharedBudgetStart,
         float sharedBudgetMs)
     {
+        using var completeActiveGrassJobsScope = CompleteActiveGrassJobsMarker.Auto();
+
         for (int i = activeGrassSubChunkGenerationWork.Count - 1; i >= 0; i--)
         {
             if (sharedBudgetMs > 0f &&
@@ -1088,6 +1167,8 @@ public class FoliageManager
         long sharedBudgetStart,
         float sharedBudgetMs)
     {
+        using var processGrassSubChunkQueueScope = ProcessGrassSubChunkQueueMarker.Auto();
+
         int maxGenerations = Mathf.Max(1, grassSettings.maxSubChunkGenerationsPerFrame);
         float budgetMs = Mathf.Max(0f, grassSettings.subChunkGenerationBudgetMsPerFrame);
         long frameStart = TerrainGenerationProfiler.GetTimestamp();
@@ -1201,6 +1282,8 @@ public class FoliageManager
         long sharedBudgetStart,
         float sharedBudgetMs)
     {
+        using var processGroundFoliageGenerationScope = ProcessGroundFoliageGenerationMarker.Auto();
+
         int maxGenerations = Mathf.Max(1, grassSettings.maxGroundFoliageGenerationsPerFrame);
         float budgetMs = Mathf.Max(0f, grassSettings.groundFoliageGenerationBudgetMsPerFrame);
         long frameStart = TerrainGenerationProfiler.GetTimestamp();
@@ -1302,6 +1385,8 @@ public class FoliageManager
         long sharedBudgetStart,
         float sharedBudgetMs)
     {
+        using var processFoliageBatchQueueScope = ProcessFoliageBatchQueueMarker.Auto();
+
         int maxRebuilds = Mathf.Max(1, grassSettings.maxRenderBatchRebuildsPerFrame);
         float budgetMs = Mathf.Max(0f, grassSettings.renderBatchRebuildBudgetMsPerFrame);
         long frameStart = TerrainGenerationProfiler.GetTimestamp();
@@ -1357,6 +1442,8 @@ public class FoliageManager
         long sharedBudgetStart,
         float sharedBudgetMs)
     {
+        using var processTreeRepresentationQueueScope = ProcessTreeRepresentationQueueMarker.Auto();
+
         int maxRebuilds = Mathf.Max(1, treeSettings.maxTreeRepresentationRebuildsPerFrame);
         float budgetMs = Mathf.Max(0f, treeSettings.treeRepresentationRebuildBudgetMsPerFrame);
         long frameStart = TerrainGenerationProfiler.GetTimestamp();
@@ -1415,6 +1502,8 @@ public class FoliageManager
         ChunkCoord viewerCoord,
         SubChunkCoord viewerGlobalSubChunk)
     {
+        using var pruneStaleFoliageQueuesScope = PruneStaleFoliageQueuesMarker.Auto();
+
         queuedGrassSubChunks.Clear();
         for (int i = pendingGrassSubChunkWork.Count - 1; i >= 0; i--)
         {

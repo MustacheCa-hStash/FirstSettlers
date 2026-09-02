@@ -1,7 +1,10 @@
 using UnityEngine;
+using Unity.Profiling;
 
 public class WorldManager : MonoBehaviour
 {
+    private static readonly ProfilerMarker UpdateMarker = new ProfilerMarker("FS.Streaming.WorldManager.Update");
+
     [SerializeField] int worldSeed = 12345;
     [SerializeField] int viewDistance = 4;
     [SerializeField] int colliderDistance = 3;
@@ -42,6 +45,13 @@ public class WorldManager : MonoBehaviour
     [SerializeField] int maxFarTerrainResultsAppliedPerFrame = 1;
     [SerializeField] int maxLODMeshResultsAppliedPerFrame = 12;
     [SerializeField] int maxColliderResultsAppliedPerFrame = 2;
+    [SerializeField] int urgentVisibleChunkRingRadius = 1;
+    [SerializeField] int maxVisibleChunkContentUpdatesPerFrame = 32;
+    [SerializeField] int maxRenderVisibilityChecksPerFrame = 160;
+    [SerializeField] float visibleChunkContentBudgetMsPerFrame = 1.5f;
+    [SerializeField] int maxFarTerrainTileContentUpdatesPerFrame = 4;
+    [SerializeField] int maxFarTerrainTileVisibilityChecksPerFrame = 24;
+    [SerializeField] float farTerrainTileContentBudgetMsPerFrame = 0.35f;
     [SerializeField] float completedRequestApplyBudgetMsPerFrame = 3f;
     [SerializeField] float terrainDataApplyBudgetMsPerFrame = 0.75f;
     [SerializeField] float farTerrainApplyBudgetMsPerFrame = 0.25f;
@@ -63,7 +73,11 @@ public class WorldManager : MonoBehaviour
             maxActiveTerrainDataJobs, maxActiveFarTerrainJobs, maxActiveMeshJobs,
             maxActiveColliderJobs, maxTerrainDataResultsAppliedPerFrame,
             maxFarTerrainResultsAppliedPerFrame, maxLODMeshResultsAppliedPerFrame,
-            maxColliderResultsAppliedPerFrame, completedRequestApplyBudgetMsPerFrame,
+            maxColliderResultsAppliedPerFrame, urgentVisibleChunkRingRadius,
+            maxVisibleChunkContentUpdatesPerFrame, maxRenderVisibilityChecksPerFrame,
+            visibleChunkContentBudgetMsPerFrame, maxFarTerrainTileContentUpdatesPerFrame,
+            maxFarTerrainTileVisibilityChecksPerFrame, farTerrainTileContentBudgetMsPerFrame,
+            completedRequestApplyBudgetMsPerFrame,
             terrainDataApplyBudgetMsPerFrame, farTerrainApplyBudgetMsPerFrame,
             lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame);
     }
@@ -75,11 +89,14 @@ public class WorldManager : MonoBehaviour
 
     void Update()
     {
+        using (UpdateMarker.Auto())
+        {
         chunkManager.UpdateActiveChunks();
         TerrainGenerationProfiler.LogSummaryIfDue(
             Time.unscaledTime,
             terrainGenerationProfileLogInterval,
             resetTerrainGenerationProfileAfterLog);
+        }
     }
 
     void OnDestroy()

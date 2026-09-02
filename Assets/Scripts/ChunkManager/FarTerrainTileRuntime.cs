@@ -8,7 +8,7 @@ public class FarTerrainTileRuntime
     private MeshRenderer meshRenderer;
     private Material runtimeMaterial;
     private bool visible;
-    private bool renderVisible;
+    private bool renderVisible = true;
 
     public bool IsVisible => visible;
 
@@ -61,6 +61,9 @@ public class FarTerrainTileRuntime
 
     public void SetRenderVisible(bool renderVisible)
     {
+        if (this.renderVisible == renderVisible)
+            return;
+
         this.renderVisible = renderVisible;
 
         if (meshRenderer != null)

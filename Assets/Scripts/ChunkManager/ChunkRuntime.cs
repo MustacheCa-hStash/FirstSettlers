@@ -5,6 +5,7 @@ public class ChunkRuntime
     private ChunkRecord chunkRecord;
     private GameObject root;
     private bool visible;
+    private bool renderVisible = true;
 
     private MeshFilter terrainMeshFilter;
     private MeshRenderer terrainMeshRenderer;
@@ -214,9 +215,19 @@ public class ChunkRuntime
 
     public void SetRenderVisible(bool visible)
     {
-        terrainMeshRenderer.enabled = visible;
-        lakeMeshRenderer.enabled = visible;
-        riverMeshRenderer.enabled = visible;
+        if (renderVisible == visible)
+            return;
+
+        renderVisible = visible;
+
+        if (terrainMeshRenderer != null)
+            terrainMeshRenderer.enabled = visible;
+
+        if (lakeMeshRenderer != null)
+            lakeMeshRenderer.enabled = visible;
+
+        if (riverMeshRenderer != null)
+            riverMeshRenderer.enabled = visible;
     }
 
     public void SetVisible(bool visible)

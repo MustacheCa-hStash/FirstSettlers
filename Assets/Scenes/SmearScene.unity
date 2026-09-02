@@ -524,7 +524,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   worldSeed: 9
-  viewDistance: 100
+  viewDistance: 20
   colliderDistance: 5
   enableFarTerrain: 1
   farTerrainStartRing: 15
@@ -744,6 +744,13 @@ MonoBehaviour:
   maxFarTerrainResultsAppliedPerFrame: 1
   maxLODMeshResultsAppliedPerFrame: 16
   maxColliderResultsAppliedPerFrame: 2
+  urgentVisibleChunkRingRadius: 1
+  maxVisibleChunkContentUpdatesPerFrame: 12
+  maxRenderVisibilityChecksPerFrame: 120
+  visibleChunkContentBudgetMsPerFrame: 0.75
+  maxFarTerrainTileContentUpdatesPerFrame: 3
+  maxFarTerrainTileVisibilityChecksPerFrame: 16
+  farTerrainTileContentBudgetMsPerFrame: 0.25
   completedRequestApplyBudgetMsPerFrame: 5
   terrainDataApplyBudgetMsPerFrame: 1.25
   farTerrainApplyBudgetMsPerFrame: 0.25

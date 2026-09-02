@@ -1,9 +1,15 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
+using Unity.Profiling;
 using UnityEngine;
 
 public class TerrainRequestManager
 {
+    private static readonly ProfilerMarker TerrainDataWorkerMarker = new ProfilerMarker("FS.Streaming.Worker.TerrainDataRequest");
+    private static readonly ProfilerMarker FarTerrainWorkerMarker = new ProfilerMarker("FS.Streaming.Worker.FarTerrainRequest");
+    private static readonly ProfilerMarker LodMeshWorkerMarker = new ProfilerMarker("FS.Streaming.Worker.LODMeshRequest");
+    private static readonly ProfilerMarker ColliderWorkerMarker = new ProfilerMarker("FS.Streaming.Worker.ColliderRequest");
+
     private readonly Queue<TerrainDataRequestResult> completedTerrainDataResults = new Queue<TerrainDataRequestResult>();
     private readonly Queue<FarTerrainRequestResult> completedFarTerrainResults = new Queue<FarTerrainRequestResult>();
     private readonly Queue<MeshRequestResult> completedMeshResults = new Queue<MeshRequestResult>();
@@ -98,6 +104,7 @@ public class TerrainRequestManager
         {
             try
             {
+                using var terrainDataWorkerScope = TerrainDataWorkerMarker.Auto();
                 long totalStart = TerrainGenerationProfiler.GetTimestamp();
                 long stageStart = TerrainGenerationProfiler.GetTimestamp();
                 HeightFieldResult heightField = HeightMapGenerator.GenerateTerrainHeightField(
@@ -218,6 +225,7 @@ public class TerrainRequestManager
         {
             try
             {
+                using var farTerrainWorkerScope = FarTerrainWorkerMarker.Auto();
                 FarTerrainRequestResult result = FarTerrainGenerator.Generate(
                     chunkCoord,
                     requestVersion,
@@ -265,6 +273,7 @@ public class TerrainRequestManager
         {
             try
             {
+                using var lodMeshWorkerScope = LodMeshWorkerMarker.Auto();
                 long totalStart = TerrainGenerationProfiler.GetTimestamp();
                 long stageStart = TerrainGenerationProfiler.GetTimestamp();
                 MeshData terrainMeshData = MeshGenerator.GenerateTerrainMesh(chunkCoord, heightMap, biomeMap, surfaceTypeMap, 
@@ -320,6 +329,7 @@ public class TerrainRequestManager
         {
             try
             {
+                using var colliderWorkerScope = ColliderWorkerMarker.Auto();
                 // ⭐ fixed collider step, LOD of 3
                 const int colliderStep = 8;
 
