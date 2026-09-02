@@ -170,6 +170,11 @@ public class ChunkManager
             meshHeightMultiplier);
     }
 
+    public void Dispose()
+    {
+        foliageManager?.Dispose();
+    }
+
     public ChunkCoord GetViewerChunkCoord()
     {
         return GetChunkCoordFromWorldPosition(viewer.position);
@@ -831,6 +836,9 @@ public class ChunkManager
         if (record.IsFarTerrainRequestInFlight)
             return;
 
+        if (ShouldDeferFarTerrainWork())
+            return;
+
         int requestVersion = record.BeginFarTerrainRequest();
 
         bool submitted = terrainRequestManager.RequestFarTerrainData(
@@ -858,6 +866,9 @@ public class ChunkManager
             return;
 
         if (record.IsRequestInFlight)
+            return;
+
+        if (ShouldDeferFarTerrainWork())
             return;
 
         int requestVersion = record.BeginRequest();
@@ -1109,46 +1120,6 @@ public class ChunkManager
             );
         }
 
-        int farTerrainResultsApplied = 0;
-        categoryStart = TerrainGenerationProfiler.GetTimestamp();
-        while (CanApplyMoreResults(
-                   farTerrainResultsApplied,
-                   maxFarTerrainResultsAppliedPerFrame,
-                   totalStart,
-                   completedRequestApplyBudgetMsPerFrame,
-                   categoryStart,
-                   farTerrainApplyBudgetMsPerFrame) &&
-               terrainRequestManager.TryDequeueFarTerrainResult(out FarTerrainRequestResult farTerrainResult))
-        {
-            processedAnyRequest = true;
-            farTerrainResultsApplied++;
-            long stageStart = TerrainGenerationProfiler.GetTimestamp();
-            Texture2D[] controlMaps = CreateControlMapTextures(farTerrainResult.ControlMapsRawData);
-            TerrainGenerationProfiler.Record(
-                TerrainGenerationProfileStage.MainFarControlMapTextureCreate,
-                stageStart);
-
-            stageStart = TerrainGenerationProfiler.GetTimestamp();
-            Mesh terrainMesh = farTerrainResult.TerrainMeshData.CreateMesh();
-            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainFarTerrainMeshCreate, stageStart);
-
-            if (farTerrainResult.IsMacroTile &&
-                farTerrainTileRecords.TryGetValue(farTerrainResult.ChunkCoord, out FarTerrainTileRecord tileRecord))
-            {
-                tileRecord.TryCompleteRequest(
-                    farTerrainResult.RequestVersion,
-                    terrainMesh,
-                    controlMaps);
-            }
-            else if (chunkRecords.TryGetValue(farTerrainResult.ChunkCoord, out ChunkRecord record))
-            {
-                record.TryCompleteFarTerrainRequest(
-                    farTerrainResult.RequestVersion,
-                    terrainMesh,
-                    controlMaps);
-            }
-        }
-
         int lodMeshResultsApplied = 0;
         categoryStart = TerrainGenerationProfiler.GetTimestamp();
         while (CanApplyMoreResults(
@@ -1212,12 +1183,172 @@ public class ChunkManager
             );
         }
 
+        int farTerrainResultsApplied = 0;
+        categoryStart = TerrainGenerationProfiler.GetTimestamp();
+        ChunkCoord viewerCoord = GetViewerChunkCoord();
+        while (!HasHigherPriorityCompletedTerrainResults() &&
+               CanApplyMoreResults(
+                   farTerrainResultsApplied,
+                   maxFarTerrainResultsAppliedPerFrame,
+                   totalStart,
+                   completedRequestApplyBudgetMsPerFrame,
+                   categoryStart,
+                   farTerrainApplyBudgetMsPerFrame) &&
+               terrainRequestManager.TryDequeueFarTerrainResult(out FarTerrainRequestResult farTerrainResult))
+        {
+            if (!IsFarTerrainResultStillWanted(farTerrainResult, viewerCoord))
+                continue;
+
+            processedAnyRequest = true;
+            farTerrainResultsApplied++;
+            long stageStart = TerrainGenerationProfiler.GetTimestamp();
+            Texture2D[] controlMaps = CreateControlMapTextures(farTerrainResult.ControlMapsRawData);
+            TerrainGenerationProfiler.Record(
+                TerrainGenerationProfileStage.MainFarControlMapTextureCreate,
+                stageStart);
+
+            stageStart = TerrainGenerationProfiler.GetTimestamp();
+            Mesh terrainMesh = farTerrainResult.TerrainMeshData.CreateMesh();
+            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainFarTerrainMeshCreate, stageStart);
+
+            bool accepted = TryCompleteFarTerrainResult(farTerrainResult, terrainMesh, controlMaps);
+            if (!accepted)
+                DestroyFarTerrainAssets(terrainMesh, controlMaps);
+        }
+
         if (processedAnyRequest)
         {
             TerrainGenerationProfiler.Record(
                 TerrainGenerationProfileStage.MainProcessCompletedRequestsTotal,
                 totalStart);
         }
+    }
+
+    private bool HasHigherPriorityCompletedTerrainResults()
+    {
+        return terrainRequestManager.CompletedTerrainDataResultCount > 0 ||
+               terrainRequestManager.CompletedMeshResultCount > 0 ||
+               terrainRequestManager.CompletedColliderResultCount > 0;
+    }
+
+    private bool ShouldDeferFarTerrainWork()
+    {
+        return terrainRequestManager.ActiveTerrainDataJobCount > 0 ||
+               terrainRequestManager.ActiveMeshJobCount > 0 ||
+               terrainRequestManager.ActiveColliderJobCount > 0 ||
+               HasHigherPriorityCompletedTerrainResults();
+    }
+
+    private bool IsFarTerrainResultStillWanted(
+        FarTerrainRequestResult result,
+        ChunkCoord viewerCoord)
+    {
+        if (result.IsMacroTile)
+        {
+            if (!farTerrainTileRecords.TryGetValue(result.ChunkCoord, out FarTerrainTileRecord tileRecord))
+                return false;
+
+            if (!tileRecord.IsRequestCurrent(result.RequestVersion))
+                return false;
+
+            if (!IsFarTerrainTileWanted(viewerCoord, result.ChunkCoord))
+            {
+                tileRecord.CancelRequest(result.RequestVersion);
+                return false;
+            }
+
+            return true;
+        }
+
+        if (!chunkRecords.TryGetValue(result.ChunkCoord, out ChunkRecord record))
+            return false;
+
+        if (!record.IsFarTerrainRequestCurrent(result.RequestVersion))
+            return false;
+
+        if (!IsChunkWithinViewDistance(viewerCoord, result.ChunkCoord) ||
+            !ShouldUseFarTerrain(viewerCoord, result.ChunkCoord))
+        {
+            record.CancelFarTerrainRequest(result.RequestVersion);
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryCompleteFarTerrainResult(
+        FarTerrainRequestResult result,
+        Mesh terrainMesh,
+        Texture2D[] controlMaps)
+    {
+        if (result.IsMacroTile &&
+            farTerrainTileRecords.TryGetValue(result.ChunkCoord, out FarTerrainTileRecord tileRecord))
+        {
+            return tileRecord.TryCompleteRequest(
+                result.RequestVersion,
+                terrainMesh,
+                controlMaps);
+        }
+
+        if (chunkRecords.TryGetValue(result.ChunkCoord, out ChunkRecord record))
+        {
+            return record.TryCompleteFarTerrainRequest(
+                result.RequestVersion,
+                terrainMesh,
+                controlMaps);
+        }
+
+        return false;
+    }
+
+    private static void DestroyFarTerrainAssets(Mesh terrainMesh, Texture2D[] controlMaps)
+    {
+        if (terrainMesh != null)
+            UnityEngine.Object.Destroy(terrainMesh);
+
+        if (controlMaps == null)
+            return;
+
+        for (int i = 0; i < controlMaps.Length; i++)
+        {
+            if (controlMaps[i] != null)
+                UnityEngine.Object.Destroy(controlMaps[i]);
+        }
+    }
+
+    private bool IsChunkWithinViewDistance(ChunkCoord viewerCoord, ChunkCoord targetCoord)
+    {
+        int dx = targetCoord.x - viewerCoord.x;
+        int dz = targetCoord.z - viewerCoord.z;
+        return dx * dx + dz * dz <= viewDistance * viewDistance;
+    }
+
+    private bool IsFarTerrainTileWanted(ChunkCoord viewerCoord, ChunkCoord farTileCoord)
+    {
+        if (!enableFarTerrain || farTerrainMacroTileSize <= 1)
+            return false;
+
+        if (!IsFarTerrainTileFullyFar(viewerCoord, farTileCoord))
+            return false;
+
+        int originX = farTileCoord.x * farTerrainMacroTileSize;
+        int originZ = farTileCoord.z * farTerrainMacroTileSize;
+        int maxX = originX + farTerrainMacroTileSize - 1;
+        int maxZ = originZ + farTerrainMacroTileSize - 1;
+        int sqrViewRadius = viewDistance * viewDistance;
+
+        for (int x = originX; x <= maxX; x++)
+        {
+            for (int z = originZ; z <= maxZ; z++)
+            {
+                int dx = x - viewerCoord.x;
+                int dz = z - viewerCoord.z;
+                if (dx * dx + dz * dz <= sqrViewRadius)
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool CanApplyMoreResults(

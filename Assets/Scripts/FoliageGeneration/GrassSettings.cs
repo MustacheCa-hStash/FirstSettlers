@@ -14,10 +14,14 @@ public class GrassSettings
     public float subChunkGenerationBudgetMsPerFrame = 1.0f;
 
     [Header("Foliage Work Budgets")]
+    public float foregroundFoliageWorkBudgetMsPerFrame = 1.35f;
     public int maxGroundFoliageGenerationsPerFrame = 2;
     public float groundFoliageGenerationBudgetMsPerFrame = 0.75f;
     public int maxRenderBatchRebuildsPerFrame = 1;
     public float renderBatchRebuildBudgetMsPerFrame = 0.35f;
+    public int maxQueuedGrassSubChunkWork = 128;
+    public int maxQueuedGroundFoliageGenerationWork = 48;
+    public int maxQueuedRenderBatchWork = 96;
 
     [Range(0f, 1f)] public float densityRadius3 = 1.0f;
     [Range(0f, 1f)] public float densityRadius6 = 0.7f;

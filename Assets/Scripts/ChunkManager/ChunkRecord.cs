@@ -252,6 +252,11 @@ public class ChunkRecord
         }
     }
 
+    public bool IsFarTerrainRequestCurrent(int requestVersion)
+    {
+        return farTerrainRequestInFlight && farTerrainRequestVersion == requestVersion;
+    }
+
     public bool TryCompleteFarTerrainRequest(
         int requestVersion,
         Mesh returnedFarTerrainMesh,

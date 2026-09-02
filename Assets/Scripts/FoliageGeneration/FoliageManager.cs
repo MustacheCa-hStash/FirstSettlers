@@ -46,8 +46,10 @@ public class FoliageManager
     private TreeBillboardRenderData grasslandOakTreeBillboard;
     private TreeBillboardRenderData grasslandWillowTreeBillboard;
     private TreeBillboardRenderData grasslandFallbackTreeBillboard;
-    private readonly Queue<GrassSubChunkWorkItem> pendingGrassSubChunkWork = new();
+    private readonly List<GrassSubChunkWorkItem> pendingGrassSubChunkWork = new();
     private readonly HashSet<GrassSubChunkWorkKey> queuedGrassSubChunks = new();
+    private readonly List<ActiveGrassSubChunkGenerationWorkItem> activeGrassSubChunkGenerationWork = new();
+    private readonly HashSet<GrassSubChunkWorkKey> activeGrassSubChunkGenerations = new();
     private readonly HashSet<ChunkCoord> dirtyGrassChunks = new();
     private readonly List<FoliageBatchWorkItem> pendingFoliageBatchWork = new();
     private readonly HashSet<FoliageBatchWorkKey> queuedFoliageBatchWork = new();
@@ -75,11 +77,32 @@ public class FoliageManager
         ResolveTreeRenderAssets();
     }
 
+    public void Dispose()
+    {
+        for (int i = 0; i < activeGrassSubChunkGenerationWork.Count; i++)
+        {
+            activeGrassSubChunkGenerationWork[i].GenerationJob.Dispose();
+        }
+
+        activeGrassSubChunkGenerationWork.Clear();
+        activeGrassSubChunkGenerations.Clear();
+        pendingGrassSubChunkWork.Clear();
+        queuedGrassSubChunks.Clear();
+        pendingGroundFoliageGenerationWork.Clear();
+        queuedGroundFoliageGenerationWork.Clear();
+        pendingFoliageBatchWork.Clear();
+        queuedFoliageBatchWork.Clear();
+        pendingTreeRepresentationWork.Clear();
+        queuedTreeRepresentationWork.Clear();
+        dirtyGrassChunks.Clear();
+        RecordFoliageQueueSnapshot(0);
+    }
+
     private void RecordFoliageQueueSnapshot(int treeRepresentationWorkCount = -1)
     {
         TerrainGenerationProfiler.RecordFoliageQueueSnapshot(
-            pendingGrassSubChunkWork.Count,
-            queuedGrassSubChunks.Count,
+            pendingGrassSubChunkWork.Count + activeGrassSubChunkGenerationWork.Count,
+            queuedGrassSubChunks.Count + activeGrassSubChunkGenerations.Count,
             dirtyGrassChunks.Count,
             pendingFoliageBatchWork.Count,
             treeRepresentationWorkCount,
@@ -252,11 +275,20 @@ public class FoliageManager
         List<ChunkCoord> orderedActiveCoords)
     {
         long stageStart = TerrainGenerationProfiler.GetTimestamp();
+        long workBudgetStart = TerrainGenerationProfiler.GetTimestamp();
+        float foregroundBudgetMs = Mathf.Max(0f, grassSettings.foregroundFoliageWorkBudgetMsPerFrame);
 
-        ProcessPendingGroundFoliageGenerationWork(chunkManager, viewerCoord);
-        ProcessPendingGrassSubChunkWork(chunkManager, viewerCoord, viewerGlobalSubChunk);
-        ProcessPendingFoliageBatchWork(chunkManager, viewerCoord, viewerGlobalSubChunk);
-        ProcessPendingTreeRepresentationWork(chunkManager, viewerCoord);
+        PruneStaleFoliageQueues(chunkManager, viewerCoord, viewerGlobalSubChunk);
+        CompleteActiveGrassSubChunkGenerationWork(
+            chunkManager,
+            viewerCoord,
+            viewerGlobalSubChunk,
+            workBudgetStart,
+            foregroundBudgetMs);
+        ProcessPendingGroundFoliageGenerationWork(chunkManager, viewerCoord, workBudgetStart, foregroundBudgetMs);
+        ProcessPendingGrassSubChunkWork(chunkManager, viewerCoord, viewerGlobalSubChunk, workBudgetStart, foregroundBudgetMs);
+        ProcessPendingFoliageBatchWork(chunkManager, viewerCoord, viewerGlobalSubChunk, workBudgetStart, foregroundBudgetMs);
+        ProcessPendingTreeRepresentationWork(chunkManager, viewerCoord, workBudgetStart, foregroundBudgetMs);
 
         for (int i = 0; i < orderedActiveCoords.Count; i++)
         {
@@ -933,6 +965,7 @@ public class FoliageManager
         int chunkGlobalSubZ = record.ChunkCoord.z * subChunksPerChunk;
         int viewerLocalSubX = viewerGlobalSubChunk.x - chunkGlobalSubX;
         int viewerLocalSubZ = viewerGlobalSubChunk.z - chunkGlobalSubZ;
+        int maxQueuedGrassWork = Mathf.Max(1, grassSettings.maxQueuedGrassSubChunkWork);
 
         for (int radius = 0; radius <= activeSubChunkRadius; radius++)
         {
@@ -962,11 +995,23 @@ public class FoliageManager
                     if (data.IsNearGrassSubChunkGenerated(localSubX, localSubZ))
                         continue;
 
+                    if (pendingGrassSubChunkWork.Count + activeGrassSubChunkGenerationWork.Count >= maxQueuedGrassWork)
+                    {
+                        TerrainGenerationProfiler.Record(
+                            TerrainGenerationProfileStage.FoliageGrassSubChunkEnqueue,
+                            stageStart);
+                        RecordFoliageQueueSnapshot();
+                        return;
+                    }
+
                     GrassSubChunkWorkKey key = new GrassSubChunkWorkKey(record.ChunkCoord, localSubX, localSubZ);
+                    if (activeGrassSubChunkGenerations.Contains(key))
+                        continue;
+
                     if (!queuedGrassSubChunks.Add(key))
                         continue;
 
-                    pendingGrassSubChunkWork.Enqueue(new GrassSubChunkWorkItem(key));
+                    pendingGrassSubChunkWork.Add(new GrassSubChunkWorkItem(key));
                 }
             }
         }
@@ -977,10 +1022,71 @@ public class FoliageManager
         RecordFoliageQueueSnapshot();
     }
 
+    private void CompleteActiveGrassSubChunkGenerationWork(
+        ChunkManager chunkManager,
+        ChunkCoord viewerCoord,
+        SubChunkCoord viewerGlobalSubChunk,
+        long sharedBudgetStart,
+        float sharedBudgetMs)
+    {
+        for (int i = activeGrassSubChunkGenerationWork.Count - 1; i >= 0; i--)
+        {
+            if (sharedBudgetMs > 0f &&
+                TerrainGenerationProfiler.GetElapsedMilliseconds(sharedBudgetStart) >= sharedBudgetMs)
+            {
+                break;
+            }
+
+            ActiveGrassSubChunkGenerationWorkItem workItem = activeGrassSubChunkGenerationWork[i];
+            if (!workItem.GenerationJob.IsCompleted)
+                continue;
+
+            activeGrassSubChunkGenerationWork.RemoveAt(i);
+            activeGrassSubChunkGenerations.Remove(workItem.Key);
+
+            ChunkRecord record = chunkManager.GetChunkRecord(workItem.Key.ChunkCoord);
+            bool shouldUseCloverInfluence =
+                ShouldApplyCloverInfluenceToGrass(viewerCoord, workItem.Key.ChunkCoord);
+            if (workItem.UsesCloverInfluence == shouldUseCloverInfluence &&
+                IsGrassSubChunkWorkStillWanted(record, viewerCoord, viewerGlobalSubChunk, workItem.Key))
+            {
+                workItem.GenerationJob.CompleteAndApply();
+                dirtyGrassChunks.Add(workItem.Key.ChunkCoord);
+            }
+            else
+            {
+                workItem.GenerationJob.Dispose();
+            }
+        }
+
+        EnqueueDirtyGrassBatchRebuilds(chunkManager, viewerCoord);
+    }
+
+    private void EnqueueDirtyGrassBatchRebuilds(ChunkManager chunkManager, ChunkCoord viewerCoord)
+    {
+        foreach (ChunkCoord chunkCoord in dirtyGrassChunks)
+        {
+            ChunkRecord record = chunkManager.GetChunkRecord(chunkCoord);
+            ChunkRuntime runtime = chunkManager.GetChunkRuntime(record);
+
+            if (record == null || runtime == null || runtime.FoliageRuntime == null)
+                continue;
+
+            if (IsWithinNearGrass(viewerCoord, chunkCoord))
+            {
+                EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.NearGrass);
+            }
+        }
+
+        dirtyGrassChunks.Clear();
+    }
+
     private void ProcessPendingGrassSubChunkWork(
         ChunkManager chunkManager,
         ChunkCoord viewerCoord,
-        SubChunkCoord viewerGlobalSubChunk)
+        SubChunkCoord viewerGlobalSubChunk,
+        long sharedBudgetStart,
+        float sharedBudgetMs)
     {
         int maxGenerations = Mathf.Max(1, grassSettings.maxSubChunkGenerationsPerFrame);
         float budgetMs = Mathf.Max(0f, grassSettings.subChunkGenerationBudgetMsPerFrame);
@@ -989,10 +1095,10 @@ public class FoliageManager
 
         while (pendingGrassSubChunkWork.Count > 0 && generatedCount < maxGenerations)
         {
-            if (budgetMs > 0f && TerrainGenerationProfiler.GetElapsedMilliseconds(frameStart) >= budgetMs)
+            if (!HasFoliageWorkBudgetRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs))
                 break;
 
-            GrassSubChunkWorkItem workItem = pendingGrassSubChunkWork.Dequeue();
+            GrassSubChunkWorkItem workItem = PopNearestGrassSubChunkWork(viewerGlobalSubChunk);
             queuedGrassSubChunks.Remove(workItem.Key);
 
             if (!IsWithinNearGrass(viewerCoord, workItem.Key.ChunkCoord))
@@ -1032,7 +1138,7 @@ public class FoliageManager
             EnsureRocksGenerated(record);
 
             long discoveryStart = TerrainGenerationProfiler.GetTimestamp();
-            FoliageGenerator.GenerateGrassForSubChunk(
+            bool scheduled = FoliageGenerator.TryScheduleGrassForSubChunk(
                 record,
                 grassSettings,
                 cloverSettings,
@@ -1043,30 +1149,30 @@ public class FoliageManager
                 meshHeightMultiplier,
                 workItem.Key.LocalSubChunkX,
                 workItem.Key.LocalSubChunkZ,
-                applyCloverInfluence);
+                applyCloverInfluence,
+                out FoliageGenerator.GrassSubChunkGenerationJob generationJob);
             TerrainGenerationProfiler.Record(
                 TerrainGenerationProfileStage.FoliageGrassSubChunkDiscovery,
                 discoveryStart);
 
-            dirtyGrassChunks.Add(record.ChunkCoord);
-            generatedCount++;
-        }
-
-        foreach (ChunkCoord chunkCoord in dirtyGrassChunks)
-        {
-            ChunkRecord record = chunkManager.GetChunkRecord(chunkCoord);
-            ChunkRuntime runtime = chunkManager.GetChunkRuntime(record);
-
-            if (record == null || runtime == null || runtime.FoliageRuntime == null)
-                continue;
-
-            if (IsWithinNearGrass(viewerCoord, chunkCoord))
+            if (scheduled)
             {
-                EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.NearGrass);
+                activeGrassSubChunkGenerations.Add(workItem.Key);
+                activeGrassSubChunkGenerationWork.Add(
+                    new ActiveGrassSubChunkGenerationWorkItem(workItem.Key, generationJob, applyCloverInfluence));
             }
+            else
+            {
+                dirtyGrassChunks.Add(record.ChunkCoord);
+            }
+
+            generatedCount++;
+
+            if (!HasFoliageWorkBudgetRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs))
+                break;
         }
 
-        dirtyGrassChunks.Clear();
+        EnqueueDirtyGrassBatchRebuilds(chunkManager, viewerCoord);
         RecordFoliageQueueSnapshot();
     }
 
@@ -1079,13 +1185,21 @@ public class FoliageManager
         if (!queuedGroundFoliageGenerationWork.Add(key))
             return;
 
+        if (pendingGroundFoliageGenerationWork.Count >= Mathf.Max(1, grassSettings.maxQueuedGroundFoliageGenerationWork))
+        {
+            queuedGroundFoliageGenerationWork.Remove(key);
+            return;
+        }
+
         pendingGroundFoliageGenerationWork.Add(new GroundFoliageGenerationWorkItem(key));
         RecordFoliageQueueSnapshot();
     }
 
     private void ProcessPendingGroundFoliageGenerationWork(
         ChunkManager chunkManager,
-        ChunkCoord viewerCoord)
+        ChunkCoord viewerCoord,
+        long sharedBudgetStart,
+        float sharedBudgetMs)
     {
         int maxGenerations = Mathf.Max(1, grassSettings.maxGroundFoliageGenerationsPerFrame);
         float budgetMs = Mathf.Max(0f, grassSettings.groundFoliageGenerationBudgetMsPerFrame);
@@ -1094,7 +1208,7 @@ public class FoliageManager
 
         while (pendingGroundFoliageGenerationWork.Count > 0 && generationCount < maxGenerations)
         {
-            if (budgetMs > 0f && TerrainGenerationProfiler.GetElapsedMilliseconds(frameStart) >= budgetMs)
+            if (!HasFoliageWorkBudgetRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs))
                 break;
 
             GroundFoliageGenerationWorkItem workItem = PopNearestGroundFoliageGenerationWork(viewerCoord);
@@ -1130,6 +1244,9 @@ public class FoliageManager
                     generationCount++;
                     break;
             }
+
+            if (!HasFoliageWorkBudgetRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs))
+                break;
         }
 
         RecordFoliageQueueSnapshot();
@@ -1143,6 +1260,12 @@ public class FoliageManager
         FoliageBatchWorkKey key = new FoliageBatchWorkKey(record.ChunkCoord, workType);
         if (!queuedFoliageBatchWork.Add(key))
             return;
+
+        if (pendingFoliageBatchWork.Count >= Mathf.Max(1, grassSettings.maxQueuedRenderBatchWork))
+        {
+            queuedFoliageBatchWork.Remove(key);
+            return;
+        }
 
         pendingFoliageBatchWork.Add(new FoliageBatchWorkItem(key));
         RecordFoliageQueueSnapshot();
@@ -1175,7 +1298,9 @@ public class FoliageManager
     private void ProcessPendingFoliageBatchWork(
         ChunkManager chunkManager,
         ChunkCoord viewerCoord,
-        SubChunkCoord viewerGlobalSubChunk)
+        SubChunkCoord viewerGlobalSubChunk,
+        long sharedBudgetStart,
+        float sharedBudgetMs)
     {
         int maxRebuilds = Mathf.Max(1, grassSettings.maxRenderBatchRebuildsPerFrame);
         float budgetMs = Mathf.Max(0f, grassSettings.renderBatchRebuildBudgetMsPerFrame);
@@ -1184,7 +1309,7 @@ public class FoliageManager
 
         while (pendingFoliageBatchWork.Count > 0 && rebuildCount < maxRebuilds)
         {
-            if (budgetMs > 0f && TerrainGenerationProfiler.GetElapsedMilliseconds(frameStart) >= budgetMs)
+            if (!HasFoliageWorkBudgetRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs))
                 break;
 
             FoliageBatchWorkItem workItem = PopNearestFoliageBatchWork(viewerCoord);
@@ -1218,6 +1343,9 @@ public class FoliageManager
                     rebuildCount++;
                     break;
             }
+
+            if (!HasFoliageWorkBudgetRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs))
+                break;
         }
 
         RecordFoliageQueueSnapshot();
@@ -1225,7 +1353,9 @@ public class FoliageManager
 
     private void ProcessPendingTreeRepresentationWork(
         ChunkManager chunkManager,
-        ChunkCoord viewerCoord)
+        ChunkCoord viewerCoord,
+        long sharedBudgetStart,
+        float sharedBudgetMs)
     {
         int maxRebuilds = Mathf.Max(1, treeSettings.maxTreeRepresentationRebuildsPerFrame);
         float budgetMs = Mathf.Max(0f, treeSettings.treeRepresentationRebuildBudgetMsPerFrame);
@@ -1234,7 +1364,7 @@ public class FoliageManager
 
         while (pendingTreeRepresentationWork.Count > 0 && rebuildCount < maxRebuilds)
         {
-            if (budgetMs > 0f && TerrainGenerationProfiler.GetElapsedMilliseconds(frameStart) >= budgetMs)
+            if (!HasFoliageWorkBudgetRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs))
                 break;
 
             TreeRepresentationWorkItem workItem = PopNearestTreeRepresentationWork(viewerCoord);
@@ -1260,9 +1390,124 @@ public class FoliageManager
             EnsureTreesGenerated(record);
             RebuildTreeRepresentationIfNeeded(runtime, record, viewerCoord);
             rebuildCount++;
+
+            if (!HasFoliageWorkBudgetRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs))
+                break;
         }
 
         RecordFoliageQueueSnapshot(pendingTreeRepresentationWork.Count);
+    }
+
+    private static bool HasFoliageWorkBudgetRemaining(
+        long localBudgetStart,
+        float localBudgetMs,
+        long sharedBudgetStart,
+        float sharedBudgetMs)
+    {
+        return (localBudgetMs <= 0f ||
+                TerrainGenerationProfiler.GetElapsedMilliseconds(localBudgetStart) < localBudgetMs) &&
+               (sharedBudgetMs <= 0f ||
+                TerrainGenerationProfiler.GetElapsedMilliseconds(sharedBudgetStart) < sharedBudgetMs);
+    }
+
+    private void PruneStaleFoliageQueues(
+        ChunkManager chunkManager,
+        ChunkCoord viewerCoord,
+        SubChunkCoord viewerGlobalSubChunk)
+    {
+        queuedGrassSubChunks.Clear();
+        for (int i = pendingGrassSubChunkWork.Count - 1; i >= 0; i--)
+        {
+            GrassSubChunkWorkItem workItem = pendingGrassSubChunkWork[i];
+            ChunkRecord record = chunkManager.GetChunkRecord(workItem.Key.ChunkCoord);
+
+            if (!IsGrassSubChunkWorkStillWanted(record, viewerCoord, viewerGlobalSubChunk, workItem.Key) ||
+                !queuedGrassSubChunks.Add(workItem.Key))
+            {
+                pendingGrassSubChunkWork.RemoveAt(i);
+            }
+        }
+
+        queuedGroundFoliageGenerationWork.Clear();
+        for (int i = pendingGroundFoliageGenerationWork.Count - 1; i >= 0; i--)
+        {
+            GroundFoliageGenerationWorkItem workItem = pendingGroundFoliageGenerationWork[i];
+            ChunkRecord record = chunkManager.GetChunkRecord(workItem.Key.ChunkCoord);
+
+            if (record == null ||
+                !HasRequiredTerrainData(record) ||
+                !IsGroundFoliageGenerationStillWanted(record, viewerCoord, workItem.Key.GenerationType) ||
+                !queuedGroundFoliageGenerationWork.Add(workItem.Key))
+            {
+                pendingGroundFoliageGenerationWork.RemoveAt(i);
+            }
+        }
+
+        queuedFoliageBatchWork.Clear();
+        for (int i = pendingFoliageBatchWork.Count - 1; i >= 0; i--)
+        {
+            FoliageBatchWorkItem workItem = pendingFoliageBatchWork[i];
+            ChunkRecord record = chunkManager.GetChunkRecord(workItem.Key.ChunkCoord);
+            ChunkRuntime runtime = chunkManager.GetChunkRuntime(record);
+
+            if (record == null ||
+                runtime == null ||
+                runtime.FoliageRuntime == null ||
+                !HasRequiredTerrainData(record) ||
+                !IsFoliageBatchWorkStillWanted(record, viewerCoord, workItem.Key.WorkType) ||
+                !queuedFoliageBatchWork.Add(workItem.Key))
+            {
+                pendingFoliageBatchWork.RemoveAt(i);
+            }
+        }
+
+        queuedTreeRepresentationWork.Clear();
+        for (int i = pendingTreeRepresentationWork.Count - 1; i >= 0; i--)
+        {
+            TreeRepresentationWorkItem workItem = pendingTreeRepresentationWork[i];
+            ChunkRecord record = chunkManager.GetChunkRecord(workItem.ChunkCoord);
+            ChunkRuntime runtime = chunkManager.GetChunkRuntime(record);
+
+            if (record == null ||
+                runtime == null ||
+                runtime.FoliageRuntime == null ||
+                !HasRequiredTerrainData(record) ||
+                !IsWithinTreeRenderRange(viewerCoord, workItem.ChunkCoord) ||
+                runtime.FoliageRuntime.HasCurrentTreeRepresentation(GetTreeRepresentationMode(viewerCoord, workItem.ChunkCoord)) ||
+                !queuedTreeRepresentationWork.Add(workItem.ChunkCoord))
+            {
+                pendingTreeRepresentationWork.RemoveAt(i);
+            }
+        }
+
+        RecordFoliageQueueSnapshot(pendingTreeRepresentationWork.Count);
+    }
+
+    private GrassSubChunkWorkItem PopNearestGrassSubChunkWork(SubChunkCoord viewerGlobalSubChunk)
+    {
+        int bestIndex = 0;
+        int bestDistance = int.MaxValue;
+        int subChunksPerChunk = Mathf.Max(1, grassSettings.subChunksPerChunk);
+
+        for (int i = 0; i < pendingGrassSubChunkWork.Count; i++)
+        {
+            GrassSubChunkWorkItem candidate = pendingGrassSubChunkWork[i];
+            int globalSubX = candidate.Key.ChunkCoord.x * subChunksPerChunk + candidate.Key.LocalSubChunkX;
+            int globalSubZ = candidate.Key.ChunkCoord.z * subChunksPerChunk + candidate.Key.LocalSubChunkZ;
+            int dx = globalSubX - viewerGlobalSubChunk.x;
+            int dz = globalSubZ - viewerGlobalSubChunk.z;
+            int distance = dx * dx + dz * dz;
+
+            if (distance >= bestDistance)
+                continue;
+
+            bestDistance = distance;
+            bestIndex = i;
+        }
+
+        GrassSubChunkWorkItem result = pendingGrassSubChunkWork[bestIndex];
+        pendingGrassSubChunkWork.RemoveAt(bestIndex);
+        return result;
     }
 
     private TreeRepresentationWorkItem PopNearestTreeRepresentationWork(ChunkCoord viewerCoord)
@@ -1357,6 +1602,48 @@ public class FoliageManager
             default:
                 return false;
         }
+    }
+
+    private bool IsGrassSubChunkWorkStillWanted(
+        ChunkRecord record,
+        ChunkCoord viewerCoord,
+        SubChunkCoord viewerGlobalSubChunk,
+        GrassSubChunkWorkKey key)
+    {
+        if (record == null ||
+            !HasRequiredTerrainData(record) ||
+            !IsWithinNearGrass(viewerCoord, key.ChunkCoord) ||
+            !IsCloverReadyForGrass(record, viewerCoord))
+        {
+            return false;
+        }
+
+        ChunkFoliageData data = record.FoliageData;
+        if (data == null ||
+            data.nearGrassInstancesBySubChunk == null ||
+            data.nearGrassSubChunkGenerated == null)
+        {
+            return true;
+        }
+
+        int subChunksPerChunk = Mathf.Max(1, data.subChunksPerChunk);
+        if (key.LocalSubChunkX < 0 ||
+            key.LocalSubChunkZ < 0 ||
+            key.LocalSubChunkX >= subChunksPerChunk ||
+            key.LocalSubChunkZ >= subChunksPerChunk)
+        {
+            return false;
+        }
+
+        int activeSubChunkRadius = GetActiveGrassSubChunkRadius(subChunksPerChunk);
+        return IsGrassSubChunkDesired(
+                   key.ChunkCoord,
+                   key.LocalSubChunkX,
+                   key.LocalSubChunkZ,
+                   viewerGlobalSubChunk,
+                   subChunksPerChunk,
+                   activeSubChunkRadius) &&
+               !data.IsNearGrassSubChunkGenerated(key.LocalSubChunkX, key.LocalSubChunkZ);
     }
 
     private bool IsGroundFoliageGenerationStillWanted(
@@ -2359,6 +2646,23 @@ public class FoliageManager
         public GrassSubChunkWorkItem(GrassSubChunkWorkKey key)
         {
             Key = key;
+        }
+    }
+
+    private readonly struct ActiveGrassSubChunkGenerationWorkItem
+    {
+        public readonly GrassSubChunkWorkKey Key;
+        public readonly FoliageGenerator.GrassSubChunkGenerationJob GenerationJob;
+        public readonly bool UsesCloverInfluence;
+
+        public ActiveGrassSubChunkGenerationWorkItem(
+            GrassSubChunkWorkKey key,
+            FoliageGenerator.GrassSubChunkGenerationJob generationJob,
+            bool usesCloverInfluence)
+        {
+            Key = key;
+            GenerationJob = generationJob;
+            UsesCloverInfluence = usesCloverInfluence;
         }
     }
 

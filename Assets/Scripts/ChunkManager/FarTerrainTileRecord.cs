@@ -33,6 +33,11 @@ public class FarTerrainTileRecord
             requestInFlight = false;
     }
 
+    public bool IsRequestCurrent(int version)
+    {
+        return requestInFlight && requestVersion == version;
+    }
+
     public bool TryCompleteRequest(int version, Mesh returnedTerrainMesh, Texture2D[] returnedControlMapData)
     {
         if (!requestInFlight || requestVersion != version)

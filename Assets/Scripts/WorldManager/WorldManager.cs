@@ -35,16 +35,16 @@ public class WorldManager : MonoBehaviour
     [SerializeField] bool resetTerrainGenerationProfileAfterLog = true;
     [Header("Terrain Streaming Budgets")]
     [SerializeField] int maxActiveTerrainDataJobs = 3;
-    [SerializeField] int maxActiveFarTerrainJobs = 3;
+    [SerializeField] int maxActiveFarTerrainJobs = 1;
     [SerializeField] int maxActiveMeshJobs = 4;
     [SerializeField] int maxActiveColliderJobs = 2;
     [SerializeField] int maxTerrainDataResultsAppliedPerFrame = 2;
-    [SerializeField] int maxFarTerrainResultsAppliedPerFrame = 96;
+    [SerializeField] int maxFarTerrainResultsAppliedPerFrame = 1;
     [SerializeField] int maxLODMeshResultsAppliedPerFrame = 12;
     [SerializeField] int maxColliderResultsAppliedPerFrame = 2;
     [SerializeField] float completedRequestApplyBudgetMsPerFrame = 3f;
     [SerializeField] float terrainDataApplyBudgetMsPerFrame = 0.75f;
-    [SerializeField] float farTerrainApplyBudgetMsPerFrame = 1.5f;
+    [SerializeField] float farTerrainApplyBudgetMsPerFrame = 0.25f;
     [SerializeField] float lodMeshApplyBudgetMsPerFrame = 0.75f;
     [SerializeField] float colliderApplyBudgetMsPerFrame = 0.25f;
 
@@ -80,6 +80,11 @@ public class WorldManager : MonoBehaviour
             Time.unscaledTime,
             terrainGenerationProfileLogInterval,
             resetTerrainGenerationProfileAfterLog);
+    }
+
+    void OnDestroy()
+    {
+        chunkManager?.Dispose();
     }
 
     public WorldDebugInfo GetDebugInfoAtWorldPosition(Vector3 worldPosition)

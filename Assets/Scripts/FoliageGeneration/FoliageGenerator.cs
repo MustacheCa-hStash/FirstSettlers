@@ -54,6 +54,40 @@ public static class FoliageGenerator
         int localSubChunkZ,
         bool applyCloverInfluence = true)
     {
+        if (TryScheduleGrassForSubChunk(
+                record,
+                grassSettings,
+                cloverSettings,
+                treeSettings,
+                worldSeed,
+                chunkSize,
+                worldScale,
+                meshHeightMultiplier,
+                localSubChunkX,
+                localSubChunkZ,
+                applyCloverInfluence,
+                out GrassSubChunkGenerationJob job))
+        {
+            job.CompleteAndApply();
+        }
+    }
+
+    public static bool TryScheduleGrassForSubChunk(
+        ChunkRecord record,
+        GrassSettings grassSettings,
+        CloverSettings cloverSettings,
+        TreeSettings treeSettings,
+        int worldSeed,
+        int chunkSize,
+        float worldScale,
+        float meshHeightMultiplier,
+        int localSubChunkX,
+        int localSubChunkZ,
+        bool applyCloverInfluence,
+        out GrassSubChunkGenerationJob scheduledJob)
+    {
+        scheduledJob = null;
+
         int subChunksPerChunk = Mathf.Max(1, grassSettings.subChunksPerChunk);
         EnsureNearGrassStorage(record, subChunksPerChunk);
 
@@ -67,7 +101,7 @@ public static class FoliageGenerator
         if (record.SurfaceTypeMap == null || record.HeightMap == null || record.BiomeMap == null)
         {
             foliageData.MarkNearGrassSubChunkGenerated(localSubChunkX, localSubChunkZ, applyCloverInfluence);
-            return;
+            return false;
         }
 
         int cellsPerAxis = Mathf.Max(1, grassSettings.cellsPerAxis);
@@ -103,19 +137,20 @@ public static class FoliageGenerator
         int cellCountZ = endCellZ - startCellZ + 1;
         int candidateCount = cellCountX * cellCountZ;
 
-        NativeArray<float> heightMap = FlattenFloatMap(record.HeightMap, Allocator.TempJob, out int heightMapWidth, out int heightMapHeight);
-        NativeArray<SurfaceType> surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.TempJob, out int surfaceMapWidth, out int surfaceMapHeight);
-        NativeArray<BiomeType> biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.TempJob, out int biomeMapWidth, out int biomeMapHeight);
-        NativeArray<GroundCoverType> groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.TempJob, out int groundCoverMapWidth, out int groundCoverMapHeight);
-        NativeArray<float2> treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.TempJob);
-        NativeArray<float2> bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, Allocator.TempJob);
-        NativeArray<float2> rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, Allocator.TempJob);
+        const Allocator asyncAllocator = Allocator.Persistent;
+        NativeArray<float> heightMap = FlattenFloatMap(record.HeightMap, asyncAllocator, out int heightMapWidth, out int heightMapHeight);
+        NativeArray<SurfaceType> surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, asyncAllocator, out int surfaceMapWidth, out int surfaceMapHeight);
+        NativeArray<BiomeType> biomeMap = FlattenBiomeMap(record.BiomeMap, asyncAllocator, out int biomeMapWidth, out int biomeMapHeight);
+        NativeArray<GroundCoverType> groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, asyncAllocator, out int groundCoverMapWidth, out int groundCoverMapHeight);
+        NativeArray<float2> treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, asyncAllocator);
+        NativeArray<float2> bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, asyncAllocator);
+        NativeArray<float2> rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, asyncAllocator);
         NativeArray<float4> cloverInfluences = CreateCloverInfluences(
             applyCloverInfluence ? foliageData.cloverInstances : null,
             cloverSettings,
-            Allocator.TempJob);
+            asyncAllocator);
         NativeArray<GrassSubChunkDiscoveryResult> results =
-            new NativeArray<GrassSubChunkDiscoveryResult>(candidateCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            new NativeArray<GrassSubChunkDiscoveryResult>(candidateCount, asyncAllocator, NativeArrayOptions.UninitializedMemory);
 
         try
         {
@@ -171,26 +206,24 @@ public static class FoliageGenerator
             };
 
             JobHandle handle = job.Schedule(candidateCount, 32);
-            handle.Complete();
-
-            List<FoliageInstanceData> subChunkInstances =
-                foliageData.nearGrassInstancesBySubChunk[localSubChunkX, localSubChunkZ];
-
-            for (int i = 0; i < results.Length; i++)
-            {
-                GrassSubChunkDiscoveryResult result = results[i];
-                if (result.valid == 0)
-                    continue;
-
-                subChunkInstances.Add(new FoliageInstanceData(
-                    new Vector3(result.localPosition.x, result.localPosition.y, result.localPosition.z),
-                    Quaternion.Euler(0f, result.yaw, 0f),
-                    Vector3.one * result.uniformScale,
-                    result.selectionRank,
-                    result.forestBlend));
-            }
+            scheduledJob = new GrassSubChunkGenerationJob(
+                record,
+                localSubChunkX,
+                localSubChunkZ,
+                applyCloverInfluence,
+                handle,
+                heightMap,
+                surfaceMap,
+                biomeMap,
+                groundCoverMap,
+                treeExclusionPositions,
+                bushExclusionPositions,
+                rockExclusionPositions,
+                cloverInfluences,
+                results);
+            return true;
         }
-        finally
+        catch
         {
             if (heightMap.IsCreated)
                 heightMap.Dispose();
@@ -210,10 +243,131 @@ public static class FoliageGenerator
                 cloverInfluences.Dispose();
             if (results.IsCreated)
                 results.Dispose();
+
+            throw;
+        }
+    }
+
+    public sealed class GrassSubChunkGenerationJob : System.IDisposable
+    {
+        private readonly ChunkRecord record;
+        private readonly int localSubChunkX;
+        private readonly int localSubChunkZ;
+        private readonly bool applyCloverInfluence;
+        private JobHandle handle;
+        private NativeArray<float> heightMap;
+        private NativeArray<SurfaceType> surfaceMap;
+        private NativeArray<BiomeType> biomeMap;
+        private NativeArray<GroundCoverType> groundCoverMap;
+        private NativeArray<float2> treeExclusionPositions;
+        private NativeArray<float2> bushExclusionPositions;
+        private NativeArray<float2> rockExclusionPositions;
+        private NativeArray<float4> cloverInfluences;
+        private NativeArray<GrassSubChunkDiscoveryResult> results;
+        private bool disposed;
+
+        internal GrassSubChunkGenerationJob(
+            ChunkRecord record,
+            int localSubChunkX,
+            int localSubChunkZ,
+            bool applyCloverInfluence,
+            JobHandle handle,
+            NativeArray<float> heightMap,
+            NativeArray<SurfaceType> surfaceMap,
+            NativeArray<BiomeType> biomeMap,
+            NativeArray<GroundCoverType> groundCoverMap,
+            NativeArray<float2> treeExclusionPositions,
+            NativeArray<float2> bushExclusionPositions,
+            NativeArray<float2> rockExclusionPositions,
+            NativeArray<float4> cloverInfluences,
+            NativeArray<GrassSubChunkDiscoveryResult> results)
+        {
+            this.record = record;
+            this.localSubChunkX = localSubChunkX;
+            this.localSubChunkZ = localSubChunkZ;
+            this.applyCloverInfluence = applyCloverInfluence;
+            this.handle = handle;
+            this.heightMap = heightMap;
+            this.surfaceMap = surfaceMap;
+            this.biomeMap = biomeMap;
+            this.groundCoverMap = groundCoverMap;
+            this.treeExclusionPositions = treeExclusionPositions;
+            this.bushExclusionPositions = bushExclusionPositions;
+            this.rockExclusionPositions = rockExclusionPositions;
+            this.cloverInfluences = cloverInfluences;
+            this.results = results;
         }
 
-        SortSubChunkBucketBySelectionRank(foliageData, localSubChunkX, localSubChunkZ);
-        foliageData.MarkNearGrassSubChunkGenerated(localSubChunkX, localSubChunkZ, applyCloverInfluence);
+        public bool IsCompleted => disposed || handle.IsCompleted;
+
+        public void CompleteAndApply()
+        {
+            if (disposed)
+                return;
+
+            handle.Complete();
+
+            try
+            {
+                ChunkFoliageData foliageData = record.FoliageData;
+                List<FoliageInstanceData> subChunkInstances =
+                    foliageData.nearGrassInstancesBySubChunk[localSubChunkX, localSubChunkZ];
+
+                for (int i = 0; i < results.Length; i++)
+                {
+                    GrassSubChunkDiscoveryResult result = results[i];
+                    if (result.valid == 0)
+                        continue;
+
+                    subChunkInstances.Add(new FoliageInstanceData(
+                        new Vector3(result.localPosition.x, result.localPosition.y, result.localPosition.z),
+                        Quaternion.Euler(0f, result.yaw, 0f),
+                        Vector3.one * result.uniformScale,
+                        result.selectionRank,
+                        result.forestBlend));
+                }
+
+                SortSubChunkBucketBySelectionRank(foliageData, localSubChunkX, localSubChunkZ);
+                foliageData.MarkNearGrassSubChunkGenerated(localSubChunkX, localSubChunkZ, applyCloverInfluence);
+            }
+            finally
+            {
+                DisposeArrays();
+            }
+        }
+
+        public void Dispose()
+        {
+            if (disposed)
+                return;
+
+            handle.Complete();
+            DisposeArrays();
+        }
+
+        private void DisposeArrays()
+        {
+            if (heightMap.IsCreated)
+                heightMap.Dispose();
+            if (surfaceMap.IsCreated)
+                surfaceMap.Dispose();
+            if (biomeMap.IsCreated)
+                biomeMap.Dispose();
+            if (groundCoverMap.IsCreated)
+                groundCoverMap.Dispose();
+            if (treeExclusionPositions.IsCreated)
+                treeExclusionPositions.Dispose();
+            if (bushExclusionPositions.IsCreated)
+                bushExclusionPositions.Dispose();
+            if (rockExclusionPositions.IsCreated)
+                rockExclusionPositions.Dispose();
+            if (cloverInfluences.IsCreated)
+                cloverInfluences.Dispose();
+            if (results.IsCreated)
+                results.Dispose();
+
+            disposed = true;
+        }
     }
 
     public static void GenerateBillboardGrassForChunk(
@@ -1337,7 +1491,7 @@ public static class FoliageGenerator
         }
     }
 
-    private struct GrassSubChunkDiscoveryResult
+    internal struct GrassSubChunkDiscoveryResult
     {
         public byte valid;
         public float3 localPosition;

@@ -523,7 +523,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 7
+  worldSeed: 8
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -546,10 +546,14 @@ MonoBehaviour:
     activeSubChunkRadius: 0
     maxSubChunkGenerationsPerFrame: 8
     subChunkGenerationBudgetMsPerFrame: 1
+    foregroundFoliageWorkBudgetMsPerFrame: 1.35
     maxGroundFoliageGenerationsPerFrame: 2
     groundFoliageGenerationBudgetMsPerFrame: 0.75
     maxRenderBatchRebuildsPerFrame: 1
     renderBatchRebuildBudgetMsPerFrame: 0.35
+    maxQueuedGrassSubChunkWork: 128
+    maxQueuedGroundFoliageGenerationWork: 48
+    maxQueuedRenderBatchWork: 96
     densityRadius3: 1
     densityRadius6: 0.6
     densityRadius10: 0.2
@@ -616,7 +620,7 @@ MonoBehaviour:
     preGenerationRingPadding: 1
     receiveCloverShadows: 0
     patchCellSize: 16
-    maxPatchCentersPerCell: 1
+    maxPatchCentersPerCell: 2
     patchSpawnChance: 0.3
     patchNoiseScale: 0.028
     patchNoiseThreshold: 0.5
@@ -632,8 +636,8 @@ MonoBehaviour:
     bushExclusionRadius: 1.1
     rockExclusionRadius: 0.85
     grassDensityInsidePatch: 0
-    grassInfluenceRadius: 0.45
-    grassFadePadding: 0.35
+    grassInfluenceRadius: 0.7
+    grassFadePadding: 0.7
   treeSettings:
     mapleTreePrefab: {fileID: 5742719185016810390, guid: 73725a84115a55c42a0b3d9b18fdb0b1, type: 3}
     sugarMapleTreePrefab: {fileID: 8072720124864646751, guid: 92cc01de156a13640b9a9f2978a6ed7d, type: 3}
@@ -723,16 +727,16 @@ MonoBehaviour:
   terrainGenerationProfileLogInterval: 5
   resetTerrainGenerationProfileAfterLog: 1
   maxActiveTerrainDataJobs: 4
-  maxActiveFarTerrainJobs: 4
+  maxActiveFarTerrainJobs: 1
   maxActiveMeshJobs: 6
   maxActiveColliderJobs: 2
   maxTerrainDataResultsAppliedPerFrame: 3
-  maxFarTerrainResultsAppliedPerFrame: 160
+  maxFarTerrainResultsAppliedPerFrame: 1
   maxLODMeshResultsAppliedPerFrame: 16
   maxColliderResultsAppliedPerFrame: 2
   completedRequestApplyBudgetMsPerFrame: 5
   terrainDataApplyBudgetMsPerFrame: 1.25
-  farTerrainApplyBudgetMsPerFrame: 2.25
+  farTerrainApplyBudgetMsPerFrame: 0.25
   lodMeshApplyBudgetMsPerFrame: 1.25
   colliderApplyBudgetMsPerFrame: 0.35
 --- !u!4 &830849844
