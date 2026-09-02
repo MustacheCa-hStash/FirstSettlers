@@ -50,6 +50,9 @@ public enum TerrainGenerationProfileStage
     FoliageFlowerGeneration,
     FoliageFlowerBatchBuild,
     FoliageFlowerDraw,
+    FoliageCloverGeneration,
+    FoliageCloverBatchBuild,
+    FoliageCloverDraw,
     FoliageTreeGeneration,
     FoliageTreeGameObjectRebuild,
     FoliageTreeBillboardBatchBuild,
@@ -135,6 +138,9 @@ public static class TerrainGenerationProfiler
         "foliage flower generation",
         "foliage flower batch build",
         "foliage flower draw",
+        "foliage clover generation",
+        "foliage clover batch build",
+        "foliage clover draw",
         "foliage tree generation",
         "foliage tree gameobject rebuild",
         "foliage tree billboard batch build",
@@ -159,6 +165,7 @@ public static class TerrainGenerationProfiler
     private static int pendingGrassSubChunkWork;
     private static int queuedGrassSubChunks;
     private static int dirtyGrassChunks;
+    private static int queuedGroundFoliageGenerations;
     private static int queuedFoliageBatchRebuilds;
     private static int queuedTreeRepresentationRebuilds;
 
@@ -247,7 +254,8 @@ public static class TerrainGenerationProfiler
         int queuedGrassKeys,
         int dirtyGrassChunkCount,
         int foliageBatchRebuildCount = 0,
-        int treeRepresentationRebuildCount = -1)
+        int treeRepresentationRebuildCount = -1,
+        int groundFoliageGenerationCount = -1)
     {
         if (!isEnabled)
             return;
@@ -257,6 +265,8 @@ public static class TerrainGenerationProfiler
             pendingGrassSubChunkWork = pendingGrassWork;
             queuedGrassSubChunks = queuedGrassKeys;
             dirtyGrassChunks = dirtyGrassChunkCount;
+            if (groundFoliageGenerationCount >= 0)
+                queuedGroundFoliageGenerations = groundFoliageGenerationCount;
             queuedFoliageBatchRebuilds = foliageBatchRebuildCount;
             if (treeRepresentationRebuildCount >= 0)
                 queuedTreeRepresentationRebuilds = treeRepresentationRebuildCount;
@@ -309,6 +319,8 @@ public static class TerrainGenerationProfiler
             Builder.Append(queuedGrassSubChunks);
             Builder.Append(" dirtyGrassChunks=");
             Builder.Append(dirtyGrassChunks);
+            Builder.Append(" queuedGroundGen=");
+            Builder.Append(queuedGroundFoliageGenerations);
             Builder.Append(" queuedBatchRebuilds=");
             Builder.Append(queuedFoliageBatchRebuilds);
             Builder.Append(" queuedTreeRebuilds=");

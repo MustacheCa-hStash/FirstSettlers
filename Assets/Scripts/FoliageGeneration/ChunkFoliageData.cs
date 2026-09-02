@@ -3,6 +3,7 @@ using System.Collections.Generic;
 public class ChunkFoliageData
 {
     public bool nearGrassGenerated;
+    public bool nearGrassUsesCloverInfluence;
     public int subChunksPerChunk;
     public List<FoliageInstanceData>[,] nearGrassInstancesBySubChunk;
     public bool[,] nearGrassSubChunkGenerated;
@@ -12,6 +13,9 @@ public class ChunkFoliageData
 
     public bool flowersGenerated;
     public List<FlowerInstanceData> flowerInstances = new List<FlowerInstanceData>();
+
+    public bool cloverGenerated;
+    public List<CloverInstanceData> cloverInstances = new List<CloverInstanceData>();
 
     public bool treeCubesGenerated;
     public List<TreeInstanceData> treeCubeInstances = new List<TreeInstanceData>();
@@ -40,6 +44,7 @@ public class ChunkFoliageData
     public void ClearNearGrass()
     {
         nearGrassGenerated = false;
+        nearGrassUsesCloverInfluence = false;
 
         if (nearGrassInstancesBySubChunk == null)
             return;
@@ -73,13 +78,31 @@ public class ChunkFoliageData
         nearGrassGenerated = false;
     }
 
-    public void MarkNearGrassSubChunkGenerated(int localSubChunkX, int localSubChunkZ)
+    public void MarkNearGrassSubChunkGenerated(int localSubChunkX, int localSubChunkZ, bool usesCloverInfluence = false)
     {
         if (!HasValidNearGrassSubChunk(localSubChunkX, localSubChunkZ))
             return;
 
+        nearGrassUsesCloverInfluence = usesCloverInfluence;
         nearGrassSubChunkGenerated[localSubChunkX, localSubChunkZ] = true;
         nearGrassGenerated = AreAllNearGrassSubChunksGenerated();
+    }
+
+    public bool HasAnyNearGrassSubChunkGenerated()
+    {
+        if (nearGrassSubChunkGenerated == null)
+            return false;
+
+        for (int x = 0; x < subChunksPerChunk; x++)
+        {
+            for (int z = 0; z < subChunksPerChunk; z++)
+            {
+                if (nearGrassSubChunkGenerated[x, z])
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     private bool HasValidNearGrassSubChunk(int localSubChunkX, int localSubChunkZ)
@@ -121,6 +144,12 @@ public class ChunkFoliageData
         flowerInstances.Clear();
     }
 
+    public void ClearClover()
+    {
+        cloverGenerated = false;
+        cloverInstances.Clear();
+    }
+
     public void ClearTreeCubes()
     {
         treeCubesGenerated = false;
@@ -144,6 +173,7 @@ public class ChunkFoliageData
         ClearNearGrass();
         ClearBillboards();
         ClearFlowers();
+        ClearClover();
         ClearTreeCubes();
         ClearBushes();
         ClearRocks();
@@ -175,6 +205,11 @@ public class ChunkFoliageData
     public int GetTotalFlowerInstanceCount()
     {
         return flowerInstances != null ? flowerInstances.Count : 0;
+    }
+
+    public int GetTotalCloverInstanceCount()
+    {
+        return cloverInstances != null ? cloverInstances.Count : 0;
     }
 
     public int GetTotalTreeCubeInstanceCount()

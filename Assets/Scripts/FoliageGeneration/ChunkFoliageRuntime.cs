@@ -21,6 +21,18 @@ public struct TreeBillboardRenderData
     }
 }
 
+public struct CloverRenderData
+{
+    public Mesh mesh;
+    public Material material;
+
+    public CloverRenderData(Mesh mesh, Material material)
+    {
+        this.mesh = mesh;
+        this.material = material;
+    }
+}
+
 public struct GrassRenderBatch
 {
     public Matrix4x4[] matrices;
@@ -28,6 +40,20 @@ public struct GrassRenderBatch
 
     public GrassRenderBatch(Matrix4x4[] matrices, Vector4[] instanceData)
     {
+        this.matrices = matrices;
+        this.instanceData = instanceData;
+    }
+}
+
+public struct CloverRenderBatch
+{
+    public int prefabIndex;
+    public Matrix4x4[] matrices;
+    public Vector4[] instanceData;
+
+    public CloverRenderBatch(int prefabIndex, Matrix4x4[] matrices, Vector4[] instanceData)
+    {
+        this.prefabIndex = prefabIndex;
         this.matrices = matrices;
         this.instanceData = instanceData;
     }
@@ -66,6 +92,10 @@ public class ChunkFoliageRuntime
     public Mesh flowerMesh;
     public Material flowerMaterial;
     public int flowerPetalColorPropertyId;
+
+    public CloverRenderData[] cloverRenderData;
+    public bool receiveCloverShadows;
+    public int cloverInstanceDataPropertyId;
 
     public GameObject mapleTreePrefab;
     public GameObject sugarMapleTreePrefab;
@@ -114,6 +144,8 @@ public class ChunkFoliageRuntime
     private readonly MaterialPropertyBlock grassPropertyBlock = new MaterialPropertyBlock();
     private readonly List<FlowerRenderBatch> flowerRenderBatches = new List<FlowerRenderBatch>();
     private readonly MaterialPropertyBlock flowerPropertyBlock = new MaterialPropertyBlock();
+    private readonly List<CloverRenderBatch> cloverRenderBatches = new List<CloverRenderBatch>();
+    private readonly MaterialPropertyBlock cloverPropertyBlock = new MaterialPropertyBlock();
 
     private readonly List<TreeBillboardInstanceBatch> mapleTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
     private readonly List<TreeBillboardInstanceBatch> sugarMapleTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
@@ -146,12 +178,14 @@ public class ChunkFoliageRuntime
     private bool hasBuiltGrassRenderData;
     private bool hasBuiltBillboardRenderData;
     private bool hasBuiltFlowerRenderData;
+    private bool hasBuiltCloverRenderData;
 
     public bool IsCreated => root != null;
     public int GpuGrassInstanceCount =>
         CountGrassInstances(grassRenderBatches) +
         CountGrassInstances(billboardRenderBatches);
     public int GpuFlowerInstanceCount => CountFlowerInstances();
+    public int GpuCloverInstanceCount => CountCloverInstances();
     public int GpuTreeInstanceCount =>
         CountMatrices(mapleTreeBillboardMatrixBatches) +
         CountMatrices(sugarMapleTreeBillboardMatrixBatches) +
@@ -237,9 +271,11 @@ public class ChunkFoliageRuntime
         grassRenderBatches.Clear();
         billboardRenderBatches.Clear();
         flowerRenderBatches.Clear();
+        cloverRenderBatches.Clear();
         hasBuiltGrassRenderData = false;
         hasBuiltBillboardRenderData = false;
         hasBuiltFlowerRenderData = false;
+        hasBuiltCloverRenderData = false;
         mapleTreeBillboardMatrixBatches.Clear();
         sugarMapleTreeBillboardMatrixBatches.Clear();
         birchAspenTreeBillboardMatrixBatches.Clear();
@@ -287,6 +323,11 @@ public class ChunkFoliageRuntime
         return flowerMesh != null && flowerMaterial != null && hasBuiltFlowerRenderData;
     }
 
+    public bool HasValidCloverRenderData()
+    {
+        return HasAnyValidCloverRenderAsset() && hasBuiltCloverRenderData;
+    }
+
     public bool HasValidTreeBillboardRenderData()
     {
         return HasValidBillboardBatch(mapleTreeBillboard, mapleTreeBillboardMatrixBatches) ||
@@ -331,6 +372,11 @@ public class ChunkFoliageRuntime
     public void AccumulateFlowerRenderStats(ref WorldRenderStatsDebugInfo stats)
     {
         AccumulateFlowerStats(ref stats.Flowers);
+    }
+
+    public void AccumulateCloverRenderStats(ref WorldRenderStatsDebugInfo stats)
+    {
+        AccumulateCloverStats(ref stats.Clover);
     }
 
     public void AccumulateTreeBillboardRenderStats(ref WorldRenderStatsDebugInfo stats)
@@ -525,6 +571,56 @@ public class ChunkFoliageRuntime
         hasBuiltFlowerRenderData = true;
     }
 
+    public void CacheCloverBatches(List<Matrix4x4>[] worldMatricesByPrefab, List<Vector4>[] instanceDataByPrefab)
+    {
+        cloverRenderBatches.Clear();
+
+        if (worldMatricesByPrefab == null || instanceDataByPrefab == null)
+        {
+            hasBuiltCloverRenderData = true;
+            return;
+        }
+
+        int prefabCount = Mathf.Min(worldMatricesByPrefab.Length, instanceDataByPrefab.Length);
+        for (int prefabIndex = 0; prefabIndex < prefabCount; prefabIndex++)
+        {
+            List<Matrix4x4> worldMatrices = worldMatricesByPrefab[prefabIndex];
+            List<Vector4> instanceData = instanceDataByPrefab[prefabIndex];
+
+            if (worldMatrices == null || instanceData == null)
+                continue;
+
+            if (worldMatrices.Count != instanceData.Count)
+            {
+                Debug.LogError("Clover matrix and instance data counts must match.");
+                hasBuiltCloverRenderData = false;
+                return;
+            }
+
+            const int maxBatchSize = 1023;
+            int totalCount = worldMatrices.Count;
+            int startIndex = 0;
+
+            while (startIndex < totalCount)
+            {
+                int batchCount = Mathf.Min(maxBatchSize, totalCount - startIndex);
+                Matrix4x4[] matrixBatch = new Matrix4x4[batchCount];
+                Vector4[] instanceDataBatch = new Vector4[batchCount];
+
+                for (int i = 0; i < batchCount; i++)
+                {
+                    matrixBatch[i] = worldMatrices[startIndex + i];
+                    instanceDataBatch[i] = instanceData[startIndex + i];
+                }
+
+                cloverRenderBatches.Add(new CloverRenderBatch(prefabIndex, matrixBatch, instanceDataBatch));
+                startIndex += batchCount;
+            }
+        }
+
+        hasBuiltCloverRenderData = true;
+    }
+
     public void CacheTreeBillboardMatrices(
         List<Matrix4x4> mapleWorldMatrices,
         List<Vector4> mapleLeafTints,
@@ -641,6 +737,19 @@ public class ChunkFoliageRuntime
         return count;
     }
 
+    private int CountCloverInstances()
+    {
+        int count = 0;
+
+        for (int i = 0; i < cloverRenderBatches.Count; i++)
+        {
+            if (cloverRenderBatches[i].matrices != null)
+                count += cloverRenderBatches[i].matrices.Length;
+        }
+
+        return count;
+    }
+
     private void AccumulateGrassStats(
         Mesh mesh,
         List<GrassRenderBatch> batches,
@@ -669,6 +778,26 @@ public class ChunkFoliageRuntime
                 continue;
 
             stats.AddMeshInstances(flowerMesh, flowerRenderBatches[i].matrices.Length);
+        }
+    }
+
+    private void AccumulateCloverStats(ref RenderGeometryStats stats)
+    {
+        if (cloverRenderData == null)
+            return;
+
+        for (int i = 0; i < cloverRenderBatches.Count; i++)
+        {
+            CloverRenderBatch batch = cloverRenderBatches[i];
+            if (batch.matrices == null)
+                continue;
+
+            if ((uint)batch.prefabIndex >= cloverRenderData.Length)
+                continue;
+
+            Mesh mesh = cloverRenderData[batch.prefabIndex].mesh;
+            if (mesh != null)
+                stats.AddMeshInstances(mesh, batch.matrices.Length);
         }
     }
 
@@ -1003,6 +1132,18 @@ public class ChunkFoliageRuntime
         hasBuiltFlowerRenderData = false;
     }
 
+    public void ClearGrassBatches()
+    {
+        grassRenderBatches.Clear();
+        hasBuiltGrassRenderData = false;
+    }
+
+    public void ClearCloverBatches()
+    {
+        cloverRenderBatches.Clear();
+        hasBuiltCloverRenderData = false;
+    }
+
     public void ClearTreeBillboardMatrices()
     {
         mapleTreeBillboardMatrixBatches.Clear();
@@ -1110,6 +1251,46 @@ public class ChunkFoliageRuntime
             stageStart);
     }
 
+    public void DrawClover()
+    {
+        if (!isVisible || !HasValidCloverRenderData() || cloverRenderBatches.Count == 0)
+            return;
+
+        long stageStart = TerrainGenerationProfiler.GetTimestamp();
+
+        for (int i = 0; i < cloverRenderBatches.Count; i++)
+        {
+            CloverRenderBatch batch = cloverRenderBatches[i];
+            if (batch.matrices == null || batch.instanceData == null)
+                continue;
+
+            if ((uint)batch.prefabIndex >= cloverRenderData.Length)
+                continue;
+
+            CloverRenderData renderData = cloverRenderData[batch.prefabIndex];
+            if (renderData.mesh == null || renderData.material == null)
+                continue;
+
+            cloverPropertyBlock.Clear();
+            cloverPropertyBlock.SetVectorArray(cloverInstanceDataPropertyId, batch.instanceData);
+
+            Graphics.DrawMeshInstanced(
+                renderData.mesh,
+                0,
+                renderData.material,
+                batch.matrices,
+                batch.matrices.Length,
+                cloverPropertyBlock,
+                ShadowCastingMode.Off,
+                receiveCloverShadows
+            );
+        }
+
+        TerrainGenerationProfiler.Record(
+            TerrainGenerationProfileStage.FoliageCloverDraw,
+            stageStart);
+    }
+
     public void DrawTreeBillboards(bool castShadows, bool receiveShadows)
     {
         if (!isVisible || !HasValidTreeBillboardRenderData())
@@ -1175,6 +1356,20 @@ public class ChunkFoliageRuntime
         return renderData.mesh != null &&
                renderData.material != null &&
                batches.Count > 0;
+    }
+
+    private bool HasAnyValidCloverRenderAsset()
+    {
+        if (cloverRenderData == null)
+            return false;
+
+        for (int i = 0; i < cloverRenderData.Length; i++)
+        {
+            if (cloverRenderData[i].mesh != null && cloverRenderData[i].material != null)
+                return true;
+        }
+
+        return false;
     }
 
     private GameObject GetTreePrefab(WorldFeatureVariant variant)

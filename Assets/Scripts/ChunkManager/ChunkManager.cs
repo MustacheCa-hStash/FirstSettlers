@@ -81,6 +81,7 @@ public class ChunkManager
         Transform foliageParent,
         GrassSettings grassSettings,
         FlowerSettings flowerSettings,
+        CloverSettings cloverSettings,
         TreeSettings treeSettings,
         float sampleScale,
         float worldScale,
@@ -161,6 +162,7 @@ public class ChunkManager
             foliageParent,
             grassSettings,
             flowerSettings,
+            cloverSettings,
             treeSettings,
             seed,
             chunkSize,
@@ -197,6 +199,7 @@ public class ChunkManager
         int treeGameObjectCount = 0;
         int gpuGrassInstanceCount = 0;
         int gpuFlowerInstanceCount = 0;
+        int gpuCloverInstanceCount = 0;
         int gpuTreeInstanceCount = 0;
 
         if (hasTerrainData && TryGetPaddedSampleIndices(coord, worldPosition, record, out int sampleX, out int sampleZ))
@@ -224,6 +227,7 @@ public class ChunkManager
             treeGameObjectCount = runtime.FoliageRuntime.TreeGameObjectCount;
             gpuGrassInstanceCount = runtime.FoliageRuntime.GpuGrassInstanceCount;
             gpuFlowerInstanceCount = runtime.FoliageRuntime.GpuFlowerInstanceCount;
+            gpuCloverInstanceCount = runtime.FoliageRuntime.GpuCloverInstanceCount;
             gpuTreeInstanceCount = runtime.FoliageRuntime.GpuTreeInstanceCount;
         }
 
@@ -247,6 +251,7 @@ public class ChunkManager
             treeGameObjectCount,
             gpuGrassInstanceCount,
             gpuFlowerInstanceCount,
+            gpuCloverInstanceCount,
             gpuTreeInstanceCount);
     }
 
