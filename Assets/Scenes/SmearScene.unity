@@ -611,6 +611,8 @@ MonoBehaviour:
   nightAmbientSkyColor: {r: 0.075, g: 0.085, b: 0.13, a: 1}
   nightAmbientEquatorColor: {r: 0.055, g: 0.062, b: 0.09, a: 1}
   nightAmbientGroundColor: {r: 0.038, g: 0.042, b: 0.055, a: 1}
+  updateTreeNightLighting: 1
+  midnightTreeAmbientFloorScale: 0.48
   updateFogColor: 1
   dayFogColor: {r: 0.52, g: 0.66, b: 0.95, a: 1}
   dawnDuskFogColor: {r: 0.95, g: 0.55, b: 0.32, a: 1}

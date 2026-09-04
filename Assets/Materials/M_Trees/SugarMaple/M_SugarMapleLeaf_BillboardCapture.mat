@@ -43,13 +43,13 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AmbientStrength: 0.35
+    - _AmbientStrength: 0.72
     - _CardVariationStrength: 0.04
     - _ColorVariationStrength: 0.55
     - _Cutoff: 0.42
     - _LeafContrast: 0.32
     - _LeafDetailContrast: 0.16
-    - _LightWrap: 0.45
+    - _LightWrap: 0.68
     - _SeasonAutumnAmount: 1
     - _Smoothness: 0.04
     - _SpecularStrength: 0.01

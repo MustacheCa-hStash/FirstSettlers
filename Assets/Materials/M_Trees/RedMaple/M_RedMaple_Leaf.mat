@@ -101,7 +101,7 @@ Material:
     - _AlphaClip: 1
     - _AlphaCutoutShadows: 1
     - _AlphaToMask: 1
-    - _AmbientStrength: 0.24
+    - _AmbientStrength: 0.3
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BlendOp: 0
@@ -121,7 +121,7 @@ Material:
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _LeafContrast: 0.34
-    - _LightWrap: 0.45
+    - _LightWrap: 0.62
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005

@@ -50,6 +50,10 @@ public class SunCycleController : MonoBehaviour
     [SerializeField] private Color nightAmbientEquatorColor = new Color(0.055f, 0.062f, 0.09f, 1f);
     [SerializeField] private Color nightAmbientGroundColor = new Color(0.038f, 0.042f, 0.055f, 1f);
 
+    [Header("Tree Night Lighting")]
+    [SerializeField] private bool updateTreeNightLighting = true;
+    [SerializeField] private float midnightTreeAmbientFloorScale = 0.48f;
+
     [Header("Fog")]
     [SerializeField] private bool updateFogColor = true;
     [SerializeField] private Color dayFogColor = new Color(0.52f, 0.66f, 0.95f, 1f);
@@ -59,6 +63,9 @@ public class SunCycleController : MonoBehaviour
     [Header("Global Illumination")]
     [SerializeField] private bool updateDynamicGI;
     [SerializeField] private float dynamicGiUpdateIntervalSeconds = 8f;
+
+    private static readonly int TreeNightAmbientFloorDimAmountId = Shader.PropertyToID("_TreeNightAmbientFloorDimAmount");
+    private static readonly int TreeNightAmbientFloorScaleAtMidnightId = Shader.PropertyToID("_TreeNightAmbientFloorScaleAtMidnight");
 
     private float nextDynamicGiUpdateTime;
 
@@ -91,6 +98,7 @@ public class SunCycleController : MonoBehaviour
         twilightNightFraction = Mathf.Clamp(twilightNightFraction, 0.01f, 0.5f);
         dayAmbientIntensity = Mathf.Max(0f, dayAmbientIntensity);
         nightAmbientIntensity = Mathf.Max(0f, nightAmbientIntensity);
+        midnightTreeAmbientFloorScale = Mathf.Clamp01(midnightTreeAmbientFloorScale);
         dynamicGiUpdateIntervalSeconds = Mathf.Max(0.1f, dynamicGiUpdateIntervalSeconds);
     }
 
@@ -144,6 +152,8 @@ public class SunCycleController : MonoBehaviour
         if (updateAmbientLighting)
             ApplyAmbient(ambientBlend);
 
+        ApplyTreeNightLighting(snapshot);
+
         if (updateFogColor)
             ApplyFog(snapshot, ambientBlend);
 
@@ -152,6 +162,12 @@ public class SunCycleController : MonoBehaviour
             DynamicGI.UpdateEnvironment();
             nextDynamicGiUpdateTime = Time.unscaledTime + dynamicGiUpdateIntervalSeconds;
         }
+    }
+
+    private void OnDisable()
+    {
+        Shader.SetGlobalFloat(TreeNightAmbientFloorDimAmountId, 0f);
+        Shader.SetGlobalFloat(TreeNightAmbientFloorScaleAtMidnightId, 1f);
     }
 
     private bool ResolveReferences()
@@ -226,6 +242,22 @@ public class SunCycleController : MonoBehaviour
         float edgeDistance = Mathf.Min(snapshot.NightProgress, 1f - snapshot.NightProgress);
         float twilightFade = 1f - Smooth01(Mathf.InverseLerp(0f, twilightNightFraction, edgeDistance));
         return twilightAmbientBlend * twilightFade;
+    }
+
+    private void ApplyTreeNightLighting(GameTimeSnapshot snapshot)
+    {
+        float dimAmount = updateTreeNightLighting ? GetTreeAmbientFloorDimAmount(snapshot) : 0f;
+        Shader.SetGlobalFloat(TreeNightAmbientFloorDimAmountId, dimAmount);
+        Shader.SetGlobalFloat(TreeNightAmbientFloorScaleAtMidnightId, midnightTreeAmbientFloorScale);
+    }
+
+    private float GetTreeAmbientFloorDimAmount(GameTimeSnapshot snapshot)
+    {
+        if (snapshot.IsDaylight)
+            return 0f;
+
+        float edgeDistance = Mathf.Min(snapshot.NightProgress, 1f - snapshot.NightProgress);
+        return Smooth01(Mathf.InverseLerp(0f, 0.5f, edgeDistance));
     }
 
     private void ApplyAmbient(float ambientBlend)

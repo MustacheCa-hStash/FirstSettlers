@@ -99,7 +99,7 @@ Material:
     - _ColorVariationStrength: 0.42
     - _Cull: 0
     - _Cutoff: 0.5
-    - _AmbientStrength: 0.34
+    - _AmbientStrength: 0.56
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
@@ -108,7 +108,7 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _LightWrap: 0.48
+    - _LightWrap: 0.72
     - _InteriorShadeStrength: 0.04
     - _LeafTintStrength: 1
     - _LeafWhiteSoftness: 0.14

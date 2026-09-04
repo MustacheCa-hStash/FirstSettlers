@@ -88,7 +88,7 @@ Material:
     - _AlphaClip: 1
     - _AlphaCutoutShadows: 1
     - _AlphaToMask: 1
-    - _AmbientStrength: 0.24
+    - _AmbientStrength: 0.3
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BlendOp: 0
@@ -113,7 +113,7 @@ Material:
     - _LeafMaskSoftness: 0.08
     - _LeafMaskThreshold: 0
     - _LeafTintStrength: 0.85
-    - _LightWrap: 0.38
+    - _LightWrap: 0.45
     - _LowerShadeStrength: 0.22
     - _Metallic: 0
     - _NeedleContrast: 0.34

@@ -37,7 +37,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _AlphaCutoutShadows: 1
-    - _AmbientStrength: 0.28
+    - _AmbientStrength: 0.34
     - _Brightness: 1
     - _ColorVariationStrength: 0.22
     - _Cutoff: 0.38
@@ -45,7 +45,7 @@ Material:
     - _LeafMaskSoftness: 0.06
     - _LeafMaskThreshold: 0.16
     - _LeafTintStrength: 0.82
-    - _LightWrap: 0.48
+    - _LightWrap: 0.64
     - _LowerShadeStrength: 0.18
     - _NeedleContrast: 0.16
     - _Smoothness: 0.05

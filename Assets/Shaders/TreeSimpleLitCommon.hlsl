@@ -1,6 +1,9 @@
 #ifndef TREE_SIMPLE_LIT_COMMON_INCLUDED
 #define TREE_SIMPLE_LIT_COMMON_INCLUDED
 
+half _TreeNightAmbientFloorDimAmount;
+half _TreeNightAmbientFloorScaleAtMidnight;
+
 InputData InitializeTreeSimpleLitInputData(
     float3 positionWS,
     half3 normalWS,
@@ -13,7 +16,10 @@ InputData InitializeTreeSimpleLitInputData(
     inputData.normalWS = NormalizeNormalPerPixel(normalWS);
     inputData.viewDirectionWS = GetWorldSpaceNormalizeViewDir(positionWS);
     inputData.shadowCoord = shadowCoord;
-    inputData.bakedGI = max(SampleSH(inputData.normalWS), ambientStrength.xxx);
+    half floorScaleAtMidnight = saturate(_TreeNightAmbientFloorScaleAtMidnight);
+    half nightDimAmount = saturate(_TreeNightAmbientFloorDimAmount);
+    half scaledAmbientStrength = ambientStrength * lerp(1.0h, floorScaleAtMidnight, nightDimAmount);
+    inputData.bakedGI = max(SampleSH(inputData.normalWS), scaledAmbientStrength.xxx);
     inputData.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(positionCS);
     inputData.shadowMask = half4(1.0h, 1.0h, 1.0h, 1.0h);
     return inputData;
