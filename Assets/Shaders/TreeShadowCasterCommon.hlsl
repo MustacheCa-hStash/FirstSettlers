@@ -3,6 +3,7 @@
 
 float3 _LightDirection;
 float3 _LightPosition;
+half _AlphaCutoutShadows;
 
 float4 TransformWorldToTreeShadowClip(float3 positionWS, float3 normalWS)
 {

@@ -53,6 +53,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -7511558181221131132, guid: 27f4fb45e36dc034184801f135c96d9b, type: 3}
+      propertyPath: m_ReceiveShadows
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 27f4fb45e36dc034184801f135c96d9b, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: 7efa87b7a32708c4baac28310395c2c6, type: 2}
@@ -63,6 +67,10 @@ PrefabInstance:
     - target: {fileID: 3291404508521735426, guid: 27f4fb45e36dc034184801f135c96d9b, type: 3}
       propertyPath: m_CastShadows
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3291404508521735426, guid: 27f4fb45e36dc034184801f135c96d9b, type: 3}
+      propertyPath: m_ReceiveShadows
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3291404508521735426, guid: 27f4fb45e36dc034184801f135c96d9b, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'

@@ -747,7 +747,7 @@ MonoBehaviour:
     rockGrassExclusionRadius: 1.25
     gameObjectRockChunkRingRadius: 3
     castTreeShadows: 1
-    receiveTreeShadows: 0
+    receiveTreeShadows: 1
   sampleScale: 600
   worldScale: 0.3
   octaves: 2

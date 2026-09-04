@@ -11,6 +11,7 @@ Shader "Custom/SpruceBillboardVariationSimpleLitCutout"
         _ColorVariationStrength("Color Variation Strength", Range(0, 1)) = 0.38
         _NeedleContrast("Needle Contrast", Range(0, 1)) = 0.18
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.5
+        [Toggle] _AlphaCutoutShadows("Alpha Cutout Shadows", Float) = 1
         _LeafMaskThreshold("Green Canopy Threshold", Range(-0.1, 0.35)) = 0.0
         _LeafMaskSoftness("Green Canopy Softness", Range(0.001, 0.25)) = 0.08
         _LeafTintStrength("Canopy Variation Strength", Range(0, 1)) = 0.85
@@ -386,8 +387,11 @@ Shader "Custom/SpruceBillboardVariationSimpleLitCutout"
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
 
-                half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a * _BaseColor.a;
-                clip(alpha - _Cutoff);
+                if (_AlphaCutoutShadows > 0.5h)
+                {
+                    half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a * _BaseColor.a;
+                    clip(alpha - _Cutoff);
+                }
                 return 0;
             }
             ENDHLSL

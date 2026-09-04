@@ -11,6 +11,7 @@ Shader "Custom/RedMapleLeafSimpleLitCutout"
         _TreeLeafTint("Per Tree Leaf Tint", Color) = (1, 1, 1, 1)
         _SeasonAutumnAmount("Season Autumn Amount", Range(0, 1)) = 1.0
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.42
+        [Toggle] _AlphaCutoutShadows("Alpha Cutout Shadows", Float) = 1
         _ColorVariationStrength("Color Variation Strength", Range(0, 1)) = 0.62
         _LeafContrast("Leaf Card Contrast", Range(0, 1)) = 0.34
         _VerticalGradientStrength("Vertical Gradient Strength", Range(0, 1)) = 0.30
@@ -336,8 +337,11 @@ Shader "Custom/RedMapleLeafSimpleLitCutout"
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
 
-                half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
-                clip(alpha - _Cutoff);
+                if (_AlphaCutoutShadows > 0.5h)
+                {
+                    half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
+                    clip(alpha - _Cutoff);
+                }
                 return 0;
             }
             ENDHLSL

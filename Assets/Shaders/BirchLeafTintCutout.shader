@@ -10,6 +10,7 @@ Shader "Custom/BirchLeafSimpleLitCutout"
         _LeafShadowColor("Leaf Shadow Color", Color) = (0.055, 0.18, 0.045, 1.0)
         _SeasonAutumnAmount("Season Autumn Amount", Range(0, 1)) = 0.0
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.42
+        [Toggle] _AlphaCutoutShadows("Alpha Cutout Shadows", Float) = 1
         _ColorVariationStrength("Color Variation Strength", Range(0, 1)) = 0.45
         _LeafContrast("Leaf Detail Contrast", Range(0, 1)) = 0.26
         _VerticalGradientStrength("Lower Leaf Shade", Range(0, 1)) = 0.22
@@ -328,8 +329,11 @@ Shader "Custom/BirchLeafSimpleLitCutout"
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
 
-                half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
-                clip(alpha - _Cutoff);
+                if (_AlphaCutoutShadows > 0.5h)
+                {
+                    half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
+                    clip(alpha - _Cutoff);
+                }
                 return 0;
             }
             ENDHLSL

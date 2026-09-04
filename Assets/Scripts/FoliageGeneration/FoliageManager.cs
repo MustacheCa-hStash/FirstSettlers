@@ -960,9 +960,7 @@ public class FoliageManager
 
         if (mode == FoliageRepresentationMode.GPUInstancedBillboard)
         {
-            runtime.FoliageRuntime.DrawTreeBillboards(
-                treeSettings.castTreeShadows,
-                treeSettings.receiveTreeShadows);
+            runtime.FoliageRuntime.DrawTreeBillboards(treeSettings.castTreeShadows);
         }
     }
 

@@ -7,6 +7,7 @@ Shader "Custom/WhitePineNeedleSimpleLitCutout"
         _NeedleShadowColor("Needle Shadow Color", Color) = (0.035, 0.16, 0.08, 1.0)
         _NeedleTipColor("Needle Tip Color", Color) = (0.46, 0.68, 0.34, 1.0)
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.38
+        [Toggle] _AlphaCutoutShadows("Alpha Cutout Shadows", Float) = 1
         _TipStrength("Tip Brightness Strength", Range(0, 1)) = 0.28
         _VerticalGradientStrength("Vertical Gradient Strength", Range(0, 1)) = 0.22
         _StrandContrast("Strand Contrast", Range(0, 1)) = 0.35
@@ -314,8 +315,11 @@ Shader "Custom/WhitePineNeedleSimpleLitCutout"
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
 
-                half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
-                clip(alpha - _Cutoff);
+                if (_AlphaCutoutShadows > 0.5h)
+                {
+                    half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
+                    clip(alpha - _Cutoff);
+                }
 
                 #ifdef LOD_FADE_CROSSFADE
                     LODFadeCrossFade(IN.positionCS);

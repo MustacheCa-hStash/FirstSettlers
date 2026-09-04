@@ -11,6 +11,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
         _NeedleContrast("Needle Contrast", Range(0, 1)) = 0.22
         _TipStrength("Tip Color Strength", Range(0, 1)) = 0.10
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.35
+        [Toggle] _AlphaCutoutShadows("Alpha Cutout Shadows", Float) = 1
         _AmbientStrength("Ambient Strength", Range(0, 1)) = 0.35
         _LightWrap("Leaf Light Wrap", Range(0, 1)) = 0.45
         _Smoothness("Smoothness", Range(0, 1)) = 0.08
@@ -291,6 +292,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
 
             float3 _LightDirection;
             float3 _LightPosition;
+            half _AlphaCutoutShadows;
 
             struct Attributes
             {
@@ -369,8 +371,11 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
 
-                half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
-                clip(alpha - _Cutoff);
+                if (_AlphaCutoutShadows > 0.5h)
+                {
+                    half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
+                    clip(alpha - _Cutoff);
+                }
 
                 #ifdef LOD_FADE_CROSSFADE
                     LODFadeCrossFade(IN.positionCS);

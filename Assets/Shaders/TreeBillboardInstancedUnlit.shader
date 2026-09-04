@@ -5,6 +5,7 @@ Shader "Custom/TreeBillboardInstancedSimpleLit"
         [MainTexture] _BaseMap("Tree Billboard Texture", 2D) = "white" {}
         [MainColor] _BaseColor("Tint", Color) = (1, 1, 1, 1)
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.5
+        [Toggle] _AlphaCutoutShadows("Alpha Cutout Shadows", Float) = 1
         _AmbientStrength("Ambient Strength", Range(0, 1)) = 0.58
         _LightWrap("Billboard Light Softness", Range(0, 1)) = 0.72
         _Smoothness("Smoothness", Range(0, 1)) = 0.06
@@ -239,8 +240,11 @@ Shader "Custom/TreeBillboardInstancedSimpleLit"
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
 
-                half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a * _BaseColor.a;
-                clip(alpha - _Cutoff);
+                if (_AlphaCutoutShadows > 0.5h)
+                {
+                    half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a * _BaseColor.a;
+                    clip(alpha - _Cutoff);
+                }
                 return 0;
             }
             ENDHLSL

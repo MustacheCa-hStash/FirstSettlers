@@ -11,6 +11,7 @@ Shader "Custom/BirchBillboardSimpleLitCutout"
         _LeafShadowColor("Leaf Shadow Color", Color) = (0.055, 0.18, 0.045, 1.0)
         _SeasonAutumnAmount("Season Autumn Amount", Range(0, 1)) = 0.0
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.5
+        [Toggle] _AlphaCutoutShadows("Alpha Cutout Shadows", Float) = 1
         _LeafWhiteThreshold("Leaf White Threshold", Range(0, 1)) = 0.42
         _LeafWhiteSoftness("Leaf White Softness", Range(0.001, 0.35)) = 0.14
         _CanopyTintStart("Canopy Tint Start", Range(0, 1)) = 0.13
@@ -429,8 +430,11 @@ Shader "Custom/BirchBillboardSimpleLitCutout"
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
 
-                half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a * _BaseColor.a;
-                clip(alpha - _Cutoff);
+                if (_AlphaCutoutShadows > 0.5h)
+                {
+                    half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a * _BaseColor.a;
+                    clip(alpha - _Cutoff);
+                }
                 return 0;
             }
             ENDHLSL

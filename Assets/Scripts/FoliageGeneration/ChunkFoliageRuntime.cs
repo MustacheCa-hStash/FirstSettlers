@@ -75,6 +75,7 @@ public class ChunkFoliageRuntime
 {
     private static readonly int TreeLeafTintPropertyId = Shader.PropertyToID("_TreeLeafTint");
     private static readonly int TreeBarkTintPropertyId = Shader.PropertyToID("_TreeBarkTint");
+    private static readonly int AlphaCutoutShadowsPropertyId = Shader.PropertyToID("_AlphaCutoutShadows");
 
     public Transform root;
 
@@ -927,16 +928,21 @@ public class ChunkFoliageRuntime
 
             ApplyTreeMaterialOverrides(treeObject, instance);
             ConfigureSpawnedRendererCulling(treeObject.Renderers);
-            ConfigureTreeRendererShadows(treeObject.Renderers, castShadows, receiveShadows);
+            ConfigureTreeRendererShadows(
+                treeObject.Renderers,
+                castShadows,
+                receiveShadows,
+                IsGrasslandTreeVariant(instance.variant));
             treeObject.GameObject.SetActive(true);
             treeGameObjects.Add(treeObject);
         }
     }
 
-    private static void ConfigureTreeRendererShadows(
+    private void ConfigureTreeRendererShadows(
         Renderer[] renderers,
         bool castShadows,
-        bool receiveShadows)
+        bool receiveShadows,
+        bool alphaCutoutLeafShadows)
     {
         if (renderers == null)
             return;
@@ -952,8 +958,44 @@ public class ChunkFoliageRuntime
                 continue;
 
             renderer.shadowCastingMode = shadowMode;
-            renderer.receiveShadows = receiveShadows;
+            renderer.receiveShadows = receiveShadows && IsTreeTrunkRenderer(renderer);
+            renderer.GetPropertyBlock(treePropertyBlock);
+            treePropertyBlock.SetFloat(AlphaCutoutShadowsPropertyId, alphaCutoutLeafShadows ? 1f : 0f);
+            renderer.SetPropertyBlock(treePropertyBlock);
         }
+    }
+
+    private static bool IsTreeTrunkRenderer(Renderer renderer)
+    {
+        if (renderer == null)
+            return false;
+
+        Material[] materials = renderer.sharedMaterials;
+        if (materials == null)
+            return false;
+
+        for (int i = 0; i < materials.Length; i++)
+        {
+            Material material = materials[i];
+            if (material == null)
+                continue;
+
+            if (ContainsTreeTrunkToken(material.name))
+                return true;
+
+            Shader shader = material.shader;
+            if (shader != null && ContainsTreeTrunkToken(shader.name))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool ContainsTreeTrunkToken(string value)
+    {
+        return !string.IsNullOrEmpty(value) &&
+               (value.IndexOf("Bark", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                value.IndexOf("Trunk", System.StringComparison.OrdinalIgnoreCase) >= 0);
     }
 
     private void ApplyTreeMaterialOverrides(TreeGameObjectInstance treeObject, TreeInstanceData instance)
@@ -1410,7 +1452,7 @@ public class ChunkFoliageRuntime
             stageStart);
     }
 
-    public void DrawTreeBillboards(bool castShadows, bool receiveShadows)
+    public void DrawTreeBillboards(bool castShadows)
     {
         if (!isVisible || !HasValidTreeBillboardRenderData())
             return;
@@ -1421,18 +1463,18 @@ public class ChunkFoliageRuntime
             ? ShadowCastingMode.On
             : ShadowCastingMode.Off;
 
-        DrawTreeBillboardBatches(mapleTreeBillboard, mapleTreeBillboardMatrixBatches, shadowMode, receiveShadows);
-        DrawTreeBillboardBatches(sugarMapleTreeBillboard, sugarMapleTreeBillboardMatrixBatches, shadowMode, receiveShadows);
-        DrawTreeBillboardBatches(birchAspenTreeBillboard, birchAspenTreeBillboardMatrixBatches, shadowMode, receiveShadows);
-        DrawTreeBillboardBatches(beechTreeBillboard, beechTreeBillboardMatrixBatches, shadowMode, receiveShadows);
-        DrawTreeBillboardBatches(spruceTreeBillboard, spruceTreeBillboardMatrixBatches, shadowMode, receiveShadows);
-        DrawTreeBillboardBatches(whitePineTreeBillboard, whitePineTreeBillboardMatrixBatches, shadowMode, receiveShadows);
-        DrawTreeBillboardBatches(oakTreeBillboard, oakTreeBillboardMatrixBatches, shadowMode, receiveShadows);
-        DrawTreeBillboardBatches(grasslandMapleTreeBillboard, grasslandMapleTreeBillboardMatrixBatches, shadowMode, receiveShadows);
-        DrawTreeBillboardBatches(grasslandBirchAspenTreeBillboard, grasslandBirchAspenTreeBillboardMatrixBatches, shadowMode, receiveShadows);
-        DrawTreeBillboardBatches(grasslandWhitePineTreeBillboard, grasslandWhitePineTreeBillboardMatrixBatches, shadowMode, receiveShadows);
-        DrawTreeBillboardBatches(grasslandOakTreeBillboard, grasslandOakTreeBillboardMatrixBatches, shadowMode, receiveShadows);
-        DrawTreeBillboardBatches(grasslandWillowTreeBillboard, grasslandWillowTreeBillboardMatrixBatches, shadowMode, receiveShadows);
+        DrawTreeBillboardBatches(mapleTreeBillboard, mapleTreeBillboardMatrixBatches, shadowMode, false);
+        DrawTreeBillboardBatches(sugarMapleTreeBillboard, sugarMapleTreeBillboardMatrixBatches, shadowMode, false);
+        DrawTreeBillboardBatches(birchAspenTreeBillboard, birchAspenTreeBillboardMatrixBatches, shadowMode, false);
+        DrawTreeBillboardBatches(beechTreeBillboard, beechTreeBillboardMatrixBatches, shadowMode, false);
+        DrawTreeBillboardBatches(spruceTreeBillboard, spruceTreeBillboardMatrixBatches, shadowMode, false);
+        DrawTreeBillboardBatches(whitePineTreeBillboard, whitePineTreeBillboardMatrixBatches, shadowMode, false);
+        DrawTreeBillboardBatches(oakTreeBillboard, oakTreeBillboardMatrixBatches, shadowMode, false);
+        DrawTreeBillboardBatches(grasslandMapleTreeBillboard, grasslandMapleTreeBillboardMatrixBatches, shadowMode, true);
+        DrawTreeBillboardBatches(grasslandBirchAspenTreeBillboard, grasslandBirchAspenTreeBillboardMatrixBatches, shadowMode, true);
+        DrawTreeBillboardBatches(grasslandWhitePineTreeBillboard, grasslandWhitePineTreeBillboardMatrixBatches, shadowMode, true);
+        DrawTreeBillboardBatches(grasslandOakTreeBillboard, grasslandOakTreeBillboardMatrixBatches, shadowMode, true);
+        DrawTreeBillboardBatches(grasslandWillowTreeBillboard, grasslandWillowTreeBillboardMatrixBatches, shadowMode, true);
         TerrainGenerationProfiler.Record(
             TerrainGenerationProfileStage.FoliageTreeBillboardDraw,
             stageStart);
@@ -1442,7 +1484,7 @@ public class ChunkFoliageRuntime
         TreeBillboardRenderData renderData,
         List<TreeBillboardInstanceBatch> batches,
         ShadowCastingMode shadowMode,
-        bool receiveShadows)
+        bool alphaCutoutShadows)
     {
         if (renderData.mesh == null || renderData.material == null)
             return;
@@ -1456,6 +1498,7 @@ public class ChunkFoliageRuntime
 
             treeBillboardPropertyBlock.Clear();
             treeBillboardPropertyBlock.SetVectorArray(TreeLeafTintPropertyId, batch.leafTints);
+            treeBillboardPropertyBlock.SetFloat(AlphaCutoutShadowsPropertyId, alphaCutoutShadows ? 1f : 0f);
 
             Graphics.DrawMeshInstanced(
                 renderData.mesh,
@@ -1465,7 +1508,7 @@ public class ChunkFoliageRuntime
                 batch.matrices.Length,
                 treeBillboardPropertyBlock,
                 shadowMode,
-                receiveShadows
+                false
             );
         }
     }

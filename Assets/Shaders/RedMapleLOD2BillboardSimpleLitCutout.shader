@@ -23,6 +23,7 @@ Shader "Custom/RedMapleLOD2BillboardSimpleLitCutout"
         _LowerShadeStrength("Lower Canopy Shade", Range(0, 1)) = 0.20
         _InteriorShadeStrength("Interior Canopy Shade", Range(0, 1)) = 0.16
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.38
+        [Toggle] _AlphaCutoutShadows("Alpha Cutout Shadows", Float) = 1
         _LeafMaskThreshold("Leaf Mask Threshold", Range(0, 1)) = 0.18
         _LeafMaskSoftness("Leaf Mask Softness", Range(0.001, 0.25)) = 0.05
         _Brightness("Brightness", Range(0.25, 2)) = 1.0
@@ -99,6 +100,7 @@ Shader "Custom/RedMapleLOD2BillboardSimpleLitCutout"
                 half _LowerShadeStrength;
                 half _InteriorShadeStrength;
                 half _Cutoff;
+                half _AlphaCutoutShadows;
                 half _LeafMaskThreshold;
                 half _LeafMaskSoftness;
                 half _Brightness;
@@ -328,6 +330,7 @@ Shader "Custom/RedMapleLOD2BillboardSimpleLitCutout"
                 half _LowerShadeStrength;
                 half _InteriorShadeStrength;
                 half _Cutoff;
+                half _AlphaCutoutShadows;
                 half _LeafMaskThreshold;
                 half _LeafMaskSoftness;
                 half _Brightness;
@@ -409,8 +412,11 @@ Shader "Custom/RedMapleLOD2BillboardSimpleLitCutout"
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
 
-                half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a * _BaseColor.a;
-                clip(alpha - _Cutoff);
+                if (_AlphaCutoutShadows > 0.5h)
+                {
+                    half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a * _BaseColor.a;
+                    clip(alpha - _Cutoff);
+                }
 
                 #ifdef LOD_FADE_CROSSFADE
                     LODFadeCrossFade(IN.positionCS);
