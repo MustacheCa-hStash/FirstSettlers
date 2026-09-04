@@ -78,6 +78,9 @@ public class ChunkFoliageRuntime
     private static readonly int AlphaCutoutShadowsPropertyId = Shader.PropertyToID("_AlphaCutoutShadows");
 
     public Transform root;
+    private bool rangeVisible;
+    private bool renderVisible = true;
+    private bool shadowCasterVisible = true;
 
     public Mesh grassMesh;
     public Material grassMaterial;
@@ -308,11 +311,30 @@ public class ChunkFoliageRuntime
 
     public void SetVisible(bool visible)
     {
-        isVisible = visible;
+        rangeVisible = visible;
+        ApplyVisibility();
+    }
+
+    public void SetRenderVisible(bool visible)
+    {
+        renderVisible = visible;
+        ApplyVisibility();
+    }
+
+    public void SetShadowCasterVisible(bool visible)
+    {
+        shadowCasterVisible = visible;
+        ApplyVisibility();
+    }
+
+    private void ApplyVisibility()
+    {
+        isVisible = rangeVisible && renderVisible;
+        bool rootVisible = rangeVisible && (renderVisible || shadowCasterVisible);
 
         if (root != null)
         {
-            root.gameObject.SetActive(visible);
+            root.gameObject.SetActive(rootVisible);
         }
     }
 

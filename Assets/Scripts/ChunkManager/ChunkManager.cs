@@ -76,6 +76,7 @@ public class ChunkManager
     private readonly int urgentVisibleChunkRingRadius;
     private readonly int maxVisibleChunkContentUpdatesPerFrame;
     private readonly int maxRenderVisibilityChecksPerFrame;
+    private readonly float foliageFrustumPaddingWorldUnits;
     private readonly float visibleChunkContentBudgetMsPerFrame;
     private readonly int maxFarTerrainTileContentUpdatesPerFrame;
     private readonly float farTerrainTileContentBudgetMsPerFrame;
@@ -155,6 +156,7 @@ public class ChunkManager
         int urgentVisibleChunkRingRadius,
         int maxVisibleChunkContentUpdatesPerFrame,
         int maxRenderVisibilityChecksPerFrame,
+        float foliageFrustumPaddingChunks,
         float visibleChunkContentBudgetMsPerFrame,
         int maxFarTerrainTileContentUpdatesPerFrame,
         float farTerrainTileContentBudgetMsPerFrame,
@@ -198,6 +200,7 @@ public class ChunkManager
         this.urgentVisibleChunkRingRadius = Mathf.Max(0, urgentVisibleChunkRingRadius);
         this.maxVisibleChunkContentUpdatesPerFrame = Mathf.Max(1, maxVisibleChunkContentUpdatesPerFrame);
         this.maxRenderVisibilityChecksPerFrame = Mathf.Max(1, maxRenderVisibilityChecksPerFrame);
+        this.foliageFrustumPaddingWorldUnits = Mathf.Max(0f, foliageFrustumPaddingChunks) * chunkSize * worldScale;
         this.visibleChunkContentBudgetMsPerFrame = Mathf.Max(0f, visibleChunkContentBudgetMsPerFrame);
         this.maxFarTerrainTileContentUpdatesPerFrame = Mathf.Max(1, maxFarTerrainTileContentUpdatesPerFrame);
         this.farTerrainTileContentBudgetMsPerFrame = Mathf.Max(0f, farTerrainTileContentBudgetMsPerFrame);
@@ -898,7 +901,10 @@ public class ChunkManager
                 runtime.SetVisible(true);
 
             bool renderVisible = viewerCamera == null || IsChunkInFrustum(coord);
+            bool foliageShadowCasterVisible = viewerCamera == null || IsChunkInFrustum(coord, foliageFrustumPaddingWorldUnits);
             runtime.SetRenderVisible(renderVisible);
+            runtime.SetFoliageRenderVisible(renderVisible);
+            runtime.SetFoliageShadowCasterVisible(foliageShadowCasterVisible);
 
             if (renderVisible)
                 AddFrustumVisibleCoord(coord);
@@ -1067,7 +1073,15 @@ public class ChunkManager
 
     private bool IsChunkInFrustum(ChunkCoord coord)
     {
+        return IsChunkInFrustum(coord, 0f);
+    }
+
+    private bool IsChunkInFrustum(ChunkCoord coord, float paddingWorldUnits)
+    {
         Bounds bounds = GetChunkWorldBounds(coord);
+        if (paddingWorldUnits > 0f)
+            bounds.Expand(new Vector3(paddingWorldUnits * 2f, 0f, paddingWorldUnits * 2f));
+
         return GeometryUtility.TestPlanesAABB(frustumPlanes, bounds);
     }
 

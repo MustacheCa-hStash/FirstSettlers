@@ -681,7 +681,7 @@ public class FoliageManager
             ChunkRecord record = chunkManager.GetChunkRecord(coord);
             ChunkRuntime runtime = chunkManager.GetChunkRuntime(record);
 
-            if (record == null || runtime == null || runtime.FoliageRuntime == null)
+            if (record == null || runtime == null || runtime.FoliageRuntime == null || !runtime.IsFoliageRenderVisible)
                 continue;
 
             bool useNearGrass = IsWithinNearGrass(viewerCoord, coord);
@@ -3327,6 +3327,8 @@ public class FoliageManager
         chunkRuntime.FoliageRuntime.grasslandWillowTreeBillboard = grasslandWillowTreeBillboard;
         chunkRuntime.FoliageRuntime.grasslandFallbackTreeBillboard = grasslandFallbackTreeBillboard;
 
+        chunkRuntime.FoliageRuntime.SetRenderVisible(chunkRuntime.IsFoliageRenderVisible);
+        chunkRuntime.FoliageRuntime.SetShadowCasterVisible(chunkRuntime.IsFoliageShadowCasterVisible);
         chunkRuntime.FoliageRuntime.SetVisible(false);
     }
 

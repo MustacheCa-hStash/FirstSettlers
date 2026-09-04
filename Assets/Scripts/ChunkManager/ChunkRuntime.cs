@@ -7,6 +7,8 @@ public class ChunkRuntime
     private GameObject root;
     private bool visible;
     private bool renderVisible = true;
+    private bool foliageRenderVisible = true;
+    private bool foliageShadowCasterVisible = true;
 
     private MeshFilter terrainMeshFilter;
     private MeshRenderer terrainMeshRenderer;
@@ -31,6 +33,9 @@ public class ChunkRuntime
     public GameObject Root => root;
     public Transform RootTransform => root != null ? root.transform : null;
     public bool IsVisible => visible;
+    public bool IsRenderVisible => renderVisible;
+    public bool IsFoliageRenderVisible => foliageRenderVisible;
+    public bool IsFoliageShadowCasterVisible => foliageShadowCasterVisible;
     public int CurrentLOD => currentLOD;
     public ChunkFoliageRuntime FoliageRuntime {
         get => foliageRuntime;
@@ -234,6 +239,25 @@ public class ChunkRuntime
 
         if (riverMeshRenderer != null)
             riverMeshRenderer.enabled = visible;
+
+    }
+
+    public void SetFoliageRenderVisible(bool visible)
+    {
+        if (foliageRenderVisible == visible)
+            return;
+
+        foliageRenderVisible = visible;
+        foliageRuntime?.SetRenderVisible(visible);
+    }
+
+    public void SetFoliageShadowCasterVisible(bool visible)
+    {
+        if (foliageShadowCasterVisible == visible)
+            return;
+
+        foliageShadowCasterVisible = visible;
+        foliageRuntime?.SetShadowCasterVisible(visible);
     }
 
     public void SetVisible(bool visible)

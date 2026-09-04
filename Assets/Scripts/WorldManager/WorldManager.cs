@@ -51,6 +51,8 @@ public class WorldManager : MonoBehaviour
     [SerializeField] int urgentVisibleChunkRingRadius = 1;
     [SerializeField] int maxVisibleChunkContentUpdatesPerFrame = 32;
     [SerializeField] int maxRenderVisibilityChecksPerFrame = 160;
+    [Tooltip("Extra chunk-width margin used only for foliage render visibility, so off-camera trees can still cast shadows into view.")]
+    [SerializeField] float foliageFrustumPaddingChunks = 1f;
     [SerializeField] float visibleChunkContentBudgetMsPerFrame = 1.5f;
     [SerializeField] int maxFarTerrainTileContentUpdatesPerFrame = 4;
     [SerializeField] float farTerrainTileContentBudgetMsPerFrame = 0.35f;
@@ -78,6 +80,7 @@ public class WorldManager : MonoBehaviour
             maxFarTerrainResultsAppliedPerFrame, maxLODMeshResultsAppliedPerFrame,
             maxColliderResultsAppliedPerFrame, urgentVisibleChunkRingRadius,
             maxVisibleChunkContentUpdatesPerFrame, maxRenderVisibilityChecksPerFrame,
+            foliageFrustumPaddingChunks,
             visibleChunkContentBudgetMsPerFrame, maxFarTerrainTileContentUpdatesPerFrame,
             farTerrainTileContentBudgetMsPerFrame,
             completedRequestApplyBudgetMsPerFrame,

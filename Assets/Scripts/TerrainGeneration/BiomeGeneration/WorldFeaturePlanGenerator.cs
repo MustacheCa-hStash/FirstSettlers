@@ -1286,13 +1286,7 @@ public static class WorldFeaturePlanGenerator
             }
             else
             {
-                ApplyRadialInfluence(
-                    forestFields.RockInfluenceMap,
-                    chunkSize,
-                    placement.sampleX,
-                    placement.sampleZ,
-                    placement.influenceRadius,
-                    1f);
+                // Forest boulders still reserve placement space, but no longer stamp a circular floor patch.
             }
         }
 

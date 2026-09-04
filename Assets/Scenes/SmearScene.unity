@@ -772,6 +772,7 @@ MonoBehaviour:
   urgentVisibleChunkRingRadius: 1
   maxVisibleChunkContentUpdatesPerFrame: 12
   maxRenderVisibilityChecksPerFrame: 120
+  foliageFrustumPaddingChunks: 1
   visibleChunkContentBudgetMsPerFrame: 0.75
   maxFarTerrainTileContentUpdatesPerFrame: 3
   farTerrainTileContentBudgetMsPerFrame: 0.25
