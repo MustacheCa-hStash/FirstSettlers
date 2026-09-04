@@ -12,7 +12,8 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _ALPHACUTOUTSHADOWS_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -35,7 +36,8 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AmbientStrength: 0.58
+    - _AlphaCutoutShadows: 1
+    - _AmbientStrength: 0.28
     - _BillboardTintCompression: 0
     - _Brightness: 1
     - _ColorVariationStrength: 0.28
@@ -46,17 +48,17 @@ Material:
     - _LeafMaskThreshold: 0.25
     - _LeafSaturation: 0.84
     - _LeafTintStrength: 1
-    - _LightWrap: 0.64
+    - _LightWrap: 0.48
     - _LowerShadeStrength: 0.2
     - _SeasonAutumnAmount: 1
     - _Smoothness: 0.05
     - _SpecularStrength: 0.015
+    - _TreeTintStrength: 0.88
     - _WindFlutterSpeed: 3.4
     - _WindFlutterStrength: 0.014
     - _WindGustScale: 0.14
     - _WindSpeed: 1.15
     - _WindStrength: 0.045
-    - _TreeTintStrength: 0.88
     m_Colors:
     - _AutumnCrimsonColor: {r: 0.54, g: 0.22, b: 0.08, a: 1}
     - _AutumnGoldColor: {r: 1, g: 0.7, b: 0.16, a: 1}
@@ -67,9 +69,9 @@ Material:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _BillboardTintAverageColor: {r: 1, g: 0.7, b: 0.16, a: 1}
     - _LeafShadowColor: {r: 0.34, g: 0.24, b: 0.08, a: 1}
+    - _SummerDeepVariationColor: {r: 0.1, g: 0.25, b: 0.07, a: 1}
     - _SummerLeafColor: {r: 0.18, g: 0.42, b: 0.12, a: 1}
     - _SummerVariationColor: {r: 0.3, g: 0.52, b: 0.16, a: 1}
-    - _SummerDeepVariationColor: {r: 0.1, g: 0.25, b: 0.07, a: 1}
     - _TreeLeafTint: {r: 1, g: 0.74, b: 0.22, a: 1}
     - _WindDirection: {r: 1, g: 0, b: 0.35, a: 0}
   m_BuildTextureStacks: []

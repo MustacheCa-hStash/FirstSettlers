@@ -28,6 +28,7 @@ Shader "Custom/GrassInstancedTerrainTint"
 
         _GrassDetailStrength("Grass Detail Strength", Range(0, 1)) = 0.35
         _GrassDetailContrast("Grass Detail Contrast", Range(0.1, 6)) = 2.14
+        _AmbientStrength("Minimum Ambient Strength", Range(0, 1)) = 0.28
         [Toggle] _ReceiveShadows("Receive Shadows", Float) = 0
 
         _BladeMinY("Blade Min Y", Float) = 0
@@ -99,6 +100,7 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half _BlendSharpness;
                 half _GrassDetailStrength;
                 half _GrassDetailContrast;
+                half _AmbientStrength;
                 half _ReceiveShadows;
                 half _BladeMinY;
                 half _BladeMaxY;
@@ -238,7 +240,7 @@ Shader "Custom/GrassInstancedTerrainTint"
                 Light mainLight = GetMainLight(IN.shadowCoord);
                 half shadowAttenuation = lerp(1.0h, mainLight.shadowAttenuation, saturate(_ReceiveShadows));
                 half ndotl = saturate(dot(normalWS, mainLight.direction));
-                half3 ambient = SampleSH(normalWS);
+                half3 ambient = max(SampleSH(normalWS), _AmbientStrength.xxx);
                 half3 lighting = ambient + mainLight.color * (0.35h + ndotl * 0.65h) * shadowAttenuation;
 
                 half3 color = grassTint * grassVariation * _BaseColor.rgb * _Color.rgb * lighting;

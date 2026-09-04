@@ -14,6 +14,7 @@ Shader "Custom/CloverInstancedSimpleLit"
         _AlphaFromLuminance("Alpha From Luminance", Range(0, 1)) = 0
         _TextureContrast("Texture Contrast", Range(0.1, 4)) = 1.3
         _TextureShadeStrength("Texture Shade Strength", Range(0, 1.5)) = 0.75
+        _AmbientStrength("Minimum Ambient Strength", Range(0, 1)) = 0.28
         _VariationScale("Smooth Variation Scale", Float) = 5.5
         _VariationStrength("Smooth Variation Strength", Range(0, 1)) = 0.18
         _InstanceVariationStrength("Instance Variation Strength", Range(0, 1)) = 0.14
@@ -66,6 +67,7 @@ Shader "Custom/CloverInstancedSimpleLit"
                 half _AlphaFromLuminance;
                 half _TextureContrast;
                 half _TextureShadeStrength;
+                half _AmbientStrength;
                 half _VariationScale;
                 half _VariationStrength;
                 half _InstanceVariationStrength;
@@ -181,7 +183,7 @@ Shader "Custom/CloverInstancedSimpleLit"
                 half3 normalWS = normalize(IN.normalWS);
                 Light mainLight = GetMainLight();
                 half ndotl = saturate(dot(normalWS, mainLight.direction));
-                half3 ambient = SampleSH(normalWS);
+                half3 ambient = max(SampleSH(normalWS), _AmbientStrength.xxx);
                 half3 lighting = ambient + mainLight.color * (0.38h + ndotl * 0.62h);
 
                 half3 color = cloverColor * textureShade * lighting;

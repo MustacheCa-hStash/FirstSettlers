@@ -64,7 +64,7 @@ Shader "Custom/StylizedTerrainURP"
         _NoiseScale("Noise Scale", Range(0.001, 0.2)) = 0.03
         _NoiseStrength("Noise Strength", Range(0.0, 2.0)) = 1.0
         _BlendSharpness("Blend Sharpness", Range(0.25, 3.0)) = 1.0
-        _AmbientStrength("Ambient Strength", Range(0.0, 1.0)) = 0.35
+        _AmbientStrength("Minimum Ambient Strength", Range(0.0, 1.0)) = 0.26
         [Toggle] _ReceiveShadows("Receive Shadows", Float) = 1.0
     }
 
@@ -516,7 +516,8 @@ Shader "Custom/StylizedTerrainURP"
                 half3 diffuse = LightingLambert(mainLight.color, mainLight.direction, normalWS) *
                     mainLight.distanceAttenuation *
                     shadowAttenuation;
-                half3 lighting = diffuse + half3(_AmbientStrength, _AmbientStrength, _AmbientStrength);
+                half3 ambient = max(SampleSH(normalWS), half3(_AmbientStrength, _AmbientStrength, _AmbientStrength));
+                half3 lighting = diffuse + ambient;
                 half3 color = baseColor * lighting;
                 color = MixFog(color, IN.fogFactor);
 

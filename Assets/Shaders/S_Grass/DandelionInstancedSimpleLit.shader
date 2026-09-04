@@ -20,6 +20,7 @@ Shader "Custom/DandelionInstancedSimpleLit"
         _RedHeadHeightSplit("Red Mask Head Height Split", Range(0, 1)) = 0.45
         _RedHeadSplitFeather("Red Mask Split Feather", Range(0.001, 0.5)) = 0.16
         _TextureShadeStrength("Mask Edge Shade Strength", Range(0, 1.5)) = 0.2
+        _AmbientStrength("Minimum Ambient Strength", Range(0, 1)) = 0.30
         _VariationScale("Smooth Variation Scale", Float) = 4.5
         _VariationStrength("Smooth Variation Strength", Range(0, 1)) = 0.11
         _InstanceVariationStrength("Instance Variation Strength", Range(0, 1)) = 0.08
@@ -90,6 +91,7 @@ Shader "Custom/DandelionInstancedSimpleLit"
                 half _RedHeadHeightSplit;
                 half _RedHeadSplitFeather;
                 half _TextureShadeStrength;
+                half _AmbientStrength;
                 half _VariationScale;
                 half _VariationStrength;
                 half _InstanceVariationStrength;
@@ -244,7 +246,7 @@ Shader "Custom/DandelionInstancedSimpleLit"
                 half3 normalWS = normalize(IN.normalWS);
                 Light mainLight = GetMainLight();
                 half ndotl = saturate(dot(normalWS, mainLight.direction));
-                half3 ambient = SampleSH(normalWS);
+                half3 ambient = max(SampleSH(normalWS), _AmbientStrength.xxx);
                 half3 lighting = ambient + mainLight.color * (0.42h + ndotl * 0.58h);
 
                 return half4(color * _BaseColor.rgb * edgeShade * lighting, baseAlpha * _BaseColor.a);

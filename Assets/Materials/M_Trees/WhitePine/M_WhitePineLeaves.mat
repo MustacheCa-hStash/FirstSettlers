@@ -26,6 +26,7 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords:
+  - _ALPHACUTOUTSHADOWS_ON
   - _ALPHATEST_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
@@ -44,10 +45,11 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AmbientStrength: 0.68
+    - _AlphaCutoutShadows: 1
+    - _AmbientStrength: 0.28
     - _CardVariationStrength: 0.04
     - _Cutoff: 0.38
-    - _LightWrap: 0.7
+    - _LightWrap: 0.45
     - _Smoothness: 0.04
     - _SpecularStrength: 0.01
     - _StrandContrast: 0.28

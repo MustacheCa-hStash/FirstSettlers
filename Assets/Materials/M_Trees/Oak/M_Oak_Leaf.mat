@@ -11,9 +11,10 @@ Material:
   m_Shader: {fileID: 4800000, guid: 6a2678f3b56b41c18a9662c4fe293417, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords:
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _ALPHACUTOUTSHADOWS_ON
   - _ALPHATEST_ON
-  m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -86,34 +87,36 @@ Material:
     m_Floats:
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 1
+    - _AlphaCutoutShadows: 1
     - _AlphaToMask: 1
+    - _AmbientStrength: 0.24
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BlendOp: 0
     - _BumpScale: 1
+    - _CardVariationStrength: 0.28
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
+    - _ColorVariationStrength: 0.58
     - _Cull: 2
     - _Cutoff: 0.42
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _DstBlendAlpha: 0
-    - _AmbientStrength: 0.44
-    - _CardVariationStrength: 0.28
-    - _ColorVariationStrength: 0.58
     - _EnvironmentReflections: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _LeafContrast: 0.4
-    - _LightWrap: 0.62
+    - _LightWrap: 0.45
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _SampleGI: 0
+    - _SeasonAutumnAmount: 0
     - _Smoothness: 0.08
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
@@ -121,7 +124,6 @@ Material:
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
-    - _SeasonAutumnAmount: 0
     - _TreeTintStrength: 0.35
     - _UseVertexColor: 0
     - _VerticalGradientStrength: 0.08

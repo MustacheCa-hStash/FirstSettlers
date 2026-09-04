@@ -31,10 +31,10 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AmbientStrength: 0.68
+    - _AmbientStrength: 0.35
     - _CardVariationStrength: 0.04
     - _Cutoff: 0.38
-    - _LightWrap: 0.7
+    - _LightWrap: 0.45
     - _Smoothness: 0.04
     - _SpecularStrength: 0.01
     - _StrandContrast: 0.28

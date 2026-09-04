@@ -12,6 +12,7 @@ Shader "Custom/FlowerInstancedUnlit"
 
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.5
         _MaskSharpness("Mask Sharpness", Range(0.25, 8)) = 1
+        _AmbientStrength("Minimum Ambient Strength", Range(0, 1)) = 0.32
         _WindDirection("Wind Direction", Vector) = (1, 0, 0.35, 0)
         _WindStrength("Wind Stem Bend Strength", Range(0, 1)) = 0.035
         _WindSpeed("Wind Stem Bend Speed", Range(0, 8)) = 1.9
@@ -39,7 +40,7 @@ Shader "Custom/FlowerInstancedUnlit"
 
         Pass
         {
-            Name "ForwardUnlit"
+            Name "ForwardLit"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
@@ -49,6 +50,7 @@ Shader "Custom/FlowerInstancedUnlit"
             #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -64,6 +66,7 @@ Shader "Custom/FlowerInstancedUnlit"
                 half4 _FlowerCenterColor;
                 half _Cutoff;
                 half _MaskSharpness;
+                half _AmbientStrength;
                 float4 _WindDirection;
                 half _WindStrength;
                 half _WindSpeed;
@@ -90,6 +93,7 @@ Shader "Custom/FlowerInstancedUnlit"
                 float4 positionCS : SV_POSITION;
                 float2 baseUV : TEXCOORD0;
                 float2 maskUV : TEXCOORD1;
+                half3 normalWS : TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -134,6 +138,7 @@ Shader "Custom/FlowerInstancedUnlit"
                 OUT.positionCS = TransformWorldToHClip(positionWS);
                 OUT.baseUV = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.maskUV = TRANSFORM_TEX(IN.uv, _MaskMap);
+                OUT.normalWS = half3(0.0h, 1.0h, 0.0h);
 
                 return OUT;
             }
@@ -161,7 +166,13 @@ Shader "Custom/FlowerInstancedUnlit"
                     stem * mask.g +
                     center * mask.b;
 
-                return half4(color, baseSample.a);
+                half3 normalWS = normalize(IN.normalWS);
+                Light mainLight = GetMainLight();
+                half ndotl = saturate(dot(normalWS, mainLight.direction));
+                half3 ambient = max(SampleSH(normalWS), _AmbientStrength.xxx);
+                half3 lighting = ambient + mainLight.color * (0.40h + ndotl * 0.60h);
+
+                return half4(color * lighting, baseSample.a);
             }
             ENDHLSL
         }

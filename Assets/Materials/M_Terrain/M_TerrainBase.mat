@@ -150,7 +150,7 @@ Material:
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
     - _AlphaToMask: 0
-    - _AmbientStrength: 0.35
+    - _AmbientStrength: 0.26
     - _BareDirtNormalStrength: 0.35
     - _BareDirtTiling: 0.35
     - _Blend: 0

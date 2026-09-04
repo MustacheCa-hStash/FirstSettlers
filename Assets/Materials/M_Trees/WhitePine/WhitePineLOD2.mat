@@ -12,7 +12,8 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _ALPHACUTOUTSHADOWS_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -35,7 +36,8 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AmbientStrength: 0.58
+    - _AlphaCutoutShadows: 1
+    - _AmbientStrength: 0.28
     - _Brightness: 1
     - _ColorVariationStrength: 0.22
     - _Cutoff: 0.38
@@ -43,7 +45,7 @@ Material:
     - _LeafMaskSoftness: 0.06
     - _LeafMaskThreshold: 0.16
     - _LeafTintStrength: 0.82
-    - _LightWrap: 0.64
+    - _LightWrap: 0.48
     - _LowerShadeStrength: 0.18
     - _NeedleContrast: 0.16
     - _Smoothness: 0.05

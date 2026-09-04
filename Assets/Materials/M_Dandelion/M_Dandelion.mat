@@ -39,6 +39,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _AmbientStrength: 0.3
     - _Cutoff: 0.25
     - _HeadStripeContrast: 0.9
     - _HeadStripeScale: 18

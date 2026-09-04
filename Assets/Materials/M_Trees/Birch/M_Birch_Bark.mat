@@ -84,12 +84,13 @@ Material:
     m_Ints: []
     m_Floats:
     - _AddPrecomputedVelocity: 0
-    - _AmbientStrength: 0.42
     - _AlphaClip: 0
     - _AlphaToMask: 0
+    - _AmbientStrength: 0.24
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BlendOp: 0
+    - _Brightness: 1
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
@@ -101,6 +102,7 @@ Material:
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
+    - _FauxSideShadeStrength: 0.2
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
@@ -111,6 +113,9 @@ Material:
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _SampleGI: 0
+    - _ScarSoftness: 0.08
+    - _ScarStrength: 0.95
+    - _ScarThreshold: 0.34
     - _Smoothness: 0.08
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
@@ -118,11 +123,6 @@ Material:
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
-    - _Brightness: 1
-    - _FauxSideShadeStrength: 0.2
-    - _ScarSoftness: 0.08
-    - _ScarStrength: 0.95
-    - _ScarThreshold: 0.34
     - _UseVertexColor: 0
     - _VerticalGradientStrength: 0.1
     - _WorkflowMode: 1
