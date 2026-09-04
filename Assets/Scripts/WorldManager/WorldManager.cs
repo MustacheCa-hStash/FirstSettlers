@@ -22,6 +22,7 @@ public class WorldManager : MonoBehaviour
     [SerializeField] GrassSettings grassSettings;
     [SerializeField] FlowerSettings flowerSettings = new FlowerSettings();
     [SerializeField] CloverSettings cloverSettings = new CloverSettings();
+    [SerializeField] DandelionSettings dandelionSettings = new DandelionSettings();
     [SerializeField] TreeSettings treeSettings;
     [SerializeField] float sampleScale = 10f;
     [SerializeField] float worldScale = 1.0f;
@@ -50,7 +51,6 @@ public class WorldManager : MonoBehaviour
     [SerializeField] int maxRenderVisibilityChecksPerFrame = 160;
     [SerializeField] float visibleChunkContentBudgetMsPerFrame = 1.5f;
     [SerializeField] int maxFarTerrainTileContentUpdatesPerFrame = 4;
-    [SerializeField] int maxFarTerrainTileVisibilityChecksPerFrame = 24;
     [SerializeField] float farTerrainTileContentBudgetMsPerFrame = 0.35f;
     [SerializeField] float completedRequestApplyBudgetMsPerFrame = 3f;
     [SerializeField] float terrainDataApplyBudgetMsPerFrame = 0.75f;
@@ -68,7 +68,7 @@ public class WorldManager : MonoBehaviour
         chunkManager = new ChunkManager(viewDistance, colliderDistance, enableFarTerrain, farTerrainStartRing,
             farTerrainMacroTileSize, farTerrainHeightGridResolution, farTerrainControlMapResolution, farTerrainSkirtDepth,
             chunkSize, worldSeed, viewer, viewerCamera,
-            chunkParent, foliageParent, grassSettings, flowerSettings, cloverSettings, treeSettings, sampleScale, worldScale, octaves, persistence,
+            chunkParent, foliageParent, grassSettings, flowerSettings, cloverSettings, dandelionSettings, treeSettings, sampleScale, worldScale, octaves, persistence,
             lacunarity, erosionStrength, meshHeightMultiplier, terrainMaterial, waterMaterial,
             maxActiveTerrainDataJobs, maxActiveFarTerrainJobs, maxActiveMeshJobs,
             maxActiveColliderJobs, maxTerrainDataResultsAppliedPerFrame,
@@ -76,7 +76,7 @@ public class WorldManager : MonoBehaviour
             maxColliderResultsAppliedPerFrame, urgentVisibleChunkRingRadius,
             maxVisibleChunkContentUpdatesPerFrame, maxRenderVisibilityChecksPerFrame,
             visibleChunkContentBudgetMsPerFrame, maxFarTerrainTileContentUpdatesPerFrame,
-            maxFarTerrainTileVisibilityChecksPerFrame, farTerrainTileContentBudgetMsPerFrame,
+            farTerrainTileContentBudgetMsPerFrame,
             completedRequestApplyBudgetMsPerFrame,
             terrainDataApplyBudgetMsPerFrame, farTerrainApplyBudgetMsPerFrame,
             lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame);

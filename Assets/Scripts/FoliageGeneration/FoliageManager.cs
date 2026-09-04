@@ -19,10 +19,14 @@ public class FoliageManager
     private static readonly ProfilerMarker HandleSubChunkRocksMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Rocks");
     private static readonly ProfilerMarker HandleSubChunkFlowersMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Flowers");
     private static readonly ProfilerMarker HandleSubChunkCloverMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Clover");
+    private static readonly ProfilerMarker HandleSubChunkDandelionsMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Dandelions");
     private static readonly ProfilerMarker HandleSubChunkGrassMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Grass");
     private static readonly ProfilerMarker HandleSubChunkBillboardGrassMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.BillboardGrass");
     private static readonly ProfilerMarker HandleSubChunkSetVisibleMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.SetVisible");
     private static readonly ProfilerMarker DrawVisibleFoliageEveryFrameMarker = new ProfilerMarker("FS.Streaming.Foliage.DrawVisibleEveryFrame");
+    private static readonly ProfilerMarker QueueFoliageManagementMarker = new ProfilerMarker("FS.Streaming.Foliage.QueueManagement");
+    private static readonly ProfilerMarker ProcessFoliageManagementQueueMarker = new ProfilerMarker("FS.Streaming.Foliage.ProcessManagementQueue");
+    private static readonly ProfilerMarker DrawFoliageOnlyMarker = new ProfilerMarker("FS.Streaming.Foliage.DrawOnly");
     private static readonly ProfilerMarker PruneStaleFoliageQueuesMarker = new ProfilerMarker("FS.Streaming.Foliage.PruneStaleQueues");
     private static readonly ProfilerMarker CompleteActiveGrassJobsMarker = new ProfilerMarker("FS.Streaming.Foliage.CompleteActiveGrassJobs");
     private static readonly ProfilerMarker ProcessGroundFoliageGenerationMarker = new ProfilerMarker("FS.Streaming.Foliage.ProcessGroundGenerationQueue");
@@ -34,6 +38,7 @@ public class FoliageManager
     private readonly GrassSettings grassSettings;
     private readonly FlowerSettings flowerSettings;
     private readonly CloverSettings cloverSettings;
+    private readonly DandelionSettings dandelionSettings;
     private readonly TreeSettings treeSettings;
     private readonly int worldSeed;
     private readonly int chunkSize;
@@ -53,6 +58,10 @@ public class FoliageManager
 
     private CloverRenderData[] cloverRenderData;
     private int cloverInstanceDataPropertyId;
+
+    private Mesh dandelionMesh;
+    private Material dandelionMaterial;
+    private int dandelionInstanceDataPropertyId;
 
     private TreeBillboardRenderData mapleTreeBillboard;
     private TreeBillboardRenderData sugarMapleTreeBillboard;
@@ -79,14 +88,18 @@ public class FoliageManager
     private readonly HashSet<ChunkCoord> queuedTreeRepresentationWork = new();
     private readonly List<GroundFoliageGenerationWorkItem> pendingGroundFoliageGenerationWork = new();
     private readonly HashSet<GroundFoliageGenerationWorkKey> queuedGroundFoliageGenerationWork = new();
+    private readonly List<FoliageManagementWorkItem> pendingFoliageManagementWork = new();
+    private readonly HashSet<ChunkCoord> queuedFoliageManagementWork = new();
+    private readonly List<ChunkCoord> deferredFoliageManagementRetries = new();
 
-    public FoliageManager(Transform foliageParent, GrassSettings grassSettings, FlowerSettings flowerSettings, CloverSettings cloverSettings, TreeSettings treeSettings, int worldSeed,
+    public FoliageManager(Transform foliageParent, GrassSettings grassSettings, FlowerSettings flowerSettings, CloverSettings cloverSettings, DandelionSettings dandelionSettings, TreeSettings treeSettings, int worldSeed,
         int chunkSize, float worldScale, float meshHeightMultiplier)
     {
         this.foliageParent = foliageParent;
         this.grassSettings = grassSettings;
         this.flowerSettings = flowerSettings;
         this.cloverSettings = cloverSettings;
+        this.dandelionSettings = dandelionSettings;
         this.treeSettings = treeSettings;
         this.worldSeed = worldSeed;
         this.chunkSize = chunkSize;
@@ -96,6 +109,7 @@ public class FoliageManager
         ResolveGrassRenderAssets();
         ResolveFlowerRenderAssets();
         ResolveCloverRenderAssets();
+        ResolveDandelionRenderAssets();
         ResolveTreeRenderAssets();
     }
 
@@ -116,6 +130,9 @@ public class FoliageManager
         queuedFoliageBatchWork.Clear();
         pendingTreeRepresentationWork.Clear();
         queuedTreeRepresentationWork.Clear();
+        pendingFoliageManagementWork.Clear();
+        queuedFoliageManagementWork.Clear();
+        deferredFoliageManagementRetries.Clear();
         dirtyGrassChunks.Clear();
         RecordFoliageQueueSnapshot(0);
     }
@@ -140,68 +157,238 @@ public class FoliageManager
     {
         using (HandleViewerSubChunkChangedMarker.Auto())
         {
-        long stageStart = TerrainGenerationProfiler.GetTimestamp();
+            long stageStart = TerrainGenerationProfiler.GetTimestamp();
 
-        using (HandleSubChunkLoopMarker.Auto())
-        {
-        for (int i = 0; i < orderedActiveCoords.Count; i++)
-        {
-            ChunkCoord coord = orderedActiveCoords[i];
-            ChunkRecord record = chunkManager.GetChunkRecord(coord);
-            ChunkRuntime runtime = chunkManager.GetChunkRuntime(record);
-
-            if (record == null || runtime == null)
-                continue;
-
-            using (HandleSubChunkEnsureRuntimeMarker.Auto())
+            using (QueueFoliageManagementMarker.Auto())
             {
-                EnsureFoliageRuntimeExists(runtime, record);
-            }
-
-            bool useNearGrass;
-            bool useBillboardGrass;
-            bool useFlowers;
-            bool useClover;
-            bool preGenerateClover;
-            bool useTrees;
-            bool useBushes;
-            bool useRocks;
-            bool useFoliage;
-            using (HandleSubChunkRangeChecksMarker.Auto())
-            {
-                useNearGrass = IsWithinNearGrass(viewerCoord, coord);
-                useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
-                useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
-                useClover = IsWithinCloverRenderRange(viewerCoord, coord);
-                preGenerateClover = IsWithinCloverGenerationRange(viewerCoord, coord);
-                useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
-                useBushes = IsWithinBushRenderRange(viewerCoord, coord);
-                useRocks = IsWithinRockRenderRange(viewerCoord, coord);
-                useFoliage = useNearGrass || useBillboardGrass || useFlowers || useClover || preGenerateClover || useTrees || useBushes || useRocks;
-            }
-
-            if (!HasRequiredTerrainData(record))
-            {
-                using (HandleSubChunkClearInactiveMarker.Auto())
+                for (int i = 0; i < orderedActiveCoords.Count; i++)
                 {
-                    runtime.FoliageRuntime.ClearCachedBatches();
-                    runtime.FoliageRuntime.SetVisible(false);
+                    EnqueueFoliageManagementWork(orderedActiveCoords[i]);
                 }
-                continue;
             }
 
-            if (!useFoliage)
+            TerrainGenerationProfiler.Record(
+                TerrainGenerationProfileStage.FoliageHandleSubChunkChanged,
+                stageStart);
+        }
+    }
+
+    public void DrawVisibleFoliageEveryFrame(
+        ChunkManager chunkManager,
+        ChunkCoord viewerCoord,
+        SubChunkCoord viewerGlobalSubChunk,
+        List<ChunkCoord> orderedActiveCoords)
+    {
+        using (DrawVisibleFoliageEveryFrameMarker.Auto())
+        {
+            long stageStart = TerrainGenerationProfiler.GetTimestamp();
+            long workBudgetStart = TerrainGenerationProfiler.GetTimestamp();
+            float foregroundBudgetMs = Mathf.Max(0f, grassSettings.foregroundFoliageWorkBudgetMsPerFrame);
+
+            PruneStaleFoliageQueues(chunkManager, viewerCoord, viewerGlobalSubChunk);
+            CompleteActiveGrassSubChunkGenerationWork(
+                chunkManager,
+                viewerCoord,
+                viewerGlobalSubChunk,
+                workBudgetStart,
+                foregroundBudgetMs);
+            ProcessPendingFoliageManagementWork(chunkManager, viewerCoord, viewerGlobalSubChunk, workBudgetStart, foregroundBudgetMs);
+            ProcessPendingGroundFoliageGenerationWork(chunkManager, viewerCoord, workBudgetStart, foregroundBudgetMs);
+            ProcessPendingGrassSubChunkWork(chunkManager, viewerCoord, viewerGlobalSubChunk, workBudgetStart, foregroundBudgetMs);
+            ProcessPendingFoliageBatchWork(chunkManager, viewerCoord, viewerGlobalSubChunk, workBudgetStart, foregroundBudgetMs);
+            ProcessPendingTreeRepresentationWork(chunkManager, viewerCoord, workBudgetStart, foregroundBudgetMs);
+
+            using (DrawFoliageOnlyMarker.Auto())
             {
-                using (HandleSubChunkClearInactiveMarker.Auto())
+                for (int i = 0; i < orderedActiveCoords.Count; i++)
                 {
-                    runtime.FoliageRuntime.ClearCachedBatches();
-                    runtime.FoliageRuntime.SetVisible(false);
+                    ChunkCoord coord = orderedActiveCoords[i];
+                    ChunkRecord record = chunkManager.GetChunkRecord(coord);
+                    ChunkRuntime runtime = chunkManager.GetChunkRuntime(record);
+
+                    DrawFoliageForChunk(record, runtime, viewerCoord, coord);
                 }
-                continue;
             }
 
-            using (HandleSubChunkTreesMarker.Auto())
+            TerrainGenerationProfiler.Record(
+                TerrainGenerationProfileStage.FoliageDrawVisibleEveryFrame,
+                stageStart);
+        }
+    }
+
+    private void DrawFoliageForChunk(
+        ChunkRecord record,
+        ChunkRuntime runtime,
+        ChunkCoord viewerCoord,
+        ChunkCoord coord)
+    {
+        if (record == null ||
+            runtime == null ||
+            runtime.FoliageRuntime == null ||
+            !HasRequiredTerrainData(record))
+        {
+            return;
+        }
+
+        bool useNearGrass = IsWithinNearGrass(viewerCoord, coord);
+        bool useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
+        bool useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
+        bool useClover = IsWithinCloverRenderRange(viewerCoord, coord);
+        bool useDandelions = IsWithinDandelionRenderRange(viewerCoord, coord);
+        bool useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
+
+        if (!(useNearGrass || useBillboardGrass || useFlowers || useClover || useDandelions || useTrees))
+            return;
+
+        if (useNearGrass)
+        {
+            if (useClover && HasCloverRenderAssets())
+                runtime.FoliageRuntime.DrawClover();
+
+            if (IsCloverReadyForGrass(record, viewerCoord))
+                runtime.FoliageRuntime.DrawGrass();
+        }
+        else if (useBillboardGrass)
+        {
+            runtime.FoliageRuntime.DrawBillboards();
+        }
+
+        if (useFlowers && HasFlowerRenderAssets())
+            runtime.FoliageRuntime.DrawFlowers();
+
+        if (useDandelions && HasDandelionRenderAssets())
+            runtime.FoliageRuntime.DrawDandelions();
+
+        DrawTreesForChunk(runtime, viewerCoord, coord);
+    }
+
+    private void EnqueueFoliageManagementWork(ChunkCoord coord)
+    {
+        if (!queuedFoliageManagementWork.Add(coord))
+            return;
+
+        if (pendingFoliageManagementWork.Count >= Mathf.Max(1, grassSettings.maxQueuedFoliageManagementWork))
+        {
+            queuedFoliageManagementWork.Remove(coord);
+            return;
+        }
+
+        pendingFoliageManagementWork.Add(new FoliageManagementWorkItem(coord));
+    }
+
+    private void ProcessPendingFoliageManagementWork(
+        ChunkManager chunkManager,
+        ChunkCoord viewerCoord,
+        SubChunkCoord viewerGlobalSubChunk,
+        long sharedBudgetStart,
+        float sharedBudgetMs)
+    {
+        using var processFoliageManagementQueueScope = ProcessFoliageManagementQueueMarker.Auto();
+
+        int maxChunks = Mathf.Max(1, grassSettings.maxFoliageManagementChunksPerFrame);
+        float budgetMs = Mathf.Max(0f, grassSettings.foliageManagementBudgetMsPerFrame);
+        long frameStart = TerrainGenerationProfiler.GetTimestamp();
+        int managedCount = 0;
+
+        deferredFoliageManagementRetries.Clear();
+
+        while (pendingFoliageManagementWork.Count > 0 && managedCount < maxChunks)
+        {
+            if (!HasFoliageWorkBudgetRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs))
+                break;
+
+            FoliageManagementWorkItem workItem = PopNearestFoliageManagementWork(viewerCoord);
+            queuedFoliageManagementWork.Remove(workItem.ChunkCoord);
+
+            bool shouldRetry = ManageFoliageForChunk(
+                chunkManager,
+                viewerCoord,
+                viewerGlobalSubChunk,
+                workItem.ChunkCoord);
+
+            if (shouldRetry)
+                deferredFoliageManagementRetries.Add(workItem.ChunkCoord);
+
+            managedCount++;
+
+            if (!HasFoliageWorkBudgetRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs))
+                break;
+        }
+
+        for (int i = 0; i < deferredFoliageManagementRetries.Count; i++)
+        {
+            EnqueueFoliageManagementWork(deferredFoliageManagementRetries[i]);
+        }
+
+        deferredFoliageManagementRetries.Clear();
+        RecordFoliageQueueSnapshot(pendingTreeRepresentationWork.Count);
+    }
+
+    private bool ManageFoliageForChunk(
+        ChunkManager chunkManager,
+        ChunkCoord viewerCoord,
+        SubChunkCoord viewerGlobalSubChunk,
+        ChunkCoord coord)
+    {
+        ChunkRecord record = chunkManager.GetChunkRecord(coord);
+        ChunkRuntime runtime = chunkManager.GetChunkRuntime(record);
+
+        if (record == null || runtime == null)
+            return false;
+
+        using (HandleSubChunkEnsureRuntimeMarker.Auto())
+        {
+            EnsureFoliageRuntimeExists(runtime, record);
+        }
+
+        bool useNearGrass;
+        bool useBillboardGrass;
+        bool useFlowers;
+        bool useClover;
+        bool preGenerateClover;
+        bool useDandelions;
+        bool useTrees;
+        bool useBushes;
+        bool useRocks;
+        bool useFoliage;
+
+        using (HandleSubChunkRangeChecksMarker.Auto())
+        {
+            useNearGrass = IsWithinNearGrass(viewerCoord, coord);
+            useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
+            useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
+            useClover = IsWithinCloverRenderRange(viewerCoord, coord);
+            preGenerateClover = IsWithinCloverGenerationRange(viewerCoord, coord);
+            useDandelions = IsWithinDandelionRenderRange(viewerCoord, coord);
+            useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
+            useBushes = IsWithinBushRenderRange(viewerCoord, coord);
+            useRocks = IsWithinRockRenderRange(viewerCoord, coord);
+            useFoliage = useNearGrass || useBillboardGrass || useFlowers || useClover || preGenerateClover || useDandelions || useTrees || useBushes || useRocks;
+        }
+
+        if (!HasRequiredTerrainData(record))
+        {
+            using (HandleSubChunkClearInactiveMarker.Auto())
             {
+                runtime.FoliageRuntime.SetVisible(false);
+            }
+
+            return useFoliage;
+        }
+
+        if (!useFoliage)
+        {
+            using (HandleSubChunkClearInactiveMarker.Auto())
+            {
+                runtime.FoliageRuntime.ClearCachedBatches();
+                runtime.FoliageRuntime.SetVisible(false);
+            }
+
+            return false;
+        }
+
+        using (HandleSubChunkTreesMarker.Auto())
+        {
             if (useTrees)
             {
                 EnqueueTreeRepresentationRebuildIfNeeded(runtime, record, viewerCoord);
@@ -211,10 +398,10 @@ public class FoliageManager
                 runtime.FoliageRuntime.ClearTreeRepresentation(
                     ShouldRetainTreeGameObjectsForReuse(viewerCoord, coord));
             }
-            }
+        }
 
-            using (HandleSubChunkBushesMarker.Auto())
-            {
+        using (HandleSubChunkBushesMarker.Auto())
+        {
             if (useBushes)
             {
                 EnsureBushesGenerated(record);
@@ -224,10 +411,10 @@ public class FoliageManager
             {
                 runtime.FoliageRuntime.ClearBushGameObjects();
             }
-            }
+        }
 
-            using (HandleSubChunkRocksMarker.Auto())
-            {
+        using (HandleSubChunkRocksMarker.Auto())
+        {
             if (useRocks)
             {
                 EnsureRocksGenerated(record);
@@ -237,10 +424,12 @@ public class FoliageManager
             {
                 runtime.FoliageRuntime.ClearRockGameObjects();
             }
-            }
+        }
 
-            using (HandleSubChunkFlowersMarker.Auto())
-            {
+        bool cloverReadyForGrass = true;
+
+        using (HandleSubChunkFlowersMarker.Auto())
+        {
             if (useFlowers && HasFlowerRenderAssets())
             {
                 if (record.FoliageData == null || !record.FoliageData.flowersGenerated)
@@ -256,10 +445,10 @@ public class FoliageManager
             {
                 runtime.FoliageRuntime.ClearFlowerBatches();
             }
-            }
+        }
 
-            using (HandleSubChunkCloverMarker.Auto())
-            {
+        using (HandleSubChunkCloverMarker.Auto())
+        {
             if (useClover && HasCloverRenderAssets())
             {
                 if (record.FoliageData == null || !record.FoliageData.cloverGenerated)
@@ -281,14 +470,34 @@ public class FoliageManager
             {
                 EnqueueGroundFoliageGeneration(record, GroundFoliageGenerationType.Clover);
             }
-            }
+        }
 
-            using (HandleSubChunkGrassMarker.Auto())
+        using (HandleSubChunkDandelionsMarker.Auto())
+        {
+            if (useDandelions && HasDandelionRenderAssets())
             {
+                if (record.FoliageData == null || !record.FoliageData.dandelionsGenerated)
+                {
+                    EnqueueGroundFoliageGeneration(record, GroundFoliageGenerationType.Dandelion);
+                }
+                else if (!runtime.FoliageRuntime.HasValidDandelionRenderData())
+                {
+                    EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.Dandelion);
+                }
+            }
+            else
+            {
+                runtime.FoliageRuntime.ClearDandelionBatches();
+            }
+        }
+
+        using (HandleSubChunkGrassMarker.Auto())
+        {
             if (useNearGrass)
             {
                 EnsureRocksGenerated(record);
-                if (IsCloverReadyForGrass(record, viewerCoord))
+                cloverReadyForGrass = IsCloverReadyForGrass(record, viewerCoord);
+                if (cloverReadyForGrass)
                 {
                     EnsureNearGrassCloverInfluenceState(record, runtime, ShouldApplyCloverInfluenceToGrass(viewerCoord, record.ChunkCoord));
                     EnqueueMissingGrassSubChunks(record, viewerGlobalSubChunk);
@@ -300,10 +509,10 @@ public class FoliageManager
                     runtime.FoliageRuntime.ClearGrassBatches();
                 }
             }
-            }
+        }
 
-            using (HandleSubChunkBillboardGrassMarker.Auto())
-            {
+        using (HandleSubChunkBillboardGrassMarker.Auto())
+        {
             if (!useNearGrass && useBillboardGrass)
             {
                 if (record.FoliageData == null || !record.FoliageData.billboardGenerated)
@@ -324,211 +533,140 @@ public class FoliageManager
                         billboardGenerationStart);
                 }
 
-                if (viewerChunkChanged || !runtime.FoliageRuntime.HasValidBillboardRenderData())
+                if (!runtime.FoliageRuntime.HasValidBillboardRenderData())
                     EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.BillboardGrass);
             }
-            }
-
-            using (HandleSubChunkSetVisibleMarker.Auto())
-            {
-                runtime.FoliageRuntime.SetVisible(true);
-            }
-        }
         }
 
-        TerrainGenerationProfiler.Record(
-            TerrainGenerationProfileStage.FoliageHandleSubChunkChanged,
-            stageStart);
+        using (HandleSubChunkSetVisibleMarker.Auto())
+        {
+            runtime.FoliageRuntime.SetVisible(true);
         }
+
+        return ShouldRetryFoliageManagement(
+            record,
+            runtime,
+            viewerCoord,
+            useNearGrass,
+            useBillboardGrass,
+            useFlowers,
+            useClover,
+            useDandelions,
+            useTrees,
+            useBushes,
+            useRocks,
+            cloverReadyForGrass,
+            viewerGlobalSubChunk);
     }
 
-    public void DrawVisibleFoliageEveryFrame(
-        ChunkManager chunkManager,
+    private bool ShouldRetryFoliageManagement(
+        ChunkRecord record,
+        ChunkRuntime runtime,
         ChunkCoord viewerCoord,
-        SubChunkCoord viewerGlobalSubChunk,
-        List<ChunkCoord> orderedActiveCoords)
+        bool useNearGrass,
+        bool useBillboardGrass,
+        bool useFlowers,
+        bool useClover,
+        bool useDandelions,
+        bool useTrees,
+        bool useBushes,
+        bool useRocks,
+        bool cloverReadyForGrass,
+        SubChunkCoord viewerGlobalSubChunk)
     {
-        using (DrawVisibleFoliageEveryFrameMarker.Auto())
+        ChunkFoliageRuntime foliageRuntime = runtime.FoliageRuntime;
+
+        if (useNearGrass)
         {
-        long stageStart = TerrainGenerationProfiler.GetTimestamp();
-        long workBudgetStart = TerrainGenerationProfiler.GetTimestamp();
-        float foregroundBudgetMs = Mathf.Max(0f, grassSettings.foregroundFoliageWorkBudgetMsPerFrame);
+            if (!cloverReadyForGrass)
+                return true;
 
-        PruneStaleFoliageQueues(chunkManager, viewerCoord, viewerGlobalSubChunk);
-        CompleteActiveGrassSubChunkGenerationWork(
-            chunkManager,
-            viewerCoord,
-            viewerGlobalSubChunk,
-            workBudgetStart,
-            foregroundBudgetMs);
-        ProcessPendingGroundFoliageGenerationWork(chunkManager, viewerCoord, workBudgetStart, foregroundBudgetMs);
-        ProcessPendingGrassSubChunkWork(chunkManager, viewerCoord, viewerGlobalSubChunk, workBudgetStart, foregroundBudgetMs);
-        ProcessPendingFoliageBatchWork(chunkManager, viewerCoord, viewerGlobalSubChunk, workBudgetStart, foregroundBudgetMs);
-        ProcessPendingTreeRepresentationWork(chunkManager, viewerCoord, workBudgetStart, foregroundBudgetMs);
+            if (!foliageRuntime.HasValidGrassRenderData())
+                return true;
 
-        for (int i = 0; i < orderedActiveCoords.Count; i++)
-        {
-            ChunkCoord coord = orderedActiveCoords[i];
-            ChunkRecord record = chunkManager.GetChunkRecord(coord);
-            ChunkRuntime runtime = chunkManager.GetChunkRuntime(record);
-
-            if (record == null || runtime == null || runtime.FoliageRuntime == null)
-                continue;
-
-            bool useNearGrass = IsWithinNearGrass(viewerCoord, coord);
-            bool useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
-            bool useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
-            bool useClover = IsWithinCloverRenderRange(viewerCoord, coord);
-            bool preGenerateClover = IsWithinCloverGenerationRange(viewerCoord, coord);
-            bool useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
-            bool useBushes = IsWithinBushRenderRange(viewerCoord, coord);
-            bool useRocks = IsWithinRockRenderRange(viewerCoord, coord);
-            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useClover || preGenerateClover || useTrees || useBushes || useRocks;
-
-            if (!HasRequiredTerrainData(record))
-            {
-                runtime.FoliageRuntime.SetVisible(false);
-                continue;
-            }
-
-            if (!useFoliage)
-            {
-                runtime.FoliageRuntime.SetVisible(false);
-                continue;
-            }
-
-            runtime.FoliageRuntime.SetVisible(true);
-
-            if (useTrees)
-            {
-                EnqueueTreeRepresentationRebuildIfNeeded(runtime, record, viewerCoord);
-            }
-            else
-            {
-                runtime.FoliageRuntime.ClearTreeRepresentation(
-                    ShouldRetainTreeGameObjectsForReuse(viewerCoord, coord));
-            }
-
-            if (useBushes)
-            {
-                EnsureBushesGenerated(record);
-                RebuildBushGameObjectsIfNeeded(runtime, record);
-            }
-            else
-            {
-                runtime.FoliageRuntime.ClearBushGameObjects();
-            }
-
-            if (useRocks)
-            {
-                EnsureRocksGenerated(record);
-                RebuildRockGameObjectsIfNeeded(runtime, record);
-            }
-            else
-            {
-                runtime.FoliageRuntime.ClearRockGameObjects();
-            }
-
-            if (useNearGrass)
-            {
-                EnsureRocksGenerated(record);
-                bool cloverReadyForGrass = IsCloverReadyForGrass(record, viewerCoord);
-                if (cloverReadyForGrass)
-                {
-                    EnsureNearGrassCloverInfluenceState(record, runtime, ShouldApplyCloverInfluenceToGrass(viewerCoord, record.ChunkCoord));
-                    EnqueueMissingGrassSubChunks(record, viewerGlobalSubChunk);
-                }
-                else
-                {
-                    EnqueueGroundFoliageGeneration(record, GroundFoliageGenerationType.Clover);
-                    runtime.FoliageRuntime.ClearGrassBatches();
-                }
-
-                if (useClover && HasCloverRenderAssets())
-                {
-                    if (record.FoliageData == null || !record.FoliageData.cloverGenerated)
-                    {
-                        EnqueueGroundFoliageGeneration(record, GroundFoliageGenerationType.Clover);
-                    }
-                    else if (!runtime.FoliageRuntime.HasValidCloverRenderData())
-                    {
-                        EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.Clover);
-                    }
-
-                    runtime.FoliageRuntime.SetVisible(true);
-                    runtime.FoliageRuntime.DrawClover();
-                }
-                else
-                {
-                    runtime.FoliageRuntime.ClearCloverBatches();
-                }
-
-                if (cloverReadyForGrass && !runtime.FoliageRuntime.HasValidGrassRenderData())
-                {
-                    EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.NearGrass);
-                }
-
-                runtime.FoliageRuntime.SetVisible(true);
-                if (cloverReadyForGrass)
-                    runtime.FoliageRuntime.DrawGrass();
-            }
-            else if (useBillboardGrass)
-            {
-                if (record.FoliageData == null || !record.FoliageData.billboardGenerated)
-                {
-                    EnsureRocksGenerated(record);
-
-                    long billboardGenerationStart = TerrainGenerationProfiler.GetTimestamp();
-                    FoliageGenerator.GenerateBillboardGrassForChunk(
-                        record,
-                        grassSettings,
-                        treeSettings,
-                        worldSeed,
-                        chunkSize,
-                        worldScale,
-                        meshHeightMultiplier);
-                    TerrainGenerationProfiler.Record(
-                        TerrainGenerationProfileStage.FoliageBillboardGrassGeneration,
-                        billboardGenerationStart);
-                }
-
-                if (!runtime.FoliageRuntime.HasValidBillboardRenderData())
-                {
-                    EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.BillboardGrass);
-                }
-
-                runtime.FoliageRuntime.SetVisible(true);
-                runtime.FoliageRuntime.DrawBillboards();
-            }
-
-            if (useFlowers && HasFlowerRenderAssets())
-            {
-                if (record.FoliageData == null || !record.FoliageData.flowersGenerated)
-                {
-                    EnqueueGroundFoliageGeneration(record, GroundFoliageGenerationType.Flower);
-                }
-                else if (!runtime.FoliageRuntime.HasValidFlowerRenderData())
-                {
-                    EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.Flower);
-                }
-
-                runtime.FoliageRuntime.SetVisible(true);
-                runtime.FoliageRuntime.DrawFlowers();
-            }
-
-            if (preGenerateClover && HasCloverRenderAssets() &&
-                (record.FoliageData == null || !record.FoliageData.cloverGenerated))
-            {
-                EnqueueGroundFoliageGeneration(record, GroundFoliageGenerationType.Clover);
-            }
-
-            DrawTreesForChunk(runtime, viewerCoord, coord);
+            if (HasMissingDesiredGrassSubChunks(record, viewerGlobalSubChunk))
+                return true;
         }
 
-        TerrainGenerationProfiler.Record(
-            TerrainGenerationProfileStage.FoliageDrawVisibleEveryFrame,
-            stageStart);
+        if (!useNearGrass &&
+            useBillboardGrass &&
+            !foliageRuntime.HasValidBillboardRenderData())
+        {
+            return true;
         }
+
+        if (useFlowers &&
+            HasFlowerRenderAssets() &&
+            !foliageRuntime.HasValidFlowerRenderData())
+        {
+            return true;
+        }
+
+        if (useClover &&
+            HasCloverRenderAssets() &&
+            !foliageRuntime.HasValidCloverRenderData())
+        {
+            return true;
+        }
+
+        if (useDandelions &&
+            HasDandelionRenderAssets() &&
+            !foliageRuntime.HasValidDandelionRenderData())
+        {
+            return true;
+        }
+
+        if (useTrees &&
+            !foliageRuntime.HasCurrentTreeRepresentation(GetTreeRepresentationMode(viewerCoord, record.ChunkCoord)))
+        {
+            return true;
+        }
+
+        if (useBushes && !foliageRuntime.HasCurrentBushRepresentation())
+            return true;
+
+        if (useRocks && !foliageRuntime.HasCurrentRockRepresentation())
+            return true;
+
+        return false;
+    }
+
+    private bool HasMissingDesiredGrassSubChunks(
+        ChunkRecord record,
+        SubChunkCoord viewerGlobalSubChunk)
+    {
+        ChunkFoliageData data = record.FoliageData;
+        if (data == null ||
+            data.nearGrassInstancesBySubChunk == null ||
+            data.nearGrassSubChunkGenerated == null)
+        {
+            return true;
+        }
+
+        int subChunksPerChunk = Mathf.Max(1, data.subChunksPerChunk);
+        int activeSubChunkRadius = GetActiveGrassSubChunkRadius(subChunksPerChunk);
+
+        for (int localSubX = 0; localSubX < subChunksPerChunk; localSubX++)
+        {
+            for (int localSubZ = 0; localSubZ < subChunksPerChunk; localSubZ++)
+            {
+                if (!IsGrassSubChunkDesired(
+                        record.ChunkCoord,
+                        localSubX,
+                        localSubZ,
+                        viewerGlobalSubChunk,
+                        subChunksPerChunk,
+                        activeSubChunkRadius))
+                {
+                    continue;
+                }
+
+                if (!data.IsNearGrassSubChunkGenerated(localSubX, localSubZ))
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     public void AccumulateVisibleFoliageRenderStats(
@@ -551,10 +689,11 @@ public class FoliageManager
             bool useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
             bool useClover = IsWithinCloverRenderRange(viewerCoord, coord);
             bool preGenerateClover = IsWithinCloverGenerationRange(viewerCoord, coord);
+            bool useDandelions = IsWithinDandelionRenderRange(viewerCoord, coord);
             bool useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
             bool useBushes = IsWithinBushRenderRange(viewerCoord, coord);
             bool useRocks = IsWithinRockRenderRange(viewerCoord, coord);
-            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useClover || preGenerateClover || useTrees || useBushes || useRocks;
+            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useClover || preGenerateClover || useDandelions || useTrees || useBushes || useRocks;
 
             if (!HasRequiredTerrainData(record) || !useFoliage)
                 continue;
@@ -573,6 +712,9 @@ public class FoliageManager
 
             if (useClover && HasCloverRenderAssets())
                 runtime.FoliageRuntime.AccumulateCloverRenderStats(ref stats);
+
+            if (useDandelions && HasDandelionRenderAssets())
+                runtime.FoliageRuntime.AccumulateDandelionRenderStats(ref stats);
 
             if (useTrees)
             {
@@ -663,6 +805,36 @@ public class FoliageManager
                 meshHeightMultiplier);
             TerrainGenerationProfiler.Record(
                 TerrainGenerationProfileStage.FoliageCloverGeneration,
+                stageStart);
+        }
+    }
+
+    private void EnsureDandelionsGenerated(ChunkRecord record)
+    {
+        if (!IsDandelionSystemEnabled())
+            return;
+
+        if (record.FoliageData == null || !record.FoliageData.treeCubesGenerated)
+            EnsureTreesGenerated(record);
+
+        if (record.FoliageData == null || !record.FoliageData.bushesGenerated)
+            EnsureBushesGenerated(record);
+
+        if (record.FoliageData == null || !record.FoliageData.rocksGenerated)
+            EnsureRocksGenerated(record);
+
+        if (record.FoliageData == null || !record.FoliageData.dandelionsGenerated)
+        {
+            long stageStart = TerrainGenerationProfiler.GetTimestamp();
+            FoliageGenerator.GenerateDandelionsForChunk(
+                record,
+                dandelionSettings,
+                worldSeed,
+                chunkSize,
+                worldScale,
+                meshHeightMultiplier);
+            TerrainGenerationProfiler.Record(
+                TerrainGenerationProfileStage.FoliageDandelionGeneration,
                 stageStart);
         }
     }
@@ -1326,6 +1498,12 @@ public class FoliageManager
 
                     generationCount++;
                     break;
+                case GroundFoliageGenerationType.Dandelion:
+                    EnsureDandelionsGenerated(record);
+                    if (record.FoliageData != null && record.FoliageData.dandelionsGenerated)
+                        EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.Dandelion);
+                    generationCount++;
+                    break;
             }
 
             if (!HasFoliageWorkBudgetRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs))
@@ -1427,6 +1605,10 @@ public class FoliageManager
                     RebuildCloverBatches(runtime, record);
                     rebuildCount++;
                     break;
+                case FoliageBatchWorkType.Dandelion:
+                    RebuildDandelionBatches(runtime, record);
+                    rebuildCount++;
+                    break;
             }
 
             if (!HasFoliageWorkBudgetRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs))
@@ -1504,6 +1686,19 @@ public class FoliageManager
     {
         using var pruneStaleFoliageQueuesScope = PruneStaleFoliageQueuesMarker.Auto();
 
+        queuedFoliageManagementWork.Clear();
+        for (int i = pendingFoliageManagementWork.Count - 1; i >= 0; i--)
+        {
+            FoliageManagementWorkItem workItem = pendingFoliageManagementWork[i];
+            ChunkRecord record = chunkManager.GetChunkRecord(workItem.ChunkCoord);
+
+            if (!IsFoliageManagementWorkStillWanted(record, viewerCoord, workItem.ChunkCoord) ||
+                !queuedFoliageManagementWork.Add(workItem.ChunkCoord))
+            {
+                pendingFoliageManagementWork.RemoveAt(i);
+            }
+        }
+
         queuedGrassSubChunks.Clear();
         for (int i = pendingGrassSubChunkWork.Count - 1; i >= 0; i--)
         {
@@ -1570,6 +1765,47 @@ public class FoliageManager
         }
 
         RecordFoliageQueueSnapshot(pendingTreeRepresentationWork.Count);
+    }
+
+    private bool IsFoliageManagementWorkStillWanted(
+        ChunkRecord record,
+        ChunkCoord viewerCoord,
+        ChunkCoord coord)
+    {
+        if (record == null)
+            return false;
+
+        return IsWithinNearGrass(viewerCoord, coord) ||
+               IsWithinBillboardGrass(viewerCoord, coord) ||
+               IsWithinFlowerRenderRange(viewerCoord, coord) ||
+               IsWithinCloverRenderRange(viewerCoord, coord) ||
+               IsWithinCloverGenerationRange(viewerCoord, coord) ||
+               IsWithinDandelionRenderRange(viewerCoord, coord) ||
+               IsWithinTreeRenderRange(viewerCoord, coord) ||
+               IsWithinBushRenderRange(viewerCoord, coord) ||
+               IsWithinRockRenderRange(viewerCoord, coord);
+    }
+
+    private FoliageManagementWorkItem PopNearestFoliageManagementWork(ChunkCoord viewerCoord)
+    {
+        int bestIndex = 0;
+        int bestDistance = int.MaxValue;
+
+        for (int i = 0; i < pendingFoliageManagementWork.Count; i++)
+        {
+            FoliageManagementWorkItem candidate = pendingFoliageManagementWork[i];
+            int distance = GetChunkRingDistance(viewerCoord, candidate.ChunkCoord);
+
+            if (distance >= bestDistance)
+                continue;
+
+            bestDistance = distance;
+            bestIndex = i;
+        }
+
+        FoliageManagementWorkItem result = pendingFoliageManagementWork[bestIndex];
+        pendingFoliageManagementWork.RemoveAt(bestIndex);
+        return result;
     }
 
     private GrassSubChunkWorkItem PopNearestGrassSubChunkWork(SubChunkCoord viewerGlobalSubChunk)
@@ -1688,6 +1924,9 @@ public class FoliageManager
             case FoliageBatchWorkType.Clover:
                 return IsWithinCloverRenderRange(viewerCoord, record.ChunkCoord) &&
                        HasCloverRenderAssets();
+            case FoliageBatchWorkType.Dandelion:
+                return IsWithinDandelionRenderRange(viewerCoord, record.ChunkCoord) &&
+                       HasDandelionRenderAssets();
             default:
                 return false;
         }
@@ -1752,6 +1991,11 @@ public class FoliageManager
                        HasCloverRenderAssets() &&
                        IsWithinCloverGenerationRange(viewerCoord, record.ChunkCoord) &&
                        (record.FoliageData == null || !record.FoliageData.cloverGenerated);
+            case GroundFoliageGenerationType.Dandelion:
+                return IsDandelionSystemEnabled() &&
+                       HasDandelionRenderAssets() &&
+                       IsWithinDandelionRenderRange(viewerCoord, record.ChunkCoord) &&
+                       (record.FoliageData == null || !record.FoliageData.dandelionsGenerated);
             default:
                 return false;
         }
@@ -2013,6 +2257,94 @@ public class FoliageManager
             foliageRuntime.CacheCloverBatches(worldMatricesByPrefab, instanceDataByPrefab);
             TerrainGenerationProfiler.Record(
                 TerrainGenerationProfileStage.FoliageCloverBatchBuild,
+                stageStart);
+        }
+        finally
+        {
+            if (sources.IsCreated)
+                sources.Dispose();
+            if (nativeMatrices.IsCreated)
+                nativeMatrices.Dispose();
+            if (nativeInstanceData.IsCreated)
+                nativeInstanceData.Dispose();
+        }
+    }
+
+    private void RebuildDandelionBatches(ChunkRuntime runtime, ChunkRecord record)
+    {
+        ChunkFoliageRuntime foliageRuntime = runtime.FoliageRuntime;
+        ChunkFoliageData data = record.FoliageData;
+
+        if (foliageRuntime == null || data == null || data.dandelionInstances == null)
+            return;
+
+        long stageStart = TerrainGenerationProfiler.GetTimestamp();
+        int instanceCount = data.dandelionInstances.Count;
+
+        if (instanceCount == 0)
+        {
+            foliageRuntime.CacheDandelionBatches(Array.Empty<Matrix4x4>(), Array.Empty<Vector4>());
+            TerrainGenerationProfiler.Record(
+                TerrainGenerationProfileStage.FoliageDandelionBatchBuild,
+                stageStart);
+            return;
+        }
+
+        Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
+        NativeArray<CloverRenderSourceData> sources =
+            new NativeArray<CloverRenderSourceData>(instanceCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+        NativeArray<float4x4> nativeMatrices =
+            new NativeArray<float4x4>(instanceCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+        NativeArray<float4> nativeInstanceData =
+            new NativeArray<float4>(instanceCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+
+        try
+        {
+            for (int i = 0; i < instanceCount; i++)
+            {
+                DandelionInstanceData instance = data.dandelionInstances[i];
+                sources[i] = new CloverRenderSourceData
+                {
+                    localPosition = new float3(
+                        instance.localPosition.x,
+                        instance.localPosition.y,
+                        instance.localPosition.z),
+                    localRotation = new quaternion(
+                        instance.localRotation.x,
+                        instance.localRotation.y,
+                        instance.localRotation.z,
+                        instance.localRotation.w),
+                    localScale = new float3(
+                        instance.localScale.x,
+                        instance.localScale.y,
+                        instance.localScale.z),
+                    selectionRank = instance.selectionRank
+                };
+            }
+
+            CloverRenderBatchBuildJob job = new CloverRenderBatchBuildJob
+            {
+                sources = sources,
+                chunkLocalToWorld = ToFloat4x4(chunkLocalToWorld),
+                matrices = nativeMatrices,
+                instanceData = nativeInstanceData
+            };
+
+            JobHandle handle = job.Schedule(instanceCount, 64);
+            handle.Complete();
+
+            Matrix4x4[] worldMatrices = new Matrix4x4[instanceCount];
+            Vector4[] instanceData = new Vector4[instanceCount];
+
+            for (int i = 0; i < instanceCount; i++)
+            {
+                worldMatrices[i] = ToMatrix4x4(nativeMatrices[i]);
+                instanceData[i] = ToVector4(nativeInstanceData[i]);
+            }
+
+            foliageRuntime.CacheDandelionBatches(worldMatrices, instanceData);
+            TerrainGenerationProfiler.Record(
+                TerrainGenerationProfileStage.FoliageDandelionBatchBuild,
                 stageStart);
         }
         finally
@@ -2651,6 +2983,17 @@ public class FoliageManager
         return dx <= generationRingRadius && dz <= generationRingRadius;
     }
 
+    private bool IsWithinDandelionRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
+    {
+        if (!IsDandelionSystemEnabled())
+            return false;
+
+        int activeRingRadius = Mathf.Max(0, dandelionSettings.activeRingRadius);
+        int dx = Mathf.Abs(targetCoord.x - viewerCoord.x);
+        int dz = Mathf.Abs(targetCoord.z - viewerCoord.z);
+        return dx <= activeRingRadius && dz <= activeRingRadius;
+    }
+
     private bool IsWithinBillboardGrass(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
         int absDx = Mathf.Abs(targetCoord.x - viewerCoord.x);
@@ -2688,6 +3031,11 @@ public class FoliageManager
         return cloverSettings != null && cloverSettings.enableClover;
     }
 
+    private bool IsDandelionSystemEnabled()
+    {
+        return dandelionSettings != null && dandelionSettings.enableDandelions;
+    }
+
     private bool HasFlowerRenderAssets()
     {
         return flowerMesh != null && flowerMaterial != null;
@@ -2705,6 +3053,11 @@ public class FoliageManager
         }
 
         return false;
+    }
+
+    private bool HasDandelionRenderAssets()
+    {
+        return dandelionMesh != null && dandelionMaterial != null;
     }
 
     private int GetCloverRenderAssetCount()
@@ -2726,6 +3079,16 @@ public class FoliageManager
     {
         Color linearColor = ((Color)color).linear;
         return new Vector4(linearColor.r, linearColor.g, linearColor.b, linearColor.a);
+    }
+
+    private readonly struct FoliageManagementWorkItem
+    {
+        public readonly ChunkCoord ChunkCoord;
+
+        public FoliageManagementWorkItem(ChunkCoord chunkCoord)
+        {
+            ChunkCoord = chunkCoord;
+        }
     }
 
     private readonly struct GrassSubChunkWorkItem
@@ -2799,7 +3162,8 @@ public class FoliageManager
     private enum GroundFoliageGenerationType
     {
         Flower,
-        Clover
+        Clover,
+        Dandelion
     }
 
     private readonly struct GroundFoliageGenerationWorkItem
@@ -2845,7 +3209,8 @@ public class FoliageManager
         NearGrass,
         BillboardGrass,
         Flower,
-        Clover
+        Clover,
+        Dandelion
     }
 
     private readonly struct FoliageBatchWorkItem
@@ -2916,6 +3281,11 @@ public class FoliageManager
         chunkRuntime.FoliageRuntime.cloverRenderData = cloverRenderData;
         chunkRuntime.FoliageRuntime.receiveCloverShadows = cloverSettings != null && cloverSettings.receiveCloverShadows;
         chunkRuntime.FoliageRuntime.cloverInstanceDataPropertyId = cloverInstanceDataPropertyId;
+
+        chunkRuntime.FoliageRuntime.dandelionMesh = dandelionMesh;
+        chunkRuntime.FoliageRuntime.dandelionMaterial = dandelionMaterial;
+        chunkRuntime.FoliageRuntime.receiveDandelionShadows = dandelionSettings != null && dandelionSettings.receiveDandelionShadows;
+        chunkRuntime.FoliageRuntime.dandelionInstanceDataPropertyId = dandelionInstanceDataPropertyId;
 
         chunkRuntime.FoliageRuntime.mapleTreePrefab = treeSettings.mapleTreePrefab;
         chunkRuntime.FoliageRuntime.sugarMapleTreePrefab = treeSettings.sugarMapleTreePrefab;
@@ -2993,6 +3363,7 @@ public class FoliageManager
             else
             {
                 grassMaterial = meshRenderer.sharedMaterial;
+                grassMaterial.enableInstancing = true;
             }
         }
 
@@ -3021,6 +3392,7 @@ public class FoliageManager
             else
             {
                 billboardGrassMaterial = meshRenderer.sharedMaterial;
+                billboardGrassMaterial.enableInstancing = true;
             }
         }
     }
@@ -3129,6 +3501,29 @@ public class FoliageManager
 
         meshRenderer.sharedMaterial.enableInstancing = true;
         return new CloverRenderData(meshFilter.sharedMesh, meshRenderer.sharedMaterial);
+    }
+
+    private void ResolveDandelionRenderAssets()
+    {
+        string instanceDataPropertyName = dandelionSettings == null ||
+                                          string.IsNullOrEmpty(dandelionSettings.dandelionInstanceDataPropertyName)
+            ? "_DandelionInstanceData"
+            : dandelionSettings.dandelionInstanceDataPropertyName;
+
+        dandelionInstanceDataPropertyId = Shader.PropertyToID(instanceDataPropertyName);
+
+        if (!IsDandelionSystemEnabled())
+            return;
+
+        if (dandelionSettings.dandelionPrefab == null)
+        {
+            Debug.LogWarning("Dandelions are enabled but no dandelion prefab is assigned.");
+            return;
+        }
+
+        CloverRenderData renderData = ResolveCloverRenderData(dandelionSettings.dandelionPrefab, "dandelion prefab");
+        dandelionMesh = renderData.mesh;
+        dandelionMaterial = renderData.material;
     }
 
     private void ResolveTreeRenderAssets()

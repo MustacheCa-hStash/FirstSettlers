@@ -22,6 +22,7 @@ public readonly struct WorldDebugInfo
     public readonly int GpuGrassInstanceCount;
     public readonly int GpuFlowerInstanceCount;
     public readonly int GpuCloverInstanceCount;
+    public readonly int GpuDandelionInstanceCount;
     public readonly int GpuTreeInstanceCount;
 
     public WorldDebugInfo(
@@ -45,6 +46,7 @@ public readonly struct WorldDebugInfo
         int gpuGrassInstanceCount,
         int gpuFlowerInstanceCount,
         int gpuCloverInstanceCount,
+        int gpuDandelionInstanceCount,
         int gpuTreeInstanceCount)
     {
         WorldPosition = worldPosition;
@@ -67,6 +69,7 @@ public readonly struct WorldDebugInfo
         GpuGrassInstanceCount = gpuGrassInstanceCount;
         GpuFlowerInstanceCount = gpuFlowerInstanceCount;
         GpuCloverInstanceCount = gpuCloverInstanceCount;
+        GpuDandelionInstanceCount = gpuDandelionInstanceCount;
         GpuTreeInstanceCount = gpuTreeInstanceCount;
     }
 }

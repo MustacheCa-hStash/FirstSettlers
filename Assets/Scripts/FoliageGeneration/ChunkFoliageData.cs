@@ -17,6 +17,9 @@ public class ChunkFoliageData
     public bool cloverGenerated;
     public List<CloverInstanceData> cloverInstances = new List<CloverInstanceData>();
 
+    public bool dandelionsGenerated;
+    public List<DandelionInstanceData> dandelionInstances = new List<DandelionInstanceData>();
+
     public bool treeCubesGenerated;
     public List<TreeInstanceData> treeCubeInstances = new List<TreeInstanceData>();
 
@@ -150,6 +153,12 @@ public class ChunkFoliageData
         cloverInstances.Clear();
     }
 
+    public void ClearDandelions()
+    {
+        dandelionsGenerated = false;
+        dandelionInstances.Clear();
+    }
+
     public void ClearTreeCubes()
     {
         treeCubesGenerated = false;
@@ -174,6 +183,7 @@ public class ChunkFoliageData
         ClearBillboards();
         ClearFlowers();
         ClearClover();
+        ClearDandelions();
         ClearTreeCubes();
         ClearBushes();
         ClearRocks();
@@ -210,6 +220,11 @@ public class ChunkFoliageData
     public int GetTotalCloverInstanceCount()
     {
         return cloverInstances != null ? cloverInstances.Count : 0;
+    }
+
+    public int GetTotalDandelionInstanceCount()
+    {
+        return dandelionInstances != null ? dandelionInstances.Count : 0;
     }
 
     public int GetTotalTreeCubeInstanceCount()

@@ -837,6 +837,186 @@ public static class FoliageGenerator
         foliageData.cloverGenerated = true;
     }
 
+    public static void GenerateDandelionsForChunk(
+        ChunkRecord record,
+        DandelionSettings dandelionSettings,
+        int worldSeed,
+        int chunkSize,
+        float worldScale,
+        float meshHeightMultiplier)
+    {
+        if (record.FoliageData == null)
+        {
+            record.FoliageData = new ChunkFoliageData();
+        }
+
+        ChunkFoliageData foliageData = record.FoliageData;
+        foliageData.ClearDandelions();
+
+        if (dandelionSettings == null || !dandelionSettings.enableDandelions)
+        {
+            foliageData.dandelionsGenerated = true;
+            return;
+        }
+
+        if (record.SurfaceTypeMap == null || record.HeightMap == null || record.BiomeMap == null)
+        {
+            foliageData.dandelionsGenerated = true;
+            return;
+        }
+
+        float chunkSampleMinX = record.ChunkCoord.x * chunkSize;
+        float chunkSampleMinZ = record.ChunkCoord.z * chunkSize;
+        float chunkSampleMaxX = chunkSampleMinX + chunkSize;
+        float chunkSampleMaxZ = chunkSampleMinZ + chunkSize;
+
+        float patchCellSize = Mathf.Max(0.1f, dandelionSettings.patchCellSize);
+        float minPatchRadius = Mathf.Max(0f, Mathf.Min(dandelionSettings.patchRadiusRange.x, dandelionSettings.patchRadiusRange.y));
+        float maxPatchRadius = Mathf.Max(
+            Mathf.Max(dandelionSettings.patchRadiusRange.x, dandelionSettings.patchRadiusRange.y),
+            0f);
+        float minUniformScale = Mathf.Min(dandelionSettings.uniformScaleRange.x, dandelionSettings.uniformScaleRange.y);
+        float maxUniformScale = Mathf.Max(dandelionSettings.uniformScaleRange.x, dandelionSettings.uniformScaleRange.y);
+        float padding = maxPatchRadius + patchCellSize;
+
+        float expandedMinX = chunkSampleMinX - padding;
+        float expandedMaxX = chunkSampleMaxX + padding;
+        float expandedMinZ = chunkSampleMinZ - padding;
+        float expandedMaxZ = chunkSampleMaxZ + padding;
+
+        int globalCellMinX = Mathf.FloorToInt(expandedMinX / patchCellSize);
+        int globalCellMaxX = Mathf.FloorToInt(expandedMaxX / patchCellSize);
+        int globalCellMinZ = Mathf.FloorToInt(expandedMinZ / patchCellSize);
+        int globalCellMaxZ = Mathf.FloorToInt(expandedMaxZ / patchCellSize);
+
+        int maxPatchCentersPerCell = Mathf.Max(1, dandelionSettings.maxPatchCentersPerCell);
+        int minDandelionsPerPatch = Mathf.Max(1, dandelionSettings.minDandelionsPerPatch);
+        int maxDandelionsPerPatch = Mathf.Max(minDandelionsPerPatch, dandelionSettings.maxDandelionsPerPatch);
+        float patchNoiseScale = Mathf.Max(0.0001f, dandelionSettings.patchNoiseScale);
+
+        float topLeftX = chunkSize / -2f;
+        float bottomLeftZ = chunkSize / -2f;
+
+        int globalCellCountX = globalCellMaxX - globalCellMinX + 1;
+        int globalCellCountZ = globalCellMaxZ - globalCellMinZ + 1;
+        int patchCandidateCount = globalCellCountX * globalCellCountZ * maxPatchCentersPerCell;
+        int dandelionCandidateCount = patchCandidateCount * maxDandelionsPerPatch;
+
+        NativeArray<float> heightMap = FlattenFloatMap(record.HeightMap, Allocator.TempJob, out int heightMapWidth, out int heightMapHeight);
+        NativeArray<SurfaceType> surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.TempJob, out int surfaceMapWidth, out int surfaceMapHeight);
+        NativeArray<BiomeType> biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.TempJob, out int biomeMapWidth, out int biomeMapHeight);
+        NativeArray<GroundCoverType> groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.TempJob, out int groundCoverMapWidth, out int groundCoverMapHeight);
+        NativeArray<float> slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.TempJob, out int slopeMapWidth, out int slopeMapHeight);
+        NativeArray<float2> treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.TempJob);
+        NativeArray<float2> bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, Allocator.TempJob);
+        NativeArray<float2> rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, Allocator.TempJob);
+        NativeArray<CloverDiscoveryResult> results =
+            new NativeArray<CloverDiscoveryResult>(dandelionCandidateCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+
+        try
+        {
+            CloverDiscoveryJob job = new CloverDiscoveryJob
+            {
+                heightMap = heightMap,
+                heightMapWidth = heightMapWidth,
+                heightMapHeight = heightMapHeight,
+                surfaceMap = surfaceMap,
+                surfaceMapWidth = surfaceMapWidth,
+                surfaceMapHeight = surfaceMapHeight,
+                biomeMap = biomeMap,
+                biomeMapWidth = biomeMapWidth,
+                biomeMapHeight = biomeMapHeight,
+                groundCoverMap = groundCoverMap,
+                groundCoverMapWidth = groundCoverMapWidth,
+                groundCoverMapHeight = groundCoverMapHeight,
+                hasGroundCoverMap = record.GroundCoverMap != null,
+                slopeMap = slopeMap,
+                slopeMapWidth = slopeMapWidth,
+                slopeMapHeight = slopeMapHeight,
+                hasSlopeMap = record.SlopeMap != null,
+                treeExclusionPositions = treeExclusionPositions,
+                bushExclusionPositions = bushExclusionPositions,
+                rockExclusionPositions = rockExclusionPositions,
+                treeExclusionRadiusSqr = dandelionSettings.treeExclusionRadius * dandelionSettings.treeExclusionRadius,
+                bushExclusionRadiusSqr = dandelionSettings.bushExclusionRadius * dandelionSettings.bushExclusionRadius,
+                rockExclusionRadiusSqr = dandelionSettings.rockExclusionRadius * dandelionSettings.rockExclusionRadius,
+                results = results,
+                worldSeed = worldSeed,
+                seedOffset = dandelionSettings.seedOffset,
+                chunkSize = chunkSize,
+                globalCellMinX = globalCellMinX,
+                globalCellMinZ = globalCellMinZ,
+                globalCellCountX = globalCellCountX,
+                maxPatchCentersPerCell = maxPatchCentersPerCell,
+                minClumpsPerPatch = minDandelionsPerPatch,
+                maxClumpsPerPatch = maxDandelionsPerPatch,
+                patchCellSize = patchCellSize,
+                patchNoiseScale = patchNoiseScale,
+                patchNoiseThreshold = Mathf.Clamp01(dandelionSettings.patchNoiseThreshold),
+                patchSpawnChance = Mathf.Clamp01(dandelionSettings.patchSpawnChance),
+                minPatchRadius = minPatchRadius,
+                maxPatchRadius = maxPatchRadius,
+                chunkSampleMinX = chunkSampleMinX,
+                chunkSampleMinZ = chunkSampleMinZ,
+                chunkSampleMaxX = chunkSampleMaxX,
+                chunkSampleMaxZ = chunkSampleMaxZ,
+                topLeftX = topLeftX,
+                bottomLeftZ = bottomLeftZ,
+                worldScale = worldScale,
+                meshHeightMultiplier = meshHeightMultiplier,
+                maxSlope = dandelionSettings.maxSlope,
+                randomizeYaw = dandelionSettings.randomizeYaw,
+                minScale = minUniformScale,
+                maxScale = maxUniformScale,
+                prefabCount = 1,
+                grassInfluenceRadius = 0.01f
+            };
+
+            JobHandle handle = job.Schedule(dandelionCandidateCount, 64);
+            handle.Complete();
+
+            for (int i = 0; i < results.Length; i++)
+            {
+                CloverDiscoveryResult result = results[i];
+                if (result.valid == 0)
+                    continue;
+
+                foliageData.dandelionInstances.Add(new DandelionInstanceData(
+                    new Vector3(result.localPosition.x, result.localPosition.y, result.localPosition.z),
+                    new Quaternion(
+                        result.localRotation.value.x,
+                        result.localRotation.value.y,
+                        result.localRotation.value.z,
+                        result.localRotation.value.w),
+                    Vector3.one * result.uniformScale,
+                    result.selectionRank));
+            }
+        }
+        finally
+        {
+            if (heightMap.IsCreated)
+                heightMap.Dispose();
+            if (surfaceMap.IsCreated)
+                surfaceMap.Dispose();
+            if (biomeMap.IsCreated)
+                biomeMap.Dispose();
+            if (groundCoverMap.IsCreated)
+                groundCoverMap.Dispose();
+            if (slopeMap.IsCreated)
+                slopeMap.Dispose();
+            if (treeExclusionPositions.IsCreated)
+                treeExclusionPositions.Dispose();
+            if (bushExclusionPositions.IsCreated)
+                bushExclusionPositions.Dispose();
+            if (rockExclusionPositions.IsCreated)
+                rockExclusionPositions.Dispose();
+            if (results.IsCreated)
+                results.Dispose();
+        }
+
+        foliageData.dandelionsGenerated = true;
+    }
+
     public static void GenerateTreeCubesForChunk(
     ChunkRecord record,
     TreeSettings treeSettings,

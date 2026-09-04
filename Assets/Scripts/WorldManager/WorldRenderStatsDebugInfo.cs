@@ -15,6 +15,7 @@ public struct WorldRenderStatsDebugInfo
     public RenderGeometryStats BillboardGrass;
     public RenderGeometryStats Flowers;
     public RenderGeometryStats Clover;
+    public RenderGeometryStats Dandelions;
     public RenderGeometryStats TreeBillboards;
     public RenderGeometryStats TreeGameObjects;
     public RenderGeometryStats BushGameObjects;
@@ -28,6 +29,7 @@ public struct WorldRenderStatsDebugInfo
         BillboardGrass.vertices +
         Flowers.vertices +
         Clover.vertices +
+        Dandelions.vertices +
         TreeBillboards.vertices +
         TreeGameObjects.vertices +
         BushGameObjects.vertices +
@@ -41,6 +43,7 @@ public struct WorldRenderStatsDebugInfo
         BillboardGrass.triangles +
         Flowers.triangles +
         Clover.triangles +
+        Dandelions.triangles +
         TreeBillboards.triangles +
         TreeGameObjects.triangles +
         BushGameObjects.triangles +

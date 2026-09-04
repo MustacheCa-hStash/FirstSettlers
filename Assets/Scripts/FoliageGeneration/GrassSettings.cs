@@ -15,6 +15,9 @@ public class GrassSettings
 
     [Header("Foliage Work Budgets")]
     public float foregroundFoliageWorkBudgetMsPerFrame = 1.35f;
+    public int maxFoliageManagementChunksPerFrame = 24;
+    public float foliageManagementBudgetMsPerFrame = 0.75f;
+    public int maxQueuedFoliageManagementWork = 2048;
     public int maxGroundFoliageGenerationsPerFrame = 2;
     public float groundFoliageGenerationBudgetMsPerFrame = 0.75f;
     public int maxRenderBatchRebuildsPerFrame = 1;

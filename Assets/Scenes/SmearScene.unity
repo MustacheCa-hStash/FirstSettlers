@@ -523,8 +523,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 9
-  viewDistance: 20
+  worldSeed: 7
+  viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
   farTerrainStartRing: 15
@@ -547,6 +547,9 @@ MonoBehaviour:
     maxSubChunkGenerationsPerFrame: 8
     subChunkGenerationBudgetMsPerFrame: 1
     foregroundFoliageWorkBudgetMsPerFrame: 1.35
+    maxFoliageManagementChunksPerFrame: 24
+    foliageManagementBudgetMsPerFrame: 0.75
+    maxQueuedFoliageManagementWork: 2048
     maxGroundFoliageGenerationsPerFrame: 2
     groundFoliageGenerationBudgetMsPerFrame: 0.75
     maxRenderBatchRebuildsPerFrame: 1
@@ -638,6 +641,27 @@ MonoBehaviour:
     grassDensityInsidePatch: 0
     grassInfluenceRadius: 0.7
     grassFadePadding: 0.7
+  dandelionSettings:
+    enableDandelions: 1
+    dandelionPrefab: {fileID: 1155896988369609512, guid: f5257473fea74414aad98e80e8510acc, type: 3}
+    activeRingRadius: 2
+    receiveDandelionShadows: 0
+    patchCellSize: 18
+    maxPatchCentersPerCell: 1
+    patchSpawnChance: 0.45
+    patchNoiseScale: 0.026
+    patchNoiseThreshold: 0.54
+    minDandelionsPerPatch: 3
+    maxDandelionsPerPatch: 12
+    patchRadiusRange: {x: 1.8, y: 5.5}
+    uniformScaleRange: {x: 0.4, y: 0.5}
+    randomizeYaw: 1
+    seedOffset: 32000
+    dandelionInstanceDataPropertyName: _DandelionInstanceData
+    maxSlope: 0.08
+    treeExclusionRadius: 1
+    bushExclusionRadius: 0.9
+    rockExclusionRadius: 0.75
   treeSettings:
     mapleTreePrefab: {fileID: 5742719185016810390, guid: 73725a84115a55c42a0b3d9b18fdb0b1, type: 3}
     sugarMapleTreePrefab: {fileID: 8072720124864646751, guid: 92cc01de156a13640b9a9f2978a6ed7d, type: 3}
@@ -749,7 +773,6 @@ MonoBehaviour:
   maxRenderVisibilityChecksPerFrame: 120
   visibleChunkContentBudgetMsPerFrame: 0.75
   maxFarTerrainTileContentUpdatesPerFrame: 3
-  maxFarTerrainTileVisibilityChecksPerFrame: 16
   farTerrainTileContentBudgetMsPerFrame: 0.25
   completedRequestApplyBudgetMsPerFrame: 5
   terrainDataApplyBudgetMsPerFrame: 1.25

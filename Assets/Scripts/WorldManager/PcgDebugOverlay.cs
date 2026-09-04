@@ -189,6 +189,8 @@ public class PcgDebugOverlay : MonoBehaviour
         builder.AppendLine(info.GpuFlowerInstanceCount.ToString());
         builder.Append("GPU Clover: ");
         builder.AppendLine(info.GpuCloverInstanceCount.ToString());
+        builder.Append("GPU Dandelions: ");
+        builder.AppendLine(info.GpuDandelionInstanceCount.ToString());
         builder.Append("GPU Trees: ");
         builder.AppendLine(info.GpuTreeInstanceCount.ToString());
 

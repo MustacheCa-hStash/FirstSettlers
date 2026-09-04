@@ -97,6 +97,11 @@ public class ChunkFoliageRuntime
     public bool receiveCloverShadows;
     public int cloverInstanceDataPropertyId;
 
+    public Mesh dandelionMesh;
+    public Material dandelionMaterial;
+    public bool receiveDandelionShadows;
+    public int dandelionInstanceDataPropertyId;
+
     public GameObject mapleTreePrefab;
     public GameObject sugarMapleTreePrefab;
     public GameObject birchAspenTreePrefab;
@@ -146,6 +151,8 @@ public class ChunkFoliageRuntime
     private readonly MaterialPropertyBlock flowerPropertyBlock = new MaterialPropertyBlock();
     private readonly List<CloverRenderBatch> cloverRenderBatches = new List<CloverRenderBatch>();
     private readonly MaterialPropertyBlock cloverPropertyBlock = new MaterialPropertyBlock();
+    private readonly List<GrassRenderBatch> dandelionRenderBatches = new List<GrassRenderBatch>();
+    private readonly MaterialPropertyBlock dandelionPropertyBlock = new MaterialPropertyBlock();
 
     private readonly List<TreeBillboardInstanceBatch> mapleTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
     private readonly List<TreeBillboardInstanceBatch> sugarMapleTreeBillboardMatrixBatches = new List<TreeBillboardInstanceBatch>();
@@ -179,6 +186,7 @@ public class ChunkFoliageRuntime
     private bool hasBuiltBillboardRenderData;
     private bool hasBuiltFlowerRenderData;
     private bool hasBuiltCloverRenderData;
+    private bool hasBuiltDandelionRenderData;
 
     public bool IsCreated => root != null;
     public int GpuGrassInstanceCount =>
@@ -186,6 +194,7 @@ public class ChunkFoliageRuntime
         CountGrassInstances(billboardRenderBatches);
     public int GpuFlowerInstanceCount => CountFlowerInstances();
     public int GpuCloverInstanceCount => CountCloverInstances();
+    public int GpuDandelionInstanceCount => CountGrassInstances(dandelionRenderBatches);
     public int GpuTreeInstanceCount =>
         CountMatrices(mapleTreeBillboardMatrixBatches) +
         CountMatrices(sugarMapleTreeBillboardMatrixBatches) +
@@ -272,10 +281,12 @@ public class ChunkFoliageRuntime
         billboardRenderBatches.Clear();
         flowerRenderBatches.Clear();
         cloverRenderBatches.Clear();
+        dandelionRenderBatches.Clear();
         hasBuiltGrassRenderData = false;
         hasBuiltBillboardRenderData = false;
         hasBuiltFlowerRenderData = false;
         hasBuiltCloverRenderData = false;
+        hasBuiltDandelionRenderData = false;
         mapleTreeBillboardMatrixBatches.Clear();
         sugarMapleTreeBillboardMatrixBatches.Clear();
         birchAspenTreeBillboardMatrixBatches.Clear();
@@ -328,6 +339,11 @@ public class ChunkFoliageRuntime
         return HasAnyValidCloverRenderAsset() && hasBuiltCloverRenderData;
     }
 
+    public bool HasValidDandelionRenderData()
+    {
+        return dandelionMesh != null && dandelionMaterial != null && hasBuiltDandelionRenderData;
+    }
+
     public bool HasValidTreeBillboardRenderData()
     {
         return HasValidBillboardBatch(mapleTreeBillboard, mapleTreeBillboardMatrixBatches) ||
@@ -377,6 +393,11 @@ public class ChunkFoliageRuntime
     public void AccumulateCloverRenderStats(ref WorldRenderStatsDebugInfo stats)
     {
         AccumulateCloverStats(ref stats.Clover);
+    }
+
+    public void AccumulateDandelionRenderStats(ref WorldRenderStatsDebugInfo stats)
+    {
+        AccumulateGrassStats(dandelionMesh, dandelionRenderBatches, ref stats.Dandelions);
     }
 
     public void AccumulateTreeBillboardRenderStats(ref WorldRenderStatsDebugInfo stats)
@@ -619,6 +640,11 @@ public class ChunkFoliageRuntime
         }
 
         hasBuiltCloverRenderData = true;
+    }
+
+    public void CacheDandelionBatches(Matrix4x4[] worldMatrices, Vector4[] instanceData)
+    {
+        hasBuiltDandelionRenderData = CacheGrassRenderBatches(worldMatrices, instanceData, dandelionRenderBatches);
     }
 
     public void CacheTreeBillboardMatrices(
@@ -898,6 +924,7 @@ public class ChunkFoliageRuntime
             treeTransform.localScale = instance.localScale;
 
             ApplyTreeMaterialOverrides(treeObject, instance);
+            ConfigureSpawnedRendererCulling(treeObject.Renderers);
             treeObject.GameObject.SetActive(true);
             treeGameObjects.Add(treeObject);
         }
@@ -1008,6 +1035,7 @@ public class ChunkFoliageRuntime
                 berryBushRuntime = bushObject.AddComponent<BerryBushRuntime>();
 
             berryBushRuntime.Initialize(instance, BerryBushManager.Instance);
+            ConfigureSpawnedRendererCulling(bushObject);
 
             bushGameObjects.Add(bushObject);
         }
@@ -1039,6 +1067,7 @@ public class ChunkFoliageRuntime
             rockObject.transform.localPosition = instance.localPosition;
             rockObject.transform.localRotation = instance.localRotation;
             rockObject.transform.localScale = instance.localScale;
+            ConfigureSpawnedRendererCulling(rockObject);
 
             rockGameObjects.Add(rockObject);
         }
@@ -1132,6 +1161,30 @@ public class ChunkFoliageRuntime
         hasBuiltFlowerRenderData = false;
     }
 
+    private static void ConfigureSpawnedRendererCulling(GameObject rootObject)
+    {
+        if (rootObject == null)
+            return;
+
+        ConfigureSpawnedRendererCulling(rootObject.GetComponentsInChildren<Renderer>(true));
+    }
+
+    private static void ConfigureSpawnedRendererCulling(Renderer[] renderers)
+    {
+        if (renderers == null)
+            return;
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null)
+                continue;
+
+            renderer.forceRenderingOff = false;
+            renderer.allowOcclusionWhenDynamic = true;
+        }
+    }
+
     public void ClearGrassBatches()
     {
         grassRenderBatches.Clear();
@@ -1142,6 +1195,12 @@ public class ChunkFoliageRuntime
     {
         cloverRenderBatches.Clear();
         hasBuiltCloverRenderData = false;
+    }
+
+    public void ClearDandelionBatches()
+    {
+        dandelionRenderBatches.Clear();
+        hasBuiltDandelionRenderData = false;
     }
 
     public void ClearTreeBillboardMatrices()
@@ -1288,6 +1347,39 @@ public class ChunkFoliageRuntime
 
         TerrainGenerationProfiler.Record(
             TerrainGenerationProfileStage.FoliageCloverDraw,
+            stageStart);
+    }
+
+    public void DrawDandelions()
+    {
+        if (!isVisible || !HasValidDandelionRenderData() || dandelionRenderBatches.Count == 0)
+            return;
+
+        long stageStart = TerrainGenerationProfiler.GetTimestamp();
+
+        for (int i = 0; i < dandelionRenderBatches.Count; i++)
+        {
+            GrassRenderBatch batch = dandelionRenderBatches[i];
+            if (batch.matrices == null || batch.instanceData == null)
+                continue;
+
+            dandelionPropertyBlock.Clear();
+            dandelionPropertyBlock.SetVectorArray(dandelionInstanceDataPropertyId, batch.instanceData);
+
+            Graphics.DrawMeshInstanced(
+                dandelionMesh,
+                0,
+                dandelionMaterial,
+                batch.matrices,
+                batch.matrices.Length,
+                dandelionPropertyBlock,
+                ShadowCastingMode.Off,
+                receiveDandelionShadows
+            );
+        }
+
+        TerrainGenerationProfiler.Record(
+            TerrainGenerationProfileStage.FoliageDandelionDraw,
             stageStart);
     }
 

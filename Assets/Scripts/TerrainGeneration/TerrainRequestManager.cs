@@ -269,48 +269,137 @@ public class TerrainRequestManager
 
         Interlocked.Increment(ref activeMeshJobs);
 
-        ThreadPool.QueueUserWorkItem(_ =>
+        LODMeshRequestWorkItem workItem = new LODMeshRequestWorkItem(
+            this,
+            chunkCoord,
+            lod,
+            requestVersion,
+            heightMap,
+            biomeMap,
+            surfaceTypeMap,
+            waterStateMap,
+            meshHeightMultiplier,
+            stepIncrement,
+            worldScale,
+            riverMaskMap);
+
+        if (!ThreadPool.UnsafeQueueUserWorkItem(ProcessLODMeshRequest, workItem))
         {
-            try
-            {
-                using var lodMeshWorkerScope = LodMeshWorkerMarker.Auto();
-                long totalStart = TerrainGenerationProfiler.GetTimestamp();
-                long stageStart = TerrainGenerationProfiler.GetTimestamp();
-                MeshData terrainMeshData = MeshGenerator.GenerateTerrainMesh(chunkCoord, heightMap, biomeMap, surfaceTypeMap, 
-                    waterStateMap, meshHeightMultiplier, stepIncrement, worldScale, riverMaskMap);
-                TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainMeshBuild, stageStart);
-
-                stageStart = TerrainGenerationProfiler.GetTimestamp();
-                WaterMeshData lakeMeshData = LakeMeshGenerator.GenerateLakeMesh(heightMap, waterStateMap,
-                    riverMaskMap, meshHeightMultiplier, stepIncrement, worldScale);
-                TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.LakeMeshBuild, stageStart);
-
-                stageStart = TerrainGenerationProfiler.GetTimestamp();
-                WaterMeshData riverMeshData = RiverMeshGenerator.GenerateRiverMesh(heightMap, waterStateMap,
-                    riverMaskMap, meshHeightMultiplier, stepIncrement, worldScale);
-                TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.RiverMeshBuild, stageStart);
-
-                //only taking rivermeshdata here
-                MeshRequestResult result = new MeshRequestResult(chunkCoord, lod, requestVersion, 
-                    terrainMeshData, lakeMeshData, riverMeshData);
-                TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.LODMeshTotal, totalStart);
-
-                lock (meshResultsLock)
-                {
-                    completedMeshResults.Enqueue(result);
-                }
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"Mesh request failed for chunk={chunkCoord}, lod={lod}, version={requestVersion}\n{ex}");
-            }
-            finally
-            {
-                Interlocked.Decrement(ref activeMeshJobs);
-            }
-        });
+            Interlocked.Decrement(ref activeMeshJobs);
+            return false;
+        }
 
         return true;
+    }
+
+    private static void ProcessLODMeshRequest(object state)
+    {
+        LODMeshRequestWorkItem workItem = (LODMeshRequestWorkItem)state;
+
+        try
+        {
+            using var lodMeshWorkerScope = LodMeshWorkerMarker.Auto();
+            long totalStart = TerrainGenerationProfiler.GetTimestamp();
+            long stageStart = TerrainGenerationProfiler.GetTimestamp();
+            MeshData terrainMeshData = MeshGenerator.GenerateTerrainMesh(
+                workItem.ChunkCoord,
+                workItem.HeightMap,
+                workItem.BiomeMap,
+                workItem.SurfaceTypeMap,
+                workItem.WaterStateMap,
+                workItem.MeshHeightMultiplier,
+                workItem.StepIncrement,
+                workItem.WorldScale,
+                workItem.RiverMaskMap);
+            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainMeshBuild, stageStart);
+
+            stageStart = TerrainGenerationProfiler.GetTimestamp();
+            WaterMeshData lakeMeshData = LakeMeshGenerator.GenerateLakeMesh(
+                workItem.HeightMap,
+                workItem.WaterStateMap,
+                workItem.RiverMaskMap,
+                workItem.MeshHeightMultiplier,
+                workItem.StepIncrement,
+                workItem.WorldScale);
+            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.LakeMeshBuild, stageStart);
+
+            stageStart = TerrainGenerationProfiler.GetTimestamp();
+            WaterMeshData riverMeshData = RiverMeshGenerator.GenerateRiverMesh(
+                workItem.HeightMap,
+                workItem.WaterStateMap,
+                workItem.RiverMaskMap,
+                workItem.MeshHeightMultiplier,
+                workItem.StepIncrement,
+                workItem.WorldScale);
+            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.RiverMeshBuild, stageStart);
+
+            MeshRequestResult result = new MeshRequestResult(
+                workItem.ChunkCoord,
+                workItem.LOD,
+                workItem.RequestVersion,
+                terrainMeshData,
+                lakeMeshData,
+                riverMeshData);
+            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.LODMeshTotal, totalStart);
+
+            lock (workItem.Manager.meshResultsLock)
+            {
+                workItem.Manager.completedMeshResults.Enqueue(result);
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError(
+                $"Mesh request failed for chunk={workItem.ChunkCoord}, lod={workItem.LOD}, version={workItem.RequestVersion}\n{ex}");
+        }
+        finally
+        {
+            Interlocked.Decrement(ref activeMeshJobs);
+        }
+    }
+
+    private sealed class LODMeshRequestWorkItem
+    {
+        public readonly TerrainRequestManager Manager;
+        public readonly ChunkCoord ChunkCoord;
+        public readonly int LOD;
+        public readonly int RequestVersion;
+        public readonly float[,] HeightMap;
+        public readonly BiomeType[,] BiomeMap;
+        public readonly SurfaceType[,] SurfaceTypeMap;
+        public readonly WaterState[,] WaterStateMap;
+        public readonly float MeshHeightMultiplier;
+        public readonly int StepIncrement;
+        public readonly float WorldScale;
+        public readonly float[,] RiverMaskMap;
+
+        public LODMeshRequestWorkItem(
+            TerrainRequestManager manager,
+            ChunkCoord chunkCoord,
+            int lod,
+            int requestVersion,
+            float[,] heightMap,
+            BiomeType[,] biomeMap,
+            SurfaceType[,] surfaceTypeMap,
+            WaterState[,] waterStateMap,
+            float meshHeightMultiplier,
+            int stepIncrement,
+            float worldScale,
+            float[,] riverMaskMap)
+        {
+            Manager = manager;
+            ChunkCoord = chunkCoord;
+            LOD = lod;
+            RequestVersion = requestVersion;
+            HeightMap = heightMap;
+            BiomeMap = biomeMap;
+            SurfaceTypeMap = surfaceTypeMap;
+            WaterStateMap = waterStateMap;
+            MeshHeightMultiplier = meshHeightMultiplier;
+            StepIncrement = stepIncrement;
+            WorldScale = worldScale;
+            RiverMaskMap = riverMaskMap;
+        }
     }
 
     public bool RequestColliderMesh(

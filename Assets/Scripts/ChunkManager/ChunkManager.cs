@@ -29,7 +29,6 @@ public class ChunkManager
     private static readonly ProfilerMarker RefreshUrgentVisibleChunksMarker = new ProfilerMarker("FS.Streaming.RefreshUrgentVisibleChunks");
     private static readonly ProfilerMarker RefreshRenderVisibilityMarker = new ProfilerMarker("FS.Streaming.RefreshRenderVisibility");
     private static readonly ProfilerMarker ProcessFarTerrainTileContentQueueMarker = new ProfilerMarker("FS.Streaming.ProcessFarTerrainTileContentQueue");
-    private static readonly ProfilerMarker RefreshFarTerrainTileVisibilityMarker = new ProfilerMarker("FS.Streaming.RefreshFarTerrainTileVisibility");
     private static readonly ProfilerMarker EnsureFarTerrainRequestedMarker = new ProfilerMarker("FS.Streaming.EnsureFarTerrainRequested");
     private static readonly ProfilerMarker EnsureFarTerrainTileRequestedMarker = new ProfilerMarker("FS.Streaming.EnsureFarTerrainTileRequested");
     private static readonly ProfilerMarker EnsureTerrainDataRequestedMarker = new ProfilerMarker("FS.Streaming.EnsureTerrainDataRequested");
@@ -78,7 +77,6 @@ public class ChunkManager
     private readonly int maxRenderVisibilityChecksPerFrame;
     private readonly float visibleChunkContentBudgetMsPerFrame;
     private readonly int maxFarTerrainTileContentUpdatesPerFrame;
-    private readonly int maxFarTerrainTileVisibilityChecksPerFrame;
     private readonly float farTerrainTileContentBudgetMsPerFrame;
     private readonly float completedRequestApplyBudgetMsPerFrame;
     private readonly float terrainDataApplyBudgetMsPerFrame;
@@ -107,7 +105,6 @@ public class ChunkManager
     private readonly HashSet<ChunkCoord> frustumVisibleCoordSet;
     private readonly Plane[] frustumPlanes = new Plane[6];
     private int renderVisibilityCursor;
-    private int farTerrainTileVisibilityCursor;
 
     private ChunkCoord lastUpdateViewerCoord = new ChunkCoord(int.MinValue, int.MinValue);
     private SubChunkCoord lastViewerGlobalSubChunk = new SubChunkCoord(int.MinValue, int.MinValue);
@@ -134,6 +131,7 @@ public class ChunkManager
         GrassSettings grassSettings,
         FlowerSettings flowerSettings,
         CloverSettings cloverSettings,
+        DandelionSettings dandelionSettings,
         TreeSettings treeSettings,
         float sampleScale,
         float worldScale,
@@ -157,7 +155,6 @@ public class ChunkManager
         int maxRenderVisibilityChecksPerFrame,
         float visibleChunkContentBudgetMsPerFrame,
         int maxFarTerrainTileContentUpdatesPerFrame,
-        int maxFarTerrainTileVisibilityChecksPerFrame,
         float farTerrainTileContentBudgetMsPerFrame,
         float completedRequestApplyBudgetMsPerFrame,
         float terrainDataApplyBudgetMsPerFrame,
@@ -200,7 +197,6 @@ public class ChunkManager
         this.maxRenderVisibilityChecksPerFrame = Mathf.Max(1, maxRenderVisibilityChecksPerFrame);
         this.visibleChunkContentBudgetMsPerFrame = Mathf.Max(0f, visibleChunkContentBudgetMsPerFrame);
         this.maxFarTerrainTileContentUpdatesPerFrame = Mathf.Max(1, maxFarTerrainTileContentUpdatesPerFrame);
-        this.maxFarTerrainTileVisibilityChecksPerFrame = Mathf.Max(1, maxFarTerrainTileVisibilityChecksPerFrame);
         this.farTerrainTileContentBudgetMsPerFrame = Mathf.Max(0f, farTerrainTileContentBudgetMsPerFrame);
         this.completedRequestApplyBudgetMsPerFrame = Mathf.Max(0f, completedRequestApplyBudgetMsPerFrame);
         this.terrainDataApplyBudgetMsPerFrame = Mathf.Max(0f, terrainDataApplyBudgetMsPerFrame);
@@ -236,6 +232,7 @@ public class ChunkManager
             grassSettings,
             flowerSettings,
             cloverSettings,
+            dandelionSettings,
             treeSettings,
             seed,
             chunkSize,
@@ -278,6 +275,7 @@ public class ChunkManager
         int gpuGrassInstanceCount = 0;
         int gpuFlowerInstanceCount = 0;
         int gpuCloverInstanceCount = 0;
+        int gpuDandelionInstanceCount = 0;
         int gpuTreeInstanceCount = 0;
 
         if (hasTerrainData && TryGetPaddedSampleIndices(coord, worldPosition, record, out int sampleX, out int sampleZ))
@@ -306,6 +304,7 @@ public class ChunkManager
             gpuGrassInstanceCount = runtime.FoliageRuntime.GpuGrassInstanceCount;
             gpuFlowerInstanceCount = runtime.FoliageRuntime.GpuFlowerInstanceCount;
             gpuCloverInstanceCount = runtime.FoliageRuntime.GpuCloverInstanceCount;
+            gpuDandelionInstanceCount = runtime.FoliageRuntime.GpuDandelionInstanceCount;
             gpuTreeInstanceCount = runtime.FoliageRuntime.GpuTreeInstanceCount;
         }
 
@@ -330,6 +329,7 @@ public class ChunkManager
             gpuGrassInstanceCount,
             gpuFlowerInstanceCount,
             gpuCloverInstanceCount,
+            gpuDandelionInstanceCount,
             gpuTreeInstanceCount);
     }
 
@@ -608,7 +608,6 @@ public class ChunkManager
         activeFarTilesLastUpdate = activeFarTilesThisUpdate;
         activeFarTilesThisUpdate = temp;
         renderVisibilityCursor = 0;
-        farTerrainTileVisibilityCursor = 0;
         }
     }
 
@@ -670,6 +669,7 @@ public class ChunkManager
             {
                 ChunkCoord coord = pendingVisibleChunkContentWork.Dequeue();
                 queuedVisibleChunkContentCoords.Remove(coord);
+                processedCount++;
 
                 if (!activeLastUpdate.Contains(coord))
                     continue;
@@ -677,11 +677,9 @@ public class ChunkManager
                 if (IsUrgentVisibleChunk(viewerCoord, coord))
                     continue;
 
-                ProcessVisibleChunkContent(coord, viewerCoord, sqrColliderRadius);
+                ProcessVisibleChunkContentStep(coord, viewerCoord, sqrColliderRadius);
                 if (ChunkNeedsVisibleContentWork(coord, viewerCoord, sqrColliderRadius))
                     deferredVisibleChunkContentRetries.Add(coord);
-
-                processedCount++;
             }
 
             for (int i = 0; i < deferredVisibleChunkContentRetries.Count; i++)
@@ -748,6 +746,103 @@ public class ChunkManager
                 {
                     EnsureColliderRequested(record);
                     TryApplyCollider(record, runtime);
+                }
+                else if (runtime.HasCollider())
+                {
+                    using (RemoveColliderMarker.Auto())
+                    {
+                        runtime.RemoveCollider();
+                        record.ClearColliderMesh();
+                    }
+                }
+            }
+
+            UpdateChunkRenderVisibility(coord, runtime);
+        }
+    }
+
+    private void ProcessVisibleChunkContentStep(
+        ChunkCoord coord,
+        ChunkCoord viewerCoord,
+        int sqrColliderRadius)
+    {
+        using (VisibleNormalChunkLoopMarker.Auto())
+        {
+            if (!loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
+            {
+                RemoveFrustumVisibleCoord(coord);
+                return;
+            }
+
+            if (!chunkRecords.TryGetValue(coord, out ChunkRecord record))
+            {
+                RemoveFrustumVisibleCoord(coord);
+                return;
+            }
+
+            int dx = coord.x - viewerCoord.x;
+            int dz = coord.z - viewerCoord.z;
+            int sqrDistance = dx * dx + dz * dz;
+            bool useFarTerrain = ShouldUseFarTerrain(viewerCoord, coord);
+
+            if (useFarTerrain)
+            {
+                using (VisibleChunkFarTerrainPathMarker.Auto())
+                {
+                    if (!record.HasFarTerrain)
+                    {
+                        EnsureFarTerrainRequested(record);
+                    }
+                    else if (!runtime.IsShowingLOD(FarTerrainLOD))
+                    {
+                        TryApplyFarTerrain(record, runtime);
+                    }
+                }
+
+                UpdateChunkRenderVisibility(coord, runtime);
+                return;
+            }
+
+            using (VisibleChunkNearTerrainPathMarker.Auto())
+            {
+                if (!record.HasTerrainData)
+                {
+                    EnsureTerrainDataRequested(record);
+                    UpdateChunkRenderVisibility(coord, runtime);
+                    return;
+                }
+
+                int lod = ChunkRingLODPolicy.GetLOD(viewerCoord, coord);
+                if (!record.TryGetLODTerrainMesh(lod, out _))
+                {
+                    EnsureLODMeshRequested(record, lod);
+                    UpdateChunkRenderVisibility(coord, runtime);
+                    return;
+                }
+
+                if (!runtime.IsShowingLOD(lod))
+                {
+                    TryApplyLODMesh(record, runtime, lod);
+                    UpdateChunkRenderVisibility(coord, runtime);
+                    return;
+                }
+            }
+
+            using (VisibleChunkColliderPathMarker.Auto())
+            {
+                bool colliderDesired = sqrDistance <= sqrColliderRadius;
+                record.ColliderDesired = colliderDesired;
+
+                if (colliderDesired)
+                {
+                    if (!record.ColliderReady)
+                    {
+                        EnsureColliderRequested(record);
+                    }
+                    else if (!runtime.HasCollider())
+                    {
+                        TryApplyCollider(record, runtime);
+                    }
                 }
                 else if (runtime.HasCollider())
                 {
@@ -894,7 +989,6 @@ public class ChunkManager
         {
             long budgetStart = TerrainGenerationProfiler.GetTimestamp();
             ProcessFarTerrainTileContentQueue(viewerCoord, budgetStart);
-            RefreshFarTerrainTileVisibility(budgetStart);
         }
     }
 
@@ -912,6 +1006,7 @@ public class ChunkManager
             {
                 ChunkCoord farTileCoord = pendingFarTerrainTileContentWork.Dequeue();
                 queuedFarTerrainTileContentCoords.Remove(farTileCoord);
+                processedCount++;
 
                 if (!activeFarTilesLastUpdate.Contains(farTileCoord))
                     continue;
@@ -925,12 +1020,10 @@ public class ChunkManager
                 if (!runtime.IsVisible)
                     runtime.SetVisible(true);
 
-                UpdateFarTerrainTileRenderVisibility(farTileCoord, runtime);
+                runtime.SetRenderVisible(true);
 
                 if (FarTerrainTileNeedsContentWork(farTileCoord))
                     deferredFarTerrainTileContentRetries.Add(farTileCoord);
-
-                processedCount++;
             }
 
             for (int i = 0; i < deferredFarTerrainTileContentRetries.Count; i++)
@@ -938,42 +1031,6 @@ public class ChunkManager
 
             deferredFarTerrainTileContentRetries.Clear();
         }
-    }
-
-    private void RefreshFarTerrainTileVisibility(long budgetStart)
-    {
-        using (RefreshFarTerrainTileVisibilityMarker.Auto())
-        {
-            if (orderedActiveFarTileCoords.Count == 0)
-                return;
-
-            int checksThisFrame = Mathf.Min(
-                maxFarTerrainTileVisibilityChecksPerFrame,
-                orderedActiveFarTileCoords.Count);
-
-            for (int checkedCount = 0;
-                 checkedCount < checksThisFrame && HasFarTerrainTileContentBudgetRemaining(budgetStart);
-                 checkedCount++)
-            {
-                if (farTerrainTileVisibilityCursor >= orderedActiveFarTileCoords.Count)
-                    farTerrainTileVisibilityCursor = 0;
-
-                ChunkCoord farTileCoord = orderedActiveFarTileCoords[farTerrainTileVisibilityCursor];
-                farTerrainTileVisibilityCursor++;
-
-                if (loadedFarTerrainTiles.TryGetValue(farTileCoord, out FarTerrainTileRuntime runtime))
-                    UpdateFarTerrainTileRenderVisibility(farTileCoord, runtime);
-            }
-        }
-    }
-
-    private void UpdateFarTerrainTileRenderVisibility(ChunkCoord farTileCoord, FarTerrainTileRuntime runtime)
-    {
-        if (!runtime.IsVisible)
-            runtime.SetVisible(true);
-
-        bool renderVisible = viewerCamera == null || IsFarTerrainTileInFrustum(farTileCoord);
-        runtime.SetRenderVisible(renderVisible);
     }
 
     private void QueueFarTerrainTileContentWork(ChunkCoord farTileCoord)
