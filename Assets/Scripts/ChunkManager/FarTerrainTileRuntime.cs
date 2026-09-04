@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public class FarTerrainTileRuntime
 {
@@ -17,7 +18,8 @@ public class FarTerrainTileRuntime
         int tileWorldChunkSize,
         float worldScale,
         Transform parent,
-        Material terrainMaterial)
+        Material terrainMaterial,
+        bool terrainReceiveShadows)
     {
         this.record = record;
         ChunkCoord tileCoord = record.TileCoord;
@@ -33,7 +35,12 @@ public class FarTerrainTileRuntime
         meshFilter = root.AddComponent<MeshFilter>();
         meshRenderer = root.AddComponent<MeshRenderer>();
         runtimeMaterial = new Material(terrainMaterial);
+        if (runtimeMaterial.HasProperty("_ReceiveShadows"))
+            runtimeMaterial.SetFloat("_ReceiveShadows", terrainReceiveShadows ? 1f : 0f);
+
         meshRenderer.material = runtimeMaterial;
+        meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        meshRenderer.receiveShadows = terrainReceiveShadows;
 
         SetVisible(false);
     }

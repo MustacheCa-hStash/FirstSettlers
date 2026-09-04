@@ -220,5 +220,127 @@ Shader "Custom/RedMapleLeafSimpleLitCutout"
             }
             ENDHLSL
         }
+
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags { "LightMode" = "ShadowCaster" }
+
+            ZWrite On
+            ZTest LEqual
+            ColorMask 0
+            Cull Off
+
+            HLSLPROGRAM
+            #pragma target 3.0
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_instancing
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+            #include "Assets/Shaders/TreeShadowCasterCommon.hlsl"
+
+            TEXTURE2D(_BaseMap);
+            SAMPLER(sampler_BaseMap);
+
+            CBUFFER_START(UnityPerMaterial)
+                float4 _BaseMap_ST;
+                half4 _SummerLeafColor;
+                half4 _AutumnRedColor;
+                half4 _AutumnCrimsonColor;
+                half4 _AutumnOrangeColor;
+                half4 _LeafShadowColor;
+                half4 _TreeLeafTint;
+                half _SeasonAutumnAmount;
+                half _Cutoff;
+                half _ColorVariationStrength;
+                half _LeafContrast;
+                half _VerticalGradientStrength;
+                half _CardVariationStrength;
+                half _AmbientStrength;
+                half _LightWrap;
+                half _Smoothness;
+                half _SpecularStrength;
+                half _UseVertexColor;
+                float4 _WindDirection;
+                half _WindStrength;
+                half _WindSpeed;
+                half _WindFlutterStrength;
+                half _WindFlutterSpeed;
+                half _WindGustScale;
+                half _WindHeightMin;
+                half _WindHeightMax;
+            CBUFFER_END
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            float Hash12Float(float2 p)
+            {
+                float3 p3 = frac(float3(p.xyx) * float3(0.1031, 0.1030, 0.0973));
+                p3 += dot(p3, p3.yzx + 33.33);
+                return frac((p3.x + p3.y) * p3.z);
+            }
+
+            float3 ApplyLeafWind(float3 positionWS, float3 positionOS, float2 uv)
+            {
+                float2 windDir = normalize(_WindDirection.xz + float2(0.0001, 0.0));
+                float heightMask = saturate((positionOS.y - _WindHeightMin) / max(_WindHeightMax - _WindHeightMin, 0.0001));
+                heightMask = smoothstep(0.0, 1.0, heightMask);
+
+                float spatialPhase = dot(positionWS.xz, windDir.yx * float2(0.73, -0.61));
+                float gustPhase = dot(positionWS.xz, windDir) * _WindGustScale + _Time.y * _WindSpeed;
+                float gust = sin(gustPhase + spatialPhase * 0.25);
+
+                float cardPhase = Hash12Float(floor(positionWS.xz * 0.65) + floor(uv * 6.0)) * 6.2831853;
+                float flutter = sin(_Time.y * _WindFlutterSpeed + cardPhase + spatialPhase * 2.35);
+
+                float swayAmount = gust * _WindStrength * heightMask;
+                float flutterAmount = flutter * _WindFlutterStrength * saturate(uv.y + 0.25);
+
+                float3 offset = float3(windDir.x, 0.0, windDir.y) * (swayAmount + flutterAmount);
+                offset.y = flutter * _WindFlutterStrength * 0.22 * heightMask;
+                return positionWS + offset;
+            }
+
+            Varyings vert(Attributes IN)
+            {
+                Varyings OUT;
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
+
+                float3 positionWS = TransformObjectToWorld(IN.positionOS.xyz);
+                positionWS = ApplyLeafWind(positionWS, IN.positionOS.xyz, IN.uv);
+                float3 normalWS = TransformObjectToWorldNormal(IN.normalOS);
+
+                OUT.positionCS = TransformWorldToTreeShadowClip(positionWS, normalWS);
+                OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
+                return OUT;
+            }
+
+            half4 frag(Varyings IN) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+
+                half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
+                clip(alpha - _Cutoff);
+                return 0;
+            }
+            ENDHLSL
+        }
     }
 }

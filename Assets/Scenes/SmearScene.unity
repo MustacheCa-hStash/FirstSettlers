@@ -347,13 +347,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 163550946}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
+  m_LocalRotation: {x: 0.29045945, y: -0.24684007, z: 0.07782836, w: 0.9212199}
   m_LocalPosition: {x: 0, y: 246.4, z: 73.4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+  m_LocalEulerAnglesHint: {x: 35, y: -30, z: 0}
 --- !u!114 &163550949
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -563,12 +563,12 @@ MonoBehaviour:
     densityBeyond10: 0.06
     uniformScaleRange: {x: 0.9, y: 1.3}
     randomizeYaw: 1
-    receiveGrassShadows: 0
+    receiveGrassShadows: 1
     seedOffset: 5000
     grassInstanceDataPropertyName: _GrassInstanceData
-    forestDarkGrassColor: {r: 0.2, g: 0.48, b: 0.18, a: 1}
-    forestMidGrassColor: {r: 0.29, g: 0.62, b: 0.24, a: 1}
-    forestLightGrassColor: {r: 0.44, g: 0.78, b: 0.3, a: 1}
+    forestDarkGrassColor: {r: 0.1, g: 0.28, b: 0.09, a: 1}
+    forestMidGrassColor: {r: 0.16, g: 0.4, b: 0.13, a: 1}
+    forestLightGrassColor: {r: 0.25, g: 0.52, b: 0.19, a: 1}
     billboardGrassPrefab: {fileID: 2274311721168609727, guid: e76b7893d4994f848a5f13029dbbffa1, type: 3}
     billboardRingRadius: 3
     billboardCellsPerAxis: 60
@@ -746,7 +746,7 @@ MonoBehaviour:
     grasslandRockPitchRange: {x: -12, y: 12}
     rockGrassExclusionRadius: 1.25
     gameObjectRockChunkRingRadius: 3
-    castTreeShadows: 0
+    castTreeShadows: 1
     receiveTreeShadows: 0
   sampleScale: 600
   worldScale: 0.3
@@ -757,6 +757,7 @@ MonoBehaviour:
   meshHeightMultiplier: 200
   terrainMaterial: {fileID: 2100000, guid: 75e8037765088694c9d1b4d066552b07, type: 2}
   waterMaterial: {fileID: 2100000, guid: 14ca6caf7c7b1af4395d2aad206230ea, type: 2}
+  terrainReceiveShadows: 1
   logTerrainGenerationProfile: 1
   terrainGenerationProfileLogInterval: 5
   resetTerrainGenerationProfileAfterLog: 1
@@ -852,7 +853,7 @@ Transform:
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -54.02811, y: 50, z: -884.3734}
+  m_LocalPosition: {x: -11, y: 50, z: -968}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -945,7 +946,7 @@ MonoBehaviour:
   debugText: {fileID: 0}
   debugCanvas: {fileID: 0}
   toggleKey: 96
-  visibleOnStart: 1
+  visibleOnStart: 0
   refreshInterval: 0.1
 --- !u!4 &1799351265
 Transform:

@@ -64,6 +64,7 @@ public class ChunkManager
     private readonly float meshHeightMultiplier;
     private readonly Material terrainMaterial;
     private readonly Material waterMaterial;
+    private readonly bool terrainReceiveShadows;
     private readonly int maxActiveTerrainDataJobs;
     private readonly int maxActiveFarTerrainJobs;
     private readonly int maxActiveMeshJobs;
@@ -142,6 +143,7 @@ public class ChunkManager
         float meshHeightMultiplier,
         Material terrainMaterial,
         Material waterMaterial,
+        bool terrainReceiveShadows,
         int maxActiveTerrainDataJobs,
         int maxActiveFarTerrainJobs,
         int maxActiveMeshJobs,
@@ -184,6 +186,7 @@ public class ChunkManager
         this.meshHeightMultiplier = meshHeightMultiplier;
         this.terrainMaterial = terrainMaterial;
         this.waterMaterial = waterMaterial;
+        this.terrainReceiveShadows = terrainReceiveShadows;
         this.maxActiveTerrainDataJobs = Mathf.Max(1, maxActiveTerrainDataJobs);
         this.maxActiveFarTerrainJobs = Mathf.Max(1, maxActiveFarTerrainJobs);
         this.maxActiveMeshJobs = Mathf.Max(1, maxActiveMeshJobs);
@@ -1152,7 +1155,14 @@ public class ChunkManager
 
         if (!loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
         {
-            runtime = new ChunkRuntime(record, chunkSize, worldScale, chunkParent, terrainMaterial, waterMaterial);
+            runtime = new ChunkRuntime(
+                record,
+                chunkSize,
+                worldScale,
+                chunkParent,
+                terrainMaterial,
+                waterMaterial,
+                terrainReceiveShadows);
             loadedChunks.Add(coord, runtime);
         }
 
@@ -1181,7 +1191,8 @@ public class ChunkManager
                 chunkSize * farTerrainMacroTileSize,
                 worldScale,
                 chunkParent,
-                terrainMaterial);
+                terrainMaterial,
+                terrainReceiveShadows);
             loadedFarTerrainTiles.Add(tileCoord, runtime);
         }
 

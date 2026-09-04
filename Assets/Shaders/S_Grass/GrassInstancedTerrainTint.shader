@@ -13,9 +13,9 @@ Shader "Custom/GrassInstancedTerrainTint"
         _MidGrassColor("Mid Grass Color", Color) = (0.29, 0.62, 0.24, 1)
         _LightGrassColor("Light Grass Color", Color) = (0.44, 0.78, 0.30, 1)
 
-        _ForestDarkGrassColor("Forest Dark Grass Color", Color) = (0.20, 0.48, 0.18, 1)
-        _ForestMidGrassColor("Forest Mid Grass Color", Color) = (0.29, 0.62, 0.24, 1)
-        _ForestLightGrassColor("Forest Light Grass Color", Color) = (0.44, 0.78, 0.30, 1)
+        _ForestDarkGrassColor("Forest Dark Grass Color", Color) = (0.10, 0.28, 0.09, 1)
+        _ForestMidGrassColor("Forest Mid Grass Color", Color) = (0.16, 0.40, 0.13, 1)
+        _ForestLightGrassColor("Forest Light Grass Color", Color) = (0.25, 0.52, 0.19, 1)
 
         [PerRendererData] _GrassInstanceData("Grass Instance Data", Vector) = (0, 0, 0, 0)
 
@@ -28,6 +28,7 @@ Shader "Custom/GrassInstancedTerrainTint"
 
         _GrassDetailStrength("Grass Detail Strength", Range(0, 1)) = 0.35
         _GrassDetailContrast("Grass Detail Contrast", Range(0.1, 6)) = 2.14
+        [Toggle] _ReceiveShadows("Receive Shadows", Float) = 0
 
         _BladeMinY("Blade Min Y", Float) = 0
         _BladeMaxY("Blade Max Y", Float) = 0.16
@@ -68,6 +69,8 @@ Shader "Custom/GrassInstancedTerrainTint"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -96,6 +99,7 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half _BlendSharpness;
                 half _GrassDetailStrength;
                 half _GrassDetailContrast;
+                half _ReceiveShadows;
                 half _BladeMinY;
                 half _BladeMaxY;
                 half _BaseUpwardBlend;
@@ -128,6 +132,7 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half3 normalWS : TEXCOORD1;
                 float2 baseUV : TEXCOORD2;
                 float2 grassUV : TEXCOORD3;
+                float4 shadowCoord : TEXCOORD4;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -199,6 +204,7 @@ Shader "Custom/GrassInstancedTerrainTint"
 
                 OUT.positionCS = TransformWorldToHClip(positionWS);
                 OUT.positionWS = positionWS;
+                OUT.shadowCoord = TransformWorldToShadowCoord(positionWS);
                 OUT.baseUV = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.grassUV = TRANSFORM_TEX(IN.uv, _GrassTex);
 
@@ -229,10 +235,11 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half grassVariation = saturate(1.0h + detail * _GrassDetailStrength);
 
                 half3 normalWS = normalize(IN.normalWS);
-                Light mainLight = GetMainLight();
+                Light mainLight = GetMainLight(IN.shadowCoord);
+                half shadowAttenuation = lerp(1.0h, mainLight.shadowAttenuation, saturate(_ReceiveShadows));
                 half ndotl = saturate(dot(normalWS, mainLight.direction));
                 half3 ambient = SampleSH(normalWS);
-                half3 lighting = ambient + mainLight.color * (0.35h + ndotl * 0.65h);
+                half3 lighting = ambient + mainLight.color * (0.35h + ndotl * 0.65h) * shadowAttenuation;
 
                 half3 color = grassTint * grassVariation * _BaseColor.rgb * _Color.rgb * lighting;
                 return half4(color, baseSample.a * _BaseColor.a * _Color.a);

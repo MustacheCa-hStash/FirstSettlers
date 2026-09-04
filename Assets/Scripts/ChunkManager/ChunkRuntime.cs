@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public class ChunkRuntime
 {
@@ -37,7 +38,7 @@ public class ChunkRuntime
     }
 
     public ChunkRuntime(ChunkRecord chunkRecord, int chunkSize, float worldScale, Transform parent,
-        Material terrainMaterial, Material waterMaterial)
+        Material terrainMaterial, Material waterMaterial, bool terrainReceiveShadows)
     {
         this.chunkRecord = chunkRecord;
 
@@ -56,7 +57,12 @@ public class ChunkRuntime
         terrainMeshRenderer = root.AddComponent<MeshRenderer>();
 
         runtimeTerrainMaterial = new Material(terrainMaterial);
+        if (runtimeTerrainMaterial.HasProperty("_ReceiveShadows"))
+            runtimeTerrainMaterial.SetFloat("_ReceiveShadows", terrainReceiveShadows ? 1f : 0f);
+
         terrainMeshRenderer.material = runtimeTerrainMaterial;
+        terrainMeshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        terrainMeshRenderer.receiveShadows = terrainReceiveShadows;
 
         lakeRoot = new GameObject("Lake");
         lakeRoot.transform.SetParent(root.transform, false);

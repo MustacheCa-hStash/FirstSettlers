@@ -16,9 +16,9 @@ Shader "Custom/StylizedTerrainURP"
         _DarkGrassColor("Dark Grass Color", Color) = (0.20, 0.48, 0.18, 1)
         _MidGrassColor("Mid Grass Color", Color) = (0.29, 0.62, 0.24, 1)
         _LightGrassColor("Light Grass Color", Color) = (0.44, 0.78, 0.30, 1)
-        _GroundDarkGrassColor("Ground Cover Dark Grass Color", Color) = (0.20, 0.48, 0.18, 1)
-        _GroundMidGrassColor("Ground Cover Mid Grass Color", Color) = (0.29, 0.62, 0.24, 1)
-        _GroundLightGrassColor("Ground Cover Light Grass Color", Color) = (0.44, 0.78, 0.30, 1)
+        _GroundDarkGrassColor("Ground Cover Dark Grass Color", Color) = (0.10, 0.28, 0.09, 1)
+        _GroundMidGrassColor("Ground Cover Mid Grass Color", Color) = (0.16, 0.40, 0.13, 1)
+        _GroundLightGrassColor("Ground Cover Light Grass Color", Color) = (0.25, 0.52, 0.19, 1)
         _LeafLitterColor("Leaf Litter Color", Color) = (0.24, 0.14, 0.07, 1)
         _BareDirtColor("Bare Dirt Color", Color) = (0.20, 0.13, 0.08, 1)
         _MossColor("Moss Color", Color) = (0.08, 0.28, 0.10, 1)
@@ -65,6 +65,7 @@ Shader "Custom/StylizedTerrainURP"
         _NoiseStrength("Noise Strength", Range(0.0, 2.0)) = 1.0
         _BlendSharpness("Blend Sharpness", Range(0.25, 3.0)) = 1.0
         _AmbientStrength("Ambient Strength", Range(0.0, 1.0)) = 0.35
+        [Toggle] _ReceiveShadows("Receive Shadows", Float) = 1.0
     }
 
     SubShader
@@ -85,6 +86,8 @@ Shader "Custom/StylizedTerrainURP"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_fog
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -142,6 +145,7 @@ Shader "Custom/StylizedTerrainURP"
                 float3 normalWS : TEXCOORD1;
                 float2 uv : TEXCOORD2;
                 float fogFactor : TEXCOORD3;
+                float4 shadowCoord : TEXCOORD4;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -194,6 +198,7 @@ Shader "Custom/StylizedTerrainURP"
                 float _NoiseStrength;
                 float _BlendSharpness;
                 float _AmbientStrength;
+                float _ReceiveShadows;
             CBUFFER_END
 
             float Hash21(float2 p)
@@ -316,6 +321,7 @@ Shader "Custom/StylizedTerrainURP"
                 OUT.normalWS = normalInputs.normalWS;
                 OUT.uv = IN.uv;
                 OUT.fogFactor = ComputeFogFactor(positionInputs.positionCS.z);
+                OUT.shadowCoord = TransformWorldToShadowCoord(positionInputs.positionWS);
 
                 return OUT;
             }
@@ -505,8 +511,11 @@ Shader "Custom/StylizedTerrainURP"
                     normalWS = ApplyDetailNormal(normalWS, snowTangentNormal, _SnowNormalStrength);
                 }
 
-                Light mainLight = GetMainLight();
-                half3 diffuse = LightingLambert(mainLight.color, mainLight.direction, normalWS) * mainLight.distanceAttenuation;
+                Light mainLight = GetMainLight(IN.shadowCoord);
+                half shadowAttenuation = lerp(1.0h, mainLight.shadowAttenuation, saturate(_ReceiveShadows));
+                half3 diffuse = LightingLambert(mainLight.color, mainLight.direction, normalWS) *
+                    mainLight.distanceAttenuation *
+                    shadowAttenuation;
                 half3 lighting = diffuse + half3(_AmbientStrength, _AmbientStrength, _AmbientStrength);
                 half3 color = baseColor * lighting;
                 color = MixFog(color, IN.fogFactor);

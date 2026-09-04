@@ -893,7 +893,9 @@ public class FoliageManager
             long stageStart = TerrainGenerationProfiler.GetTimestamp();
             foliageRuntime.RebuildTreeGameObjects(
                 record.FoliageData.treeCubeInstances,
-                runtime.RootTransform);
+                runtime.RootTransform,
+                treeSettings.castTreeShadows,
+                treeSettings.receiveTreeShadows);
             TerrainGenerationProfiler.Record(
                 TerrainGenerationProfileStage.FoliageTreeGameObjectRebuild,
                 stageStart);

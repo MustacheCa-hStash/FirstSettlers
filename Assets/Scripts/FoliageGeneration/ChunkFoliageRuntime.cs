@@ -899,7 +899,9 @@ public class ChunkFoliageRuntime
 
     public void RebuildTreeGameObjects(
         List<TreeInstanceData> instances,
-        Transform chunkRoot)
+        Transform chunkRoot,
+        bool castShadows,
+        bool receiveShadows)
     {
         ReleaseTreeGameObjectsToPool();
 
@@ -925,8 +927,32 @@ public class ChunkFoliageRuntime
 
             ApplyTreeMaterialOverrides(treeObject, instance);
             ConfigureSpawnedRendererCulling(treeObject.Renderers);
+            ConfigureTreeRendererShadows(treeObject.Renderers, castShadows, receiveShadows);
             treeObject.GameObject.SetActive(true);
             treeGameObjects.Add(treeObject);
+        }
+    }
+
+    private static void ConfigureTreeRendererShadows(
+        Renderer[] renderers,
+        bool castShadows,
+        bool receiveShadows)
+    {
+        if (renderers == null)
+            return;
+
+        ShadowCastingMode shadowMode = castShadows
+            ? ShadowCastingMode.On
+            : ShadowCastingMode.Off;
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null)
+                continue;
+
+            renderer.shadowCastingMode = shadowMode;
+            renderer.receiveShadows = receiveShadows;
         }
     }
 
@@ -1263,6 +1289,7 @@ public class ChunkFoliageRuntime
         grassPropertyBlock.SetColor("_ForestDarkGrassColor", forestDarkGrassColor);
         grassPropertyBlock.SetColor("_ForestMidGrassColor", forestMidGrassColor);
         grassPropertyBlock.SetColor("_ForestLightGrassColor", forestLightGrassColor);
+        grassPropertyBlock.SetFloat("_ReceiveShadows", receiveGrassShadows ? 1f : 0f);
 
         Graphics.DrawMeshInstanced(
             mesh,

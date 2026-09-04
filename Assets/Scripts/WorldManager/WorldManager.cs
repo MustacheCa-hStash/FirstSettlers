@@ -33,6 +33,8 @@ public class WorldManager : MonoBehaviour
     [SerializeField] float meshHeightMultiplier = 10f;
     [SerializeField] Material terrainMaterial;
     [SerializeField] Material waterMaterial;
+    [Header("Terrain Lighting")]
+    [SerializeField] bool terrainReceiveShadows = true;
     [Header("Terrain Generation Profiling")]
     [SerializeField] bool logTerrainGenerationProfile = true;
     [SerializeField] float terrainGenerationProfileLogInterval = 5f;
@@ -70,6 +72,7 @@ public class WorldManager : MonoBehaviour
             chunkSize, worldSeed, viewer, viewerCamera,
             chunkParent, foliageParent, grassSettings, flowerSettings, cloverSettings, dandelionSettings, treeSettings, sampleScale, worldScale, octaves, persistence,
             lacunarity, erosionStrength, meshHeightMultiplier, terrainMaterial, waterMaterial,
+            terrainReceiveShadows,
             maxActiveTerrainDataJobs, maxActiveFarTerrainJobs, maxActiveMeshJobs,
             maxActiveColliderJobs, maxTerrainDataResultsAppliedPerFrame,
             maxFarTerrainResultsAppliedPerFrame, maxLODMeshResultsAppliedPerFrame,

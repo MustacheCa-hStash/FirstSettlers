@@ -1324,12 +1324,6 @@ public static class FoliageGenerator
             return 1f;
         }
 
-        if (record.BiomeMap != null &&
-            record.BiomeMap[paddedX, paddedZ] == BiomeType.Forest)
-        {
-            return 1f;
-        }
-
         return 0f;
     }
 
@@ -1807,7 +1801,7 @@ public static class FoliageGenerator
             if (hasGroundCoverMap && ReadGroundCover(paddedX, paddedZ) == GroundCoverType.DarkGrass)
                 return 1f;
 
-            return ReadBiome(paddedX, paddedZ) == BiomeType.Forest ? 1f : 0f;
+            return 0f;
         }
 
         private bool IsInsideExclusion(float2 localXZ, NativeArray<float2> positions, float exclusionRadiusSqr)
@@ -2696,7 +2690,7 @@ public static class FoliageGenerator
             if (hasGroundCoverMap && ReadGroundCover(paddedX, paddedZ) == GroundCoverType.DarkGrass)
                 return 1f;
 
-            return ReadBiome(paddedX, paddedZ) == BiomeType.Forest ? 1f : 0f;
+            return 0f;
         }
 
         private bool IsInsideExclusion(float2 localXZ, NativeArray<float2> positions, float exclusionRadiusSqr)

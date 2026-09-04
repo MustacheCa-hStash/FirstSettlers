@@ -258,6 +258,162 @@ Shader "Custom/SugarMapleBillboardSimpleLitCutout"
             }
             ENDHLSL
         }
+
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags { "LightMode" = "ShadowCaster" }
+
+            ZWrite On
+            ZTest LEqual
+            ColorMask 0
+            Cull Off
+
+            HLSLPROGRAM
+            #pragma target 3.0
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_instancing
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+            #include "Assets/Shaders/TreeShadowCasterCommon.hlsl"
+
+            TEXTURE2D(_BaseMap);
+            SAMPLER(sampler_BaseMap);
+
+            CBUFFER_START(UnityPerMaterial)
+                float4 _BaseMap_ST;
+                half4 _BaseColor;
+                half4 _BillboardTintAverageColor;
+                half _BillboardTintCompression;
+                half4 _SummerLeafColor;
+                half4 _AutumnRedColor;
+                half4 _AutumnOrangeColor;
+                half4 _AutumnYellowColor;
+                half4 _LeafShadowColor;
+                half _SeasonAutumnAmount;
+                half _TreeTintStrength;
+                half _ColorVariationStrength;
+                half _Cutoff;
+                half _LeafMaskThreshold;
+                half _LeafMaskSoftness;
+                half _PaleArtifactStrength;
+                half _CanopyTintStart;
+                half _CanopyTintFade;
+                half _LeafTintStrength;
+                half _Brightness;
+                half _AmbientStrength;
+                half _LightWrap;
+                half _Smoothness;
+                half _SpecularStrength;
+                half _ForceBillboardFacing;
+                float4 _WindDirection;
+                half _WindStrength;
+                half _WindSpeed;
+                half _WindFlutterStrength;
+                half _WindFlutterSpeed;
+                half _WindGustScale;
+            CBUFFER_END
+
+            UNITY_INSTANCING_BUFFER_START(TreeBillboardInstanceProperties)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _TreeLeafTint)
+            UNITY_INSTANCING_BUFFER_END(TreeBillboardInstanceProperties)
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            float Hash12(float2 p)
+            {
+                float3 p3 = frac(float3(p.xyx) * float3(0.1031, 0.1030, 0.0973));
+                p3 += dot(p3, p3.yzx + 33.33);
+                return frac((p3.x + p3.y) * p3.z);
+            }
+
+            float3 ApplyBillboardWind(float3 positionWS, float3 instanceOriginWS, float2 uv)
+            {
+                float2 windDir = normalize(_WindDirection.xz + float2(0.0001, 0.0));
+                float heightMask = smoothstep(0.0, 1.0, saturate(uv.y));
+                heightMask *= heightMask;
+
+                float instancePhase = Hash12(floor(instanceOriginWS.xz * 0.37)) * 6.2831853;
+                float gustPhase = dot(instanceOriginWS.xz, windDir) * _WindGustScale + _Time.y * _WindSpeed + instancePhase;
+                float gust = sin(gustPhase);
+                float edgeMask = abs(uv.x - 0.5) * 2.0;
+                float flutter = sin(_Time.y * _WindFlutterSpeed + instancePhase + edgeMask * 2.4);
+
+                float sway = gust * _WindStrength * heightMask;
+                float edgeFlutter = flutter * _WindFlutterStrength * heightMask * edgeMask;
+                return positionWS + float3(windDir.x, 0.0, windDir.y) * (sway + edgeFlutter);
+            }
+
+            Varyings vert(Attributes IN)
+            {
+                Varyings OUT;
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
+
+                float4x4 objectToWorld = GetObjectToWorldMatrix();
+                float3 instanceOriginWS = mul(objectToWorld, float4(0.0, 0.0, 0.0, 1.0)).xyz;
+                float3 scaleYVector = float3(objectToWorld._m01, objectToWorld._m11, objectToWorld._m21);
+                float3 scaleZVector = float3(objectToWorld._m02, objectToWorld._m12, objectToWorld._m22);
+                float scaleY = length(scaleYVector);
+                float scaleZ = length(scaleZVector);
+
+                float3 upWS = float3(0.0, 1.0, 0.0);
+                float3 forwardWS = _WorldSpaceCameraPos.xyz - instanceOriginWS;
+                forwardWS.y = 0.0;
+                float forwardLengthSqr = dot(forwardWS, forwardWS);
+                forwardWS = forwardLengthSqr > 0.0001
+                    ? forwardWS * rsqrt(forwardLengthSqr)
+                    : float3(0.0, 0.0, 1.0);
+
+                float3 rightWS = normalize(cross(forwardWS, upWS));
+                float3 billboardPositionWS =
+                    instanceOriginWS +
+                    rightWS * (IN.positionOS.z * scaleZ) +
+                    upWS * (IN.positionOS.y * scaleY);
+                float3 normalPositionWS = TransformObjectToWorld(IN.positionOS.xyz);
+
+                #if defined(UNITY_INSTANCING_ENABLED)
+                    float useBillboardFacing = 1.0;
+                #else
+                    float useBillboardFacing = step(0.5, _ForceBillboardFacing);
+                #endif
+
+                float3 finalPositionWS = lerp(normalPositionWS, billboardPositionWS, useBillboardFacing);
+                finalPositionWS = ApplyBillboardWind(finalPositionWS, instanceOriginWS, IN.uv);
+                half3 billboardNormalWS = normalize(_WorldSpaceCameraPos.xyz - instanceOriginWS);
+                billboardNormalWS.y *= 0.25h;
+                billboardNormalWS = normalize(lerp(billboardNormalWS, upWS, _LightWrap * 0.35h));
+
+                OUT.positionCS = TransformWorldToTreeShadowClip(finalPositionWS, billboardNormalWS);
+                OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
+                return OUT;
+            }
+
+            half4 frag(Varyings IN) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(IN);
+
+                half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a * _BaseColor.a;
+                clip(alpha - _Cutoff);
+                return 0;
+            }
+            ENDHLSL
+        }
     }
 
     FallBack "Hidden/Universal Render Pipeline/FallbackError"

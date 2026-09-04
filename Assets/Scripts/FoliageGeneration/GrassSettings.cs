@@ -38,9 +38,9 @@ public class GrassSettings
 
     [Header("Forest Grass Instance Tint")]
     public string grassInstanceDataPropertyName = "_GrassInstanceData";
-    public Color forestDarkGrassColor = new Color(0.20f, 0.48f, 0.18f, 1f);
-    public Color forestMidGrassColor = new Color(0.29f, 0.62f, 0.24f, 1f);
-    public Color forestLightGrassColor = new Color(0.44f, 0.78f, 0.30f, 1f);
+    public Color forestDarkGrassColor = new Color(0.10f, 0.28f, 0.09f, 1f);
+    public Color forestMidGrassColor = new Color(0.16f, 0.40f, 0.13f, 1f);
+    public Color forestLightGrassColor = new Color(0.25f, 0.52f, 0.19f, 1f);
 
     public GameObject billboardGrassPrefab;
 
