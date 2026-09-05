@@ -373,6 +373,7 @@ public static class FoliageGenerator
     public static void GenerateBillboardGrassForChunk(
         ChunkRecord record,
         GrassSettings grassSettings,
+        CloverSettings cloverSettings,
         TreeSettings treeSettings,
         int worldSeed,
         int chunkSize,
@@ -390,16 +391,19 @@ public static class FoliageGenerator
         if (record.SurfaceTypeMap == null || record.HeightMap == null || record.BiomeMap == null)
             return;
 
-        int cellsPerAxis = Mathf.Max(1, grassSettings.billboardCellsPerAxis);
+        int cellsPerAxis = Mathf.Max(1, grassSettings.cellsPerAxis);
         float cellSize = (float)chunkSize / cellsPerAxis;
 
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;
+        float treeExclusionRadiusSqr = 0f;
         float bushExclusionRadiusSqr = 0f;
         float rockExclusionRadiusSqr = 0f;
 
         if (treeSettings != null)
         {
+            treeExclusionRadiusSqr =
+                treeSettings.grassExclusionRadius * treeSettings.grassExclusionRadius;
             bushExclusionRadiusSqr =
                 treeSettings.bushGrassExclusionRadius * treeSettings.bushGrassExclusionRadius;
             rockExclusionRadiusSqr =
@@ -411,8 +415,13 @@ public static class FoliageGenerator
         NativeArray<SurfaceType> surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.TempJob, out int surfaceMapWidth, out int surfaceMapHeight);
         NativeArray<BiomeType> biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.TempJob, out int biomeMapWidth, out int biomeMapHeight);
         NativeArray<GroundCoverType> groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.TempJob, out int groundCoverMapWidth, out int groundCoverMapHeight);
+        NativeArray<float2> treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.TempJob);
         NativeArray<float2> bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, Allocator.TempJob);
         NativeArray<float2> rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, Allocator.TempJob);
+        NativeArray<float4> cloverInfluences = CreateCloverInfluences(
+            foliageData.cloverInstances,
+            cloverSettings,
+            Allocator.TempJob);
         NativeArray<GrassSubChunkDiscoveryResult> results =
             new NativeArray<GrassSubChunkDiscoveryResult>(candidateCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 
@@ -433,26 +442,32 @@ public static class FoliageGenerator
                 groundCoverMapWidth = groundCoverMapWidth,
                 groundCoverMapHeight = groundCoverMapHeight,
                 hasGroundCoverMap = record.GroundCoverMap != null,
+                treeExclusionPositions = treeExclusionPositions,
                 bushExclusionPositions = bushExclusionPositions,
                 rockExclusionPositions = rockExclusionPositions,
+                cloverInfluences = cloverInfluences,
+                treeExclusionRadiusSqr = treeExclusionRadiusSqr,
                 bushExclusionRadiusSqr = bushExclusionRadiusSqr,
                 rockExclusionRadiusSqr = rockExclusionRadiusSqr,
+                cloverGrassDensityInsidePatch = cloverSettings != null
+                    ? Mathf.Clamp01(cloverSettings.grassDensityInsidePatch)
+                    : 1f,
                 results = results,
                 worldSeed = worldSeed,
-                seedOffset = grassSettings.billboardSeedOffset,
+                seedOffset = grassSettings.seedOffset,
                 chunkCoordX = record.ChunkCoord.x,
                 chunkCoordZ = record.ChunkCoord.z,
                 chunkSize = chunkSize,
                 cellsPerAxis = cellsPerAxis,
                 cellSize = cellSize,
-                spawnChance = grassSettings.billboardSpawnChance,
+                cellJitter = Mathf.Clamp01(grassSettings.cellJitter),
                 topLeftX = topLeftX,
                 bottomLeftZ = bottomLeftZ,
                 worldScale = worldScale,
                 meshHeightMultiplier = meshHeightMultiplier,
-                randomizeYaw = grassSettings.randomizeBillboardYaw,
-                minScale = grassSettings.billboardUniformScaleRange.x,
-                maxScale = grassSettings.billboardUniformScaleRange.y
+                randomizeYaw = grassSettings.randomizeYaw,
+                minScale = grassSettings.uniformScaleRange.x,
+                maxScale = grassSettings.uniformScaleRange.y
             };
 
             JobHandle handle = job.Schedule(candidateCount, 64);
@@ -469,8 +484,12 @@ public static class FoliageGenerator
                         new Vector3(result.localPosition.x, result.localPosition.y, result.localPosition.z),
                         Quaternion.Euler(0f, result.yaw, 0f),
                         Vector3.one * result.uniformScale,
+                        result.selectionRank,
                         result.forestBlend));
             }
+
+            foliageData.billboardGrassInstances.Sort((a, b) =>
+                a.selectionRank.CompareTo(b.selectionRank));
         }
         finally
         {
@@ -482,10 +501,14 @@ public static class FoliageGenerator
                 biomeMap.Dispose();
             if (groundCoverMap.IsCreated)
                 groundCoverMap.Dispose();
+            if (treeExclusionPositions.IsCreated)
+                treeExclusionPositions.Dispose();
             if (bushExclusionPositions.IsCreated)
                 bushExclusionPositions.Dispose();
             if (rockExclusionPositions.IsCreated)
                 rockExclusionPositions.Dispose();
+            if (cloverInfluences.IsCreated)
+                cloverInfluences.Dispose();
             if (results.IsCreated)
                 results.Dispose();
         }
@@ -1712,10 +1735,14 @@ public static class FoliageGenerator
         public int groundCoverMapWidth;
         public int groundCoverMapHeight;
         public bool hasGroundCoverMap;
+        [ReadOnly] public NativeArray<float2> treeExclusionPositions;
         [ReadOnly] public NativeArray<float2> bushExclusionPositions;
         [ReadOnly] public NativeArray<float2> rockExclusionPositions;
+        [ReadOnly] public NativeArray<float4> cloverInfluences;
+        public float treeExclusionRadiusSqr;
         public float bushExclusionRadiusSqr;
         public float rockExclusionRadiusSqr;
+        public float cloverGrassDensityInsidePatch;
         [WriteOnly] public NativeArray<GrassSubChunkDiscoveryResult> results;
         public int worldSeed;
         public int seedOffset;
@@ -1724,7 +1751,7 @@ public static class FoliageGenerator
         public int chunkSize;
         public int cellsPerAxis;
         public float cellSize;
-        public float spawnChance;
+        public float cellJitter;
         public float topLeftX;
         public float bottomLeftZ;
         public float worldScale;
@@ -1737,16 +1764,12 @@ public static class FoliageGenerator
         {
             int cellX = index % cellsPerAxis;
             int cellZ = index / cellsPerAxis;
-            int baseHash = Hash7(worldSeed, seedOffset, chunkCoordX, chunkCoordZ, cellX, cellZ, 211);
 
-            if (Hash01(baseHash) > spawnChance)
-            {
-                results[index] = default;
-                return;
-            }
-
-            float sampleX = math.clamp((cellX + Hash01(baseHash + 31)) * cellSize, 0f, chunkSize);
-            float sampleZ = math.clamp((cellZ + Hash01(baseHash + 67)) * cellSize, 0f, chunkSize);
+            int cellHash = Hash7(worldSeed, seedOffset, chunkCoordX, chunkCoordZ, cellX, cellZ, 713);
+            float jitterX = math.lerp(0.5f, Hash01(cellHash + 31), cellJitter);
+            float jitterZ = math.lerp(0.5f, Hash01(cellHash + 67), cellJitter);
+            float sampleX = (cellX + jitterX) * cellSize;
+            float sampleZ = (cellZ + jitterZ) * cellSize;
             int mapX = math.clamp((int)math.round(sampleX), 0, chunkSize);
             int mapZ = math.clamp((int)math.round(sampleZ), 0, chunkSize);
             int paddedX = mapX + 1;
@@ -1762,16 +1785,34 @@ public static class FoliageGenerator
             float localZ = (bottomLeftZ + sampleZ) * worldScale;
             float2 localXZ = new float2(localX, localZ);
 
-            if (IsInsideExclusion(localXZ, bushExclusionPositions, bushExclusionRadiusSqr) ||
+            if (IsInsideExclusion(localXZ, treeExclusionPositions, treeExclusionRadiusSqr) ||
+                IsInsideExclusion(localXZ, bushExclusionPositions, bushExclusionRadiusSqr) ||
                 IsInsideExclusion(localXZ, rockExclusionPositions, rockExclusionRadiusSqr))
             {
                 results[index] = default;
                 return;
             }
 
+            float cloverInfluence = GetCloverInfluence(localXZ);
+            if (cloverInfluence > 0f)
+            {
+                float grassKeepChance = math.lerp(1f, cloverGrassDensityInsidePatch, cloverInfluence);
+                if (Hash01(cellHash + 509) > grassKeepChance)
+                {
+                    results[index] = default;
+                    return;
+                }
+            }
+
             float height = SampleHeightBilinear(sampleX, sampleZ);
-            float yaw = randomizeYaw ? Hash01(baseHash + 97) * 360f : 0f;
-            float uniformScale = math.lerp(minScale, maxScale, Hash01(baseHash + 131));
+            float yaw = randomizeYaw
+                ? Hash01(Hash7(worldSeed, seedOffset, chunkCoordX, chunkCoordZ, cellX, cellZ, 17)) * 360f
+                : 0f;
+            float uniformScale = math.lerp(
+                minScale,
+                maxScale,
+                Hash01(Hash7(worldSeed, seedOffset, chunkCoordX, chunkCoordZ, cellX, cellZ, 29)));
+            uint selectionRank = (uint)Hash7(worldSeed, seedOffset, chunkCoordX, chunkCoordZ, cellX, cellZ, 101);
 
             results[index] = new GrassSubChunkDiscoveryResult
             {
@@ -1779,6 +1820,7 @@ public static class FoliageGenerator
                 localPosition = new float3(localX, height * meshHeightMultiplier * worldScale, localZ),
                 yaw = yaw,
                 uniformScale = uniformScale,
+                selectionRank = selectionRank,
                 forestBlend = GetGrassForestBlend(paddedX, paddedZ)
             };
         }
@@ -1817,6 +1859,25 @@ public static class FoliageGenerator
             }
 
             return false;
+        }
+
+        private float GetCloverInfluence(float2 localXZ)
+        {
+            float influence = 0f;
+
+            for (int i = 0; i < cloverInfluences.Length; i++)
+            {
+                float4 clover = cloverInfluences[i];
+                float2 delta = localXZ - clover.xy;
+                float dist = math.length(delta);
+                float radius = math.max(clover.z, 0.01f);
+                float coreRadius = math.min(math.max(clover.w, 0.01f), radius);
+                float fade = math.saturate((radius - dist) / math.max(radius - coreRadius, 0.01f));
+                float core = dist <= coreRadius ? 1f : 0f;
+                influence = math.max(influence, math.max(core, fade));
+            }
+
+            return influence;
         }
 
         private float SampleHeightBilinear(float sampleX, float sampleZ)

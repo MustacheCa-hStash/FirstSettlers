@@ -42,6 +42,10 @@ Shader "Custom/GrassInstancedTerrainTint"
         _WindFlutterStrength("Wind Tip Flutter Strength", Range(0, 1)) = 0.018
         _WindFlutterSpeed("Wind Tip Flutter Speed", Range(0, 16)) = 7.5
         _WindGustScale("Wind Gust Scale", Range(0.01, 2)) = 0.55
+
+        [Toggle(_BILLBOARD_RENDER_FADE_ON)] _RenderFadeEnabled("Render Fade Enabled", Float) = 0
+        _RenderFadeProgress("Render Fade Progress", Range(0, 1)) = 1
+        _FadeDitherPixelSize("Fade Dither Pixel Size", Float) = 1
     }
 
     SubShader
@@ -70,6 +74,7 @@ Shader "Custom/GrassInstancedTerrainTint"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma shader_feature_local _BILLBOARD_RENDER_FADE_ON
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
@@ -113,6 +118,9 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half _WindFlutterStrength;
                 half _WindFlutterSpeed;
                 half _WindGustScale;
+                half _RenderFadeEnabled;
+                half _RenderFadeProgress;
+                half _FadeDitherPixelSize;
             CBUFFER_END
 
             UNITY_INSTANCING_BUFFER_START(GrassInstanceProperties)
@@ -135,8 +143,20 @@ Shader "Custom/GrassInstancedTerrainTint"
                 float2 baseUV : TEXCOORD2;
                 float2 grassUV : TEXCOORD3;
                 float4 shadowCoord : TEXCOORD4;
+                #if defined(_BILLBOARD_RENDER_FADE_ON)
+                float4 screenPosition : TEXCOORD5;
+                #endif
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
+
+            #if defined(_BILLBOARD_RENDER_FADE_ON)
+            half Hash21(float2 p)
+            {
+                float3 p3 = frac(float3(p.xyx) * float3(0.1031, 0.1030, 0.0973));
+                p3 += dot(p3, p3.yzx + 33.33);
+                return frac((p3.x + p3.y) * p3.z);
+            }
+            #endif
 
             half ValueNoise(float2 worldXZ)
             {
@@ -207,6 +227,9 @@ Shader "Custom/GrassInstancedTerrainTint"
                 OUT.positionCS = TransformWorldToHClip(positionWS);
                 OUT.positionWS = positionWS;
                 OUT.shadowCoord = TransformWorldToShadowCoord(positionWS);
+                #if defined(_BILLBOARD_RENDER_FADE_ON)
+                OUT.screenPosition = ComputeScreenPos(OUT.positionCS);
+                #endif
                 OUT.baseUV = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.grassUV = TRANSFORM_TEX(IN.uv, _GrassTex);
 
@@ -227,6 +250,16 @@ Shader "Custom/GrassInstancedTerrainTint"
 
                 half4 instanceData = UNITY_ACCESS_INSTANCED_PROP(GrassInstanceProperties, _GrassInstanceData);
                 half forestBlend = saturate(instanceData.x);
+
+                #if defined(_BILLBOARD_RENDER_FADE_ON)
+                if (_RenderFadeEnabled > 0.5h)
+                {
+                    float2 screenUv = IN.screenPosition.xy / max(IN.screenPosition.w, 0.0001);
+                    float2 pixelCoord = floor(screenUv * _ScreenParams.xy / max(_FadeDitherPixelSize, 1.0h));
+                    half ditherThreshold = Hash21(pixelCoord + instanceData.xy * float2(97.13, 41.71));
+                    clip(saturate(_RenderFadeProgress) - ditherThreshold);
+                }
+                #endif
 
                 half3 grassTint = PaletteTint(IN.positionWS.xz, forestBlend);
 

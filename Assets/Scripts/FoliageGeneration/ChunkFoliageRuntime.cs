@@ -76,6 +76,9 @@ public class ChunkFoliageRuntime
     private static readonly int TreeLeafTintPropertyId = Shader.PropertyToID("_TreeLeafTint");
     private static readonly int TreeBarkTintPropertyId = Shader.PropertyToID("_TreeBarkTint");
     private static readonly int AlphaCutoutShadowsPropertyId = Shader.PropertyToID("_AlphaCutoutShadows");
+    private static readonly int RenderFadeEnabledPropertyId = Shader.PropertyToID("_RenderFadeEnabled");
+    private static readonly int RenderFadeProgressPropertyId = Shader.PropertyToID("_RenderFadeProgress");
+    private static readonly int FadeDitherPixelSizePropertyId = Shader.PropertyToID("_FadeDitherPixelSize");
 
     public Transform root;
     private bool rangeVisible;
@@ -92,6 +95,9 @@ public class ChunkFoliageRuntime
 
     public Mesh billboardMesh;
     public Material billboardMaterial;
+    public bool enableBillboardGrassRenderFade;
+    public float billboardGrassRenderFadeDuration;
+    public float billboardGrassFadeDitherPixelSize;
 
     public Mesh flowerMesh;
     public Material flowerMaterial;
@@ -191,6 +197,8 @@ public class ChunkFoliageRuntime
     private bool hasBuiltFlowerRenderData;
     private bool hasBuiltCloverRenderData;
     private bool hasBuiltDandelionRenderData;
+    private int lastBillboardGrassDrawFrame = -1;
+    private float billboardGrassRenderFadeStartTime;
 
     public bool IsCreated => root != null;
     public int GpuGrassInstanceCount =>
@@ -456,11 +464,13 @@ public class ChunkFoliageRuntime
     public void CacheBillboardMatrices(List<Matrix4x4> worldMatrices, List<Vector4> instanceData)
     {
         hasBuiltBillboardRenderData = CacheGrassRenderBatches(worldMatrices, instanceData, billboardRenderBatches);
+        ResetBillboardGrassRenderFade();
     }
 
     public void CacheBillboardMatrices(Matrix4x4[] worldMatrices, Vector4[] instanceData)
     {
         hasBuiltBillboardRenderData = CacheGrassRenderBatches(worldMatrices, instanceData, billboardRenderBatches);
+        ResetBillboardGrassRenderFade();
     }
 
     private bool CacheGrassRenderBatches(
@@ -1318,7 +1328,7 @@ public class ChunkFoliageRuntime
 
         for (int i = 0; i < grassRenderBatches.Count; i++)
         {
-            DrawInstancedBatch(grassMesh, grassMaterial, grassRenderBatches[i]);
+            DrawInstancedBatch(grassMesh, grassMaterial, grassRenderBatches[i], 1f);
         }
 
         TerrainGenerationProfiler.Record(
@@ -1332,10 +1342,11 @@ public class ChunkFoliageRuntime
             return;
 
         long stageStart = TerrainGenerationProfiler.GetTimestamp();
+        float renderFadeProgress = GetBillboardGrassRenderFadeProgress();
 
         for (int i = 0; i < billboardRenderBatches.Count; i++)
         {
-            DrawInstancedBatch(billboardMesh, billboardMaterial, billboardRenderBatches[i]);
+            DrawInstancedBatch(billboardMesh, billboardMaterial, billboardRenderBatches[i], renderFadeProgress);
         }
 
         TerrainGenerationProfiler.Record(
@@ -1346,7 +1357,8 @@ public class ChunkFoliageRuntime
     private void DrawInstancedBatch(
         Mesh mesh,
         Material material,
-        GrassRenderBatch batch)
+        GrassRenderBatch batch,
+        float renderFadeProgress)
     {
         grassPropertyBlock.Clear();
         grassPropertyBlock.SetVectorArray(grassInstanceDataPropertyId, batch.instanceData);
@@ -1354,6 +1366,10 @@ public class ChunkFoliageRuntime
         grassPropertyBlock.SetColor("_ForestMidGrassColor", forestMidGrassColor);
         grassPropertyBlock.SetColor("_ForestLightGrassColor", forestLightGrassColor);
         grassPropertyBlock.SetFloat("_ReceiveShadows", receiveGrassShadows ? 1f : 0f);
+        bool renderFadeEnabled = renderFadeProgress < 1f;
+        grassPropertyBlock.SetFloat(RenderFadeEnabledPropertyId, renderFadeEnabled ? 1f : 0f);
+        grassPropertyBlock.SetFloat(RenderFadeProgressPropertyId, renderFadeProgress);
+        grassPropertyBlock.SetFloat(FadeDitherPixelSizePropertyId, Mathf.Max(1f, billboardGrassFadeDitherPixelSize));
 
         Graphics.DrawMeshInstanced(
             mesh,
@@ -1365,6 +1381,29 @@ public class ChunkFoliageRuntime
             ShadowCastingMode.Off,
             receiveGrassShadows
         );
+    }
+
+    private float GetBillboardGrassRenderFadeProgress()
+    {
+        if (!enableBillboardGrassRenderFade || billboardGrassRenderFadeDuration <= 0f)
+        {
+            lastBillboardGrassDrawFrame = Time.frameCount;
+            return 1f;
+        }
+
+        if (lastBillboardGrassDrawFrame < 0 || Time.frameCount - lastBillboardGrassDrawFrame > 1)
+        {
+            billboardGrassRenderFadeStartTime = Time.time;
+        }
+
+        lastBillboardGrassDrawFrame = Time.frameCount;
+        return Mathf.Clamp01((Time.time - billboardGrassRenderFadeStartTime) / billboardGrassRenderFadeDuration);
+    }
+
+    private void ResetBillboardGrassRenderFade()
+    {
+        lastBillboardGrassDrawFrame = -1;
+        billboardGrassRenderFadeStartTime = 0f;
     }
 
     public void DrawFlowers()

@@ -8,6 +8,7 @@ public class GrassSettings
     public int cellsPerAxis = 125;
     [Range(0f, 1f)] public float cellJitter = 1.0f;
     public int activeRingRadius = 1;
+    [Min(0)] public int nearGrassPrecomputeChunkPadding = 0;
     public int subChunksPerChunk = 10;
     public int activeSubChunkRadius = 0;
     public int maxSubChunkGenerationsPerFrame = 8;
@@ -48,7 +49,12 @@ public class GrassSettings
     public int billboardCellsPerAxis = 50;
     [Range(0f, 1f)] public float billboardSpawnChance = 0.4f;
 
-    public Vector2 billboardUniformScaleRange = new Vector2(1.5f, 2.5f);
-    public bool randomizeBillboardYaw = true;
-    public int billboardSeedOffset = 9000;
+    [HideInInspector] public Vector2 billboardUniformScaleRange = new Vector2(1.5f, 2.5f);
+    [HideInInspector] public bool randomizeBillboardYaw = true;
+    [HideInInspector] public int billboardSeedOffset = 9000;
+
+    [Header("Billboard Render Fade")]
+    public bool enableBillboardRenderFade = true;
+    public float billboardRenderFadeDuration = 0.65f;
+    public float billboardFadeDitherPixelSize = 1f;
 }

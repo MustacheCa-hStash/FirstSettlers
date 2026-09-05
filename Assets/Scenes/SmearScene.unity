@@ -887,7 +887,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   worldSeed: 7
-  viewDistance: 100
+  viewDistance: 30
   colliderDistance: 5
   enableFarTerrain: 1
   farTerrainStartRing: 9
@@ -905,6 +905,7 @@ MonoBehaviour:
     cellsPerAxis: 125
     cellJitter: 1
     activeRingRadius: 1
+    nearGrassPrecomputeChunkPadding: 0
     subChunksPerChunk: 10
     activeSubChunkRadius: 0
     maxSubChunkGenerationsPerFrame: 8
@@ -935,10 +936,13 @@ MonoBehaviour:
     billboardGrassPrefab: {fileID: 2274311721168609727, guid: e76b7893d4994f848a5f13029dbbffa1, type: 3}
     billboardRingRadius: 3
     billboardCellsPerAxis: 60
-    billboardSpawnChance: 0.25
+    billboardSpawnChance: 0.05
     billboardUniformScaleRange: {x: 0.9, y: 1.1}
     randomizeBillboardYaw: 1
     billboardSeedOffset: 9000
+    enableBillboardRenderFade: 1
+    billboardRenderFadeDuration: 0.65
+    billboardFadeDitherPixelSize: 1
   flowerSettings:
     enableFlowers: 1
     flowerPrefab: {fileID: 7417632742218973167, guid: 012753618076f5a44bc43bfe79e09f48, type: 3}
@@ -1108,7 +1112,7 @@ MonoBehaviour:
     grasslandLargeRockUniformScaleRange: {x: 95, y: 135}
     grasslandRockPitchRange: {x: -12, y: 12}
     rockGrassExclusionRadius: 1.25
-    gameObjectRockChunkRingRadius: 3
+    gameObjectRockChunkRingRadius: 6
     castTreeShadows: 1
     receiveTreeShadows: 1
   sampleScale: 600
