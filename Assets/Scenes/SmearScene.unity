@@ -887,7 +887,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   worldSeed: 7
-  viewDistance: 30
+  viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
   farTerrainStartRing: 9
