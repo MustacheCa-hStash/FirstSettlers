@@ -5,11 +5,10 @@ public static class TerrainControlMapBuilder
     public static ControlMapPixelData BuildRaw(SurfaceType[,] surfaceTypeMap, GroundCoverType[,] groundCoverMap)
     {
         int width = surfaceTypeMap.GetLength(0);
-        ControlMapPixelData controlMap = new ControlMapPixelData(width, width, 3);
+        int height = surfaceTypeMap.GetLength(1);
+        ControlMapPixelData controlMap = new ControlMapPixelData(width, height, 3);
 
-        int pixelCount = width * width;
-
-        for (int z = 0; z < width; z++)
+        for (int z = 0; z < height; z++)
         {
             for (int x = 0; x < width; x++)
             {
@@ -29,7 +28,36 @@ public static class TerrainControlMapBuilder
             }
         }
 
-        return controlMap;
+        return BlendPaddedWeights(controlMap);
+    }
+
+    private static ControlMapPixelData BlendPaddedWeights(ControlMapPixelData source)
+    {
+        // Use the neighboring chunk samples in the one-sample halo, then emit only mesh samples.
+        // The separable [1, 2, 1] kernel rounds material boundaries without changing gameplay labels.
+        int width = source.Width - 2;
+        int height = source.Height - 2;
+        var result = new ControlMapPixelData(width, height, source.Maps.Length);
+        for (int map = 0; map < source.Maps.Length; map++)
+        {
+            for (int z = 0; z < height; z++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    Color weights = Color.clear;
+                    for (int dz = -1; dz <= 1; dz++)
+                    {
+                        for (int dx = -1; dx <= 1; dx++)
+                        {
+                            float weight = (dx == 0 ? 2f : 1f) * (dz == 0 ? 2f : 1f) / 16f;
+                            weights += (Color)source.Maps[map][(z + 1 + dz) * source.Width + x + 1 + dx] * weight;
+                        }
+                    }
+                    result.Maps[map][z * width + x] = weights;
+                }
+            }
+        }
+        return result;
     }
 
     private static bool UsesFirstControlMap(SurfaceType surfaceType)

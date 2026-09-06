@@ -5,6 +5,7 @@ Shader "Custom/StylizedTerrainURP"
         _ControlMap0("Control Map 0", 2D) = "black" {}
         _ControlMap1("Control Map 1", 2D) = "black" {}
         _ControlMap2("Ground Cover Map", 2D) = "black" {}
+        _SurfaceBlendSharpness("Surface Blend Sharpness", Range(0.25, 4.0)) = 1.0
 
         _SandColor("Sand Color", Color) = (0.80, 0.75, 0.55, 1)
         _MudColor("Mud Color", Color) = (0.42, 0.32, 0.22, 1)
@@ -149,6 +150,8 @@ Shader "Custom/StylizedTerrainURP"
             };
 
             CBUFFER_START(UnityPerMaterial)
+                float4 _ControlMap0_TexelSize;
+                float _SurfaceBlendSharpness;
                 half4 _SandColor;
                 half4 _MudColor;
                 half4 _RockColor;
@@ -331,9 +334,16 @@ Shader "Custom/StylizedTerrainURP"
                 half3 baseNormalWS = normalize(IN.normalWS);
                 half3 normalWS = baseNormalWS;
 
-                float4 control0 = SAMPLE_TEXTURE2D(_ControlMap0, sampler_ControlMap0, IN.uv);
-                float4 control1 = SAMPLE_TEXTURE2D(_ControlMap1, sampler_ControlMap1, IN.uv);
-                float4 control2 = SAMPLE_TEXTURE2D(_ControlMap2, sampler_ControlMap2, IN.uv);
+                // Control pixels represent mesh samples, including the endpoints of each chunk.
+                float2 controlUV = IN.uv * (1.0 - _ControlMap0_TexelSize.xy) + 0.5 * _ControlMap0_TexelSize.xy;
+                float4 control0 = SAMPLE_TEXTURE2D(_ControlMap0, sampler_ControlMap0, controlUV);
+                float4 control1 = SAMPLE_TEXTURE2D(_ControlMap1, sampler_ControlMap1, controlUV);
+                float4 control2 = SAMPLE_TEXTURE2D(_ControlMap2, sampler_ControlMap2, controlUV);
+                control0 = pow(saturate(control0), max(_SurfaceBlendSharpness, 0.25));
+                control1 = pow(saturate(control1), max(_SurfaceBlendSharpness, 0.25));
+                float totalWeight = dot(control0, float4(1, 1, 1, 1)) + dot(control1.rgb, float3(1, 1, 1));
+                control0 /= max(totalWeight, 0.00001);
+                control1 /= max(totalWeight, 0.00001);
 
                 half sandWeight = control0.r;
                 half mudWeight = control0.g;
@@ -366,6 +376,7 @@ Shader "Custom/StylizedTerrainURP"
                 );
 
                 half3 baseColor = 0;
+                float3 weightedNormal = baseNormalWS * (sandWeight + mudWeight + rockWeight + cliffWeight + riverbedWeight);
 
                 baseColor += _SandColor.rgb * sandWeight;
                 baseColor += _MudColor.rgb * mudWeight;
@@ -470,6 +481,11 @@ Shader "Custom/StylizedTerrainURP"
 
                         normalWS = normalize(lerp(normalWS, mossNormalWS, mossWeight));
                     }
+                    weightedNormal += normalWS * grassWeight;
+                }
+                else
+                {
+                    weightedNormal += baseNormalWS * grassWeight;
                 }
 
                 if (snowWeight > 0.001h)
@@ -508,8 +524,14 @@ Shader "Custom/StylizedTerrainURP"
 
                     float3 snowTangentNormal = normalize(lerp(snowTangentNormalUV, snowTangentNormalTri, snowTriplanarBlend));
 
-                    normalWS = ApplyDetailNormal(normalWS, snowTangentNormal, _SnowNormalStrength);
+                    float3 snowNormalWS = ApplyDetailNormal(baseNormalWS, snowTangentNormal, _SnowNormalStrength);
+                    weightedNormal += snowNormalWS * snowWeight;
                 }
+                else
+                {
+                    weightedNormal += baseNormalWS * snowWeight;
+                }
+                normalWS = normalize(weightedNormal);
 
                 Light mainLight = GetMainLight(IN.shadowCoord);
                 half shadowAttenuation = lerp(1.0h, mainLight.shadowAttenuation, saturate(_ReceiveShadows));

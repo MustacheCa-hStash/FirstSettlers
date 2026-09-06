@@ -1974,7 +1974,7 @@ public class ChunkManager
 
         for (int i = 0; i < rawData.Maps.Length; i++)
         {
-            Texture2D tex = new Texture2D(rawData.Width, rawData.Height, TextureFormat.RGBA32, false);
+            Texture2D tex = new Texture2D(rawData.Width, rawData.Height, TextureFormat.RGBA32, false, true);
             tex.filterMode = FilterMode.Bilinear;
             tex.wrapMode = TextureWrapMode.Clamp;
             tex.SetPixels32(rawData.Maps[i]);
