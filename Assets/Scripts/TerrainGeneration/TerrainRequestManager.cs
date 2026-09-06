@@ -319,34 +319,19 @@ public class TerrainRequestManager
             TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainMeshBuild, stageStart);
 
             stageStart = TerrainGenerationProfiler.GetTimestamp();
-            WaterMeshData lakeMeshData = LakeMeshGenerator.GenerateLakeMesh(
-                workItem.HeightMap,
+            WaterMeshData waterMeshData = WaterMeshGenerator.GenerateWaterMesh(
                 workItem.WaterStateMap,
-                workItem.RiverMaskMap,
-                workItem.MeshHeightMultiplier,
                 workItem.StepIncrement,
                 workItem.WorldScale,
                 workItem.Manager.waterSettings.SurfaceY);
-            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.LakeMeshBuild, stageStart);
-
-            stageStart = TerrainGenerationProfiler.GetTimestamp();
-            WaterMeshData riverMeshData = RiverMeshGenerator.GenerateRiverMesh(
-                workItem.HeightMap,
-                workItem.WaterStateMap,
-                workItem.RiverMaskMap,
-                workItem.MeshHeightMultiplier,
-                workItem.StepIncrement,
-                workItem.WorldScale,
-                workItem.Manager.waterSettings.SurfaceY);
-            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.RiverMeshBuild, stageStart);
+            TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.WaterMeshBuild, stageStart);
 
             MeshRequestResult result = new MeshRequestResult(
                 workItem.ChunkCoord,
                 workItem.LOD,
                 workItem.RequestVersion,
                 terrainMeshData,
-                lakeMeshData,
-                riverMeshData);
+                waterMeshData);
             TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.LODMeshTotal, totalStart);
 
             lock (workItem.Manager.meshResultsLock)

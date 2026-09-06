@@ -9,8 +9,7 @@ public struct WorldRenderStatsDebugInfo
     public int CurrentLOD4PlusChunkCount;
 
     public RenderGeometryStats Terrain;
-    public RenderGeometryStats Lake;
-    public RenderGeometryStats River;
+    public RenderGeometryStats Water;
     public RenderGeometryStats Grass;
     public RenderGeometryStats BillboardGrass;
     public RenderGeometryStats Flowers;
@@ -23,8 +22,7 @@ public struct WorldRenderStatsDebugInfo
 
     public long TotalVertices =>
         Terrain.vertices +
-        Lake.vertices +
-        River.vertices +
+        Water.vertices +
         Grass.vertices +
         BillboardGrass.vertices +
         Flowers.vertices +
@@ -37,8 +35,7 @@ public struct WorldRenderStatsDebugInfo
 
     public long TotalTriangles =>
         Terrain.triangles +
-        Lake.triangles +
-        River.triangles +
+        Water.triangles +
         Grass.triangles +
         BillboardGrass.triangles +
         Flowers.triangles +

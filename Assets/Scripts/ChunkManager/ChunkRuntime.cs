@@ -14,13 +14,9 @@ public class ChunkRuntime
     private MeshRenderer terrainMeshRenderer;
     private Material runtimeTerrainMaterial;
 
-    private GameObject lakeRoot;
-    private MeshFilter lakeMeshFilter;
-    private MeshRenderer lakeMeshRenderer;
-
-    private GameObject riverRoot;
-    private MeshFilter riverMeshFilter;
-    private MeshRenderer riverMeshRenderer;
+    private GameObject waterRoot;
+    private MeshFilter waterMeshFilter;
+    private MeshRenderer waterMeshRenderer;
 
     private Material runtimeWaterMaterial;
     private MeshCollider terrainMeshCollider;
@@ -69,30 +65,19 @@ public class ChunkRuntime
         terrainMeshRenderer.shadowCastingMode = ShadowCastingMode.Off;
         terrainMeshRenderer.receiveShadows = terrainReceiveShadows;
 
-        lakeRoot = new GameObject("Lake");
-        lakeRoot.transform.SetParent(root.transform, false);
-        lakeRoot.transform.localPosition = Vector3.zero;
-        lakeRoot.transform.localRotation = Quaternion.identity;
-        lakeRoot.transform.localScale = Vector3.one;
+        waterRoot = new GameObject("Water");
+        waterRoot.transform.SetParent(root.transform, false);
+        waterRoot.transform.localPosition = Vector3.zero;
+        waterRoot.transform.localRotation = Quaternion.identity;
+        waterRoot.transform.localScale = Vector3.one;
 
-        lakeMeshFilter = lakeRoot.AddComponent<MeshFilter>();
-        lakeMeshRenderer = lakeRoot.AddComponent<MeshRenderer>();
-
-        riverRoot = new GameObject("River");
-        riverRoot.transform.SetParent(root.transform, false);
-        riverRoot.transform.localPosition = Vector3.zero;
-        riverRoot.transform.localRotation = Quaternion.identity;
-        riverRoot.transform.localScale = Vector3.one;
-
-        riverMeshFilter = riverRoot.AddComponent<MeshFilter>();
-        riverMeshRenderer = riverRoot.AddComponent<MeshRenderer>();
+        waterMeshFilter = waterRoot.AddComponent<MeshFilter>();
+        waterMeshRenderer = waterRoot.AddComponent<MeshRenderer>();
 
         runtimeWaterMaterial = new Material(waterMaterial);
-        lakeMeshRenderer.material = runtimeWaterMaterial;
-        riverMeshRenderer.material = runtimeWaterMaterial;
+        waterMeshRenderer.material = runtimeWaterMaterial;
 
-        lakeRoot.SetActive(false);
-        riverRoot.SetActive(false);
+        waterRoot.SetActive(false);
 
         SetVisible(false);
         chunkRecord.SetActiveRuntime(this);
@@ -113,45 +98,14 @@ public class ChunkRuntime
             runtimeTerrainMaterial.SetTexture("_ControlMap2", controlMaps[2]);
     }
 
-    public void SetMeshes(Mesh terrainMesh, Mesh lakeMesh, Mesh riverMesh, int lod)
+    public void SetMeshes(Mesh terrainMesh, Mesh waterMesh, int lod)
     {
         if (terrainMeshFilter.sharedMesh != terrainMesh)
             terrainMeshFilter.sharedMesh = terrainMesh;
 
-        bool hasRenderableLake = lakeMesh != null && lakeMesh.vertexCount > 0;
-        bool hasRenderableRiver = riverMesh != null && riverMesh.vertexCount > 0;
-
-        if (hasRenderableLake)
-        {
-            if (lakeMeshFilter.sharedMesh != lakeMesh)
-                lakeMeshFilter.sharedMesh = lakeMesh;
-
-            if (!lakeRoot.activeSelf)
-                lakeRoot.SetActive(true);
-        }
-        else
-        {
-            lakeMeshFilter.sharedMesh = null;
-
-            if (lakeRoot.activeSelf)
-                lakeRoot.SetActive(false);
-        }
-
-        if (hasRenderableRiver)
-        {
-            if (riverMeshFilter.sharedMesh != riverMesh)
-                riverMeshFilter.sharedMesh = riverMesh;
-
-            if (!riverRoot.activeSelf)
-                riverRoot.SetActive(true);
-        }
-        else
-        {
-            riverMeshFilter.sharedMesh = null;
-        
-            if (riverRoot.activeSelf)
-                riverRoot.SetActive(false);
-        }
+        bool hasWater = waterMesh != null && waterMesh.vertexCount > 0;
+        waterMeshFilter.sharedMesh = hasWater ? waterMesh : null;
+        waterRoot.SetActive(hasWater);
 
         currentLOD = lod;
     }
@@ -185,14 +139,10 @@ public class ChunkRuntime
     public void ClearMeshes()
     {
         terrainMeshFilter.sharedMesh = null;
-        lakeMeshFilter.sharedMesh = null;
-        riverMeshFilter.sharedMesh = null;
+        waterMeshFilter.sharedMesh = null;
 
-        if (lakeRoot != null)
-            lakeRoot.SetActive(false);
-
-        if (riverRoot != null)
-            riverRoot.SetActive(false);
+        if (waterRoot != null)
+            waterRoot.SetActive(false);
 
         currentLOD = -1;
     }
@@ -214,13 +164,10 @@ public class ChunkRuntime
             stats.Terrain.AddMesh(terrainMesh);
         }
 
-        Mesh lakeMesh = lakeMeshFilter != null ? lakeMeshFilter.sharedMesh : null;
-        if (lakeRoot != null && lakeRoot.activeSelf && lakeMesh != null)
-            stats.Lake.AddMesh(lakeMesh);
+        Mesh waterMesh = waterMeshFilter != null ? waterMeshFilter.sharedMesh : null;
+        if (waterRoot != null && waterRoot.activeSelf && waterMesh != null)
+            stats.Water.AddMesh(waterMesh);
 
-        Mesh riverMesh = riverMeshFilter != null ? riverMeshFilter.sharedMesh : null;
-        if (riverRoot != null && riverRoot.activeSelf && riverMesh != null)
-            stats.River.AddMesh(riverMesh);
 
     }
 
@@ -234,11 +181,8 @@ public class ChunkRuntime
         if (terrainMeshRenderer != null)
             terrainMeshRenderer.enabled = visible;
 
-        if (lakeMeshRenderer != null)
-            lakeMeshRenderer.enabled = visible;
-
-        if (riverMeshRenderer != null)
-            riverMeshRenderer.enabled = visible;
+        if (waterMeshRenderer != null)
+            waterMeshRenderer.enabled = visible;
 
     }
 
@@ -291,14 +235,11 @@ public class ChunkRuntime
             root = null;
         }
 
-        lakeRoot = null;
-        riverRoot = null;
+        waterRoot = null;
         terrainMeshFilter = null;
         terrainMeshRenderer = null;
-        lakeMeshFilter = null;
-        lakeMeshRenderer = null;
-        riverMeshFilter = null;
-        riverMeshRenderer = null;
+        waterMeshFilter = null;
+        waterMeshRenderer = null;
         terrainMeshCollider = null;
         chunkRecord = null;
         currentLOD = -1;

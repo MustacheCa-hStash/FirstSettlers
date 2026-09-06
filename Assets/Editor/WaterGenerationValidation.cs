@@ -64,7 +64,8 @@ public static class WaterGenerationValidation
                 {
                     BiomeType helperBiome = BiomeClassifier.Classify(heights[x, z], moisture[x, z], temperature[x, z], slopes[x, z], 0f, masks[x, z], level);
                     Require(biomes[x, z] == helperBiome, $"Biome helper/job mismatch at {x},{z}: height={heights[x, z]:R}, level={level:R}, helper={helperBiome}, job={biomes[x, z]}.");
-                    Require(states[x, z] == WaterStateClassifier.Classify(heights[x, z], masks[x, z], level), "Water helper/job mismatch.");
+                    WaterState helperState = WaterStateClassifier.Classify(heights[x, z], masks[x, z], level);
+                    Require(states[x, z] == helperState, $"Water helper/job mismatch at {x},{z}: height={heights[x, z]:R}, level={level:R}, helper={helperState}, job={states[x, z]}.");
                     bool submerged = heights[x, z] <= level;
                     Require(biomes[x, z] != BiomeType.Beach, "Beach biome is still generated.");
                     Require((biomes[x, z] == BiomeType.Water) == submerged, "Water biome does not match the plane.");
@@ -82,8 +83,7 @@ public static class WaterGenerationValidation
 
             foreach (int step in new[] { 1, 2, 4, 8, 16 })
             {
-                ValidatePlane(LakeMeshGenerator.GenerateLakeMesh(heights, states, masks, 200f, step, 0.3f, surfaceY), surfaceY);
-                ValidatePlane(RiverMeshGenerator.GenerateRiverMesh(heights, states, masks, 200f, step, 0.3f, surfaceY), surfaceY);
+                ValidatePlane(WaterMeshGenerator.GenerateWaterMesh(states, step, 0.3f, surfaceY), surfaceY);
             }
 
             // A steep shoreline exercises the interpolation exclusion independently of the beach band.

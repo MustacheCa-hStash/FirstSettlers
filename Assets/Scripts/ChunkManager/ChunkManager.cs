@@ -1443,7 +1443,7 @@ public class ChunkManager
             return;
 
         runtime.SetControlMaps(record.FarTerrainControlMapData);
-        runtime.SetMeshes(terrainMesh, null, null, FarTerrainLOD);
+        runtime.SetMeshes(terrainMesh, null, FarTerrainLOD);
     }
 
     private void TryApplyFarTerrainTile(FarTerrainTileRecord record, FarTerrainTileRuntime runtime)
@@ -1543,14 +1543,12 @@ public class ChunkManager
 
         if (!runtime.IsShowingLOD(lod))
         {
-            Mesh lakeMesh = null;
-            Mesh riverMesh = null;
+            Mesh waterMesh = null;
 
-            record.TryGetLODLakeMesh(lod, out lakeMesh);
-            record.TryGetLODRiverMesh(lod, out riverMesh);
+            record.TryGetLODWaterMesh(lod, out waterMesh);
 
             runtime.SetControlMaps(record.ControlMapData);
-            runtime.SetMeshes(terrainMesh, lakeMesh, riverMesh, lod);
+            runtime.SetMeshes(terrainMesh, waterMesh, lod);
         }
     }
 
@@ -1642,19 +1640,14 @@ public class ChunkManager
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainLODTerrainMeshCreate, stageStart);
 
                     stageStart = TerrainGenerationProfiler.GetTimestamp();
-                    Mesh lakeMesh = meshResult.LakeMeshData.CreateMesh();
-                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainLakeMeshCreate, stageStart);
-
-                    stageStart = TerrainGenerationProfiler.GetTimestamp();
-                    Mesh riverMesh = meshResult.RiverMeshData.CreateMesh();
-                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainRiverMeshCreate, stageStart);
+                    Mesh waterMesh = meshResult.WaterMeshData.CreateMesh();
+                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainWaterMeshCreate, stageStart);
 
                     bool completed = record.TryCompleteMeshRequest(
                         meshResult.LOD,
                         meshResult.RequestVersion,
                         terrainMesh,
-                        lakeMesh,
-                        riverMesh
+                        waterMesh
                     );
 
                     if (completed)

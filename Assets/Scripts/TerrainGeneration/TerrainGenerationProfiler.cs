@@ -23,8 +23,7 @@ public enum TerrainGenerationProfileStage
     FarTerrainTotal,
 
     TerrainMeshBuild,
-    LakeMeshBuild,
-    RiverMeshBuild,
+    WaterMeshBuild,
     LODMeshTotal,
     ColliderMeshBuild,
 
@@ -32,8 +31,7 @@ public enum TerrainGenerationProfileStage
     MainFarControlMapTextureCreate,
     MainFarTerrainMeshCreate,
     MainLODTerrainMeshCreate,
-    MainLakeMeshCreate,
-    MainRiverMeshCreate,
+    MainWaterMeshCreate,
     MainColliderMeshCreate,
     MainProcessCompletedRequestsTotal,
 
@@ -114,8 +112,7 @@ public static class TerrainGenerationProfiler
         "far terrain total",
 
         "terrain mesh build",
-        "lake mesh build",
-        "river mesh build",
+        "water mesh build",
         "lod mesh total",
         "collider mesh build",
 
@@ -123,8 +120,7 @@ public static class TerrainGenerationProfiler
         "main far control textures",
         "main far mesh create",
         "main lod terrain mesh create",
-        "main lake mesh create",
-        "main river mesh create",
+        "main water mesh create",
         "main collider mesh create",
         "main completed-request processing",
 
