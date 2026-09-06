@@ -3,7 +3,6 @@ using UnityEngine;
 public static class SurfaceTypeClassifier
 {
     private const float RiverBankThreshold = TerrainWaterSettings.RiverBankThreshold;
-    private const float RiverCoreThreshold = TerrainWaterSettings.RiverCoreThreshold;
 
     private const float CliffSlopeThreshold = 0.6f;
     private const float RockSlopeThreshold = 0.42f;
@@ -16,14 +15,11 @@ public static class SurfaceTypeClassifier
         if (slope >= CliffSlopeThreshold)
             return SurfaceType.Cliff;
 
-        if (height <= waterLevel + TerrainWaterSettings.BeachBand)
+        if (height <= waterLevel + TerrainWaterSettings.ShoreBand)
             return SurfaceType.Sand;
 
         if (biome == BiomeType.Rock)
             return SurfaceType.Rock;
-
-        if (riverMask >= RiverCoreThreshold)
-            return SurfaceType.Riverbed;
 
         if (riverMask >= RiverBankThreshold)
         {
@@ -36,6 +32,8 @@ public static class SurfaceTypeClassifier
         switch (biome)
         {
             case BiomeType.Beach:
+                return SurfaceType.Sand;
+
             case BiomeType.Desert:
                 return SurfaceType.Sand;
 

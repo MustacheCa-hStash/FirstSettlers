@@ -1,10 +1,12 @@
 public readonly struct TerrainWaterSettings
 {
     public const float DefaultWaterLevel = 0.24f;
-    public const float BeachBand = 0.02f;
-    public const float WetBand = 0.02f;
+    public const float ShoreBand = 0.01f;
+    public const float WetBand = ShoreBand;
     public const float ShallowDepth = 0.015f;
-    public const float RiverBankThreshold = 0.60f;
+    public const float RiverCarveStart = 0.60f;
+    // The typical shoreline is near mask 0.82; halfway from the old 0.60 bank is 0.71.
+    public const float RiverBankThreshold = 0.71f;
     public const float RiverCoreThreshold = 0.75f;
     public const float RiverShoulderHeight = 0.04f;
     public const float RiverBedDepth = 0.03f;

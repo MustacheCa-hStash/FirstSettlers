@@ -903,9 +903,6 @@ public static class FarTerrainGenerator
         if (height <= waterLevel)
             return BiomeType.Water;
 
-        if (height < waterLevel + TerrainWaterSettings.BeachBand)
-            return BiomeType.Beach;
-
         if (mountainMask > 0.46f)
         {
             if (height > 5.5f && slope < 0.12f)

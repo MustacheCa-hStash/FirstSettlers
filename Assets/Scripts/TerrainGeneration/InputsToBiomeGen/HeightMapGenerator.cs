@@ -379,7 +379,7 @@ public static class HeightMapGenerator
         float shoulder = waterLevel + TerrainWaterSettings.RiverShoulderHeight;
         float basinBlend = math.smoothstep(0f, 1f, basinInfluence);
         float basinHeight = math.lerp(originalHeight, math.min(originalHeight, shoulder), basinBlend);
-        float channelBlend = math.smoothstep(TerrainWaterSettings.RiverBankThreshold, 1f, riverMask);
+        float channelBlend = math.smoothstep(TerrainWaterSettings.RiverCarveStart, 1f, riverMask);
         float bed = waterLevel - TerrainWaterSettings.RiverBedDepth;
         return math.lerp(basinHeight, math.min(basinHeight, bed), channelBlend);
     }

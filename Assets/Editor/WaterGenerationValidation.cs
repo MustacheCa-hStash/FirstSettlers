@@ -33,6 +33,10 @@ public static class WaterGenerationValidation
         {
             TerrainWaterSettings settings = new TerrainWaterSettings(surfaceY, 200f, 0.3f);
             float level = settings.WaterLevel;
+            Require(SurfaceTypeClassifier.Classify(level + 0.005f, 0f, 0f, BiomeType.Forest, level) == SurfaceType.Sand, "Lake shore is not sand.");
+            Require(SurfaceTypeClassifier.Classify(level + 0.015f, 0f, 0f, BiomeType.Forest, level) == SurfaceType.Grass, "Old outer lake shore still excludes grass.");
+            Require(SurfaceTypeClassifier.Classify(level + 0.04f, 0f, 0.65f, BiomeType.Forest, level) == SurfaceType.Grass, "Old outer river bank still excludes grass.");
+            Require(SurfaceTypeClassifier.Classify(level + 0.025f, 0f, 0.73f, BiomeType.Forest, level) == SurfaceType.Mud, "River shore is not mud.");
             float[,] heights = new float[size + 3, size + 3];
             float[,] masks = new float[size + 3, size + 3];
             float[,] slopes = new float[size + 3, size + 3];
@@ -62,6 +66,7 @@ public static class WaterGenerationValidation
                     Require(biomes[x, z] == helperBiome, $"Biome helper/job mismatch at {x},{z}: height={heights[x, z]:R}, level={level:R}, helper={helperBiome}, job={biomes[x, z]}.");
                     Require(states[x, z] == WaterStateClassifier.Classify(heights[x, z], masks[x, z], level), "Water helper/job mismatch.");
                     bool submerged = heights[x, z] <= level;
+                    Require(biomes[x, z] != BiomeType.Beach, "Beach biome is still generated.");
                     Require((biomes[x, z] == BiomeType.Water) == submerged, "Water biome does not match the plane.");
                     Require((states[x, z] == WaterState.Shallow || states[x, z] == WaterState.Deep) == submerged, "Water state does not match the plane.");
                     if (submerged)

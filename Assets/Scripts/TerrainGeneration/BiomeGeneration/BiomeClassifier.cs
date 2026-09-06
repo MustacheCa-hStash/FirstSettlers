@@ -20,13 +20,9 @@ public static class BiomeClassifier
     float slope, float mountainMask, float riverMask, float waterLevel)
     {
         slope *= slopeScale;
-        float beachLevel = waterLevel + TerrainWaterSettings.BeachBand;
 
         if (height <= waterLevel)
             return BiomeType.Water;
-
-        if (height < beachLevel)
-            return BiomeType.Beach;
 
         bool moderateMountain = mountainMask > 0.30f;
         bool strongMountain = mountainMask > 0.45f;
@@ -94,7 +90,7 @@ public static class BiomeClassifier
         if (moisture > WetMoisture)
             return BiomeType.Forest;
 
-        bool steepGrasslandSlope = slope > 0.03f && height > beachLevel + 0.08f;
+        bool steepGrasslandSlope = slope > 0.03f && height > waterLevel + 0.10f;
 
         if (steepGrasslandSlope)
             return BiomeType.Rock;

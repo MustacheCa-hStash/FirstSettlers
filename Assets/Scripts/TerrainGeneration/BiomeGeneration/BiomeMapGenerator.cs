@@ -132,7 +132,6 @@ public static class BiomeMapGenerator
             float riverMask,
             float waterLevel)
         {
-            float beachLevel = waterLevel + TerrainWaterSettings.BeachBand;
             const float rockLevel = 0.8f;
             const float coldTemp = 0.30f;
             const float hotTemp = 0.65f;
@@ -141,9 +140,6 @@ public static class BiomeMapGenerator
 
             if (terrainHeight <= waterLevel)
                 return BiomeType.Water;
-
-            if (terrainHeight < beachLevel)
-                return BiomeType.Beach;
 
             bool moderateMountain = mountainMask > 0.30f;
             bool strongMountain = mountainMask > 0.45f;
@@ -199,7 +195,7 @@ public static class BiomeMapGenerator
             if (moisture > wetMoisture)
                 return BiomeType.Forest;
 
-            bool steepGrasslandSlope = slope > 0.03f && terrainHeight > beachLevel + 0.08f;
+            bool steepGrasslandSlope = slope > 0.03f && terrainHeight > waterLevel + 0.10f;
             return steepGrasslandSlope ? BiomeType.Rock : BiomeType.Grassland;
         }
 
