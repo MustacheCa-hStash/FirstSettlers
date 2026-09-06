@@ -10,6 +10,15 @@ Shader "Custom/StylizedTerrainURP"
         _SandColor("Sand Color", Color) = (0.80, 0.75, 0.55, 1)
         _MudColor("Mud Color", Color) = (0.42, 0.32, 0.22, 1)
         _RockColor("Rock Color", Color) = (0.45, 0.45, 0.45, 1)
+        [Toggle(_ROCK_DETAIL)] _RockDetail("Enable Rock / Cliff Detail", Float) = 0
+        _RockAlbedo("Rock / Cliff Albedo", 2D) = "white" {}
+        _RockNormal("Rock / Cliff Normal", 2D) = "bump" {}
+        _RockTiling("Rock / Cliff Tiling (Repeats Per World Unit)", Float) = 0.12
+        _RockDetailStrength("Rock / Cliff Albedo Strength", Range(0, 1)) = 0.5
+        _RockNormalStrength("Rock Normal Strength", Range(0, 2)) = 0.45
+        _CliffNormalStrength("Cliff Normal Strength", Range(0, 2)) = 0.65
+        _RockDetailFadeStart("Rock Detail Fade Start", Float) = 100
+        _RockDetailFadeEnd("Rock Detail Fade End", Float) = 450
         _SnowColor("Snow Base Color", Color) = (0.92, 0.94, 0.98, 1)
         _CliffColor("Cliff Color", Color) = (0.30, 0.30, 0.30, 1)
         _RiverbedColor("Riverbed Color", Color) = (0.35, 0.30, 0.24, 1)
@@ -86,6 +95,7 @@ Shader "Custom/StylizedTerrainURP"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma shader_feature_local_fragment _ROCK_DETAIL
             #pragma multi_compile_fog
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
@@ -132,6 +142,11 @@ Shader "Custom/StylizedTerrainURP"
             TEXTURE2D(_SnowNormal);
             SAMPLER(sampler_SnowNormal);
 
+            TEXTURE2D(_RockAlbedo);
+            SAMPLER(sampler_RockAlbedo);
+            TEXTURE2D(_RockNormal);
+            SAMPLER(sampler_RockNormal);
+
             struct Attributes
             {
                 float4 positionOS : POSITION;
@@ -155,6 +170,13 @@ Shader "Custom/StylizedTerrainURP"
                 half4 _SandColor;
                 half4 _MudColor;
                 half4 _RockColor;
+                float _RockDetail;
+                float _RockTiling;
+                float _RockDetailStrength;
+                float _RockNormalStrength;
+                float _CliffNormalStrength;
+                float _RockDetailFadeStart;
+                float _RockDetailFadeEnd;
                 half4 _SnowColor;
                 half4 _CliffColor;
                 half4 _RiverbedColor;
@@ -312,6 +334,31 @@ Shader "Custom/StylizedTerrainURP"
                 return normalize(sampleX * blend.x + sampleY * blend.y + sampleZ * blend.z);
             }
 
+            void SampleRockDetail(float3 positionWS, float3 baseNormalWS, float strength,
+                out half3 albedo, out float3 detailNormalWS)
+            {
+                float3 blend = pow(abs(baseNormalWS), 4.0);
+                blend /= max(dot(blend, float3(1, 1, 1)), 1e-5);
+                float3 axisSign = step(0.0, baseNormalWS) * 2.0 - 1.0;
+                float3 p = positionWS * max(_RockTiling, 0.0001);
+                float2 uvX = p.yz * float2(axisSign.x, 1);
+                float2 uvY = p.zx * float2(axisSign.y, 1);
+                float2 uvZ = p.xy * float2(axisSign.z, 1);
+                albedo = SAMPLE_TEXTURE2D(_RockAlbedo, sampler_RockAlbedo, uvX).rgb * blend.x
+                       + SAMPLE_TEXTURE2D(_RockAlbedo, sampler_RockAlbedo, uvY).rgb * blend.y
+                       + SAMPLE_TEXTURE2D(_RockAlbedo, sampler_RockAlbedo, uvZ).rgb * blend.z;
+
+                float3 nx = UnpackNormal(SAMPLE_TEXTURE2D(_RockNormal, sampler_RockNormal, uvX));
+                float3 ny = UnpackNormal(SAMPLE_TEXTURE2D(_RockNormal, sampler_RockNormal, uvY));
+                float3 nz = UnpackNormal(SAMPLE_TEXTURE2D(_RockNormal, sampler_RockNormal, uvZ));
+                // Transform each projection's slopes into world space; flat maps preserve the mesh normal.
+                float3 perturbation = float3(0, nx.x * axisSign.x, nx.y) * blend.x
+                                    + float3(ny.y, 0, ny.x * axisSign.y) * blend.y
+                                    + float3(nz.x * axisSign.z, nz.y, 0) * blend.z;
+                perturbation -= baseNormalWS * dot(perturbation, baseNormalWS);
+                detailNormalWS = normalize(baseNormalWS + perturbation * strength);
+            }
+
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
@@ -383,6 +430,22 @@ Shader "Custom/StylizedTerrainURP"
                 baseColor += _RockColor.rgb * rockWeight;
                 baseColor += _CliffColor.rgb * cliffWeight;
                 baseColor += _RiverbedColor.rgb * riverbedWeight;
+
+                #if defined(_ROCK_DETAIL)
+                float rockSurfaceWeight = rockWeight + cliffWeight;
+                float rockFade = 1.0 - GetDistanceBlend(distanceToCamera, _RockDetailFadeStart, _RockDetailFadeEnd);
+                if (rockSurfaceWeight > 0.001 && rockFade > 0.001)
+                {
+                    float normalStrength = (_RockNormalStrength * rockWeight + _CliffNormalStrength * cliffWeight)
+                                         / max(rockSurfaceWeight, 0.001);
+                    half3 rockAlbedo;
+                    float3 rockNormalWS;
+                    SampleRockDetail(IN.positionWS, baseNormalWS, normalStrength * rockFade, rockAlbedo, rockNormalWS);
+                    half3 rockTint = _RockColor.rgb * rockWeight + _CliffColor.rgb * cliffWeight;
+                    baseColor += rockTint * (rockAlbedo - 1.0) * _RockDetailStrength * rockFade;
+                    weightedNormal += (rockNormalWS - baseNormalWS) * rockSurfaceWeight;
+                }
+                #endif
 
                 if (grassWeight > 0.001h)
                 {

@@ -161,7 +161,8 @@ public static class WaterGenerationValidation
                     for (int z = 0; z <= chunkSize; z += 4)
                     {
                         float managed = HeightMapGenerator.SampleTerrainHeight(riverChunk.x * chunkSize + x, riverChunk.z * chunkSize + z, scale, context).Height;
-                        Require(Mathf.Abs(managed - near.HeightMap[x + 1, z + 1]) < 0.0002f, "Managed/native terrain mismatch.");
+                        // Mono and Burst round large-coordinate noise arithmetic differently (1.5 cm at scene scale).
+                        Require(Mathf.Abs(managed - near.HeightMap[x + 1, z + 1]) < 0.00025f, $"Managed/native terrain mismatch: seed={seed}, chunk={riverChunk.x},{riverChunk.z}, local={x},{z}, level={waterLevel:R}, managed={managed:R}, native={near.HeightMap[x + 1, z + 1]:R}.");
                     }
                     Require(near.HeightMap[chunkSize + 1, x + 1] == neighbor.HeightMap[1, x + 1], "Chunk-border height mismatch.");
                 }

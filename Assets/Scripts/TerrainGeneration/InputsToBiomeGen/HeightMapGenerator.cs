@@ -279,21 +279,11 @@ public static class HeightMapGenerator
 
         float mainMountainHeight = mountainTerrain * mountainWeight * 45.0f;
 
-        float ruggedSampleX = worldX / (sampleScale * 0.3f);
-        float ruggedSampleZ = worldZ / (sampleScale * 0.3f);
-
-        float ruggedRaw = SampleBasicFbm(
-            ruggedSampleX,
-            ruggedSampleZ,
-            0,
-            3,
-            0.5f,
-            2.0f,
-            mountainRuggedOffsets);
-
-        float ruggedNoise = math.max(0f, ruggedRaw);
-        float ruggedMask = math.smoothstep(0.25f, 0.8f, mountainTerrain);
-        float ruggedHeight = ruggedNoise * ruggedMask * mountainWeight * 2.0f;
+        float ruggedHeight = SampleMountainDetail(
+            new float2(worldX, worldZ), sampleScale, baseLand, mainMountainHeight, waterLevel,
+            new float2(mountainRuggedOffsets[0].x, mountainRuggedOffsets[0].y),
+            new float2(mountainRuggedOffsets[1].x, mountainRuggedOffsets[1].y),
+            new float2(mountainRuggedOffsets[2].x, mountainRuggedOffsets[2].y));
 
         float finalHeight = baseLand + mainMountainHeight + ruggedHeight;
         finalHeight = ApplyHeightPipeline(finalHeight);
@@ -345,21 +335,9 @@ public static class HeightMapGenerator
 
         float mainMountainHeight = mountainTerrain * mountainWeight * 45.0f;
 
-        float ruggedSampleX = worldX / (sampleScale * 0.3f);
-        float ruggedSampleZ = worldZ / (sampleScale * 0.3f);
-
-        float ruggedRaw = SampleBasicFbm(
-            ruggedSampleX,
-            ruggedSampleZ,
-            0,
-            3,
-            0.5f,
-            2.0f,
-            mountainRuggedOffsets);
-
-        float ruggedNoise = math.max(0f, ruggedRaw);
-        float ruggedMask = math.smoothstep(0.25f, 0.8f, mountainTerrain);
-        float ruggedHeight = ruggedNoise * ruggedMask * mountainWeight * 2.0f;
+        float ruggedHeight = SampleMountainDetail(
+            new float2(worldX, worldZ), sampleScale, baseLand, mainMountainHeight, waterLevel,
+            mountainRuggedOffsets[0], mountainRuggedOffsets[1], mountainRuggedOffsets[2]);
 
         float finalHeight = baseLand + mainMountainHeight + ruggedHeight;
         finalHeight = ApplyHeightPipeline(finalHeight);
@@ -371,6 +349,43 @@ public static class HeightMapGenerator
         finalHeight = CarveRiverBasin(finalHeight, basinInfluence * riverEligibility, carvedRiverMask, waterLevel);
 
         return new TerrainHeightSampleData(finalHeight, mountainMask, carvedRiverMask);
+    }
+
+    private static float SampleMountainDetail(
+        float2 worldPosition, float sampleScale, float baseLand, float mountainHeight, float waterLevel,
+        float2 offset0, float2 offset1, float2 offset2)
+    {
+        const float relativeRelief = 0.08f;
+        const float maxRelief = 1.5f;
+        // Detail starts only after the broad mountain signal has fully excluded rivers.
+        float foothillFade = math.smoothstep(0.03f, 0.10f, mountainHeight / 45f);
+        float dryClearance = math.max(0f, baseLand + mountainHeight - waterLevel - TerrainWaterSettings.RiverShoulderHeight);
+        float amplitude = math.min(math.min(mountainHeight * relativeRelief, maxRelief), dryClearance * 0.5f);
+        amplitude *= foothillFade * math.smoothstep(0f, 0.25f, dryClearance);
+        if (amplitude <= 0f)
+            return 0f;
+
+        // Only detail coordinates are warped; the mountain envelope and river masks are untouched.
+        float2 p = worldPosition / (sampleScale * 0.6f);
+        float2 warp = new float2(
+            noise.cnoise(p * 0.35f + offset0 * 0.01f),
+            noise.cnoise(p * 0.35f + offset1 * 0.01f));
+        p += warp * 0.45f;
+        float n0 = noise.cnoise(p + offset0 * 0.01f);
+        float n1 = noise.cnoise(p * 2f + offset1 * 0.01f);
+        float n2 = noise.cnoise(p * 4f + offset2 * 0.01f);
+        float ridges = (MountainRidge(n0) + 0.45f * MountainRidge(n1) + 0.2025f * MountainRidge(n2)) / 1.6525f;
+        // Broad, offset channels share the ridge field instead of requiring another noise stack.
+        float channels = 1f - math.smoothstep(0.08f, 0.38f, math.abs(n0 + 0.42f));
+        float detail = math.clamp((ridges - 0.5f) * 2f - channels * 0.35f, -1f, 1f);
+        return detail * amplitude;
+    }
+
+    private static float MountainRidge(float value)
+    {
+        // Round the absolute-value cusp so crests survive coarse collision/LOD sampling.
+        float ridge = math.saturate(1f - math.sqrt(value * value + 0.0064f));
+        return ridge * ridge;
     }
 
     private static float CarveRiverBasin(float originalHeight, float basinInfluence, float riverMask, float waterLevel)
