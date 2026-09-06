@@ -8,16 +8,14 @@ using UnityEngine;
 
 public static class LakeMeshGenerator
 {
-    private const float LakeWaterLevel = TerrainWaterSettings.WaterLevel;
-    private const float WaterSurfaceOffset = 0.02f;
-
     public static WaterMeshData GenerateLakeMesh(
         float[,] heightMap,
         WaterState[,] waterStateMap,
         float[,] riverMaskMap,
         float heightMultiplier,
         int stepIncrement,
-        float worldScale)
+        float worldScale,
+        float waterY)
     {
         int paddedWidth = heightMap.GetLength(0);
         int chunkSize = paddedWidth - 3;
@@ -25,7 +23,6 @@ public static class LakeMeshGenerator
 
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;
-        float waterY = LakeWaterLevel * heightMultiplier * worldScale + WaterSurfaceOffset;
         int blockCountPerAxis = WaterMeshJobUtility.GetBlockCountPerAxis(chunkSize, safeStepIncrement);
         int blockCount = blockCountPerAxis * blockCountPerAxis;
 
@@ -220,8 +217,7 @@ public static class LakeMeshGenerator
 
 public static class RiverMeshGenerator
 {
-    private const float WaterSurfaceOffset = 0.02f;
-    private const float RiverInclusionThreshold = 0.75f;
+    private const float RiverInclusionThreshold = TerrainWaterSettings.RiverCoreThreshold;
 
     public static WaterMeshData GenerateRiverMesh(
         float[,] heightMap,
@@ -229,7 +225,8 @@ public static class RiverMeshGenerator
         float[,] riverMaskMap,
         float heightMultiplier,
         int stepIncrement,
-        float worldScale)
+        float worldScale,
+        float waterY)
     {
         int paddedWidth = heightMap.GetLength(0);
         int chunkSize = paddedWidth - 3;
@@ -240,10 +237,9 @@ public static class RiverMeshGenerator
 
         if (safeStepIncrement == 1)
         {
-            return GenerateRiverMeshLOD0(heightMap, riverMaskMap, heightMultiplier, worldScale);
+            return GenerateRiverMeshLOD0(heightMap, riverMaskMap, heightMultiplier, worldScale, waterY);
         }
 
-        NativeArray<float> heightSamples = default;
         NativeArray<float> riverMaskSamples = default;
         NativeArray<byte> riverCellMask = default;
         NativeArray<float3> gridVertices = default;
@@ -255,8 +251,7 @@ public static class RiverMeshGenerator
 
         try
         {
-            heightSamples = WaterMeshJobUtility.CopyFloatMapToNative(heightMap, Allocator.TempJob, out _, out int mapHeight);
-            riverMaskSamples = WaterMeshJobUtility.CopyFloatMapToNative(riverMaskMap, Allocator.TempJob, out _, out _);
+            riverMaskSamples = WaterMeshJobUtility.CopyFloatMapToNative(riverMaskMap, Allocator.TempJob, out _, out int mapHeight);
             riverCellMask =
                 new NativeArray<byte>(chunkSize * chunkSize, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 
@@ -277,14 +272,11 @@ public static class RiverMeshGenerator
 
             RiverGridBuildJob gridBuildJob = new RiverGridBuildJob
             {
-                heightMap = heightSamples,
-                riverMaskMap = riverMaskSamples,
-                mapHeight = mapHeight,
                 chunkSize = chunkSize,
                 gridResolution = gridResolution,
                 topLeftX = topLeftX,
                 bottomLeftZ = bottomLeftZ,
-                heightMultiplier = heightMultiplier,
+                waterY = waterY,
                 worldScale = worldScale,
                 vertices = gridVertices,
                 uvs = gridUvs
@@ -325,8 +317,6 @@ public static class RiverMeshGenerator
         }
         finally
         {
-            if (heightSamples.IsCreated)
-                heightSamples.Dispose();
             if (riverMaskSamples.IsCreated)
                 riverMaskSamples.Dispose();
             if (riverCellMask.IsCreated)
@@ -470,7 +460,8 @@ public static class RiverMeshGenerator
         float[,] heightMap,
         float[,] riverMaskMap,
         float heightMultiplier,
-        float worldScale)
+        float worldScale,
+        float waterY)
     {
         int paddedWidth = heightMap.GetLength(0);
         int chunkSize = paddedWidth - 3;
@@ -478,7 +469,6 @@ public static class RiverMeshGenerator
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;
 
-        NativeArray<float> heightSamples = default;
         NativeArray<float> riverMaskSamples = default;
         NativeArray<byte> riverCellMask = default;
         NativeArray<int> compactCellIndices = default;
@@ -488,8 +478,7 @@ public static class RiverMeshGenerator
 
         try
         {
-            heightSamples = WaterMeshJobUtility.CopyFloatMapToNative(heightMap, Allocator.TempJob, out _, out int mapHeight);
-            riverMaskSamples = WaterMeshJobUtility.CopyFloatMapToNative(riverMaskMap, Allocator.TempJob, out _, out _);
+            riverMaskSamples = WaterMeshJobUtility.CopyFloatMapToNative(riverMaskMap, Allocator.TempJob, out _, out int mapHeight);
             riverCellMask =
                 new NativeArray<byte>(chunkSize * chunkSize, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 
@@ -521,13 +510,10 @@ public static class RiverMeshGenerator
             RiverLOD0MeshBuildJob meshBuildJob = new RiverLOD0MeshBuildJob
             {
                 renderableCellIndices = compactCellIndices,
-                heightMap = heightSamples,
-                riverMaskMap = riverMaskSamples,
-                mapHeight = mapHeight,
                 chunkSize = chunkSize,
                 topLeftX = topLeftX,
                 bottomLeftZ = bottomLeftZ,
-                heightMultiplier = heightMultiplier,
+                waterY = waterY,
                 worldScale = worldScale,
                 vertices = vertices,
                 uvs = uvs,
@@ -540,8 +526,6 @@ public static class RiverMeshGenerator
         }
         finally
         {
-            if (heightSamples.IsCreated)
-                heightSamples.Dispose();
             if (riverMaskSamples.IsCreated)
                 riverMaskSamples.Dispose();
             if (riverCellMask.IsCreated)
@@ -636,14 +620,11 @@ public static class RiverMeshGenerator
     [BurstCompile]
     private struct RiverGridBuildJob : IJobParallelFor
     {
-        [ReadOnly] public NativeArray<float> heightMap;
-        [ReadOnly] public NativeArray<float> riverMaskMap;
-        public int mapHeight;
         public int chunkSize;
         public int gridResolution;
         public float topLeftX;
         public float bottomLeftZ;
-        public float heightMultiplier;
+        public float waterY;
         public float worldScale;
 
         [WriteOnly] public NativeArray<float3> vertices;
@@ -655,15 +636,12 @@ public static class RiverMeshGenerator
             int z = index / gridResolution;
 
             vertices[index] = BuildRiverVertex(
-                heightMap,
-                riverMaskMap,
-                mapHeight,
                 topLeftX,
                 bottomLeftZ,
                 x,
                 z,
-                heightMultiplier,
-                worldScale);
+                worldScale,
+                waterY);
             uvs[index] = new float2(x / (float)chunkSize, z / (float)chunkSize);
         }
     }
@@ -672,13 +650,10 @@ public static class RiverMeshGenerator
     private struct RiverLOD0MeshBuildJob : IJobParallelFor
     {
         [ReadOnly] public NativeArray<int> renderableCellIndices;
-        [ReadOnly] public NativeArray<float> heightMap;
-        [ReadOnly] public NativeArray<float> riverMaskMap;
-        public int mapHeight;
         public int chunkSize;
         public float topLeftX;
         public float bottomLeftZ;
-        public float heightMultiplier;
+        public float waterY;
         public float worldScale;
 
         [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float3> vertices;
@@ -693,45 +668,33 @@ public static class RiverMeshGenerator
             int baseVertex = renderableIndex * 4;
 
             vertices[baseVertex] = BuildRiverVertex(
-                heightMap,
-                riverMaskMap,
-                mapHeight,
                 topLeftX,
                 bottomLeftZ,
                 x,
                 z,
-                heightMultiplier,
-                worldScale);
+                worldScale,
+                waterY);
             vertices[baseVertex + 1] = BuildRiverVertex(
-                heightMap,
-                riverMaskMap,
-                mapHeight,
                 topLeftX,
                 bottomLeftZ,
                 x + 1,
                 z,
-                heightMultiplier,
-                worldScale);
+                worldScale,
+                waterY);
             vertices[baseVertex + 2] = BuildRiverVertex(
-                heightMap,
-                riverMaskMap,
-                mapHeight,
                 topLeftX,
                 bottomLeftZ,
                 x,
                 z + 1,
-                heightMultiplier,
-                worldScale);
+                worldScale,
+                waterY);
             vertices[baseVertex + 3] = BuildRiverVertex(
-                heightMap,
-                riverMaskMap,
-                mapHeight,
                 topLeftX,
                 bottomLeftZ,
                 x + 1,
                 z + 1,
-                heightMultiplier,
-                worldScale);
+                worldScale,
+                waterY);
 
             uvs[baseVertex] = new float2(x / (float)chunkSize, z / (float)chunkSize);
             uvs[baseVertex + 1] = new float2((x + 1) / (float)chunkSize, z / (float)chunkSize);
@@ -784,38 +747,14 @@ public static class RiverMeshGenerator
     }
 
     private static float3 BuildRiverVertex(
-        NativeArray<float> heightMap,
-        NativeArray<float> riverMaskMap,
-        int mapHeight,
         float topLeftX,
         float bottomLeftZ,
         int x,
         int z,
-        float heightMultiplier,
-        float worldScale)
+        float worldScale,
+        float waterY)
     {
-        const float riverCoreExtraDepth = 0.5f;
-
-        int mapIndex = (x + 1) * mapHeight + z + 1;
-        float terrainHeight = heightMap[mapIndex];
-        float riverMask = riverMaskMap[mapIndex];
-        float riverCoreMask = InverseLerp(RiverInclusionThreshold, 1.0f, riverMask);
-        riverCoreMask = SmoothStep(0f, 1f, riverCoreMask);
-        float restoredWaterHeight = terrainHeight + riverCoreMask * riverCoreExtraDepth;
-        float h = restoredWaterHeight * heightMultiplier * worldScale + WaterSurfaceOffset;
-
-        return new float3((topLeftX + x) * worldScale, h, (bottomLeftZ + z) * worldScale);
-    }
-
-    private static float InverseLerp(float a, float b, float value)
-    {
-        return math.clamp((value - a) / (b - a), 0f, 1f);
-    }
-
-    private static float SmoothStep(float edge0, float edge1, float value)
-    {
-        float t = InverseLerp(edge0, edge1, value);
-        return t * t * (3f - 2f * t);
+        return new float3((topLeftX + x) * worldScale, waterY, (bottomLeftZ + z) * worldScale);
     }
 }
 

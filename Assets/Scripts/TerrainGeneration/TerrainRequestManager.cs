@@ -29,6 +29,7 @@ public class TerrainRequestManager
     private readonly int maxActiveFarTerrainJobs;
     private readonly int maxActiveMeshJobs;
     private readonly int maxActiveColliderJobs;
+    private readonly TerrainWaterSettings waterSettings;
 
     public int CompletedTerrainDataResultCount
     {
@@ -75,8 +76,10 @@ public class TerrainRequestManager
         int maxActiveTerrainDataJobs,
         int maxActiveFarTerrainJobs,
         int maxActiveMeshJobs,
-        int maxActiveColliderJobs)
+        int maxActiveColliderJobs,
+        TerrainWaterSettings waterSettings)
     {
+        this.waterSettings = waterSettings;
         this.maxActiveTerrainDataJobs = Mathf.Max(1, maxActiveTerrainDataJobs);
         this.maxActiveFarTerrainJobs = Mathf.Max(1, maxActiveFarTerrainJobs);
         this.maxActiveMeshJobs = Mathf.Max(1, maxActiveMeshJobs);
@@ -111,7 +114,8 @@ public class TerrainRequestManager
                     chunkSize,
                     seed,
                     sampleScale,
-                    chunkCoord
+                    chunkCoord,
+                    waterSettings.WaterLevel
                 );
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainHeightField, stageStart);
 
@@ -134,16 +138,16 @@ public class TerrainRequestManager
 
                 stageStart = TerrainGenerationProfiler.GetTimestamp();
                 BiomeType[,] biomeMap = BiomeMapGenerator.GenerateBiomeMap(finalHeightMap, moistureMap, 
-                    temperatureMap, slopeMap, mountainMaskMap, riverMaskMap);
+                    temperatureMap, slopeMap, mountainMaskMap, riverMaskMap, waterSettings.WaterLevel);
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainBiomeMap, stageStart);
 
                 stageStart = TerrainGenerationProfiler.GetTimestamp();
                 SurfaceType[,] surfaceTypeMap = SurfaceMapGenerator.GenerateSurfaceTypeMap(finalHeightMap, slopeMap, 
-                    riverMaskMap, biomeMap);
+                    riverMaskMap, biomeMap, waterSettings.WaterLevel);
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainSurfaceMap, stageStart);
 
                 stageStart = TerrainGenerationProfiler.GetTimestamp();
-                WaterState[,] waterStateMap = WaterStateMapGenerator.GenerateWaterStateMap(finalHeightMap, riverMaskMap);
+                WaterState[,] waterStateMap = WaterStateMapGenerator.GenerateWaterStateMap(finalHeightMap, riverMaskMap, waterSettings.WaterLevel);
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainWaterStateMap, stageStart);
 
                 stageStart = TerrainGenerationProfiler.GetTimestamp();
@@ -237,6 +241,7 @@ public class TerrainRequestManager
                     heightGridResolution,
                     controlMapResolution,
                     skirtDepth,
+                    waterSettings.WaterLevel,
                     isMacroTile);
 
                 lock (farTerrainResultsLock)
@@ -320,7 +325,8 @@ public class TerrainRequestManager
                 workItem.RiverMaskMap,
                 workItem.MeshHeightMultiplier,
                 workItem.StepIncrement,
-                workItem.WorldScale);
+                workItem.WorldScale,
+                workItem.Manager.waterSettings.SurfaceY);
             TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.LakeMeshBuild, stageStart);
 
             stageStart = TerrainGenerationProfiler.GetTimestamp();
@@ -330,7 +336,8 @@ public class TerrainRequestManager
                 workItem.RiverMaskMap,
                 workItem.MeshHeightMultiplier,
                 workItem.StepIncrement,
-                workItem.WorldScale);
+                workItem.WorldScale,
+                workItem.Manager.waterSettings.SurfaceY);
             TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.RiverMeshBuild, stageStart);
 
             MeshRequestResult result = new MeshRequestResult(

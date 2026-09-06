@@ -5,7 +5,7 @@ using Unity.Jobs;
 public static class SurfaceMapGenerator
 {
     public static SurfaceType[,] GenerateSurfaceTypeMap(float[,] heightMap, float[,] slopeMap, float[,] riverMaskMap, 
-        BiomeType[,] biomeMap)
+        BiomeType[,] biomeMap, float waterLevel)
     {
         NativeArray<float> heights = default;
         NativeArray<float> slopes = default;
@@ -27,6 +27,9 @@ public static class SurfaceMapGenerator
 
             SurfaceMapJob job = new SurfaceMapJob
             {
+                width = width,
+                height = height,
+                waterLevel = waterLevel,
                 heights = heights,
                 slopes = slopes,
                 riverMasks = riverMasks,
@@ -107,6 +110,9 @@ public static class SurfaceMapGenerator
     [BurstCompile]
     private struct SurfaceMapJob : IJobParallelFor
     {
+        public int width;
+        public int height;
+        public float waterLevel;
         [ReadOnly] public NativeArray<float> heights;
         [ReadOnly] public NativeArray<float> slopes;
         [ReadOnly] public NativeArray<float> riverMasks;
@@ -116,50 +122,28 @@ public static class SurfaceMapGenerator
 
         public void Execute(int index)
         {
-            surfaces[index] = ClassifySurface(heights[index], slopes[index], riverMasks[index], biomes[index]);
-        }
+            SurfaceType surface = SurfaceTypeClassifier.Classify(heights[index], slopes[index], riverMasks[index], biomes[index], waterLevel);
+            surfaces[index] = surface;
+            if (surface != SurfaceType.Grass)
+                return;
 
-        private static SurfaceType ClassifySurface(float height, float slope, float riverMask, BiomeType biome)
-        {
-            const float oceanWaterLevel = TerrainWaterSettings.WaterLevel;
-            const float beachBand = TerrainWaterSettings.BeachLevel - TerrainWaterSettings.WaterLevel;
-            const float riverBankThreshold = 0.69f;
-            const float riverCoreThreshold = 0.72f;
-            const float cliffSlopeThreshold = 0.6f;
-            const float rockSlopeThreshold = 0.42f;
-
-            if (slope >= cliffSlopeThreshold)
-                return SurfaceType.Cliff;
-
-            if (height <= oceanWaterLevel + beachBand)
-                return SurfaceType.Sand;
-
-            if (biome == BiomeType.Rock)
-                return SurfaceType.Rock;
-
-            if (riverMask >= riverCoreThreshold)
-                return SurfaceType.Riverbed;
-
-            if (riverMask >= riverBankThreshold)
-                return slope >= rockSlopeThreshold ? SurfaceType.Rock : SurfaceType.Mud;
-
-            switch (biome)
+            // Placement rounds to a sample but interpolates height. Keep its surrounding cell dry too.
+            int x = index / height;
+            int z = index % height;
+            for (int dx = -1; dx <= 1; dx++)
             {
-                case BiomeType.Beach:
-                case BiomeType.Desert:
-                    return SurfaceType.Sand;
-                case BiomeType.Forest:
-                case BiomeType.Grassland:
-                    return SurfaceType.Grass;
-                case BiomeType.Rock:
-                    return SurfaceType.Rock;
-                case BiomeType.Snow:
-                    return SurfaceType.Snow;
-                case BiomeType.Water:
-                    return SurfaceType.Riverbed;
-                default:
-                    return SurfaceType.Grass;
+                for (int dz = -1; dz <= 1; dz++)
+                {
+                    int nx = x + dx;
+                    int nz = z + dz;
+                    if (nx >= 0 && nx < width && nz >= 0 && nz < height && heights[nx * height + nz] <= waterLevel)
+                    {
+                        surfaces[index] = SurfaceType.Mud;
+                        return;
+                    }
+                }
             }
         }
+
     }
 }

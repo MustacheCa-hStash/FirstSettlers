@@ -33,6 +33,9 @@ public class WorldManager : MonoBehaviour
     [SerializeField] float meshHeightMultiplier = 10f;
     [SerializeField] Material terrainMaterial;
     [SerializeField] Material waterMaterial;
+    [Header("Water")]
+    [Tooltip("Shared world-space surface Y for rivers and lakes. Applied when the world starts; restart Play Mode after changing. Raising this also expands lakes and moves shorelines.")]
+    [SerializeField] float globalWaterY = TerrainWaterSettings.DefaultWaterLevel * 10f;
     [Header("Terrain Lighting")]
     [SerializeField] bool terrainReceiveShadows = true;
     [Header("Terrain Generation Profiling")]
@@ -74,7 +77,7 @@ public class WorldManager : MonoBehaviour
             chunkSize, worldSeed, viewer, viewerCamera,
             chunkParent, foliageParent, grassSettings, flowerSettings, cloverSettings, dandelionSettings, treeSettings, sampleScale, worldScale, octaves, persistence,
             lacunarity, erosionStrength, meshHeightMultiplier, terrainMaterial, waterMaterial,
-            terrainReceiveShadows,
+            terrainReceiveShadows, new TerrainWaterSettings(globalWaterY, meshHeightMultiplier, worldScale),
             maxActiveTerrainDataJobs, maxActiveFarTerrainJobs, maxActiveMeshJobs,
             maxActiveColliderJobs, maxTerrainDataResultsAppliedPerFrame,
             maxFarTerrainResultsAppliedPerFrame, maxLODMeshResultsAppliedPerFrame,

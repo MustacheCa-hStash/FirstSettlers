@@ -2,21 +2,21 @@ using UnityEngine;
 
 public static class SurfaceTypeClassifier
 {
-    private const float OceanWaterLevel = TerrainWaterSettings.WaterLevel;
-    private const float BeachBand = TerrainWaterSettings.BeachLevel - TerrainWaterSettings.WaterLevel;
-
-    private const float RiverBankThreshold = 0.69f;
-    private const float RiverCoreThreshold = 0.72f;
+    private const float RiverBankThreshold = TerrainWaterSettings.RiverBankThreshold;
+    private const float RiverCoreThreshold = TerrainWaterSettings.RiverCoreThreshold;
 
     private const float CliffSlopeThreshold = 0.6f;
     private const float RockSlopeThreshold = 0.42f;
 
-    public static SurfaceType Classify(float height, float slope, float riverMask, BiomeType biome)
+    public static SurfaceType Classify(float height, float slope, float riverMask, BiomeType biome, float waterLevel)
     {
+        if (height <= waterLevel)
+            return SurfaceType.Riverbed;
+
         if (slope >= CliffSlopeThreshold)
             return SurfaceType.Cliff;
 
-        if (height <= OceanWaterLevel + BeachBand)
+        if (height <= waterLevel + TerrainWaterSettings.BeachBand)
             return SurfaceType.Sand;
 
         if (biome == BiomeType.Rock)

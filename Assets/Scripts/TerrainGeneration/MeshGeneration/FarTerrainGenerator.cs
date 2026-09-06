@@ -18,13 +18,14 @@ public static class FarTerrainGenerator
         int heightGridResolution,
         int controlMapResolution,
         float skirtDepth,
+        float waterLevel,
         bool isMacroTile = false)
     {
         long totalStart = TerrainGenerationProfiler.GetTimestamp();
         int safeHeightGridResolution = Mathf.Clamp(heightGridResolution, 2, chunkSize + 1);
         int safeControlMapResolution = Mathf.Clamp(controlMapResolution, 2, 128);
 
-        TerrainHeightSamplingContext samplingContext = HeightMapGenerator.CreateSamplingContext(seed);
+        TerrainHeightSamplingContext samplingContext = HeightMapGenerator.CreateSamplingContext(seed, waterLevel);
 
         long stageStart = TerrainGenerationProfiler.GetTimestamp();
         float[,] heightGrid = BuildHeightGrid(
@@ -42,7 +43,7 @@ public static class FarTerrainGenerator
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FarSlopeGrid, stageStart);
 
         stageStart = TerrainGenerationProfiler.GetTimestamp();
-        SurfaceType[,] meshSurfaceMap = BuildSurfaceMap(heightGrid, slopeGrid, mountainMaskGrid, riverMaskGrid);
+        SurfaceType[,] meshSurfaceMap = BuildSurfaceMap(heightGrid, slopeGrid, mountainMaskGrid, riverMaskGrid, waterLevel);
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FarSurfaceMap, stageStart);
 
         stageStart = TerrainGenerationProfiler.GetTimestamp();
@@ -61,7 +62,8 @@ public static class FarTerrainGenerator
             heightGrid,
             slopeGrid,
             mountainMaskGrid,
-            riverMaskGrid);
+            riverMaskGrid,
+            waterLevel);
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FarControlMapBuild, stageStart);
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FarTerrainTotal, totalStart);
 
@@ -108,6 +110,7 @@ public static class FarTerrainGenerator
                 chunkZ = chunkCoord.z,
                 sampleScale = sampleScale,
                 riverSeed = samplingContext.RiverSeed,
+                waterLevel = samplingContext.WaterLevel,
                 baseLandOffsets = baseLandOffsets,
                 mountainMaskOffsets = mountainMaskOffsets,
                 mountainTerrainOffsets = mountainTerrainOffsets,
@@ -187,7 +190,8 @@ public static class FarTerrainGenerator
         float[,] heightGrid,
         float[,] slopeGrid,
         float[,] mountainMaskGrid,
-        float[,] riverMaskGrid)
+        float[,] riverMaskGrid,
+        float waterLevel)
     {
         int resolution = heightGrid.GetLength(0);
         SurfaceType[,] surfaceMap = new SurfaceType[resolution, resolution];
@@ -208,6 +212,7 @@ public static class FarTerrainGenerator
 
             FarSurfaceMapJob job = new FarSurfaceMapJob
             {
+                waterLevel = waterLevel,
                 heightSamples = heightSamples,
                 slopeSamples = slopeSamples,
                 mountainMaskSamples = mountainMaskSamples,
@@ -419,7 +424,8 @@ public static class FarTerrainGenerator
         float[,] heightGrid,
         float[,] slopeGrid,
         float[,] mountainMaskGrid,
-        float[,] riverMaskGrid)
+        float[,] riverMaskGrid,
+        float waterLevel)
     {
         ControlMapPixelData controlMaps = new ControlMapPixelData(resolution, resolution, 3);
         int sourceResolution = heightGrid.GetLength(0);
@@ -445,6 +451,7 @@ public static class FarTerrainGenerator
 
             FarControlMapBuildJob job = new FarControlMapBuildJob
             {
+                waterLevel = waterLevel,
                 sourceResolution = sourceResolution,
                 controlMapResolution = resolution,
                 heightSamples = heightSamples,
@@ -578,6 +585,7 @@ public static class FarTerrainGenerator
         public int chunkZ;
         public float sampleScale;
         public int riverSeed;
+        public float waterLevel;
 
         [ReadOnly] public NativeArray<float2> baseLandOffsets;
         [ReadOnly] public NativeArray<float2> mountainMaskOffsets;
@@ -608,7 +616,7 @@ public static class FarTerrainGenerator
                 mountainMaskOffsets,
                 mountainTerrainOffsets,
                 mountainRuggedOffsets,
-                riverSeed);
+                riverSeed, waterLevel);
 
             heights[index] = sample.Height;
             mountainMasks[index] = sample.MountainMask;
@@ -646,6 +654,7 @@ public static class FarTerrainGenerator
     [BurstCompile]
     private struct FarSurfaceMapJob : IJobParallelFor
     {
+        public float waterLevel;
         [ReadOnly] public NativeArray<float> heightSamples;
         [ReadOnly] public NativeArray<float> slopeSamples;
         [ReadOnly] public NativeArray<float> mountainMaskSamples;
@@ -662,9 +671,9 @@ public static class FarTerrainGenerator
                 height,
                 slope,
                 mountainMaskSamples[index],
-                riverMask);
+                riverMask, waterLevel);
 
-            surfaces[index] = ClassifySurface(height, slope, riverMask, biome);
+            surfaces[index] = SurfaceTypeClassifier.Classify(height, slope, riverMask, biome, waterLevel);
         }
     }
 
@@ -774,6 +783,7 @@ public static class FarTerrainGenerator
     [BurstCompile]
     private struct FarControlMapBuildJob : IJobParallelFor
     {
+        public float waterLevel;
         public int sourceResolution;
         public int controlMapResolution;
 
@@ -798,8 +808,8 @@ public static class FarTerrainGenerator
             float mountainMask = SampleGrid(mountainMaskSamples, sourceResolution, tx, tz);
             float riverMask = SampleGrid(riverMaskSamples, sourceResolution, tx, tz);
 
-            BiomeType biome = ClassifyCrudeBiome(height, slope, mountainMask, riverMask);
-            SurfaceType surfaceType = ClassifySurface(height, slope, riverMask, biome);
+            BiomeType biome = ClassifyCrudeBiome(height, slope, mountainMask, riverMask, waterLevel);
+            SurfaceType surfaceType = SurfaceTypeClassifier.Classify(height, slope, riverMask, biome, waterLevel);
             Color32 surfaceColor = SurfaceTypeToControlColor(surfaceType);
 
             if (UsesFirstControlMap(surfaceType))
@@ -826,79 +836,6 @@ public static class FarTerrainGenerator
             float c = grid[x0 * resolution + z1];
             float d = grid[x1 * resolution + z1];
             return math.lerp(math.lerp(a, b, fx), math.lerp(c, d, fx), fz);
-        }
-
-        private static BiomeType ClassifyCrudeBiome(float height, float slope, float mountainMask, float riverMask)
-        {
-            const float waterLevel = TerrainWaterSettings.WaterLevel;
-            const float beachLevel = TerrainWaterSettings.BeachLevel;
-
-            if (height < waterLevel || riverMask >= 0.82f)
-                return BiomeType.Water;
-
-            if (height < beachLevel)
-                return BiomeType.Beach;
-
-            if (mountainMask > 0.46f)
-            {
-                if (height > 5.5f && slope < 0.12f)
-                    return BiomeType.Snow;
-
-                return BiomeType.Rock;
-            }
-
-            if (mountainMask > 0.32f || slope > 0.08f)
-                return BiomeType.Rock;
-
-            return BiomeType.Grassland;
-        }
-
-        private static SurfaceType ClassifySurface(float height, float slope, float riverMask, BiomeType biome)
-        {
-            const float oceanWaterLevel = TerrainWaterSettings.WaterLevel;
-            const float beachBand = TerrainWaterSettings.BeachLevel - TerrainWaterSettings.WaterLevel;
-            const float riverBankThreshold = 0.69f;
-            const float riverCoreThreshold = 0.72f;
-            const float cliffSlopeThreshold = 0.6f;
-            const float rockSlopeThreshold = 0.42f;
-
-            if (slope >= cliffSlopeThreshold)
-                return SurfaceType.Cliff;
-
-            if (height <= oceanWaterLevel + beachBand)
-                return SurfaceType.Sand;
-
-            if (biome == BiomeType.Rock)
-                return SurfaceType.Rock;
-
-            if (riverMask >= riverCoreThreshold)
-                return SurfaceType.Riverbed;
-
-            if (riverMask >= riverBankThreshold)
-            {
-                if (slope >= rockSlopeThreshold)
-                    return SurfaceType.Rock;
-
-                return SurfaceType.Mud;
-            }
-
-            switch (biome)
-            {
-                case BiomeType.Beach:
-                case BiomeType.Desert:
-                    return SurfaceType.Sand;
-                case BiomeType.Forest:
-                case BiomeType.Grassland:
-                    return SurfaceType.Grass;
-                case BiomeType.Rock:
-                    return SurfaceType.Rock;
-                case BiomeType.Snow:
-                    return SurfaceType.Snow;
-                case BiomeType.Water:
-                    return SurfaceType.Riverbed;
-                default:
-                    return SurfaceType.Grass;
-            }
         }
 
         private static bool UsesFirstControlMap(SurfaceType surfaceType)
@@ -961,12 +898,12 @@ public static class FarTerrainGenerator
         return new Vector3(-dx, 2f, -dz).normalized;
     }
 
-    private static BiomeType ClassifyCrudeBiome(float height, float slope, float mountainMask, float riverMask)
+    private static BiomeType ClassifyCrudeBiome(float height, float slope, float mountainMask, float riverMask, float waterLevel)
     {
-        if (height < TerrainWaterSettings.WaterLevel || riverMask >= 0.82f)
+        if (height <= waterLevel)
             return BiomeType.Water;
 
-        if (height < TerrainWaterSettings.BeachLevel)
+        if (height < waterLevel + TerrainWaterSettings.BeachBand)
             return BiomeType.Beach;
 
         if (mountainMask > 0.46f)
@@ -983,51 +920,4 @@ public static class FarTerrainGenerator
         return BiomeType.Grassland;
     }
 
-    private static SurfaceType ClassifySurface(float height, float slope, float riverMask, BiomeType biome)
-    {
-        const float oceanWaterLevel = TerrainWaterSettings.WaterLevel;
-        const float beachBand = TerrainWaterSettings.BeachLevel - TerrainWaterSettings.WaterLevel;
-        const float riverBankThreshold = 0.69f;
-        const float riverCoreThreshold = 0.72f;
-        const float cliffSlopeThreshold = 0.6f;
-        const float rockSlopeThreshold = 0.42f;
-
-        if (slope >= cliffSlopeThreshold)
-            return SurfaceType.Cliff;
-
-        if (height <= oceanWaterLevel + beachBand)
-            return SurfaceType.Sand;
-
-        if (biome == BiomeType.Rock)
-            return SurfaceType.Rock;
-
-        if (riverMask >= riverCoreThreshold)
-            return SurfaceType.Riverbed;
-
-        if (riverMask >= riverBankThreshold)
-        {
-            if (slope >= rockSlopeThreshold)
-                return SurfaceType.Rock;
-
-            return SurfaceType.Mud;
-        }
-
-        switch (biome)
-        {
-            case BiomeType.Beach:
-            case BiomeType.Desert:
-                return SurfaceType.Sand;
-            case BiomeType.Forest:
-            case BiomeType.Grassland:
-                return SurfaceType.Grass;
-            case BiomeType.Rock:
-                return SurfaceType.Rock;
-            case BiomeType.Snow:
-                return SurfaceType.Snow;
-            case BiomeType.Water:
-                return SurfaceType.Riverbed;
-            default:
-                return SurfaceType.Grass;
-        }
-    }
 }

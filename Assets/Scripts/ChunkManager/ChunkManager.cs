@@ -145,6 +145,7 @@ public class ChunkManager
         Material terrainMaterial,
         Material waterMaterial,
         bool terrainReceiveShadows,
+        TerrainWaterSettings waterSettings,
         int maxActiveTerrainDataJobs,
         int maxActiveFarTerrainJobs,
         int maxActiveMeshJobs,
@@ -232,7 +233,8 @@ public class ChunkManager
             this.maxActiveTerrainDataJobs,
             this.maxActiveFarTerrainJobs,
             this.maxActiveMeshJobs,
-            this.maxActiveColliderJobs);
+            this.maxActiveColliderJobs,
+            waterSettings);
         foliageManager = new FoliageManager(
             foliageParent,
             grassSettings,

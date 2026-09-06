@@ -6,7 +6,7 @@ using Unity.Mathematics;
 public static class BiomeMapGenerator
 {
     public static BiomeType[,] GenerateBiomeMap(float[,] heightMap, float[,] moistureMap, float[,] temperatureMap, 
-        float[,] slopeMap, float[,] mountainMaskMap, float[,] riverMaskMap)
+        float[,] slopeMap, float[,] mountainMaskMap, float[,] riverMaskMap, float waterLevel)
     {
         NativeArray<float> heights = default;
         NativeArray<float> moistures = default;
@@ -32,6 +32,7 @@ public static class BiomeMapGenerator
 
             BiomeMapJob job = new BiomeMapJob
             {
+                waterLevel = waterLevel,
                 heights = heights,
                 moistures = moistures,
                 temperatures = temperatures,
@@ -100,6 +101,7 @@ public static class BiomeMapGenerator
     [BurstCompile]
     private struct BiomeMapJob : IJobParallelFor
     {
+        public float waterLevel;
         [ReadOnly] public NativeArray<float> heights;
         [ReadOnly] public NativeArray<float> moistures;
         [ReadOnly] public NativeArray<float> temperatures;
@@ -118,7 +120,7 @@ public static class BiomeMapGenerator
             float mountainMask = mountainMasks[index];
             float riverMask = riverMasks[index];
 
-            biomes[index] = ClassifyBiome(terrainHeight, moisture, temperature, biomeSlope, mountainMask, riverMask);
+            biomes[index] = ClassifyBiome(terrainHeight, moisture, temperature, biomeSlope, mountainMask, riverMask, waterLevel);
         }
 
         private static BiomeType ClassifyBiome(
@@ -127,19 +129,17 @@ public static class BiomeMapGenerator
             float temperature,
             float slope,
             float mountainMask,
-            float riverMask)
+            float riverMask,
+            float waterLevel)
         {
-            const float waterLevel = TerrainWaterSettings.WaterLevel;
-            const float beachLevel = TerrainWaterSettings.BeachLevel;
+            float beachLevel = waterLevel + TerrainWaterSettings.BeachBand;
             const float rockLevel = 0.8f;
             const float coldTemp = 0.30f;
             const float hotTemp = 0.65f;
             const float dryMoisture = 0.35f;
             const float wetMoisture = 0.65f;
 
-            bool isRiver = riverMask > 0.22f && terrainHeight < waterLevel + 0.05f && slope < 0.55f;
-
-            if (terrainHeight < waterLevel || isRiver)
+            if (terrainHeight <= waterLevel)
                 return BiomeType.Water;
 
             if (terrainHeight < beachLevel)

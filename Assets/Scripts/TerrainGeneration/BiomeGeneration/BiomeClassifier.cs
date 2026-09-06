@@ -3,8 +3,6 @@
 public static class BiomeClassifier
 {
     // Height thresholds
-    private const float WaterLevel = TerrainWaterSettings.WaterLevel;
-    private const float BeachLevel = TerrainWaterSettings.BeachLevel;
     private const float RockLevel = 0.8f;
     private const float SnowLevel = 0.93f;
 
@@ -19,19 +17,15 @@ public static class BiomeClassifier
     private const float slopeScale = 4f;
 
     public static BiomeType Classify(float height, float moisture, float temperature,
-    float slope, float mountainMask, float riverMask)
+    float slope, float mountainMask, float riverMask, float waterLevel)
     {
         slope *= slopeScale;
+        float beachLevel = waterLevel + TerrainWaterSettings.BeachBand;
 
-        bool isRiver =
-            riverMask > 0.22f &&
-            height < WaterLevel + 0.05f &&
-            slope < 0.55f;
-
-        if (height < WaterLevel || isRiver)
+        if (height <= waterLevel)
             return BiomeType.Water;
 
-        if (height < BeachLevel)
+        if (height < beachLevel)
             return BiomeType.Beach;
 
         bool moderateMountain = mountainMask > 0.30f;
@@ -100,7 +94,7 @@ public static class BiomeClassifier
         if (moisture > WetMoisture)
             return BiomeType.Forest;
 
-        bool steepGrasslandSlope = slope > 0.03f && height > BeachLevel + 0.08f;
+        bool steepGrasslandSlope = slope > 0.03f && height > beachLevel + 0.08f;
 
         if (steepGrasslandSlope)
             return BiomeType.Rock;
