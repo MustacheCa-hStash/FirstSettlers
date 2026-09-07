@@ -2922,7 +2922,7 @@ public static class FoliageGenerator
         }
     }
 
-    private static void GetDeterministicTreeColors(
+    public static void GetDeterministicTreeColors(
         WorldFeatureVariant variant,
         int worldSeed,
         int seedOffset,

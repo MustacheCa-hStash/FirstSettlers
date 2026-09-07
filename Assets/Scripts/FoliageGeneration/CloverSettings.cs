@@ -8,6 +8,7 @@ public class CloverSettings
     public GameObject[] cloverClumpPrefabs;
 
     [Header("Render Range")]
+    [Tooltip("Circular radius in whole chunks around the player chunk; diagonal chunks outside the radius are excluded.")]
     public int activeRingRadius = 1;
     public int preGenerationRingPadding = 1;
     public bool receiveCloverShadows = false;

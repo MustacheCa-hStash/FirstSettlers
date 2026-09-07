@@ -113,6 +113,7 @@ public class ChunkManager
 
     private readonly TerrainRequestManager terrainRequestManager;
     private readonly FoliageManager foliageManager;
+    private readonly DistantTreeManager distantTrees;
     private readonly WorldFeatureGenerationSettings worldFeatureGenerationSettings;
 
     public ChunkManager(
@@ -248,11 +249,42 @@ public class ChunkManager
             chunkSize,
             worldScale,
             meshHeightMultiplier);
+        if (treeSettings != null && treeSettings.enableDistantTrees)
+            distantTrees = new DistantTreeManager(treeSettings, seed, chunkSize, sampleScale, octaves, persistence,
+                lacunarity, worldScale, meshHeightMultiplier, waterSettings.WaterLevel, mountainHorizontalScale,
+                worldFeatureGenerationSettings);
     }
 
     public void Dispose()
     {
+        distantTrees?.Dispose();
         foliageManager?.Dispose();
+    }
+
+    public bool TryGetDistantTreeSurface(ChunkCoord coord, out ChunkRuntime runtime,
+        out float[,] heights, out Vector2 origin, out float size)
+    {
+        loadedChunks.TryGetValue(coord, out runtime);
+        heights = null;
+        origin = new Vector2(coord.x * chunkSize * worldScale, coord.z * chunkSize * worldScale);
+        size = chunkSize * worldScale;
+        if (runtime != null && runtime.IsVisible)
+        {
+            if (runtime.CurrentLOD < 0) return false;
+            if (runtime.CurrentLOD == FarTerrainLOD)
+                heights = runtime.ChunkRecord.FarTreeHeightGrid;
+            return true;
+        }
+        ChunkCoord tile = GetFarTerrainTileCoord(coord);
+        if (loadedFarTerrainTiles.TryGetValue(tile, out var far) && far.IsVisible &&
+            farTerrainTileRecords.TryGetValue(tile, out var record) && record.HasTerrain)
+        {
+            heights = record.FarTreeHeightGrid;
+            size *= farTerrainMacroTileSize;
+            origin = new Vector2(tile.x * size, tile.z * size);
+            return heights != null;
+        }
+        return false;
     }
 
     public ChunkCoord GetViewerChunkCoord()
@@ -386,6 +418,7 @@ public class ChunkManager
             viewerCoord,
             frustumVisibleCoords,
             ref stats);
+        if (distantTrees != null) stats.TreeBillboards = distantTrees.RenderStats;
 
         return stats;
     }
@@ -518,6 +551,7 @@ public class ChunkManager
             viewerGlobalSubChunk,
             frustumVisibleCoords);
 
+        distantTrees?.Update(this, viewer.position, viewerCamera, viewDistance);
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FoliageTotal, foliageStart);
 
         lastViewerGlobalSubChunk = viewerGlobalSubChunk;
@@ -1824,7 +1858,8 @@ public class ChunkManager
                 result.RequestVersion,
                 terrainMesh,
                 controlMaps,
-                waterMesh);
+                waterMesh,
+                result.HeightGrid);
         }
 
         if (chunkRecords.TryGetValue(result.ChunkCoord, out ChunkRecord record))
@@ -1833,7 +1868,8 @@ public class ChunkManager
                 result.RequestVersion,
                 terrainMesh,
                 controlMaps,
-                waterMesh);
+                waterMesh,
+                result.HeightGrid);
         }
 
         return false;

@@ -1,6 +1,8 @@
 #ifndef TREE_SHADOW_CASTER_COMMON_INCLUDED
 #define TREE_SHADOW_CASTER_COMMON_INCLUDED
 
+#include "Assets/Shaders/DistantTreeFade.hlsl"
+
 float3 _LightDirection;
 float3 _LightPosition;
 half _AlphaCutoutShadows;

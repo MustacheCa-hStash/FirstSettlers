@@ -79,7 +79,7 @@ public static class FarTerrainGenerator
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FarTerrainTotal, totalStart);
 
         WaterMeshData waterMeshData = BuildWaterMesh(heightGrid, chunkSize, worldScale, meshHeightMultiplier, waterLevel);
-        return new FarTerrainRequestResult(chunkCoord, requestVersion, isMacroTile, meshData, controlMaps, waterMeshData);
+        return new FarTerrainRequestResult(chunkCoord, requestVersion, isMacroTile, meshData, controlMaps, waterMeshData, heightGrid);
     }
 
     // Cover cells with any submerged corner, then merge adjacent water patches.

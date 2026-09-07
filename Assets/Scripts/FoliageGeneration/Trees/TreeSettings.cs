@@ -93,7 +93,7 @@ public class TreeSettings
     public int seedOffset = 12000;
 
     [Header("Tree Representation Rings")]
-    [Tooltip("Chunk-ring radius for real GameObject trees. 1 means a 3x3 block around the player.")]
+    [Tooltip("Circular chunk radius for real GameObject trees. Radius 1 includes the player chunk and its four cardinal neighbors.")]
     public int gameObjectTreeChunkRingRadius = 1;
 
     [Tooltip("First chunk ring where billboard trees are allowed. Values inside the GameObject tree ring are clamped to the next ring.")]
@@ -101,6 +101,33 @@ public class TreeSettings
 
     [Tooltip("Maximum chunk-ring radius for billboard trees.")]
     public int billboardTreeChunkRingRadius = 8;
+
+    [Header("Distant Tree Coverage (restart Play Mode after enabling/disabling)")]
+    [Tooltip("Use cached, deterministic tree billboards on near and far terrain. Replaces the legacy billboard rings; keeps existing 3D tree ring.")]
+    public bool enableDistantTrees = true;
+    [Min(1f), Tooltip("Maximum tree distance in chunk widths, capped by loaded terrain. Clamped upward to surround the circular 3D tree region plus its fade band.")]
+    public float distantTreeDistanceChunks = 18f;
+    [Min(0.1f), Tooltip("Outer fade width in chunk widths. Cards use alpha-test dithering, not transparency blending.")]
+    public float distantTreeFadeWidthChunks = 2f;
+    [Min(0f), Tooltip("Distance in chunk widths where stable thinning starts. The near handoff always retains full density.")]
+    public float distantTreeThinningStartChunks = 8f;
+    [Range(0.05f, 1f), Tooltip("Fraction of non-protected trees retained at the outer distance. Selection is stable across camera movement.")]
+    public float distantTreeDensity = 0.45f;
+    [Min(0), Tooltip("Preserve this many well-spaced representatives per logical chunk when thinning. Sparse chunks retain all their trees.")]
+    public int distantTreeProtectedCount = 2;
+    [Min(0.05f), Tooltip("Seconds for 3D/billboard and initial-load dither transitions. Replacement must be ready before outgoing trees fade.")]
+    public float distantTreeTransitionSeconds = 0.65f;
+    [Range(0f, 1f), Tooltip("How strongly far billboards follow the displayed coarse terrain height. Blends away as detailed terrain arrives.")]
+    public float distantTreeTerrainConform = 1f;
+    [Min(0f), Tooltip("Vertical seating adjustment speed in world units per second. Zero snaps to the displayed ground immediately.")]
+    public float distantTreeHeightBlendSpeed = 20f;
+    [Header("Distant Tree Streaming")]
+    [Range(1, 4), Tooltip("Maximum concurrent background placement jobs. Each job samples a single logical chunk; no meshes or GameObjects are built on workers.")]
+    public int distantTreeWorkerCount = 1;
+    [Range(1, 8), Tooltip("Maximum completed manifests installed per frame.")]
+    public int distantTreeResultsPerFrame = 1;
+    [Min(64), Tooltip("Soft cache limit. Active chunks are retained; least recently used inactive manifests are evicted first.")]
+    public int distantTreeCacheChunks = 2048;
 
     [Header("Tree Streaming Budgets")]
     [Tooltip("Maximum tree representation rebuilds applied per frame. This includes near GameObject trees and far tree billboard batches.")]
@@ -113,7 +140,7 @@ public class TreeSettings
     public int treeGameObjectWarmRetainExtraRings = 1;
 
     [Header("Berry Bush Rendering")]
-    [Tooltip("Chunk-ring radius for berry bush GameObjects. Bushes do not currently use billboards.")]
+    [Tooltip("Circular chunk radius for berry bush GameObjects. Bushes do not currently use billboards.")]
     public int gameObjectBushChunkRingRadius = 3;
 
     [Header("Forest Rock Placement")]
@@ -139,7 +166,7 @@ public class TreeSettings
     public float rockGrassExclusionRadius = 1.25f;
 
     [Header("Forest Rock Rendering")]
-    [Tooltip("Chunk-ring radius for forest rock GameObjects.")]
+    [Tooltip("Circular chunk radius for forest rock GameObjects.")]
     public int gameObjectRockChunkRingRadius = 3;
 
     [Header("Tree Rendering")]

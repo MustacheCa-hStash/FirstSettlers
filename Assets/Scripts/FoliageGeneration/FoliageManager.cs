@@ -42,6 +42,7 @@ public class FoliageManager
     private readonly CloverSettings cloverSettings;
     private readonly DandelionSettings dandelionSettings;
     private readonly TreeSettings treeSettings;
+    private readonly bool useDistantTrees;
     private readonly int worldSeed;
     private readonly int chunkSize;
     private readonly float worldScale;
@@ -107,6 +108,7 @@ public class FoliageManager
         this.cloverSettings = cloverSettings;
         this.dandelionSettings = dandelionSettings;
         this.treeSettings = treeSettings;
+        useDistantTrees = treeSettings != null && treeSettings.enableDistantTrees;
         this.worldSeed = worldSeed;
         this.chunkSize = chunkSize;
         this.worldScale = worldScale;
@@ -783,7 +785,9 @@ public class FoliageManager
             {
                 FoliageRepresentationMode mode = GetTreeRepresentationMode(viewerCoord, coord);
 
-                if (mode == FoliageRepresentationMode.GPUInstancedBillboard)
+                if (useDistantTrees)
+                    runtime.FoliageRuntime.AccumulateTreeGameObjectRenderStats(ref stats);
+                else if (mode == FoliageRepresentationMode.GPUInstancedBillboard)
                     runtime.FoliageRuntime.AccumulateTreeBillboardRenderStats(ref stats);
                 else if (mode == FoliageRepresentationMode.GameObjectWithCollision)
                     runtime.FoliageRuntime.AccumulateTreeGameObjectRenderStats(ref stats);
@@ -963,7 +967,7 @@ public class FoliageManager
                 TerrainGenerationProfileStage.FoliageTreeGameObjectRebuild,
                 stageStart);
         }
-        else if (mode == FoliageRepresentationMode.GPUInstancedBillboard)
+        else if (mode == FoliageRepresentationMode.GPUInstancedBillboard && !useDistantTrees)
         {
             if (ShouldRetainTreeGameObjectsForReuse(viewerCoord, record.ChunkCoord))
                 foliageRuntime.ReleaseTreeGameObjectsToPool();
@@ -1021,7 +1025,7 @@ public class FoliageManager
 
         FoliageRepresentationMode mode = GetTreeRepresentationMode(viewerCoord, chunkCoord);
 
-        if (mode == FoliageRepresentationMode.GPUInstancedBillboard)
+        if (mode == FoliageRepresentationMode.GPUInstancedBillboard && !useDistantTrees)
         {
             runtime.FoliageRuntime.DrawTreeBillboards(treeSettings.castTreeShadows);
         }
@@ -1858,7 +1862,7 @@ public class FoliageManager
         for (int i = 0; i < pendingFoliageManagementWork.Count; i++)
         {
             FoliageManagementWorkItem candidate = pendingFoliageManagementWork[i];
-            int distance = GetChunkRingDistance(viewerCoord, candidate.ChunkCoord);
+            int distance = GetChunkRadialRing(viewerCoord, candidate.ChunkCoord);
 
             if (distance >= bestDistance)
                 continue;
@@ -1907,7 +1911,7 @@ public class FoliageManager
         for (int i = 0; i < pendingTreeRepresentationWork.Count; i++)
         {
             TreeRepresentationWorkItem candidate = pendingTreeRepresentationWork[i];
-            int distance = GetChunkRingDistance(viewerCoord, candidate.ChunkCoord);
+            int distance = GetChunkRadialRing(viewerCoord, candidate.ChunkCoord);
 
             if (distance >= bestDistance)
                 continue;
@@ -1930,7 +1934,7 @@ public class FoliageManager
         for (int i = 0; i < pendingGroundFoliageGenerationWork.Count; i++)
         {
             GroundFoliageGenerationWorkItem candidate = pendingGroundFoliageGenerationWork[i];
-            int distance = GetChunkRingDistance(viewerCoord, candidate.Key.ChunkCoord);
+            int distance = GetChunkRadialRing(viewerCoord, candidate.Key.ChunkCoord);
             bool preferCloverTie = distance == bestDistance &&
                                    candidate.Key.GenerationType == GroundFoliageGenerationType.Clover &&
                                    bestType != GroundFoliageGenerationType.Clover;
@@ -1956,7 +1960,7 @@ public class FoliageManager
         for (int i = 0; i < pendingFoliageBatchWork.Count; i++)
         {
             FoliageBatchWorkItem candidate = pendingFoliageBatchWork[i];
-            int distance = GetChunkRingDistance(viewerCoord, candidate.Key.ChunkCoord);
+            int distance = GetChunkRadialRing(viewerCoord, candidate.Key.ChunkCoord);
 
             if (distance >= bestDistance)
                 continue;
@@ -2149,7 +2153,7 @@ public class FoliageManager
         int globalSubZ = chunkCoord.z * subChunksPerChunk + localSubZ;
         int dx = Mathf.Abs(globalSubX - viewerGlobalSubChunk.x);
         int dz = Mathf.Abs(globalSubZ - viewerGlobalSubChunk.z);
-        return dx <= activeSubChunkRadius && dz <= activeSubChunkRadius;
+        return (long)dx * dx + (long)dz * dz <= (long)activeSubChunkRadius * activeSubChunkRadius;
     }
 
     private void RebuildFlowerBatches(ChunkRuntime runtime, ChunkRecord record)
@@ -2793,7 +2797,7 @@ public class FoliageManager
         long stageStart = TerrainGenerationProfiler.GetTimestamp();
         Matrix4x4 chunkLocalToWorld = runtime.RootTransform.localToWorldMatrix;
 
-        int chunkRing = GetChunkRingDistance(viewerCoord, record.ChunkCoord);
+        int chunkRing = GetChunkRadialRing(viewerCoord, record.ChunkCoord);
         float densityMultiplier = Mathf.Clamp01(grassSettings.billboardSpawnChance) *
                                   GetBillboardDensityMultiplierForChunkRing(chunkRing);
         float scaleMultiplier = 1f;
@@ -2936,7 +2940,7 @@ public class FoliageManager
         ChunkCoord viewerCoord,
         ChunkCoord targetCoord)
     {
-        int ring = GetChunkRingDistance(viewerCoord, targetCoord);
+        int ring = GetChunkRadialRing(viewerCoord, targetCoord);
 
         if (ring <= treeSettings.gameObjectTreeChunkRingRadius)
             return FoliageRepresentationMode.GameObjectWithCollision;
@@ -2946,7 +2950,8 @@ public class FoliageManager
 
     private bool IsWithinTreeRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
-        int ring = GetChunkRingDistance(viewerCoord, targetCoord);
+        int ring = GetChunkRadialRing(viewerCoord, targetCoord);
+        if (useDistantTrees) return ring <= treeSettings.gameObjectTreeChunkRingRadius + 2;
         return ring <= treeSettings.gameObjectTreeChunkRingRadius ||
                IsWithinBillboardTreeRenderRange(ring);
     }
@@ -2960,7 +2965,7 @@ public class FoliageManager
         if (extraRings == 0)
             return false;
 
-        int ring = GetChunkRingDistance(viewerCoord, targetCoord);
+        int ring = GetChunkRadialRing(viewerCoord, targetCoord);
         return ring <= treeSettings.gameObjectTreeChunkRingRadius + extraRings;
     }
 
@@ -2976,21 +2981,21 @@ public class FoliageManager
 
     private bool IsWithinBushRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
-        int ring = GetChunkRingDistance(viewerCoord, targetCoord);
+        int ring = GetChunkRadialRing(viewerCoord, targetCoord);
         return ring <= treeSettings.gameObjectBushChunkRingRadius;
     }
 
     private bool IsWithinRockRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
-        int ring = GetChunkRingDistance(viewerCoord, targetCoord);
+        int ring = GetChunkRadialRing(viewerCoord, targetCoord);
         return ring <= treeSettings.gameObjectRockChunkRingRadius;
     }
 
-    private int GetChunkRingDistance(ChunkCoord viewerCoord, ChunkCoord targetCoord)
+    public static int GetChunkRadialRing(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
         int dx = Mathf.Abs(targetCoord.x - viewerCoord.x);
         int dz = Mathf.Abs(targetCoord.z - viewerCoord.z);
-        return Mathf.Max(dx, dz);
+        return Mathf.CeilToInt(Mathf.Sqrt((float)dx * dx + (float)dz * dz));
     }
 
     private float GetBillboardDensityMultiplierForChunkRing(int chunkRing)
@@ -3087,17 +3092,13 @@ public class FoliageManager
 
     private bool IsWithinNearGrass(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
-        int dx = Mathf.Abs(targetCoord.x - viewerCoord.x);
-        int dz = Mathf.Abs(targetCoord.z - viewerCoord.z);
-        return dx <= grassSettings.activeRingRadius && dz <= grassSettings.activeRingRadius;
+        return IsWithinChunkRadius(viewerCoord, targetCoord, grassSettings.activeRingRadius);
     }
 
     private bool IsWithinNearGrassGenerationRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
         int generationRingRadius = GetNearGrassGenerationRingRadius();
-        int dx = Mathf.Abs(targetCoord.x - viewerCoord.x);
-        int dz = Mathf.Abs(targetCoord.z - viewerCoord.z);
-        return dx <= generationRingRadius && dz <= generationRingRadius;
+        return IsWithinChunkRadius(viewerCoord, targetCoord, generationRingRadius);
     }
 
     private bool IsWithinFlowerRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
@@ -3105,9 +3106,7 @@ public class FoliageManager
         if (!IsFlowerSystemEnabled())
             return false;
 
-        int dx = Mathf.Abs(targetCoord.x - viewerCoord.x);
-        int dz = Mathf.Abs(targetCoord.z - viewerCoord.z);
-        return dx <= flowerSettings.activeRingRadius && dz <= flowerSettings.activeRingRadius;
+        return IsWithinChunkRadius(viewerCoord, targetCoord, flowerSettings.activeRingRadius);
     }
 
     private bool IsWithinCloverRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
@@ -3118,9 +3117,7 @@ public class FoliageManager
         int activeRingRadius = Mathf.Min(
             Mathf.Max(0, cloverSettings.activeRingRadius),
             Mathf.Max(0, grassSettings.activeRingRadius));
-        int dx = Mathf.Abs(targetCoord.x - viewerCoord.x);
-        int dz = Mathf.Abs(targetCoord.z - viewerCoord.z);
-        return dx <= activeRingRadius && dz <= activeRingRadius;
+        return IsWithinChunkRadius(viewerCoord, targetCoord, activeRingRadius);
     }
 
     private bool IsWithinCloverGenerationRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
@@ -3133,9 +3130,7 @@ public class FoliageManager
             Mathf.Max(0, grassSettings.activeRingRadius));
         int preGenerationPadding = Mathf.Max(0, cloverSettings.preGenerationRingPadding);
         int generationRingRadius = activeRingRadius + preGenerationPadding;
-        int dx = Mathf.Abs(targetCoord.x - viewerCoord.x);
-        int dz = Mathf.Abs(targetCoord.z - viewerCoord.z);
-        return dx <= generationRingRadius && dz <= generationRingRadius;
+        return IsWithinChunkRadius(viewerCoord, targetCoord, generationRingRadius);
     }
 
     private bool IsWithinDandelionRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
@@ -3144,29 +3139,22 @@ public class FoliageManager
             return false;
 
         int activeRingRadius = Mathf.Max(0, dandelionSettings.activeRingRadius);
-        int dx = Mathf.Abs(targetCoord.x - viewerCoord.x);
-        int dz = Mathf.Abs(targetCoord.z - viewerCoord.z);
-        return dx <= activeRingRadius && dz <= activeRingRadius;
+        return IsWithinChunkRadius(viewerCoord, targetCoord, activeRingRadius);
     }
 
     private bool IsWithinBillboardGrass(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
-        int absDx = Mathf.Abs(targetCoord.x - viewerCoord.x);
-        int absDz = Mathf.Abs(targetCoord.z - viewerCoord.z);
+        return !IsWithinNearGrass(viewerCoord, targetCoord) &&
+               IsWithinChunkRadius(viewerCoord, targetCoord, grassSettings.billboardRingRadius);
+    }
 
-        bool insideNearSquare =
-            absDx <= grassSettings.activeRingRadius &&
-            absDz <= grassSettings.activeRingRadius;
-
-        if (insideNearSquare)
-            return false;
-
-        int dx = targetCoord.x - viewerCoord.x;
-        int dz = targetCoord.z - viewerCoord.z;
-        int distSqr = dx * dx + dz * dz;
-
-        int billboardRangeSqr = grassSettings.billboardRingRadius * grassSettings.billboardRingRadius;
-        return distSqr <= billboardRangeSqr;
+    // Circular membership of whole logical chunks. Terrain LOD rings are independent.
+    public static bool IsWithinChunkRadius(ChunkCoord viewerCoord, ChunkCoord targetCoord, int radius)
+    {
+        if (radius < 0) return false;
+        double dx = (double)targetCoord.x - viewerCoord.x;
+        double dz = (double)targetCoord.z - viewerCoord.z;
+        return dx * dx + dz * dz <= (double)radius * radius;
     }
 
     private bool HasRequiredTerrainData(ChunkRecord record)

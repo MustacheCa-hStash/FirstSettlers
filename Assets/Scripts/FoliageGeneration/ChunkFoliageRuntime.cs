@@ -221,6 +221,26 @@ public class ChunkFoliageRuntime
         CountMatrices(grasslandOakTreeBillboardMatrixBatches) +
         CountMatrices(grasslandWillowTreeBillboardMatrixBatches);
     public int TreeGameObjectCount => treeGameObjects.Count;
+    public float DistantTreeNearFade { get; private set; }
+    private float lastAppliedDistantTreeFade = float.NaN;
+    public void SetDistantTreeNearFade(float fade)
+    {
+        DistantTreeNearFade = Mathf.Clamp01(fade);
+        if (Mathf.Approximately(lastAppliedDistantTreeFade, DistantTreeNearFade)) return;
+        lastAppliedDistantTreeFade = DistantTreeNearFade;
+        foreach (var tree in treeGameObjects)
+        {
+            if (tree?.Renderers == null) continue;
+            foreach (var renderer in tree.Renderers)
+            {
+                if (renderer == null) continue;
+                renderer.GetPropertyBlock(treePropertyBlock);
+                treePropertyBlock.SetFloat("_DistantTreeEnabled", 1f);
+                treePropertyBlock.SetFloat("_DistantTreeNearFade", DistantTreeNearFade);
+                renderer.SetPropertyBlock(treePropertyBlock);
+            }
+        }
+    }
 
     public bool HasCurrentTreeRepresentation(FoliageRepresentationMode mode)
     {
@@ -937,6 +957,8 @@ public class ChunkFoliageRuntime
         bool receiveShadows)
     {
         ReleaseTreeGameObjectsToPool();
+        DistantTreeNearFade = 1f;
+        lastAppliedDistantTreeFade = float.NaN;
 
         if (instances == null || chunkRoot == null || root == null)
             return;
@@ -1042,6 +1064,7 @@ public class ChunkFoliageRuntime
                 continue;
 
             renderer.GetPropertyBlock(treePropertyBlock);
+            treePropertyBlock.SetFloat("_DistantTreeNearFade", DistantTreeNearFade);
             treePropertyBlock.SetColor(TreeLeafTintPropertyId, instance.leafTint);
             treePropertyBlock.SetColor(TreeBarkTintPropertyId, instance.barkTint);
             renderer.SetPropertyBlock(treePropertyBlock);

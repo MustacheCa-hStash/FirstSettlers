@@ -58,6 +58,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Shaders/DistantTreeFade.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
 
             TEXTURE2D(_BaseMap);
@@ -217,6 +218,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
             half4 frag(Varyings IN) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
+                ApplyDistantTreeFade(IN.positionCS.xy);
 
                 half4 atlas = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
                 clip(atlas.a - _Cutoff);

@@ -7,9 +7,11 @@ public class GrassSettings
 
     public int cellsPerAxis = 125;
     [Range(0f, 1f)] public float cellJitter = 1.0f;
+    [Tooltip("Circular radius in whole chunks around the player chunk; diagonal chunks outside the radius are excluded.")]
     public int activeRingRadius = 1;
     [Min(0)] public int nearGrassPrecomputeChunkPadding = 0;
     public int subChunksPerChunk = 10;
+    [Tooltip("Circular generation radius in subchunks. Zero derives the radius from chunk coverage and precompute padding.")]
     public int activeSubChunkRadius = 0;
     public int maxSubChunkGenerationsPerFrame = 8;
     public float subChunkGenerationBudgetMsPerFrame = 1.0f;
@@ -45,6 +47,7 @@ public class GrassSettings
 
     public GameObject billboardGrassPrefab;
 
+    [Tooltip("Circular outer chunk radius for billboard grass. The circular near-grass region is excluded.")]
     public int billboardRingRadius = 2;
     public int billboardCellsPerAxis = 50;
     [Range(0f, 1f)] public float billboardSpawnChance = 0.4f;

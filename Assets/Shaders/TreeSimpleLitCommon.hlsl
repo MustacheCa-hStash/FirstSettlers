@@ -1,6 +1,8 @@
 #ifndef TREE_SIMPLE_LIT_COMMON_INCLUDED
 #define TREE_SIMPLE_LIT_COMMON_INCLUDED
 
+#include "Assets/Shaders/DistantTreeFade.hlsl"
+
 half _TreeNightAmbientFloorDimAmount;
 half _TreeNightAmbientFloorScaleAtMidnight;
 
@@ -11,6 +13,7 @@ InputData InitializeTreeSimpleLitInputData(
     float4 shadowCoord,
     half ambientStrength)
 {
+    ApplyDistantTreeFade(positionCS.xy);
     InputData inputData = (InputData)0;
     inputData.positionWS = positionWS;
     inputData.normalWS = NormalizeNormalPerPixel(normalWS);
@@ -40,6 +43,19 @@ SurfaceData InitializeTreeSimpleLitSurfaceData(
     surfaceData.emission = half3(0.0h, 0.0h, 0.0h);
     surfaceData.occlusion = 1.0h;
     return surfaceData;
+}
+
+half4 ShadeDistantAwareTree(InputData inputData, SurfaceData surfaceData)
+{
+    if (_DistantTreeEnabled > 0.5 && _DistantTreeBillboard > 0.5)
+    {
+        Light light = GetMainLight();
+        half diffuse = saturate(dot(inputData.normalWS, light.direction));
+        half3 color = surfaceData.albedo * (inputData.bakedGI + light.color * diffuse);
+        float fog = ComputeFogFactor(TransformWorldToHClip(inputData.positionWS).z);
+        return half4(MixFog(color, fog), surfaceData.alpha);
+    }
+    return UniversalFragmentBlinnPhong(inputData, surfaceData);
 }
 
 #endif

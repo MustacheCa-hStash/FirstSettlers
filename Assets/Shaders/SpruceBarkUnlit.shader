@@ -51,6 +51,7 @@ Shader "Custom/SpruceBarkSimpleLit"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Shaders/DistantTreeFade.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -164,6 +165,7 @@ Shader "Custom/SpruceBarkSimpleLit"
             half4 frag(Varyings IN) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
+                ApplyDistantTreeFade(IN.positionCS.xy);
 
                 half barkLuma = dot(SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).rgb, half3(0.299h, 0.587h, 0.114h));
                 half crackMask = 1.0h - smoothstep(_CrackThreshold, _CrackThreshold + _CrackSoftness, barkLuma);

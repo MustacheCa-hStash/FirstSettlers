@@ -198,7 +198,7 @@ Shader "Custom/WillowLeafSimpleLitCutout"
                 inputData.normalWS = normalize(lerp(inputData.normalWS, half3(0.0h, 1.0h, 0.0h), _LightWrap * 0.24h));
 
                 SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(leafColor, mask, _Smoothness, _SpecularStrength);
-                half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
+                half4 color = ShadeDistantAwareTree(inputData, surfaceData);
                 return half4(saturate(color.rgb), mask);
             }
             ENDHLSL
@@ -314,6 +314,7 @@ Shader "Custom/WillowLeafSimpleLitCutout"
             half4 frag(Varyings IN) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
+                ApplyDistantTreeFade(IN.positionCS.xy);
 
                 if (_AlphaCutoutShadows > 0.5h)
                 {

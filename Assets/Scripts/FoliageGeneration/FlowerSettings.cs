@@ -7,6 +7,7 @@ public class FlowerSettings
     public GameObject flowerPrefab;
 
     [Header("Render Range")]
+    [Tooltip("Circular radius in whole chunks around the player chunk; diagonal chunks outside the radius are excluded.")]
     public int activeRingRadius = 2;
 
     [Header("Patch Placement")]

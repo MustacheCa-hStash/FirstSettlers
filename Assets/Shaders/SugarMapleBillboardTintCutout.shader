@@ -63,6 +63,7 @@ Shader "Custom/SugarMapleBillboardSimpleLitCutout"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile_fog
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
@@ -254,7 +255,7 @@ Shader "Custom/SugarMapleBillboardSimpleLitCutout"
                 half alpha = baseSample.a * _BaseColor.a;
                 InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);
                 SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(saturate(color * _Brightness), alpha, _Smoothness, _SpecularStrength);
-                half4 litColor = UniversalFragmentBlinnPhong(inputData, surfaceData);
+                half4 litColor = ShadeDistantAwareTree(inputData, surfaceData);
                 return half4(saturate(litColor.rgb), alpha);
             }
             ENDHLSL
@@ -408,6 +409,7 @@ Shader "Custom/SugarMapleBillboardSimpleLitCutout"
             half4 frag(Varyings IN) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
+                ApplyDistantTreeFade(IN.positionCS.xy);
 
                 if (_AlphaCutoutShadows > 0.5h)
                 {

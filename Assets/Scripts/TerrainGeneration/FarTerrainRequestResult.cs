@@ -5,6 +5,7 @@ public class FarTerrainRequestResult
     public bool IsMacroTile { get; }
     public MeshData TerrainMeshData { get; }
     public WaterMeshData WaterMeshData { get; }
+    public float[,] HeightGrid { get; }
     public ControlMapPixelData ControlMapsRawData { get; }
 
     public FarTerrainRequestResult(
@@ -12,13 +13,14 @@ public class FarTerrainRequestResult
         int requestVersion,
         bool isMacroTile,
         MeshData terrainMeshData,
-        ControlMapPixelData controlMapsRawData, WaterMeshData waterMeshData = null)
+        ControlMapPixelData controlMapsRawData, WaterMeshData waterMeshData = null, float[,] heightGrid = null)
     {
         ChunkCoord = chunkCoord;
         RequestVersion = requestVersion;
         IsMacroTile = isMacroTile;
         TerrainMeshData = terrainMeshData;
         WaterMeshData = waterMeshData;
+        HeightGrid = heightGrid;
         ControlMapsRawData = controlMapsRawData;
     }
 }

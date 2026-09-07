@@ -133,6 +133,61 @@ public static class WorldFeaturePlanGenerator
         return plan;
     }
 
+    // Sparse path: keep identical candidate order, limits, rocks and exclusions, but evaluate
+    // ecological fields only where placement needs them. Scratch maps are not retained.
+    public static WorldFeaturePlan GenerateTreePlacements(
+        ChunkCoord coord, int chunkSize, int seed, BiomeType[,] biomes, SurfaceType[,] surfaces,
+        float[,] moisture, float[,] temperature, float[,] slopes, float[,] rivers,
+        WorldFeatureGenerationSettings settings, System.Action<int, int> sample,
+        WorldFeaturePlan scratchPlan = null, bool[,] scratchPrepared = null)
+    {
+        int size = chunkSize + 3;
+        var plan = scratchPlan ?? new WorldFeaturePlan(size, size);
+        plan.Placements.Clear();
+        var prepared = scratchPrepared ?? new bool[size, size];
+        System.Array.Clear(prepared, 0, prepared.Length);
+        void Prepare(int x, int z)
+        {
+            if (prepared[x, z]) return;
+            sample(x, z);
+            BuildForestStructureFields(plan, coord, chunkSize, seed, biomes, surfaces, moisture, slopes, rivers, x, z);
+            BuildGrasslandStructureFields(plan, coord, chunkSize, seed, biomes, surfaces, moisture, slopes, rivers, x, z);
+            prepared[x, z] = true;
+        }
+        void PrepareTree(int x, int z)
+        {
+            Prepare(x, z);
+            float influence = plan.GrasslandStructure.RockinessMap[x, z] * 0.32f;
+            foreach (var rock in plan.Placements)
+            {
+                if (rock.variant != WorldFeatureVariant.GrasslandBoulder &&
+                    rock.variant != WorldFeatureVariant.GrasslandLargeBoulder) continue;
+                float dx = Mathf.Clamp(x - 1, 0, chunkSize) - rock.sampleX;
+                float dz = Mathf.Clamp(z - 1, 0, chunkSize) - rock.sampleZ;
+                float distance = Mathf.Sqrt(dx * dx + dz * dz);
+                if (distance > rock.influenceRadius) continue;
+                float f = 1f - distance / rock.influenceRadius;
+                influence = Mathf.Max(influence, Mathf.Clamp01(f * f * (3f - 2f * f)));
+            }
+            plan.GrasslandStructure.RockInfluenceMap[x, z] = influence;
+        }
+        void PrepareGrasslandTree(int x, int z)
+        {
+            PrepareTree(x, z);
+            // Only valid grassland candidates consult adjacent biomes. Rock and forest
+            // candidates do not pay for these extra terrain/climate samples.
+            if (!IsValidGrasslandLandSample(biomes, surfaces, slopes, rivers, x, z, 0.12f, 0.86f)) return;
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dz = -1; dz <= 1; dz++)
+                    sample(Mathf.Clamp(x + dx, 0, size - 1), Mathf.Clamp(z + dz, 0, size - 1));
+        }
+        AddForestBoulders(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
+        AddGrasslandRocks(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
+        AddForestTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, PrepareTree);
+        AddGrasslandTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, settings, PrepareGrasslandTree);
+        return plan;
+    }
+
     private static void BuildForestStructureFields(
         WorldFeaturePlan plan,
         ChunkCoord chunkCoord,
@@ -142,15 +197,15 @@ public static class WorldFeaturePlanGenerator
         SurfaceType[,] surfaceTypeMap,
         float[,] moistureMap,
         float[,] slopeMap,
-        float[,] riverMaskMap)
+        float[,] riverMaskMap, int onlyX = -1, int onlyZ = -1)
     {
         ForestStructureFields fields = plan.ForestStructure;
         int width = biomeMap.GetLength(0);
         int height = biomeMap.GetLength(1);
 
-        for (int x = 0; x < width; x++)
+        for (int x = onlyX < 0 ? 0 : onlyX; x < (onlyX < 0 ? width : onlyX + 1); x++)
         {
-            for (int z = 0; z < height; z++)
+            for (int z = onlyZ < 0 ? 0 : onlyZ; z < (onlyZ < 0 ? height : onlyZ + 1); z++)
             {
                 if (biomeMap[x, z] != BiomeType.Forest || surfaceTypeMap[x, z] != SurfaceType.Grass)
                     continue;
@@ -199,7 +254,7 @@ public static class WorldFeaturePlanGenerator
         SurfaceType[,] surfaceTypeMap,
         float[,] slopeMap,
         float[,] riverMaskMap,
-        WorldFeatureGenerationSettings settings)
+        WorldFeatureGenerationSettings settings, System.Action<int, int> prepare = null)
     {
         int maxForestBouldersPerChunk = Mathf.Max(0, settings.maxForestRocksPerChunk);
         if (maxForestBouldersPerChunk == 0)
@@ -234,6 +289,7 @@ public static class WorldFeaturePlanGenerator
 
             int paddedX = Mathf.Clamp(Mathf.RoundToInt(sampleX), 0, chunkSize) + 1;
             int paddedZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize) + 1;
+            prepare?.Invoke(paddedX, paddedZ);
 
             if (!IsValidForestLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, 0.15f, 0.68f))
                 continue;
@@ -280,15 +336,15 @@ public static class WorldFeaturePlanGenerator
         SurfaceType[,] surfaceTypeMap,
         float[,] moistureMap,
         float[,] slopeMap,
-        float[,] riverMaskMap)
+        float[,] riverMaskMap, int onlyX = -1, int onlyZ = -1)
     {
         GrasslandStructureFields fields = plan.GrasslandStructure;
         int width = biomeMap.GetLength(0);
         int height = biomeMap.GetLength(1);
 
-        for (int x = 0; x < width; x++)
+        for (int x = onlyX < 0 ? 0 : onlyX; x < (onlyX < 0 ? width : onlyX + 1); x++)
         {
-            for (int z = 0; z < height; z++)
+            for (int z = onlyZ < 0 ? 0 : onlyZ; z < (onlyZ < 0 ? height : onlyZ + 1); z++)
             {
                 if (biomeMap[x, z] != BiomeType.Grassland || surfaceTypeMap[x, z] != SurfaceType.Grass)
                     continue;
@@ -335,7 +391,7 @@ public static class WorldFeaturePlanGenerator
         SurfaceType[,] surfaceTypeMap,
         float[,] slopeMap,
         float[,] riverMaskMap,
-        WorldFeatureGenerationSettings settings)
+        WorldFeatureGenerationSettings settings, System.Action<int, int> prepare = null)
     {
         int maxRocksPerChunk = Mathf.Max(0, settings.maxGrasslandRocksPerChunk);
         if (maxRocksPerChunk == 0)
@@ -380,6 +436,7 @@ public static class WorldFeaturePlanGenerator
                 float sampleZ = Mathf.Clamp((cellZ + Hash01(hash + 31)) * cellSize, 5f, chunkSize - 5f);
                 int paddedX = Mathf.Clamp(Mathf.RoundToInt(sampleX), 0, chunkSize) + 1;
                 int paddedZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize) + 1;
+            prepare?.Invoke(paddedX, paddedZ);
 
                 if (!IsValidGrasslandLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, 0.13f, 0.80f))
                     continue;
@@ -432,6 +489,7 @@ public static class WorldFeaturePlanGenerator
             float sampleZ = Mathf.Clamp((cellZ + Hash01(hash + 31)) * cellSize, 3f, chunkSize - 3f);
             int paddedX = Mathf.Clamp(Mathf.RoundToInt(sampleX), 0, chunkSize) + 1;
             int paddedZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize) + 1;
+            prepare?.Invoke(paddedX, paddedZ);
 
             if (!IsValidGrasslandLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, 0.14f, 0.82f))
                 continue;
@@ -514,7 +572,7 @@ public static class WorldFeaturePlanGenerator
         float[,] moistureMap,
         float[,] temperatureMap,
         float[,] slopeMap,
-        float[,] riverMaskMap)
+        float[,] riverMaskMap, System.Action<int, int> prepare = null)
     {
         int placed = 0;
         float cellSize = chunkSize / (float)TreeCandidateCellsPerAxis;
@@ -536,6 +594,7 @@ public static class WorldFeaturePlanGenerator
 
             int paddedX = Mathf.Clamp(Mathf.RoundToInt(sampleX), 0, chunkSize) + 1;
             int paddedZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize) + 1;
+            prepare?.Invoke(paddedX, paddedZ);
 
             if (!IsValidForestLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, 0.12f, 0.64f))
                 continue;
@@ -690,7 +749,7 @@ public static class WorldFeaturePlanGenerator
         float[,] temperatureMap,
         float[,] slopeMap,
         float[,] riverMaskMap,
-        WorldFeatureGenerationSettings settings)
+        WorldFeatureGenerationSettings settings, System.Action<int, int> prepare = null)
     {
         int maxTreesPerChunk = Mathf.Max(0, settings.maxGrasslandTreesPerChunk);
         if (maxTreesPerChunk == 0)
@@ -715,6 +774,7 @@ public static class WorldFeaturePlanGenerator
             float sampleZ = Mathf.Clamp((cellZ + Hash01(hash + 31)) * cellSize, 6f, chunkSize - 6f);
             int paddedX = Mathf.Clamp(Mathf.RoundToInt(sampleX), 0, chunkSize) + 1;
             int paddedZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize) + 1;
+            prepare?.Invoke(paddedX, paddedZ);
 
             if (!IsValidGrasslandLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, 0.12f, 0.86f))
                 continue;

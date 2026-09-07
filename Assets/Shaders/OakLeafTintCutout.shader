@@ -235,7 +235,7 @@ Shader "Custom/OakLeafSimpleLitCutout"
                 inputData.normalWS = normalize(lerp(inputData.normalWS, half3(0.0h, 1.0h, 0.0h), _LightWrap * 0.22h));
 
                 SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(leafColor, atlas.a, _Smoothness, _SpecularStrength);
-                half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
+                half4 color = ShadeDistantAwareTree(inputData, surfaceData);
                 return half4(saturate(color.rgb), atlas.a);
             }
             ENDHLSL

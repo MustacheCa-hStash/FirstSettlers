@@ -164,7 +164,7 @@ Shader "Custom/RedMapleBarkSimpleLit"
                 inputData.normalWS = normalize(lerp(inputData.normalWS, half3(0.0h, 1.0h, 0.0h), _LightWrap * 0.18h));
 
                 SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(barkColor, 1.0h, _Smoothness, _SpecularStrength);
-                half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
+                half4 color = ShadeDistantAwareTree(inputData, surfaceData);
 
                 Light mainLight = GetMainLight(inputData.shadowCoord);
                 half shadowSide = saturate(1.0h - dot(inputData.normalWS, mainLight.direction) * 0.5h - 0.5h);
