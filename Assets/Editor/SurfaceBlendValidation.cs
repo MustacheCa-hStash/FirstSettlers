@@ -12,6 +12,8 @@ public static class SurfaceBlendValidation
             foreach (SurfaceType right in Enum.GetValues(typeof(SurfaceType)))
                 ValidatePair(left, right);
         }
+        ValidateSnowDusting();
+        ValidateFarTerrainClimateSurfaces();
         ValidateSharedEdge();
         Shader shader = Shader.Find("Custom/StylizedTerrainURP");
         Require(shader != null, "Terrain shader is missing.");
@@ -23,7 +25,7 @@ public static class SurfaceBlendValidation
                 Require(message.severity != UnityEditor.Rendering.ShaderCompilerMessageSeverity.Error, message.message);
         }
         finally { UnityEngine.Object.DestroyImmediate(material); }
-        Debug.Log("Surface blending validation passed: all 49 surface pairs, normalized weights, unchanged labels, shared chunk edges, and terrain shader compilation.");
+        Debug.Log("Surface blending validation passed: all 49 surface pairs, normalized weights, snow dusting, far climate surfaces, shared chunk edges, and terrain shader compilation.");
     }
 
     public static void RunBatch()
@@ -76,6 +78,92 @@ public static class SurfaceBlendValidation
         for (int z = 0; z <= size; z++)
             for (int map = 0; map < 3; map++)
                 Require(maps[0].Maps[map][z * (size + 1) + size].Equals(maps[1].Maps[map][z * (size + 1)]), "Surface blending creates a chunk seam.");
+    }
+
+    private static void ValidateSnowDusting()
+    {
+        var labels = new SurfaceType[5, 5];
+        var cover = new GroundCoverType[5, 5];
+        for (int x = 0; x < 5; x++)
+        {
+            for (int z = 0; z < 5; z++)
+            {
+                labels[x, z] = SurfaceType.Grass;
+                cover[x, z] = GroundCoverType.SnowDusting;
+            }
+        }
+
+        ControlMapPixelData data = TerrainControlMapBuilder.BuildRaw(labels, cover);
+        float grass = Weight(data, 1, 1, SurfaceType.Grass);
+        float snow = Weight(data, 1, 1, SurfaceType.Snow);
+        Require(grass > snow && snow > 0.20f && snow < 0.30f, "Snow dusting does not render as a light snow blend.");
+        Require(Mathf.Abs(grass + snow - 1f) < 0.012f, "Snow dusting changes total surface brightness.");
+    }
+
+    private static void ValidateFarTerrainClimateSurfaces()
+    {
+        const int chunkSize = 96;
+        const int seed = 42;
+        bool foundSand = false;
+        bool foundSnow = false;
+        bool foundSnowDusting = false;
+        bool foundGroundCover = false;
+
+        // Cover multiple climate regions; the old +/-72 range misses snow/tundra even without the mountain coating.
+        for (int x = -240; x <= 240 && !(foundSand && foundSnow && foundSnowDusting && foundGroundCover); x += 24)
+        {
+            for (int z = -240; z <= 240 && !(foundSand && foundSnow && foundSnowDusting && foundGroundCover); z += 24)
+            {
+                FarTerrainRequestResult far = FarTerrainGenerator.Generate(
+                    new ChunkCoord(x, z),
+                    1,
+                    chunkSize,
+                    seed,
+                    600f,
+                    200f,
+                    0.3f,
+                    5,
+                    9,
+                    0f,
+                    TerrainWaterSettings.DefaultWaterLevel,
+                    climateOctaves: 3,
+                    climatePersistence: 0.5f,
+                    climateLacunarity: 2f);
+
+                ScanFarControlMap(far.ControlMapsRawData, ref foundSand, ref foundSnow, ref foundSnowDusting, ref foundGroundCover);
+            }
+        }
+
+        Require(foundSand, "Far terrain control maps did not produce sand.");
+        Require(foundSnow, "Far terrain control maps did not produce snow.");
+        Require(foundSnowDusting, "Far terrain control maps did not produce tundra snow dusting.");
+        Require(foundGroundCover, "Far terrain control maps did not produce grass ground-cover tinting.");
+    }
+
+    private static void ScanFarControlMap(
+        ControlMapPixelData data,
+        ref bool foundSand,
+        ref bool foundSnow,
+        ref bool foundSnowDusting,
+        ref bool foundGroundCover)
+    {
+        for (int z = 0; z < data.Height; z++)
+        {
+            for (int x = 0; x < data.Width; x++)
+            {
+                int index = z * data.Width + x;
+                Color control0 = data.Maps[0][index];
+                Color control1 = data.Maps[1][index];
+                Color control2 = data.Maps[2][index];
+
+                foundSand |= control0.r > 0.9f;
+                // Mountain coating is continuous; this regional search only needs a snow-dominant sample.
+                // MountainSnowValidation separately checks full coverage at high elevations.
+                foundSnow |= control1.r > 0.5f;
+                foundSnowDusting |= control1.r > 0.20f && control1.r < 0.30f && control0.b > 0.70f;
+                foundGroundCover |= control2.r > 0.9f || control2.g > 0.9f || control2.b > 0.9f || control2.a > 0.9f;
+            }
+        }
     }
 
     private static float Weight(ControlMapPixelData data, int x, int z, SurfaceType surface)

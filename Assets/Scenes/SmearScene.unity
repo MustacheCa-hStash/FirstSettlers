@@ -886,7 +886,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 7
+  worldSeed: 14
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -1030,14 +1030,14 @@ MonoBehaviour:
     bushExclusionRadius: 0.9
     rockExclusionRadius: 0.75
   treeSettings:
-    mapleTreePrefab: {fileID: 5742719185016810390, guid: 73725a84115a55c42a0b3d9b18fdb0b1, type: 3}
+    mapleTreePrefab: {fileID: 1673192808842576614, guid: b95c736a9aa6aed419d04dafd32a56ee, type: 3}
     sugarMapleTreePrefab: {fileID: 8072720124864646751, guid: 92cc01de156a13640b9a9f2978a6ed7d, type: 3}
-    birchAspenTreePrefab: {fileID: 6389886508054090531, guid: dc3305daa1890e84f84218a22facd756, type: 3}
+    birchAspenTreePrefab: {fileID: 0}
     beechTreePrefab: {fileID: 0}
     spruceTreePrefab: {fileID: 1924954691341669752, guid: 1815886d6db86144a94eab573a359048, type: 3}
     whitePineTreePrefab: {fileID: 5101446390707208562, guid: 884ba04a3225bae48ab5f799d33f1b1f, type: 3}
-    oakTreePrefab: {fileID: 689681528551111153, guid: 13bdb8ed23f7955478eafc28cf9f8a23, type: 3}
-    treeLOD0GameObjectPrefab: {fileID: 7646694047763373140, guid: 2ce6d38af2fc32d4593a6ac07664f29a, type: 3}
+    oakTreePrefab: {fileID: 0}
+    treeLOD0GameObjectPrefab: {fileID: 5101446390707208562, guid: 884ba04a3225bae48ab5f799d33f1b1f, type: 3}
     grasslandMapleTreePrefab: {fileID: 8072720124864646751, guid: 92cc01de156a13640b9a9f2978a6ed7d, type: 3}
     grasslandBirchAspenTreePrefab: {fileID: 6389886508054090531, guid: dc3305daa1890e84f84218a22facd756, type: 3}
     grasslandWhitePineTreePrefab: {fileID: 2055201246171467053, guid: 884ba04a3225bae48ab5f799d33f1b1f, type: 3}
@@ -1097,7 +1097,7 @@ MonoBehaviour:
     bushGrassExclusionRadius: 0.45
     seedOffset: 12000
     gameObjectTreeChunkRingRadius: 7
-    billboardTreeChunkStartRingRadius: 17
+    billboardTreeChunkStartRingRadius: 18
     billboardTreeChunkRingRadius: 18
     maxTreeRepresentationRebuildsPerFrame: 2
     treeRepresentationRebuildBudgetMsPerFrame: 0.75
@@ -1116,6 +1116,7 @@ MonoBehaviour:
     castTreeShadows: 1
     receiveTreeShadows: 1
   sampleScale: 600
+  mountainWidth: 1.3
   worldScale: 0.3
   octaves: 2
   persistence: 0.05
@@ -1222,7 +1223,7 @@ Transform:
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -11, y: 50, z: -968}
+  m_LocalPosition: {x: 0, y: 100, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

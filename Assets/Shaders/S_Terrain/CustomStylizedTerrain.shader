@@ -318,7 +318,7 @@ Shader "Custom/StylizedTerrainURP"
                 return sampleX * blend.x + sampleY * blend.y + sampleZ * blend.z;
             }
 
-            float3 SampleSnowTriplanarNormalApprox(float3 positionWS, float3 normalWS, float snowTiling)
+            float3 SampleSnowTriplanarPerturbation(float3 positionWS, float3 normalWS, float snowTiling)
             {
                 float3 blend = pow(abs(normalWS), _SnowTriplanarSharpness);
                 blend /= max(dot(blend, 1.0.xxx), 1e-5);
@@ -331,7 +331,11 @@ Shader "Custom/StylizedTerrainURP"
                 float3 sampleY = UnpackNormal(SAMPLE_TEXTURE2D(_SnowNormal, sampler_SnowNormal, uvY));
                 float3 sampleZ = UnpackNormal(SAMPLE_TEXTURE2D(_SnowNormal, sampler_SnowNormal, uvZ));
 
-                return normalize(sampleX * blend.x + sampleY * blend.y + sampleZ * blend.z);
+                // Match RotateUV90 on each projection: yz -> (-z,y), xz -> (-z,x), xy -> (-y,x).
+                // Convert texture slopes into world space before blending, as for rock detail.
+                return float3(0, sampleX.y, -sampleX.x) * blend.x
+                     + float3(sampleY.y, 0, -sampleY.x) * blend.y
+                     + float3(sampleZ.y, -sampleZ.x, 0) * blend.z;
             }
 
             void SampleRockDetail(float3 positionWS, float3 baseNormalWS, float strength,
@@ -579,15 +583,17 @@ Shader "Custom/StylizedTerrainURP"
                     float3 snowTangentNormalUVFar = UnpackNormal(
                         SAMPLE_TEXTURE2D(_SnowNormal, sampler_SnowNormal, snowUVFar)
                     );
-                    float3 snowTangentNormalUV = normalize(lerp(snowTangentNormalUVNear, snowTangentNormalUVFar, snowDistanceBlend));
+                    float3 snowTangentNormalUV = lerp(snowTangentNormalUVNear, snowTangentNormalUVFar, snowDistanceBlend);
+                    float3 snowPerturbationUV = float3(snowTangentNormalUV.y, 0, -snowTangentNormalUV.x);
 
-                    float3 snowTangentNormalTriNear = SampleSnowTriplanarNormalApprox(IN.positionWS, baseNormalWS, _SnowTilingNear);
-                    float3 snowTangentNormalTriFar = SampleSnowTriplanarNormalApprox(IN.positionWS, baseNormalWS, _SnowTilingFar);
-                    float3 snowTangentNormalTri = normalize(lerp(snowTangentNormalTriNear, snowTangentNormalTriFar, snowDistanceBlend));
+                    float3 snowPerturbationTriNear = SampleSnowTriplanarPerturbation(IN.positionWS, baseNormalWS, _SnowTilingNear);
+                    float3 snowPerturbationTriFar = SampleSnowTriplanarPerturbation(IN.positionWS, baseNormalWS, _SnowTilingFar);
+                    float3 snowPerturbationTri = lerp(snowPerturbationTriNear, snowPerturbationTriFar, snowDistanceBlend);
 
-                    float3 snowTangentNormal = normalize(lerp(snowTangentNormalUV, snowTangentNormalTri, snowTriplanarBlend));
-
-                    float3 snowNormalWS = ApplyDetailNormal(baseNormalWS, snowTangentNormal, _SnowNormalStrength);
+                    float3 snowPerturbation = lerp(snowPerturbationUV, snowPerturbationTri, snowTriplanarBlend);
+                    snowPerturbation -= baseNormalWS * dot(snowPerturbation, baseNormalWS);
+                    // An unassigned/flat normal map leaves the geometric normal unchanged.
+                    float3 snowNormalWS = normalize(baseNormalWS + snowPerturbation * _SnowNormalStrength);
                     weightedNormal += snowNormalWS * snowWeight;
                 }
                 else

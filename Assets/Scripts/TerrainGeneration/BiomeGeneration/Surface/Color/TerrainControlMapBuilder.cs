@@ -2,7 +2,11 @@ using UnityEngine;
 
 public static class TerrainControlMapBuilder
 {
-    public static ControlMapPixelData BuildRaw(SurfaceType[,] surfaceTypeMap, GroundCoverType[,] groundCoverMap)
+    private const byte SnowDustingSnowWeight = 64;
+    private const byte SnowDustingGrassWeight = 255 - SnowDustingSnowWeight;
+
+    public static ControlMapPixelData BuildRaw(SurfaceType[,] surfaceTypeMap, GroundCoverType[,] groundCoverMap,
+        Unity.Mathematics.float2[,] mountainSnow = null)
     {
         int width = surfaceTypeMap.GetLength(0);
         int height = surfaceTypeMap.GetLength(1);
@@ -14,6 +18,7 @@ public static class TerrainControlMapBuilder
             {
                 int pixelIndex = z * width + x;
                 SurfaceType surfaceType = surfaceTypeMap[x, z];
+                GroundCoverType groundCoverType = groundCoverMap[x, z];
 
                 if (UsesFirstControlMap(surfaceType))
                 {
@@ -24,11 +29,28 @@ public static class TerrainControlMapBuilder
                     controlMap.Maps[1][pixelIndex] = SurfaceTypeToIndex(surfaceType);
                 }
 
-                controlMap.Maps[2][pixelIndex] = GroundCoverTypeToIndex(groundCoverMap[x, z]);
+                if (surfaceType == SurfaceType.Grass && groundCoverType == GroundCoverType.SnowDusting)
+                {
+                    controlMap.Maps[0][pixelIndex] = SurfaceTypeToIndex(SurfaceType.Grass, SnowDustingGrassWeight);
+                    controlMap.Maps[1][pixelIndex] = SurfaceTypeToIndex(SurfaceType.Snow, SnowDustingSnowWeight);
+                    controlMap.Maps[2][pixelIndex] = Color.clear;
+                }
+                else
+                {
+                    controlMap.Maps[2][pixelIndex] = GroundCoverTypeToIndex(groundCoverType);
+                }
             }
         }
 
-        return BlendPaddedWeights(controlMap);
+        ControlMapPixelData blended = BlendPaddedWeights(controlMap);
+        if (mountainSnow != null)
+            for (int z = 0; z < blended.Height; z++)
+                for (int x = 0; x < blended.Width; x++)
+                {
+                    int index = z * blended.Width + x;
+                    MountainSnow.Apply(ref blended.Maps[0][index], ref blended.Maps[1][index], mountainSnow[x + 1, z + 1]);
+                }
+        return blended;
     }
 
     private static ControlMapPixelData BlendPaddedWeights(ControlMapPixelData source)

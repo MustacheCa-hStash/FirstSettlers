@@ -24,8 +24,10 @@ Material:
   m_Shader: {fileID: 4800000, guid: a627d6af900e4a2418710b5ef7783da6, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_ValidKeywords:
+  - _ROCK_DETAIL
+  m_InvalidKeywords:
+  - _RECEIVESHADOWS_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -121,6 +123,14 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _RockAlbedo:
+        m_Texture: {fileID: 2800000, guid: 81512cf2440cd9942809b85dd4cb799c, type: 3}
+        m_Scale: {x: 0.5, y: 0.5}
+        m_Offset: {x: 0, y: 0}
+    - _RockNormal:
+        m_Texture: {fileID: 2800000, guid: 9adaa2918056e0f4188a338e5221a687, type: 3}
+        m_Scale: {x: 0.5, y: 0.5}
+        m_Offset: {x: 0, y: 0}
     - _SnowAlbedo:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -159,6 +169,7 @@ Material:
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
+    - _CliffNormalStrength: 0.65
     - _Cull: 2
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
@@ -191,6 +202,12 @@ Material:
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _ReceiveShadows: 1
+    - _RockDetail: 1
+    - _RockDetailFadeEnd: 450
+    - _RockDetailFadeStart: 100
+    - _RockDetailStrength: 0.5
+    - _RockNormalStrength: 0.45
+    - _RockTiling: 0.12
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SnowNormalStrength: 0.35
@@ -206,6 +223,7 @@ Material:
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
+    - _SurfaceBlendSharpness: 1
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:

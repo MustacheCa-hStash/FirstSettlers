@@ -19,13 +19,17 @@ public static class FarTerrainGenerator
         int controlMapResolution,
         float skirtDepth,
         float waterLevel,
-        bool isMacroTile = false)
+        bool isMacroTile = false,
+        float mountainHorizontalScale = 1f,
+        int climateOctaves = 3,
+        float climatePersistence = 0.5f,
+        float climateLacunarity = 2f)
     {
         long totalStart = TerrainGenerationProfiler.GetTimestamp();
         int safeHeightGridResolution = Mathf.Clamp(heightGridResolution, 2, chunkSize + 1);
         int safeControlMapResolution = Mathf.Clamp(controlMapResolution, 2, 128);
 
-        TerrainHeightSamplingContext samplingContext = HeightMapGenerator.CreateSamplingContext(seed, waterLevel);
+        TerrainHeightSamplingContext samplingContext = HeightMapGenerator.CreateSamplingContext(seed, waterLevel, mountainHorizontalScale);
 
         long stageStart = TerrainGenerationProfiler.GetTimestamp();
         float[,] heightGrid = BuildHeightGrid(
@@ -59,11 +63,16 @@ public static class FarTerrainGenerator
         stageStart = TerrainGenerationProfiler.GetTimestamp();
         ControlMapPixelData controlMaps = BuildControlMaps(
             safeControlMapResolution,
-            heightGrid,
-            slopeGrid,
-            mountainMaskGrid,
-            riverMaskGrid,
-            waterLevel);
+            chunkCoord,
+            chunkSize,
+            seed,
+            sampleScale,
+            waterLevel,
+            samplingContext,
+            climateOctaves,
+            climatePersistence,
+            climateLacunarity,
+            meshHeightMultiplier);
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FarControlMapBuild, stageStart);
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FarTerrainTotal, totalStart);
 
@@ -91,9 +100,13 @@ public static class FarTerrainGenerator
         NativeArray<float2> mountainMaskOffsets = default;
         NativeArray<float2> mountainTerrainOffsets = default;
         NativeArray<float2> mountainRuggedOffsets = default;
+        NativeArray<MountainExpansionAnchor> mountainAnchors = default;
 
         try
         {
+            float2 minimum = new float2(chunkCoord.x * chunkSize, chunkCoord.z * chunkSize);
+            mountainAnchors = new NativeArray<MountainExpansionAnchor>(
+                HeightMapGenerator.GetMountainAnchors(minimum, minimum + chunkSize, sampleScale, samplingContext), Allocator.TempJob);
             heights = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             mountainMasks = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             riverMasks = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
@@ -111,6 +124,8 @@ public static class FarTerrainGenerator
                 sampleScale = sampleScale,
                 riverSeed = samplingContext.RiverSeed,
                 waterLevel = samplingContext.WaterLevel,
+                mountainHorizontalScale = samplingContext.MountainHorizontalScale,
+                mountainAnchors = mountainAnchors,
                 baseLandOffsets = baseLandOffsets,
                 mountainMaskOffsets = mountainMaskOffsets,
                 mountainTerrainOffsets = mountainTerrainOffsets,
@@ -129,6 +144,7 @@ public static class FarTerrainGenerator
         }
         finally
         {
+            if (mountainAnchors.IsCreated) mountainAnchors.Dispose();
             if (heights.IsCreated)
                 heights.Dispose();
             if (mountainMasks.IsCreated)
@@ -421,43 +437,70 @@ public static class FarTerrainGenerator
 
     private static ControlMapPixelData BuildControlMaps(
         int resolution,
-        float[,] heightGrid,
-        float[,] slopeGrid,
-        float[,] mountainMaskGrid,
-        float[,] riverMaskGrid,
-        float waterLevel)
+        ChunkCoord chunkCoord,
+        int chunkSize,
+        int seed,
+        float sampleScale,
+        float waterLevel,
+        TerrainHeightSamplingContext samplingContext,
+        int climateOctaves,
+        float climatePersistence,
+        float climateLacunarity,
+        float meshHeightMultiplier)
     {
         ControlMapPixelData controlMaps = new ControlMapPixelData(resolution, resolution, 3);
-        int sourceResolution = heightGrid.GetLength(0);
         int pixelCount = resolution * resolution;
+        int safeClimateOctaves = ClimateGenerator.GetClimateOctaveCount(climateOctaves);
+        float climateMaxPossibleNoise = ClimateGenerator.GetMaxPossibleNoise(safeClimateOctaves, climatePersistence);
 
-        NativeArray<float> heightSamples = default;
-        NativeArray<float> slopeSamples = default;
-        NativeArray<float> mountainMaskSamples = default;
-        NativeArray<float> riverMaskSamples = default;
+        NativeArray<float2> baseLandOffsets = default;
+        NativeArray<float2> mountainMaskOffsets = default;
+        NativeArray<float2> mountainTerrainOffsets = default;
+        NativeArray<float2> mountainRuggedOffsets = default;
+        NativeArray<MountainExpansionAnchor> mountainAnchors = default;
+        NativeArray<float2> moistureOffsets = default;
+        NativeArray<float2> temperatureOffsets = default;
         NativeArray<Color32> controlMap0 = default;
         NativeArray<Color32> controlMap1 = default;
         NativeArray<Color32> controlMap2 = default;
 
         try
         {
-            heightSamples = CopyGridToNative(heightGrid);
-            slopeSamples = CopyGridToNative(slopeGrid);
-            mountainMaskSamples = CopyGridToNative(mountainMaskGrid);
-            riverMaskSamples = CopyGridToNative(riverMaskGrid);
+            float2 minimum = new float2(chunkCoord.x * chunkSize - 4f, chunkCoord.z * chunkSize - 4f);
+            mountainAnchors = new NativeArray<MountainExpansionAnchor>(
+                HeightMapGenerator.GetMountainAnchors(minimum, minimum + chunkSize + 8f, sampleScale, samplingContext), Allocator.TempJob);
+            baseLandOffsets = CreateNativeOffsets(samplingContext.BaseLandOffsets);
+            mountainMaskOffsets = CreateNativeOffsets(samplingContext.MountainMaskOffsets);
+            mountainTerrainOffsets = CreateNativeOffsets(samplingContext.MountainTerrainOffsets);
+            mountainRuggedOffsets = CreateNativeOffsets(samplingContext.MountainRuggedOffsets);
+            moistureOffsets = ClimateGenerator.CreateOctaveOffsets(seed + 1000, safeClimateOctaves, Allocator.TempJob);
+            temperatureOffsets = ClimateGenerator.CreateOctaveOffsets(seed + 2000, safeClimateOctaves, Allocator.TempJob);
             controlMap0 = new NativeArray<Color32>(pixelCount, Allocator.TempJob, NativeArrayOptions.ClearMemory);
             controlMap1 = new NativeArray<Color32>(pixelCount, Allocator.TempJob, NativeArrayOptions.ClearMemory);
             controlMap2 = new NativeArray<Color32>(pixelCount, Allocator.TempJob, NativeArrayOptions.ClearMemory);
 
             FarControlMapBuildJob job = new FarControlMapBuildJob
             {
+                heightMultiplier = meshHeightMultiplier,
                 waterLevel = waterLevel,
-                sourceResolution = sourceResolution,
                 controlMapResolution = resolution,
-                heightSamples = heightSamples,
-                slopeSamples = slopeSamples,
-                mountainMaskSamples = mountainMaskSamples,
-                riverMaskSamples = riverMaskSamples,
+                chunkSize = chunkSize,
+                chunkX = chunkCoord.x,
+                chunkZ = chunkCoord.z,
+                seed = seed,
+                sampleScale = sampleScale,
+                riverSeed = samplingContext.RiverSeed,
+                mountainHorizontalScale = samplingContext.MountainHorizontalScale,
+                climatePersistence = climatePersistence,
+                climateLacunarity = climateLacunarity,
+                climateMaxPossibleNoise = climateMaxPossibleNoise,
+                mountainAnchors = mountainAnchors,
+                baseLandOffsets = baseLandOffsets,
+                mountainMaskOffsets = mountainMaskOffsets,
+                mountainTerrainOffsets = mountainTerrainOffsets,
+                mountainRuggedOffsets = mountainRuggedOffsets,
+                moistureOffsets = moistureOffsets,
+                temperatureOffsets = temperatureOffsets,
                 controlMap0 = controlMap0,
                 controlMap1 = controlMap1,
                 controlMap2 = controlMap2
@@ -472,14 +515,20 @@ public static class FarTerrainGenerator
         }
         finally
         {
-            if (heightSamples.IsCreated)
-                heightSamples.Dispose();
-            if (slopeSamples.IsCreated)
-                slopeSamples.Dispose();
-            if (mountainMaskSamples.IsCreated)
-                mountainMaskSamples.Dispose();
-            if (riverMaskSamples.IsCreated)
-                riverMaskSamples.Dispose();
+            if (mountainAnchors.IsCreated)
+                mountainAnchors.Dispose();
+            if (baseLandOffsets.IsCreated)
+                baseLandOffsets.Dispose();
+            if (mountainMaskOffsets.IsCreated)
+                mountainMaskOffsets.Dispose();
+            if (mountainTerrainOffsets.IsCreated)
+                mountainTerrainOffsets.Dispose();
+            if (mountainRuggedOffsets.IsCreated)
+                mountainRuggedOffsets.Dispose();
+            if (moistureOffsets.IsCreated)
+                moistureOffsets.Dispose();
+            if (temperatureOffsets.IsCreated)
+                temperatureOffsets.Dispose();
             if (controlMap0.IsCreated)
                 controlMap0.Dispose();
             if (controlMap1.IsCreated)
@@ -584,6 +633,8 @@ public static class FarTerrainGenerator
         public int chunkX;
         public int chunkZ;
         public float sampleScale;
+        public float mountainHorizontalScale;
+        [ReadOnly] public NativeArray<MountainExpansionAnchor> mountainAnchors;
         public int riverSeed;
         public float waterLevel;
 
@@ -616,7 +667,7 @@ public static class FarTerrainGenerator
                 mountainMaskOffsets,
                 mountainTerrainOffsets,
                 mountainRuggedOffsets,
-                riverSeed, waterLevel);
+                riverSeed, waterLevel, mountainHorizontalScale, mountainAnchors);
 
             heights[index] = sample.Height;
             mountainMasks[index] = sample.MountainMask;
@@ -783,14 +834,30 @@ public static class FarTerrainGenerator
     [BurstCompile]
     private struct FarControlMapBuildJob : IJobParallelFor
     {
-        public float waterLevel;
-        public int sourceResolution;
-        public int controlMapResolution;
+        public float heightMultiplier;
+        private const byte SnowDustingSnowWeight = 64;
+        private const byte SnowDustingGrassWeight = 255 - SnowDustingSnowWeight;
 
-        [ReadOnly] public NativeArray<float> heightSamples;
-        [ReadOnly] public NativeArray<float> slopeSamples;
-        [ReadOnly] public NativeArray<float> mountainMaskSamples;
-        [ReadOnly] public NativeArray<float> riverMaskSamples;
+        public float waterLevel;
+        public int controlMapResolution;
+        public int chunkSize;
+        public int chunkX;
+        public int chunkZ;
+        public int seed;
+        public float sampleScale;
+        public int riverSeed;
+        public float mountainHorizontalScale;
+        public float climatePersistence;
+        public float climateLacunarity;
+        public float climateMaxPossibleNoise;
+
+        [ReadOnly] public NativeArray<MountainExpansionAnchor> mountainAnchors;
+        [ReadOnly] public NativeArray<float2> baseLandOffsets;
+        [ReadOnly] public NativeArray<float2> mountainMaskOffsets;
+        [ReadOnly] public NativeArray<float2> mountainTerrainOffsets;
+        [ReadOnly] public NativeArray<float2> mountainRuggedOffsets;
+        [ReadOnly] public NativeArray<float2> moistureOffsets;
+        [ReadOnly] public NativeArray<float2> temperatureOffsets;
 
         [WriteOnly] public NativeArray<Color32> controlMap0;
         [WriteOnly] public NativeArray<Color32> controlMap1;
@@ -803,39 +870,256 @@ public static class FarTerrainGenerator
             float tx = controlMapResolution == 1 ? 0f : x / (float)(controlMapResolution - 1);
             float tz = controlMapResolution == 1 ? 0f : z / (float)(controlMapResolution - 1);
 
-            float height = SampleGrid(heightSamples, sourceResolution, tx, tz);
-            float slope = SampleGrid(slopeSamples, sourceResolution, tx, tz);
-            float mountainMask = SampleGrid(mountainMaskSamples, sourceResolution, tx, tz);
-            float riverMask = SampleGrid(riverMaskSamples, sourceResolution, tx, tz);
+            float worldX = chunkX * chunkSize + tx * chunkSize;
+            float worldZ = chunkZ * chunkSize + tz * chunkSize;
 
-            BiomeType biome = ClassifyCrudeBiome(height, slope, mountainMask, riverMask, waterLevel);
-            SurfaceType surfaceType = SurfaceTypeClassifier.Classify(height, slope, riverMask, biome, waterLevel);
+            TerrainHeightSample center = SampleTerrain(worldX, worldZ);
+            float slope = SampleSlope(worldX, worldZ, out float2 snowGradient, out float neighborMean);
+            float moisture = ClimateGenerator.SampleClimate01(
+                worldX,
+                worldZ,
+                seed + 1000,
+                sampleScale * 10f,
+                climatePersistence,
+                climateLacunarity,
+                climateMaxPossibleNoise,
+                moistureOffsets);
+            float temperature = ClimateGenerator.SampleClimate01(
+                worldX,
+                worldZ,
+                seed + 2000,
+                sampleScale * 12f,
+                climatePersistence,
+                climateLacunarity,
+                climateMaxPossibleNoise,
+                temperatureOffsets);
+
+            BiomeType biome = ClassifyBiome(
+                center.Height,
+                moisture,
+                temperature,
+                slope,
+                center.MountainMask,
+                center.RiverMask,
+                waterLevel);
+            SurfaceType surfaceType = SurfaceTypeClassifier.Classify(center.Height, slope, center.RiverMask, biome, waterLevel);
+            GroundCoverType groundCoverType = ClassifyGroundCover(biome, surfaceType, moisture, slope, center.RiverMask, x, z);
             Color32 surfaceColor = SurfaceTypeToControlColor(surfaceType);
+            Color32 snowMap0 = default, snowMap1 = default;
 
             if (UsesFirstControlMap(surfaceType))
-                controlMap0[pixelIndex] = surfaceColor;
+                snowMap0 = surfaceColor;
             else
-                controlMap1[pixelIndex] = surfaceColor;
+                snowMap1 = surfaceColor;
 
-            controlMap2[pixelIndex] = new Color32(0, 0, 0, 0);
+            if (surfaceType == SurfaceType.Grass && groundCoverType == GroundCoverType.SnowDusting)
+            {
+                snowMap0 = SurfaceTypeToControlColor(SurfaceType.Grass, SnowDustingGrassWeight);
+                snowMap1 = SurfaceTypeToControlColor(SurfaceType.Snow, SnowDustingSnowWeight);
+                controlMap2[pixelIndex] = new Color32(0, 0, 0, 0);
+            }
+            else
+            {
+                controlMap2[pixelIndex] = GroundCoverTypeToControlColor(groundCoverType);
+            }
+            float2 snow = MountainSnow.Evaluate(new float2(worldX, worldZ), seed, center.Height,
+                center.MountainMask, center.RiverMask, waterLevel, temperature, moisture,
+                snowGradient, neighborMean, heightMultiplier);
+            MountainSnow.Apply(ref snowMap0, ref snowMap1, snow);
+            controlMap0[pixelIndex] = snowMap0;
+            controlMap1[pixelIndex] = snowMap1;
         }
 
-        private static float SampleGrid(NativeArray<float> grid, int resolution, float tx, float tz)
+        private TerrainHeightSample SampleTerrain(float worldX, float worldZ)
         {
-            float sourceX = tx * (resolution - 1);
-            float sourceZ = tz * (resolution - 1);
-            int x0 = (int)math.floor(sourceX);
-            int z0 = (int)math.floor(sourceZ);
-            int x1 = math.min(x0 + 1, resolution - 1);
-            int z1 = math.min(z0 + 1, resolution - 1);
-            float fx = sourceX - x0;
-            float fz = sourceZ - z0;
+            return HeightMapGenerator.SampleTerrainHeightNative(
+                worldX,
+                worldZ,
+                sampleScale,
+                baseLandOffsets,
+                mountainMaskOffsets,
+                mountainTerrainOffsets,
+                mountainRuggedOffsets,
+                riverSeed,
+                waterLevel,
+                mountainHorizontalScale,
+                mountainAnchors);
+        }
 
-            float a = grid[x0 * resolution + z0];
-            float b = grid[x1 * resolution + z0];
-            float c = grid[x0 * resolution + z1];
-            float d = grid[x1 * resolution + z1];
-            return math.lerp(math.lerp(a, b, fx), math.lerp(c, d, fx), fz);
+        private float SampleSlope(float worldX, float worldZ, out float2 gradient, out float neighborMean)
+        {
+            const float slopeRadius = MountainSnow.SampleRadius;
+
+            float left = SampleTerrain(worldX - slopeRadius, worldZ).Height;
+            float right = SampleTerrain(worldX + slopeRadius, worldZ).Height;
+            float down = SampleTerrain(worldX, worldZ - slopeRadius).Height;
+            float up = SampleTerrain(worldX, worldZ + slopeRadius).Height;
+
+            float dx = (right - left) / (slopeRadius * 2f);
+            float dz = (up - down) / (slopeRadius * 2f);
+            gradient = new float2(dx, dz);
+            neighborMean = (left + right + down + up) * 0.25f;
+            return math.sqrt(dx * dx + dz * dz);
+        }
+
+        private static BiomeType ClassifyBiome(
+            float terrainHeight,
+            float moisture,
+            float temperature,
+            float slope,
+            float mountainMask,
+            float riverMask,
+            float waterLevel)
+        {
+            const float rockLevel = 0.8f;
+            const float coldTemp = 0.30f;
+            const float hotTemp = 0.65f;
+            const float dryMoisture = 0.35f;
+            const float wetMoisture = 0.65f;
+
+            slope *= 4f;
+
+            if (terrainHeight <= waterLevel)
+                return BiomeType.Water;
+
+            bool moderateMountain = mountainMask > 0.30f;
+            bool strongMountain = mountainMask > 0.45f;
+
+            if (strongMountain)
+            {
+                float heightSnowBias = InverseLerp(2f, 11f, terrainHeight);
+                float slopeRockThreshold = math.lerp(0.015f, 0.16f, heightSnowBias);
+                bool steepMountainSlope = slope > slopeRockThreshold;
+
+                if (steepMountainSlope)
+                    return BiomeType.Rock;
+
+                if (temperature < coldTemp)
+                    return BiomeType.Snow;
+
+                if (temperature < hotTemp)
+                {
+                    float temperateSnowHeight = InverseLerp(3.0f, 8f, terrainHeight);
+                    float gentleSlopeMask = 1f - InverseLerp(0.02f, 0.18f, slope);
+                    float snowChance = temperateSnowHeight * gentleSlopeMask;
+
+                    if (snowChance > 0.5f)
+                        return BiomeType.Snow;
+
+                    return BiomeType.Rock;
+                }
+
+                return BiomeType.Rock;
+            }
+
+            if (temperature < 0.18f)
+                return moisture < 0.35f ? BiomeType.Tundra : BiomeType.Snow;
+
+            if (temperature < coldTemp && moisture > wetMoisture)
+                return BiomeType.Taiga;
+
+            if (moderateMountain)
+            {
+                float mountainStrength = InverseLerp(0.30f, 0.45f, mountainMask);
+                float adjustedRockLevel = rockLevel;
+                adjustedRockLevel -= InverseLerp(0.05f, 0.45f, slope) * 0.14f;
+                adjustedRockLevel -= mountainStrength * 0.18f;
+                adjustedRockLevel = math.clamp(adjustedRockLevel, 0.62f, rockLevel);
+
+                if (terrainHeight > adjustedRockLevel)
+                    return BiomeType.Rock;
+            }
+
+            if (temperature > hotTemp && moisture < dryMoisture)
+                return BiomeType.Desert;
+
+            if (moisture > wetMoisture)
+                return BiomeType.Forest;
+
+            bool steepGrasslandSlope = slope > 0.03f && terrainHeight > waterLevel + 0.10f;
+            return steepGrasslandSlope ? BiomeType.Rock : BiomeType.Grassland;
+        }
+
+        private GroundCoverType ClassifyGroundCover(
+            BiomeType biome,
+            SurfaceType surfaceType,
+            float moisture,
+            float slope,
+            float riverMask,
+            int x,
+            int z)
+        {
+            if (surfaceType != SurfaceType.Grass)
+                return GroundCoverType.Default;
+
+            switch (biome)
+            {
+                case BiomeType.Forest:
+                    return ClassifyForestGroundCover(moisture, slope, riverMask, x, z);
+                case BiomeType.Taiga:
+                    return Sample01(seed + 8310, x, z, 0.04f) > 0.48f
+                        ? GroundCoverType.NeedleLitter
+                        : GroundCoverType.DarkGrass;
+                case BiomeType.Tundra:
+                    return GroundCoverType.SnowDusting;
+                default:
+                    return GroundCoverType.Default;
+            }
+        }
+
+        private GroundCoverType ClassifyForestGroundCover(
+            float moisture,
+            float slope,
+            float riverMask,
+            int x,
+            int z)
+        {
+            float patchNoise = Sample01(seed + 8300, x, z, 0.055f);
+            bool nearRiver = riverMask > 0.64f;
+            bool exposedOrDry = slope > 0.085f || moisture < 0.32f;
+
+            if (nearRiver)
+                return patchNoise > 0.55f ? GroundCoverType.Moss : GroundCoverType.BareDirt;
+
+            if (exposedOrDry && patchNoise > 0.42f)
+                return GroundCoverType.BareDirt;
+
+            if (moisture > 0.70f && patchNoise < 0.25f)
+                return GroundCoverType.Moss;
+
+            return patchNoise > 0.58f ? GroundCoverType.LeafLitter : GroundCoverType.DarkGrass;
+        }
+
+        private float Sample01(int noiseSeed, int x, int z, float scale)
+        {
+            float tx = controlMapResolution == 1 ? 0f : x / (float)(controlMapResolution - 1);
+            float tz = controlMapResolution == 1 ? 0f : z / (float)(controlMapResolution - 1);
+            float worldX = chunkX * chunkSize + tx * chunkSize;
+            float worldZ = chunkZ * chunkSize + tz * chunkSize;
+            float sample = SampleValueNoise(worldX * scale, worldZ * scale, noiseSeed);
+            return math.clamp((sample + 1f) * 0.5f, 0f, 1f);
+        }
+
+        private static Color32 GroundCoverTypeToControlColor(GroundCoverType groundCoverType)
+        {
+            const byte value = 255;
+
+            switch (groundCoverType)
+            {
+                case GroundCoverType.DarkGrass:
+                    return new Color32(value, 0, 0, 0);
+                case GroundCoverType.LeafLitter:
+                case GroundCoverType.NeedleLitter:
+                    return new Color32(0, value, 0, 0);
+                case GroundCoverType.BareDirt:
+                case GroundCoverType.Gravel:
+                    return new Color32(0, 0, value, 0);
+                case GroundCoverType.Moss:
+                case GroundCoverType.Lichen:
+                    return new Color32(0, 0, 0, value);
+                default:
+                    return new Color32(0, 0, 0, 0);
+            }
         }
 
         private static bool UsesFirstControlMap(SurfaceType surfaceType)
@@ -856,10 +1140,8 @@ public static class FarTerrainGenerator
             }
         }
 
-        private static Color32 SurfaceTypeToControlColor(SurfaceType surfaceType)
+        private static Color32 SurfaceTypeToControlColor(SurfaceType surfaceType, byte value = 255)
         {
-            const byte value = 255;
-
             switch (surfaceType)
             {
                 case SurfaceType.Sand:
@@ -878,6 +1160,55 @@ public static class FarTerrainGenerator
                     return new Color32(0, 0, value, 0);
                 default:
                     return new Color32(0, 0, 0, 0);
+            }
+        }
+
+        private static float InverseLerp(float a, float b, float value)
+        {
+            return math.clamp((value - a) / (b - a), 0f, 1f);
+        }
+
+        private static float SampleValueNoise(float x, float z, int noiseSeed)
+        {
+            int ix = (int)math.floor(x);
+            int iz = (int)math.floor(z);
+
+            float fx = x - ix;
+            float fz = z - iz;
+
+            float u = Quintic(fx);
+            float v = Quintic(fz);
+
+            float a = HashToSignedValue(ix, iz, noiseSeed);
+            float b = HashToSignedValue(ix + 1, iz, noiseSeed);
+            float c = HashToSignedValue(ix, iz + 1, noiseSeed);
+            float d = HashToSignedValue(ix + 1, iz + 1, noiseSeed);
+
+            float k0 = a;
+            float k1 = b - a;
+            float k2 = c - a;
+            float k3 = a - b - c + d;
+
+            return k0 + k1 * u + k2 * v + k3 * u * v;
+        }
+
+        private static float Quintic(float t)
+        {
+            return t * t * t * (t * (t * 6f - 15f) + 10f);
+        }
+
+        private static float HashToSignedValue(int x, int z, int noiseSeed)
+        {
+            unchecked
+            {
+                uint h = (uint)noiseSeed;
+                h ^= 374761393u * (uint)x;
+                h ^= 668265263u * (uint)z;
+                h = (h ^ (h >> 13)) * 1274126177u;
+                h ^= h >> 16;
+
+                float value01 = (h & 0x00FFFFFFu) / 16777215f;
+                return value01 * 2f - 1f;
             }
         }
     }

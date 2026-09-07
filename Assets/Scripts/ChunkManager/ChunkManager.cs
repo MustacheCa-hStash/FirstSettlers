@@ -165,7 +165,8 @@ public class ChunkManager
         float terrainDataApplyBudgetMsPerFrame,
         float farTerrainApplyBudgetMsPerFrame,
         float lodMeshApplyBudgetMsPerFrame,
-        float colliderApplyBudgetMsPerFrame)
+        float colliderApplyBudgetMsPerFrame,
+        float mountainHorizontalScale = 1f)
     {
         this.viewDistance = viewDistance;
         this.colliderDistance = colliderDistance;
@@ -234,7 +235,7 @@ public class ChunkManager
             this.maxActiveFarTerrainJobs,
             this.maxActiveMeshJobs,
             this.maxActiveColliderJobs,
-            waterSettings);
+            waterSettings, mountainHorizontalScale);
         foliageManager = new FoliageManager(
             foliageParent,
             grassSettings,
@@ -1322,7 +1323,10 @@ public class ChunkManager
             worldScale,
             farTerrainHeightGridResolution,
             farTerrainControlMapResolution,
-            farTerrainSkirtDepth
+            farTerrainSkirtDepth,
+            climateOctaves: octaves,
+            climatePersistence: persistence,
+            climateLacunarity: lacunarity
         );
 
         if (!submitted)
@@ -1360,7 +1364,10 @@ public class ChunkManager
             tileHeightGridResolution,
             tileControlMapResolution,
             farTerrainSkirtDepth,
-            true);
+            true,
+            octaves,
+            persistence,
+            lacunarity);
 
         if (!submitted)
             record.CancelRequest(requestVersion);

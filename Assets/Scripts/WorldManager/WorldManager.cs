@@ -25,6 +25,10 @@ public class WorldManager : MonoBehaviour
     [SerializeField] DandelionSettings dandelionSettings = new DandelionSettings();
     [SerializeField] TreeSettings treeSettings;
     [SerializeField] float sampleScale = 10f;
+    [Tooltip("Stretches mountain profiles around detected local peaks. 1 preserves the original world; try 1.5. Does not spread mountain locations apart. Expanded ranges can merge. Rivers follow the expanded footprint. Restart Play Mode after changing.")]
+    [UnityEngine.Serialization.FormerlySerializedAs("mountainHorizontalScale")]
+    [UnityEngine.Serialization.FormerlySerializedAs("mountainCoverage")]
+    [SerializeField, Range(1f, 3f)] float mountainWidth = 1f;
     [SerializeField] float worldScale = 1.0f;
     [SerializeField] int octaves = 3;
     [SerializeField] float persistence = 0.5f;
@@ -88,7 +92,7 @@ public class WorldManager : MonoBehaviour
             farTerrainTileContentBudgetMsPerFrame,
             completedRequestApplyBudgetMsPerFrame,
             terrainDataApplyBudgetMsPerFrame, farTerrainApplyBudgetMsPerFrame,
-            lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame);
+            lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame, mountainWidth);
     }
 
     void Start()

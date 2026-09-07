@@ -30,6 +30,7 @@ public class TerrainRequestManager
     private readonly int maxActiveMeshJobs;
     private readonly int maxActiveColliderJobs;
     private readonly TerrainWaterSettings waterSettings;
+    private readonly float mountainHorizontalScale;
 
     public int CompletedTerrainDataResultCount
     {
@@ -77,9 +78,11 @@ public class TerrainRequestManager
         int maxActiveFarTerrainJobs,
         int maxActiveMeshJobs,
         int maxActiveColliderJobs,
-        TerrainWaterSettings waterSettings)
+        TerrainWaterSettings waterSettings,
+        float mountainHorizontalScale = 1f)
     {
         this.waterSettings = waterSettings;
+        this.mountainHorizontalScale = HeightMapGenerator.SanitizeMountainHorizontalScale(mountainHorizontalScale);
         this.maxActiveTerrainDataJobs = Mathf.Max(1, maxActiveTerrainDataJobs);
         this.maxActiveFarTerrainJobs = Mathf.Max(1, maxActiveFarTerrainJobs);
         this.maxActiveMeshJobs = Mathf.Max(1, maxActiveMeshJobs);
@@ -115,7 +118,8 @@ public class TerrainRequestManager
                     seed,
                     sampleScale,
                     chunkCoord,
-                    waterSettings.WaterLevel
+                    waterSettings.WaterLevel,
+                    mountainHorizontalScale
                 );
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainHeightField, stageStart);
 
@@ -178,7 +182,9 @@ public class TerrainRequestManager
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainGroundCoverMap, stageStart);
 
                 stageStart = TerrainGenerationProfiler.GetTimestamp();
-                ControlMapPixelData controlMapRawData = TerrainControlMapBuilder.BuildRaw(surfaceTypeMap, groundCoverMap);
+                var mountainSnow = MountainSnow.Generate(finalHeightMap, mountainMaskMap, riverMaskMap,
+                    temperatureMap, moistureMap, chunkSize, chunkCoord, seed, sampleScale, waterSettings, mountainHorizontalScale);
+                ControlMapPixelData controlMapRawData = TerrainControlMapBuilder.BuildRaw(surfaceTypeMap, groundCoverMap, mountainSnow);
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainControlMapBuild, stageStart);
 
                 TerrainDataRequestResult result = new TerrainDataRequestResult(chunkCoord, requestVersion, 
@@ -218,7 +224,10 @@ public class TerrainRequestManager
         int heightGridResolution,
         int controlMapResolution,
         float skirtDepth,
-        bool isMacroTile = false)
+        bool isMacroTile = false,
+        int climateOctaves = 3,
+        float climatePersistence = 0.5f,
+        float climateLacunarity = 2f)
     {
         if (Interlocked.CompareExchange(ref activeFarTerrainJobs, 0, 0) >= maxActiveFarTerrainJobs)
             return false;
@@ -242,7 +251,11 @@ public class TerrainRequestManager
                     controlMapResolution,
                     skirtDepth,
                     waterSettings.WaterLevel,
-                    isMacroTile);
+                    isMacroTile,
+                    mountainHorizontalScale,
+                    climateOctaves,
+                    climatePersistence,
+                    climateLacunarity);
 
                 lock (farTerrainResultsLock)
                 {

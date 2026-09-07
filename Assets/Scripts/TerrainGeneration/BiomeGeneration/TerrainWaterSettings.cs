@@ -14,6 +14,7 @@ public readonly struct TerrainWaterSettings
 
     public readonly float SurfaceY;
     public readonly float WaterLevel;
+    public readonly float HeightMultiplier;
 
     public TerrainWaterSettings(float surfaceY, float heightMultiplier, float worldScale)
     {
@@ -23,6 +24,7 @@ public readonly struct TerrainWaterSettings
             throw new System.ArgumentOutOfRangeException(nameof(surfaceY), "Water Y must be finite and terrain scales must be positive and finite.");
 
         SurfaceY = surfaceY;
+        HeightMultiplier = heightMultiplier;
         WaterLevel = surfaceY / (heightMultiplier * worldScale);
     }
 }
