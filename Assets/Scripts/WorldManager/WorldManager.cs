@@ -29,6 +29,8 @@ public class WorldManager : MonoBehaviour
     [UnityEngine.Serialization.FormerlySerializedAs("mountainHorizontalScale")]
     [UnityEngine.Serialization.FormerlySerializedAs("mountainCoverage")]
     [SerializeField, Range(1f, 3f)] float mountainWidth = 1f;
+    [Tooltip("Render-only gamma for mountain snow coverage. 1 disables the boost; lower values make blended mountain snow brighter without changing other surface transitions. Restart Play Mode after changing.")]
+    [SerializeField, Range(0.35f, 1.25f)] float mountainSnowBlendGamma = MountainSnow.DefaultRenderCoverageGamma;
     [SerializeField] float worldScale = 1.0f;
     [SerializeField] int octaves = 3;
     [SerializeField] float persistence = 0.5f;
@@ -92,7 +94,7 @@ public class WorldManager : MonoBehaviour
             farTerrainTileContentBudgetMsPerFrame,
             completedRequestApplyBudgetMsPerFrame,
             terrainDataApplyBudgetMsPerFrame, farTerrainApplyBudgetMsPerFrame,
-            lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame, mountainWidth);
+            lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame, mountainWidth, mountainSnowBlendGamma);
     }
 
     void Start()

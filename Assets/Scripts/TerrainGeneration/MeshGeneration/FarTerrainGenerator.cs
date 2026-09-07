@@ -21,6 +21,7 @@ public static class FarTerrainGenerator
         float waterLevel,
         bool isMacroTile = false,
         float mountainHorizontalScale = 1f,
+        float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma,
         int climateOctaves = 3,
         float climatePersistence = 0.5f,
         float climateLacunarity = 2f)
@@ -72,11 +73,28 @@ public static class FarTerrainGenerator
             climateOctaves,
             climatePersistence,
             climateLacunarity,
-            meshHeightMultiplier);
+            meshHeightMultiplier,
+            mountainSnowRenderCoverageGamma);
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FarControlMapBuild, stageStart);
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FarTerrainTotal, totalStart);
 
-        return new FarTerrainRequestResult(chunkCoord, requestVersion, isMacroTile, meshData, controlMaps);
+        WaterMeshData waterMeshData = BuildWaterMesh(heightGrid, chunkSize, worldScale, meshHeightMultiplier, waterLevel);
+        return new FarTerrainRequestResult(chunkCoord, requestVersion, isMacroTile, meshData, controlMaps, waterMeshData);
+    }
+
+    // Cover cells with any submerged corner, then merge adjacent water patches.
+    private static WaterMeshData BuildWaterMesh(
+        float[,] heightGrid, int chunkSize, float worldScale, float heightMultiplier, float waterLevel)
+    {
+        int resolution = heightGrid.GetLength(0);
+        var states = new WaterState[resolution + 2, resolution + 2];
+        for (int x = 0; x < resolution; x++)
+            for (int z = 0; z < resolution; z++)
+                states[x + 1, z + 1] = heightGrid[x, z] <= waterLevel ? WaterState.Deep : WaterState.Dry;
+
+        float sampleWorldScale = chunkSize * worldScale / (resolution - 1);
+        return WaterMeshGenerator.GenerateWaterMesh(
+            states, 1, sampleWorldScale, waterLevel * heightMultiplier * worldScale);
     }
 
     private static float[,] BuildHeightGrid(
@@ -446,7 +464,8 @@ public static class FarTerrainGenerator
         int climateOctaves,
         float climatePersistence,
         float climateLacunarity,
-        float meshHeightMultiplier)
+        float meshHeightMultiplier,
+        float mountainSnowRenderCoverageGamma)
     {
         ControlMapPixelData controlMaps = new ControlMapPixelData(resolution, resolution, 3);
         int pixelCount = resolution * resolution;
@@ -494,6 +513,7 @@ public static class FarTerrainGenerator
                 climatePersistence = climatePersistence,
                 climateLacunarity = climateLacunarity,
                 climateMaxPossibleNoise = climateMaxPossibleNoise,
+                mountainSnowRenderCoverageGamma = MountainSnow.SanitizeRenderCoverageGamma(mountainSnowRenderCoverageGamma),
                 mountainAnchors = mountainAnchors,
                 baseLandOffsets = baseLandOffsets,
                 mountainMaskOffsets = mountainMaskOffsets,
@@ -850,6 +870,7 @@ public static class FarTerrainGenerator
         public float climatePersistence;
         public float climateLacunarity;
         public float climateMaxPossibleNoise;
+        public float mountainSnowRenderCoverageGamma;
 
         [ReadOnly] public NativeArray<MountainExpansionAnchor> mountainAnchors;
         [ReadOnly] public NativeArray<float2> baseLandOffsets;
@@ -925,7 +946,7 @@ public static class FarTerrainGenerator
             float2 snow = MountainSnow.Evaluate(new float2(worldX, worldZ), seed, center.Height,
                 center.MountainMask, center.RiverMask, waterLevel, temperature, moisture,
                 snowGradient, neighborMean, heightMultiplier);
-            MountainSnow.Apply(ref snowMap0, ref snowMap1, snow);
+            MountainSnow.Apply(ref snowMap0, ref snowMap1, snow, mountainSnowRenderCoverageGamma);
             controlMap0[pixelIndex] = snowMap0;
             controlMap1[pixelIndex] = snowMap1;
         }

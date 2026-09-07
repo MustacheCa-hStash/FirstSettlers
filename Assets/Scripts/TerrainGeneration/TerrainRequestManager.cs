@@ -31,6 +31,7 @@ public class TerrainRequestManager
     private readonly int maxActiveColliderJobs;
     private readonly TerrainWaterSettings waterSettings;
     private readonly float mountainHorizontalScale;
+    private readonly float mountainSnowRenderCoverageGamma;
 
     public int CompletedTerrainDataResultCount
     {
@@ -79,10 +80,12 @@ public class TerrainRequestManager
         int maxActiveMeshJobs,
         int maxActiveColliderJobs,
         TerrainWaterSettings waterSettings,
-        float mountainHorizontalScale = 1f)
+        float mountainHorizontalScale = 1f,
+        float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma)
     {
         this.waterSettings = waterSettings;
         this.mountainHorizontalScale = HeightMapGenerator.SanitizeMountainHorizontalScale(mountainHorizontalScale);
+        this.mountainSnowRenderCoverageGamma = MountainSnow.SanitizeRenderCoverageGamma(mountainSnowRenderCoverageGamma);
         this.maxActiveTerrainDataJobs = Mathf.Max(1, maxActiveTerrainDataJobs);
         this.maxActiveFarTerrainJobs = Mathf.Max(1, maxActiveFarTerrainJobs);
         this.maxActiveMeshJobs = Mathf.Max(1, maxActiveMeshJobs);
@@ -184,7 +187,11 @@ public class TerrainRequestManager
                 stageStart = TerrainGenerationProfiler.GetTimestamp();
                 var mountainSnow = MountainSnow.Generate(finalHeightMap, mountainMaskMap, riverMaskMap,
                     temperatureMap, moistureMap, chunkSize, chunkCoord, seed, sampleScale, waterSettings, mountainHorizontalScale);
-                ControlMapPixelData controlMapRawData = TerrainControlMapBuilder.BuildRaw(surfaceTypeMap, groundCoverMap, mountainSnow);
+                ControlMapPixelData controlMapRawData = TerrainControlMapBuilder.BuildRaw(
+                    surfaceTypeMap,
+                    groundCoverMap,
+                    mountainSnow,
+                    mountainSnowRenderCoverageGamma);
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainControlMapBuild, stageStart);
 
                 TerrainDataRequestResult result = new TerrainDataRequestResult(chunkCoord, requestVersion, 
@@ -253,6 +260,7 @@ public class TerrainRequestManager
                     waterSettings.WaterLevel,
                     isMacroTile,
                     mountainHorizontalScale,
+                    mountainSnowRenderCoverageGamma,
                     climateOctaves,
                     climatePersistence,
                     climateLacunarity);

@@ -886,7 +886,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 14
+  worldSeed: 8
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -1117,6 +1117,7 @@ MonoBehaviour:
     receiveTreeShadows: 1
   sampleScale: 600
   mountainWidth: 1.3
+  mountainSnowBlendGamma: 0.633
   worldScale: 0.3
   octaves: 2
   persistence: 0.05
@@ -1401,9 +1402,9 @@ MonoBehaviour:
   timeScale: 1
   daylightHours: 16
   nighttimeHours: 8
-  daylightStartHour: 2
+  daylightStartHour: 6
   startingDay: 0
-  startingHour: 6
+  startingHour: 14
   startingMinute: 0
   maxDiscreteMinutesProcessedPerFrame: 360
 --- !u!1 &1971578341

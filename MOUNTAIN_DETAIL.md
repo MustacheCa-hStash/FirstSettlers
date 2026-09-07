@@ -26,6 +26,8 @@ The fixed climatic shaded direction is +Z, with prevailing wind toward +X. Shelt
 
 Coverage fades into the existing lowlands between mountain masks 0.25 and 0.45, and between heights 0.6 and 1.5 above the water level. Existing lowland snow and tundra dusting remain intact even where the mountain mask overlaps them. Mountain snow can coat rock or grass without changing gameplay biome/surface labels; legacy mountain Snow materials recover rock underneath where snow retreats. Shorelines and river banks are excluded. No geometry, collision, dynamic weather simulation, extra shader textures, or per-frame snow work is added.
 
+Rendered mountain snow applies a configurable coverage gamma boost in MountainSnow.Apply before writing the snow control-map weight. This keeps the same generated distribution while making partially blended mountain snow read brighter against rock. Tune **Mountain Snow Blend Gamma** on WorldManager; 1 disables the boost, and lower values make blended snow more prominent.
+
 Near and far terrain call the same evaluator in Burst jobs. Near terrain reuses its height map and samples beyond the halo where necessary; distant terrain reuses the four height samples already needed for its slope. Both use a fixed four-terrain-unit radius, independent of mesh LOD. Coarse distant control maps still approximate small snow boundaries through filtering.
 
 Restart Play Mode/regenerate the world to update existing chunks. Run **Tools > Terrain > Validate Mountain Snow** to check climate ordering, slope and shelter response, weight conservation, protected water, adjacent X/Z chunk borders, and near/far snow agreement across three seeds.

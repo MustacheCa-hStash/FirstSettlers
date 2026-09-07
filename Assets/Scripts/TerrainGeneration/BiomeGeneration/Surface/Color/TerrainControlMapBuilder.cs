@@ -6,7 +6,8 @@ public static class TerrainControlMapBuilder
     private const byte SnowDustingGrassWeight = 255 - SnowDustingSnowWeight;
 
     public static ControlMapPixelData BuildRaw(SurfaceType[,] surfaceTypeMap, GroundCoverType[,] groundCoverMap,
-        Unity.Mathematics.float2[,] mountainSnow = null)
+        Unity.Mathematics.float2[,] mountainSnow = null,
+        float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma)
     {
         int width = surfaceTypeMap.GetLength(0);
         int height = surfaceTypeMap.GetLength(1);
@@ -48,7 +49,8 @@ public static class TerrainControlMapBuilder
                 for (int x = 0; x < blended.Width; x++)
                 {
                     int index = z * blended.Width + x;
-                    MountainSnow.Apply(ref blended.Maps[0][index], ref blended.Maps[1][index], mountainSnow[x + 1, z + 1]);
+                    MountainSnow.Apply(ref blended.Maps[0][index], ref blended.Maps[1][index],
+                        mountainSnow[x + 1, z + 1], mountainSnowRenderCoverageGamma);
                 }
         return blended;
     }

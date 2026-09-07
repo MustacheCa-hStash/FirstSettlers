@@ -125,7 +125,7 @@ public static class MountainSnowValidation
                 float2 snow = near[x * 4 + 1, z * 4 + 1];
                 if (snow.y < 0.999f) continue;
                 float rendered = far.ControlMapsRawData.Maps[1][z * 9 + x].r / 255f;
-                Require(math.abs(rendered - snow.x) < 0.008f, "Near/far snow mismatch.");
+                Require(math.abs(rendered - MountainSnow.RenderCoverage(snow.x)) < 0.008f, "Near/far snow mismatch.");
                 sum += rendered;
                 compared++;
             }

@@ -166,7 +166,8 @@ public class ChunkManager
         float farTerrainApplyBudgetMsPerFrame,
         float lodMeshApplyBudgetMsPerFrame,
         float colliderApplyBudgetMsPerFrame,
-        float mountainHorizontalScale = 1f)
+        float mountainHorizontalScale = 1f,
+        float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma)
     {
         this.viewDistance = viewDistance;
         this.colliderDistance = colliderDistance;
@@ -235,7 +236,7 @@ public class ChunkManager
             this.maxActiveFarTerrainJobs,
             this.maxActiveMeshJobs,
             this.maxActiveColliderJobs,
-            waterSettings, mountainHorizontalScale);
+            waterSettings, mountainHorizontalScale, mountainSnowRenderCoverageGamma);
         foliageManager = new FoliageManager(
             foliageParent,
             grassSettings,
@@ -1209,7 +1210,8 @@ public class ChunkManager
                 worldScale,
                 chunkParent,
                 terrainMaterial,
-                terrainReceiveShadows);
+                terrainReceiveShadows,
+                waterMaterial);
             loadedFarTerrainTiles.Add(tileCoord, runtime);
         }
 
@@ -1450,7 +1452,7 @@ public class ChunkManager
             return;
 
         runtime.SetControlMaps(record.FarTerrainControlMapData);
-        runtime.SetMeshes(terrainMesh, null, FarTerrainLOD);
+        runtime.SetMeshes(terrainMesh, record.FarTerrainWaterMesh, FarTerrainLOD);
     }
 
     private void TryApplyFarTerrainTile(FarTerrainTileRecord record, FarTerrainTileRuntime runtime)
@@ -1464,7 +1466,7 @@ public class ChunkManager
             return;
 
         runtime.SetControlMaps(record.ControlMapData);
-        runtime.SetMesh(terrainMesh);
+        runtime.SetMesh(terrainMesh, record.WaterMesh);
     }
 
     private void EnsureColliderRequested(ChunkRecord record)
@@ -1730,10 +1732,12 @@ public class ChunkManager
                     Mesh terrainMesh = farTerrainResult.TerrainMeshData.CreateMesh();
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainFarTerrainMeshCreate, stageStart);
 
-                    bool accepted = TryCompleteFarTerrainResult(farTerrainResult, terrainMesh, controlMaps);
+                    Mesh waterMesh = farTerrainResult.WaterMeshData != null && farTerrainResult.WaterMeshData.VertexCount > 0
+                        ? farTerrainResult.WaterMeshData.CreateMesh() : null;
+                    bool accepted = TryCompleteFarTerrainResult(farTerrainResult, terrainMesh, controlMaps, waterMesh);
                     if (!accepted)
                     {
-                        DestroyFarTerrainAssets(terrainMesh, controlMaps);
+                        DestroyFarTerrainAssets(terrainMesh, controlMaps, waterMesh);
                     }
                     else if (farTerrainResult.IsMacroTile)
                     {
@@ -1810,7 +1814,8 @@ public class ChunkManager
     private bool TryCompleteFarTerrainResult(
         FarTerrainRequestResult result,
         Mesh terrainMesh,
-        Texture2D[] controlMaps)
+        Texture2D[] controlMaps,
+        Mesh waterMesh)
     {
         if (result.IsMacroTile &&
             farTerrainTileRecords.TryGetValue(result.ChunkCoord, out FarTerrainTileRecord tileRecord))
@@ -1818,7 +1823,8 @@ public class ChunkManager
             return tileRecord.TryCompleteRequest(
                 result.RequestVersion,
                 terrainMesh,
-                controlMaps);
+                controlMaps,
+                waterMesh);
         }
 
         if (chunkRecords.TryGetValue(result.ChunkCoord, out ChunkRecord record))
@@ -1826,16 +1832,20 @@ public class ChunkManager
             return record.TryCompleteFarTerrainRequest(
                 result.RequestVersion,
                 terrainMesh,
-                controlMaps);
+                controlMaps,
+                waterMesh);
         }
 
         return false;
     }
 
-    private static void DestroyFarTerrainAssets(Mesh terrainMesh, Texture2D[] controlMaps)
+    private static void DestroyFarTerrainAssets(Mesh terrainMesh, Texture2D[] controlMaps, Mesh waterMesh)
     {
         if (terrainMesh != null)
             UnityEngine.Object.Destroy(terrainMesh);
+
+        if (waterMesh != null)
+            UnityEngine.Object.Destroy(waterMesh);
 
         if (controlMaps == null)
             return;

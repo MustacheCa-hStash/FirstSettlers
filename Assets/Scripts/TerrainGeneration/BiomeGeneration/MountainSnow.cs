@@ -8,6 +8,7 @@ using UnityEngine;
 public static class MountainSnow
 {
     public const int SampleRadius = 4;
+    public const float DefaultRenderCoverageGamma = 0.72f;
 
     // Generated height units (60 world units at the scene's current scales).
     public static float Snowline(float temperature, float moisture)
@@ -130,9 +131,10 @@ public static class MountainSnow
         }
     }
 
-    public static void Apply(ref Color32 map0, ref Color32 map1, float2 snow)
+    public static void Apply(ref Color32 map0, ref Color32 map1, float2 snow, float renderCoverageGamma = DefaultRenderCoverageGamma)
     {
         if (snow.y <= 0f) return;
+        float coverage = RenderCoverage(snow.x, renderCoverageGamma);
         float4 a = new float4(map0.r, map0.g, map0.b, map0.a) / 255f;
         float4 b = new float4(map1.r, map1.g, map1.b, map1.a) / 255f;
         float total = math.csum(a) + b.x + b.y + b.z;
@@ -141,14 +143,20 @@ public static class MountainSnow
         groundA.w += b.x;
         float4 groundB = b;
         groundB.x = 0f;
-        groundA *= 1f - snow.x;
-        groundB *= 1f - snow.x;
-        groundB.x = snow.x * total;
+        groundA *= 1f - coverage;
+        groundB *= 1f - coverage;
+        groundB.x = coverage * total;
         a = math.lerp(a, groundA, snow.y);
         b = math.lerp(b, groundB, snow.y);
         map0 = new Color32(Byte(a.x), Byte(a.y), Byte(a.z), Byte(a.w));
         map1 = new Color32(Byte(b.x), Byte(b.y), Byte(b.z), Byte(b.w));
     }
+
+    public static float RenderCoverage(float coverage, float gamma = DefaultRenderCoverageGamma)
+        => math.pow(math.saturate(coverage), SanitizeRenderCoverageGamma(gamma));
+
+    public static float SanitizeRenderCoverageGamma(float gamma)
+        => math.isfinite(gamma) ? math.clamp(gamma, 0.35f, 1.25f) : DefaultRenderCoverageGamma;
 
     private static byte Byte(float value) => (byte)math.round(math.saturate(value) * 255f);
 }

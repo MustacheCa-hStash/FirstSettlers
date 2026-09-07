@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class FarTerrainTileRecord
 {
+    public Mesh WaterMesh { get; private set; }
     private readonly ChunkCoord tileCoord;
     private Mesh terrainMesh;
     private Texture2D[] controlMapData;
@@ -38,12 +39,13 @@ public class FarTerrainTileRecord
         return requestInFlight && requestVersion == version;
     }
 
-    public bool TryCompleteRequest(int version, Mesh returnedTerrainMesh, Texture2D[] returnedControlMapData)
+    public bool TryCompleteRequest(int version, Mesh returnedTerrainMesh, Texture2D[] returnedControlMapData, Mesh returnedWaterMesh = null)
     {
         if (!requestInFlight || requestVersion != version)
             return false;
 
         terrainMesh = returnedTerrainMesh;
+        WaterMesh = returnedWaterMesh;
         controlMapData = returnedControlMapData;
         ready = terrainMesh != null && controlMapData != null;
         requestInFlight = false;

@@ -3,6 +3,7 @@ using UnityEngine;
 
 public class ChunkRecord
 {
+    public Mesh FarTerrainWaterMesh { get; private set; }
     private ChunkCoord chunkCoord;
     private ChunkRuntime activeRuntime;
     private float[,] heightMap;
@@ -246,7 +247,7 @@ public class ChunkRecord
     public bool TryCompleteFarTerrainRequest(
         int requestVersion,
         Mesh returnedFarTerrainMesh,
-        Texture2D[] returnedFarTerrainControlMapData)
+        Texture2D[] returnedFarTerrainControlMapData, Mesh returnedWaterMesh = null)
     {
         if (!farTerrainRequestInFlight)
             return false;
@@ -255,6 +256,7 @@ public class ChunkRecord
             return false;
 
         farTerrainMesh = returnedFarTerrainMesh;
+        FarTerrainWaterMesh = returnedWaterMesh;
         farTerrainControlMapData = returnedFarTerrainControlMapData;
         farTerrainReady = farTerrainMesh != null && farTerrainControlMapData != null;
         farTerrainRequestInFlight = false;
