@@ -234,6 +234,7 @@ public static class MountainDetailValidation
                     Require(message.severity != UnityEditor.Rendering.ShaderCompilerMessageSeverity.Error, message.message);
             }
             Require(material.HasProperty("_RockNormal") && material.HasProperty("_RockAlbedo"), "Rock asset slots missing.");
+            Require(material.HasProperty("_SandNormal") && material.HasProperty("_SandAlbedo"), "Sand asset slots missing.");
         }
         finally { UnityEngine.Object.DestroyImmediate(material); }
     }

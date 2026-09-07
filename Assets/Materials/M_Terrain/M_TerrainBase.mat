@@ -131,6 +131,14 @@ Material:
         m_Texture: {fileID: 2800000, guid: 9adaa2918056e0f4188a338e5221a687, type: 3}
         m_Scale: {x: 0.5, y: 0.5}
         m_Offset: {x: 0, y: 0}
+    - _SandAlbedo:
+        m_Texture: {fileID: 2800000, guid: 40481a7395ba9934eb64ce1ed6488677, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SandNormal:
+        m_Texture: {fileID: 2800000, guid: 57dbac610d514d14db60ef3ea9acf343, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _SnowAlbedo:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -208,6 +216,9 @@ Material:
     - _RockDetailStrength: 0.5
     - _RockNormalStrength: 0.45
     - _RockTiling: 0.12
+    - _SandDetailStrength: 0.35
+    - _SandNormalStrength: 0.3
+    - _SandTiling: 0.35
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SnowNormalStrength: 0.35

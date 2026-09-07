@@ -8,6 +8,11 @@ Shader "Custom/StylizedTerrainURP"
         _SurfaceBlendSharpness("Surface Blend Sharpness", Range(0.25, 4.0)) = 1.0
 
         _SandColor("Sand Color", Color) = (0.80, 0.75, 0.55, 1)
+        _SandAlbedo("Sand Albedo", 2D) = "white" {}
+        _SandNormal("Sand Normal", 2D) = "bump" {}
+        _SandTiling("Sand Tiling (Repeats Per World Unit)", Float) = 0.35
+        _SandDetailStrength("Sand Albedo Strength", Range(0, 1)) = 0.35
+        _SandNormalStrength("Sand Normal Strength", Range(0, 2)) = 0.30
         _MudColor("Mud Color", Color) = (0.42, 0.32, 0.22, 1)
         _RockColor("Rock Color", Color) = (0.45, 0.45, 0.45, 1)
         [Toggle(_ROCK_DETAIL)] _RockDetail("Enable Rock / Cliff Detail", Float) = 0
@@ -136,6 +141,9 @@ Shader "Custom/StylizedTerrainURP"
             TEXTURE2D(_MossNormal);
             SAMPLER(sampler_MossNormal);
 
+            TEXTURE2D(_SandAlbedo);
+            TEXTURE2D(_SandNormal);
+
             TEXTURE2D(_SnowAlbedo);
             SAMPLER(sampler_SnowAlbedo);
 
@@ -168,6 +176,9 @@ Shader "Custom/StylizedTerrainURP"
                 float4 _ControlMap0_TexelSize;
                 float _SurfaceBlendSharpness;
                 half4 _SandColor;
+                float _SandTiling;
+                float _SandDetailStrength;
+                float _SandNormalStrength;
                 half4 _MudColor;
                 half4 _RockColor;
                 float _RockDetail;
@@ -363,6 +374,15 @@ Shader "Custom/StylizedTerrainURP"
                 detailNormalWS = normalize(baseNormalWS + perturbation * strength);
             }
 
+            void SampleSandDetail(float3 positionWS, float3 baseNormalWS, out half3 albedo, out float3 detailNormalWS)
+            {
+                float2 uv = positionWS.xz * max(_SandTiling, 0.0001);
+                albedo = SAMPLE_TEXTURE2D(_SandAlbedo, sampler_GrassAlbedo, uv).rgb;
+
+                float3 tangentNormal = UnpackNormal(SAMPLE_TEXTURE2D(_SandNormal, sampler_GrassNormal, uv));
+                detailNormalWS = ApplyDetailNormal(baseNormalWS, tangentNormal, _SandNormalStrength);
+            }
+
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
@@ -434,6 +454,15 @@ Shader "Custom/StylizedTerrainURP"
                 baseColor += _RockColor.rgb * rockWeight;
                 baseColor += _CliffColor.rgb * cliffWeight;
                 baseColor += _RiverbedColor.rgb * riverbedWeight;
+
+                if (sandWeight > 0.001h)
+                {
+                    half3 sandAlbedo;
+                    float3 sandNormalWS;
+                    SampleSandDetail(IN.positionWS, baseNormalWS, sandAlbedo, sandNormalWS);
+                    baseColor += _SandColor.rgb * sandWeight * (sandAlbedo - 1.0h) * _SandDetailStrength;
+                    weightedNormal += (sandNormalWS - baseNormalWS) * sandWeight;
+                }
 
                 #if defined(_ROCK_DETAIL)
                 float rockSurfaceWeight = rockWeight + cliffWeight;
