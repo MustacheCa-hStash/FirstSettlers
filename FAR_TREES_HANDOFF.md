@@ -73,3 +73,31 @@ Distance, density, fade, conformity and budget controls update while playing. Re
 - Distant-tree minimum distance/thinning safeguards now use the circular inner radius plus two chunks of handoff padding, rather than the old square diagonal multiplier.
 - Added radius-zero, diagonal rejection, 3-4-5 boundary, negative-coordinate, and tree/ground-cover consistency checks.
 - Follow-up validation: whitespace check passed. Unity batch correctness launch exited before tests because this project is open in another Unity editor session; the new circular checks remain available through the correctness menu. No performance tests were run.
+
+## Spruce LOD3 color and simpler far shader
+- Spruce_LOD3_v01 uses Spruce_Billboard_Tree_Mat and Custom/SpruceBillboardVariationSimpleLitCutout.
+- Connected matching Spruce_LOD2_Mask_0d red-channel needle mask; linear import. Albedo alpha still controls holes, mask only separates needles from bark.
+- Matched palette mixing rules and current 3D material variation .52, contrast .34, tip .1, ambient .3. Billboard uses multiplicative captured texture detail; exact appearance still depends on capture lighting and flat normals and needs user visual comparison.
+- Runtime-owned distant material enables SPRUCE_FAR_SIMPLE (multi_compile_local prevents build stripping). Vertex palette variation, early dither rejection, no extra procedural canopy darkening, simple main light + ambient + fog. Source material retains full lighting outside distant manager.
+- No performance tests. Static diff check passed; shader compilation/visual validation not yet confirmed in the open Unity session. Restart play mode to rebuild runtime material clones and enable new variant/mask.
+
+## Camera-depth band ordering
+- Distant Tree Depth Ordering defaults on; Distant Tree Depth Bands defaults 32 (4-64). Live controls; no near LOD or density changes.
+- Visible instances are stably bucketed by camera-forward depth each frame, separately per shared mesh/material. Bands span the visible batch's minimum/maximum base depth. Whole-tree bases approximate extent; within-band order remains the original chunk traversal order.
+- Stable counting sort uses reusable pending records, index storage and 64 counters. Linear CPU work and extra retained memory; buffers can allocate when a new peak instance count is reached. No steady-state sorting allocations.
+- Draws still pack 1023 instances across band boundaries, preserving draw counts for identical visibility. Unity can reorder separate draw groups; different species/materials are not globally depth sorted. This is depth-efficiency ordering, not occlusion culling.
+- Static diff check passed. External dotnet build was attempted but stopped in Unity RenderPipelines.Core package (CS8168/CS8347 in PassesData.cs), so compilation of these changes remains unconfirmed in Unity. No performance tests run.
+
+## Density-aware distant stands
+- Enabled by default: Distant Tree Density Aware. Existing Distant Tree Density (.45) is the dense-interior outer target, not a second multiplicative reduction. Disable awareness for uniform distance thinning.
+- Cached 4x4 cells per logical chunk store tree count and estimated circular crown area from billboard bounds. Each tree samples a 3x3 cell neighborhood across adjacent chunk manifests. Three or fewer neighborhood trees are protected. Edge exposure is the fraction of empty surrounding cells.
+- Distant Tree Crowding Threshold defaults .35 summed crown area / sampled ground area; thinning ramps from this threshold to twice it. Distant Tree Edge Protection defaults .8. Existing thinning start, transition duration and protected representatives remain effective.
+- Neighbor insertion/replacement/eviction invalidates only adjacent cached crowding. Missing manifests count as open space (conservative retention). Density approaches updated targets temporally; the inner handoff remains full density. Surviving positions and stable priorities never change.
+- Limitations: approximate crown footprints, grid-scale edge detection, no skyline/view-dependent protection, extra per-tree cached arrays; recently streamed stands can initially retain more trees. This is not occlusion culling and improvements require user benchmarking.
+- Whitespace/static review passed. External compilation could not complete because Unity dependency DLLs are absent from Temp/bin/Debug; Unity compilation and scene appearance remain to verify. No performance tests run.
+
+## Uniform Spruce billboard color (supersedes masked color above)
+- User requested uniform dark green over every surviving pixel, including trunk. Spruce billboard forward shader now uses Uniform Dark Green (_BaseNeedleColor) times Base Tint, retaining lighting/fog and fades.
+- Albedo texture is used only for alpha; separate needle-mask binding, sample, color-variation function and vertex interpolation removed. Obsolete variation/mask controls removed from shader inspector. Original texture assets remain available.
+- Static diff check passed; no performance tests or Unity visual/compilation validation this turn. Restart play mode to refresh cloned materials.
+- Correction: restored the prior texture-modulated Spruce leaf palette, contrast and far vertex variation; applies to all opaque pixels including bark, with no needle-mask sample. Supersedes uniform flat color above. Static checks passed; no performance tests or visual verification.

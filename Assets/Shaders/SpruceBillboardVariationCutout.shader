@@ -5,19 +5,14 @@ Shader "Custom/SpruceBillboardVariationSimpleLitCutout"
         [MainTexture] _BaseMap("Spruce Billboard Texture", 2D) = "white" {}
         [MainColor] _BaseColor("Base Tint", Color) = (1, 1, 1, 1)
         _BaseNeedleColor("Base Needle Color", Color) = (0.18431373, 0.35294118, 0.21176471, 1.0)
-        _CoolNeedleColor("Cool Blue-Green Color", Color) = (0.13, 0.25, 0.22, 1.0)
-        _DeepNeedleColor("Deep Shadow Green", Color) = (0.055, 0.16, 0.09, 1.0)
-        _SunNeedleColor("Sunlit Olive Green", Color) = (0.30, 0.45, 0.22, 1.0)
-        _ColorVariationStrength("Color Variation Strength", Range(0, 1)) = 0.38
-        _NeedleContrast("Needle Contrast", Range(0, 1)) = 0.18
+        _CoolNeedleColor("Cool Blue-Green Color", Color) = (0.13, 0.25, 0.22, 1)
+        _DeepNeedleColor("Deep Shadow Green", Color) = (0.055, 0.16, 0.09, 1)
+        _SunNeedleColor("Fresh Tip Color", Color) = (0.30, 0.45, 0.22, 1)
+        _ColorVariationStrength("Color Variation Strength", Range(0, 1)) = 0.52
+        _NeedleContrast("Needle Contrast", Range(0, 1)) = 0.34
+        _TipStrength("Tip Color Strength", Range(0, 1)) = 0.1
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.5
         [Toggle] _AlphaCutoutShadows("Alpha Cutout Shadows", Float) = 1
-        _LeafMaskThreshold("Green Canopy Threshold", Range(-0.1, 0.35)) = 0.0
-        _LeafMaskSoftness("Green Canopy Softness", Range(0.001, 0.25)) = 0.08
-        _LeafTintStrength("Canopy Variation Strength", Range(0, 1)) = 0.85
-        _LowerShadeStrength("Lower Canopy Shade", Range(0, 1)) = 0.22
-        _InteriorShadeStrength("Interior Canopy Shade", Range(0, 1)) = 0.20
-        _FauxShadeStrength("Faux Lighting Shade", Range(0, 1)) = 0.36
         _Brightness("Brightness", Range(0.25, 2)) = 1.0
         _AmbientStrength("Ambient Strength", Range(0, 1)) = 0.56
         _LightWrap("Billboard Light Softness", Range(0, 1)) = 0.72
@@ -58,6 +53,7 @@ Shader "Custom/SpruceBillboardVariationSimpleLitCutout"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile_local _ SPRUCE_FAR_SIMPLE
             #pragma multi_compile_fog
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
@@ -69,6 +65,8 @@ Shader "Custom/SpruceBillboardVariationSimpleLitCutout"
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
 
+
+
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
@@ -77,6 +75,7 @@ Shader "Custom/SpruceBillboardVariationSimpleLitCutout"
                 half4 _DeepNeedleColor;
                 half4 _SunNeedleColor;
                 half _ColorVariationStrength;
+                half _TipStrength;
                 half _NeedleContrast;
                 half _Cutoff;
                 half _LeafMaskThreshold;
@@ -114,6 +113,8 @@ Shader "Custom/SpruceBillboardVariationSimpleLitCutout"
                 half3 normalWS : TEXCOORD2;
                 float2 uv : TEXCOORD3;
                 float4 shadowCoord : TEXCOORD4;
+                half3 farNeedleColor : TEXCOORD5;
+
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -126,20 +127,17 @@ Shader "Custom/SpruceBillboardVariationSimpleLitCutout"
 
             half3 EvaluateSpruceNeedleColor(float2 uv, float3 instanceOriginWS)
             {
-                half treeNoise = Hash12(floor(instanceOriginWS.xz * 0.27h));
-                half branchNoise = Hash12(floor(instanceOriginWS.xz * 0.51h) + floor(uv * 5.0h));
-                half fineNoise = Hash12(floor(instanceOriginWS.xz * 1.21h) + floor(uv * 18.0h));
-
-                half coolMix = smoothstep(0.15h, 0.82h, branchNoise + treeNoise * 0.12h) * _ColorVariationStrength;
-                half deepMix = smoothstep(0.70h, 0.98h, 1.0h - fineNoise + branchNoise * 0.16h) * _ColorVariationStrength * 0.62h;
-                half sunMix = smoothstep(0.70h, 0.98h, uv.y + fineNoise * 0.16h) * _ColorVariationStrength * 0.45h;
-
+                half branchNoise = Hash12(floor(instanceOriginWS.xz * 0.34h) + floor(uv * 4.0h));
+                half fineNoise = Hash12(floor(instanceOriginWS.xz * 1.15h) + floor(uv * 17.0h));
+                half coolMix = smoothstep(0.18h, 0.78h, branchNoise) * _ColorVariationStrength;
+                half deepMix = smoothstep(0.68h, 0.98h, 1.0h - fineNoise + branchNoise * 0.24h) * _ColorVariationStrength * 0.82h;
+                half tipMix = smoothstep(0.62h, 0.96h, uv.y + fineNoise * 0.18h) * _TipStrength;
                 half3 needleColor = lerp(_BaseNeedleColor.rgb, _CoolNeedleColor.rgb, coolMix);
                 needleColor = lerp(needleColor, _DeepNeedleColor.rgb, deepMix);
-                needleColor = lerp(needleColor, _SunNeedleColor.rgb, sunMix);
-
-                half contrastNoise = treeNoise * 0.36h + branchNoise * 0.42h + fineNoise * 0.22h;
-                needleColor *= lerp(1.0h - _NeedleContrast, 1.0h + _NeedleContrast, contrastNoise);
+                needleColor = lerp(needleColor, _SunNeedleColor.rgb, tipMix);
+                half contrastNoise = branchNoise * 0.62h + fineNoise * 0.38h;
+                half colorContrast = saturate(_NeedleContrast * 1.35h);
+                needleColor *= lerp(1.0h - colorContrast, 1.0h + colorContrast, contrastNoise);
                 return needleColor;
             }
 
@@ -187,9 +185,13 @@ Shader "Custom/SpruceBillboardVariationSimpleLitCutout"
 
                 float3 rightWS = normalize(cross(forwardWS, upWS));
 
+                float horizontalOS = abs(IN.positionOS.z) > 0.0001
+                    ? IN.positionOS.z
+                    : IN.positionOS.x;
+
                 float3 billboardPositionWS =
                     instanceOriginWS +
-                    rightWS * (IN.positionOS.z * scaleZ) +
+                    rightWS * (horizontalOS * scaleZ) +
                     upWS * (IN.positionOS.y * scaleY);
 
                 float3 normalPositionWS = TransformObjectToWorld(IN.positionOS.xyz);
@@ -211,6 +213,10 @@ Shader "Custom/SpruceBillboardVariationSimpleLitCutout"
                 OUT.normalWS = billboardNormalWS;
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.shadowCoord = TransformWorldToShadowCoord(finalPositionWS);
+                OUT.farNeedleColor = 0;
+                #if defined(SPRUCE_FAR_SIMPLE)
+                    OUT.farNeedleColor = EvaluateSpruceNeedleColor(IN.uv, instanceOriginWS);
+                #endif
 
                 return OUT;
             }
@@ -219,30 +225,38 @@ Shader "Custom/SpruceBillboardVariationSimpleLitCutout"
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
 
+                ApplyDistantTreeFade(IN.positionCS.xy);
                 half4 baseSample = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;
                 clip(baseSample.a - _Cutoff);
 
-                half greenDominance = baseSample.g - max(baseSample.r, baseSample.b);
-                half leafMask = smoothstep(
-                    _LeafMaskThreshold,
-                    _LeafMaskThreshold + _LeafMaskSoftness,
-                    greenDominance);
-
-                half3 variedNeedleColor = EvaluateSpruceNeedleColor(IN.uv, IN.instanceOriginWS);
-                half3 color = lerp(baseSample.rgb, variedNeedleColor, leafMask * _LeafTintStrength);
-                half2 centeredUv = IN.uv * 2.0h - 1.0h;
-                half interiorMask = 1.0h - saturate(length(centeredUv * half2(0.78h, 1.05h)));
-                half lowerMask = saturate(1.0h - IN.uv.y);
-                half shadeMask = saturate(
-                    lowerMask * _LowerShadeStrength +
-                    interiorMask * _InteriorShadeStrength);
-                color = lerp(color, _DeepNeedleColor.rgb, leafMask * shadeMask * _FauxShadeStrength);
-
-                half alpha = baseSample.a * _BaseColor.a;
+                // Apply the previous leaf treatment everywhere, without a bark/leaf mask.
+                half3 variedNeedleColor = IN.farNeedleColor;
+                #if !defined(SPRUCE_FAR_SIMPLE)
+                    variedNeedleColor = EvaluateSpruceNeedleColor(IN.uv, IN.positionWS);
+                #endif
+                half atlasLuma = saturate(dot(baseSample.rgb, half3(0.299h, 0.587h, 0.114h)));
+                half textureDetail = smoothstep(0.18h, 0.92h, atlasLuma);
+                half textureContrast = lerp(1.0h - _NeedleContrast * 0.72h,
+                    1.0h + _NeedleContrast * 0.42h, textureDetail);
+                half3 color = baseSample.rgb * variedNeedleColor * textureContrast;
+                half alpha = baseSample.a;
+                #if defined(SPRUCE_FAR_SIMPLE)
+                    // No specular, shadow coordinates, view vector or full surface setup.
+                    half3 normal = normalize(IN.normalWS);
+                    Light light = GetMainLight();
+                    half ambient = _AmbientStrength * lerp(1.0h,
+                        saturate(_TreeNightAmbientFloorScaleAtMidnight), saturate(_TreeNightAmbientFloorDimAmount));
+                    half3 illumination = max(SampleSH(normal), ambient.xxx)
+                        + light.color * saturate(dot(normal, light.direction));
+                    half3 farColor = MixFog(saturate(color * _Brightness) * illumination,
+                        ComputeFogFactor(TransformWorldToHClip(IN.positionWS).z));
+                    return half4(saturate(farColor), alpha);
+                #else
                 InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);
                 SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(saturate(color * _Brightness), alpha, _Smoothness, _SpecularStrength);
                 half4 litColor = ShadeDistantAwareTree(inputData, surfaceData);
                 return half4(saturate(litColor.rgb), alpha);
+                #endif
             }
             ENDHLSL
         }
@@ -279,6 +293,7 @@ Shader "Custom/SpruceBillboardVariationSimpleLitCutout"
                 half4 _DeepNeedleColor;
                 half4 _SunNeedleColor;
                 half _ColorVariationStrength;
+                half _TipStrength;
                 half _NeedleContrast;
                 half _Cutoff;
                 half _LeafMaskThreshold;
@@ -361,9 +376,13 @@ Shader "Custom/SpruceBillboardVariationSimpleLitCutout"
                     : float3(0.0, 0.0, 1.0);
 
                 float3 rightWS = normalize(cross(forwardWS, upWS));
+                float horizontalOS = abs(IN.positionOS.z) > 0.0001
+                    ? IN.positionOS.z
+                    : IN.positionOS.x;
+
                 float3 billboardPositionWS =
                     instanceOriginWS +
-                    rightWS * (IN.positionOS.z * scaleZ) +
+                    rightWS * (horizontalOS * scaleZ) +
                     upWS * (IN.positionOS.y * scaleY);
                 float3 normalPositionWS = TransformObjectToWorld(IN.positionOS.xyz);
 

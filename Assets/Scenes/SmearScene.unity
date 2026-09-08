@@ -886,7 +886,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 7
+  worldSeed: 5
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -1030,20 +1030,20 @@ MonoBehaviour:
     bushExclusionRadius: 0.9
     rockExclusionRadius: 0.75
   treeSettings:
-    mapleTreePrefab: {fileID: 1673192808842576614, guid: b95c736a9aa6aed419d04dafd32a56ee, type: 3}
-    sugarMapleTreePrefab: {fileID: 8072720124864646751, guid: 92cc01de156a13640b9a9f2978a6ed7d, type: 3}
+    mapleTreePrefab: {fileID: 0}
+    sugarMapleTreePrefab: {fileID: 0}
     birchAspenTreePrefab: {fileID: 0}
     beechTreePrefab: {fileID: 0}
-    spruceTreePrefab: {fileID: 1924954691341669752, guid: 1815886d6db86144a94eab573a359048, type: 3}
-    whitePineTreePrefab: {fileID: 5101446390707208562, guid: 884ba04a3225bae48ab5f799d33f1b1f, type: 3}
+    spruceTreePrefab: {fileID: 0}
+    whitePineTreePrefab: {fileID: 0}
     oakTreePrefab: {fileID: 0}
-    treeLOD0GameObjectPrefab: {fileID: 5101446390707208562, guid: 884ba04a3225bae48ab5f799d33f1b1f, type: 3}
-    grasslandMapleTreePrefab: {fileID: 8072720124864646751, guid: 92cc01de156a13640b9a9f2978a6ed7d, type: 3}
-    grasslandBirchAspenTreePrefab: {fileID: 6389886508054090531, guid: dc3305daa1890e84f84218a22facd756, type: 3}
-    grasslandWhitePineTreePrefab: {fileID: 2055201246171467053, guid: 884ba04a3225bae48ab5f799d33f1b1f, type: 3}
-    grasslandOakTreePrefab: {fileID: 689681528551111153, guid: 13bdb8ed23f7955478eafc28cf9f8a23, type: 3}
-    grasslandWillowTreePrefab: {fileID: 903212642650115724, guid: eaee7ec1a3c6a7d4a9d8ad52f7ce400d, type: 3}
-    grasslandTreeFallbackPrefab: {fileID: 689681528551111153, guid: 13bdb8ed23f7955478eafc28cf9f8a23, type: 3}
+    treeLOD0GameObjectPrefab: {fileID: 1924954691341669752, guid: 1815886d6db86144a94eab573a359048, type: 3}
+    grasslandMapleTreePrefab: {fileID: 0}
+    grasslandBirchAspenTreePrefab: {fileID: 0}
+    grasslandWhitePineTreePrefab: {fileID: 0}
+    grasslandOakTreePrefab: {fileID: 0}
+    grasslandWillowTreePrefab: {fileID: 0}
+    grasslandTreeFallbackPrefab: {fileID: 1924954691341669752, guid: 1815886d6db86144a94eab573a359048, type: 3}
     blueberryBushPrefab: {fileID: 2095120421312505866, guid: 90b14277c549b58408d186345b97dfbe, type: 3}
     raspberryBushPrefab: {fileID: 0}
     strawberryBushPrefab: {fileID: 6447866110754163726, guid: 083081802f30fd149b46c7105b9698ba, type: 3}
@@ -1075,20 +1075,20 @@ MonoBehaviour:
     - {fileID: 84383437243448747, guid: 298768191928dee44af9681b94d34074, type: 3}
     - {fileID: 8050534036156293782, guid: fcff478c2eedf3b4ca05fa36f505f20b, type: 3}
     grasslandLargeRockFallbackPrefab: {fileID: 0}
-    mapleTreeBillboardPrefab: {fileID: 3403621320543128518, guid: d96f60ca326eadc41ae355f1226e17f0, type: 3}
-    sugarMapleTreeBillboardPrefab: {fileID: 3842789560270380040, guid: 2765c206081e4df4db5876c1fb94f5cf, type: 3}
-    birchAspenTreeBillboardPrefab: {fileID: 5515095018814835153, guid: 7e06b59d6389c6e4eba0246dbb6a80e3, type: 3}
+    mapleTreeBillboardPrefab: {fileID: 0}
+    sugarMapleTreeBillboardPrefab: {fileID: 0}
+    birchAspenTreeBillboardPrefab: {fileID: 0}
     beechTreeBillboardPrefab: {fileID: 0}
-    spruceTreeBillboardPrefab: {fileID: 2187734985160261948, guid: 8b171c068f925b74999d21147046d6d5, type: 3}
-    whitePineTreeBillboardPrefab: {fileID: 3112171756057442003, guid: 14dc1a9bff1a955439338363f273bc15, type: 3}
+    spruceTreeBillboardPrefab: {fileID: 0}
+    whitePineTreeBillboardPrefab: {fileID: 0}
     oakTreeBillboardPrefab: {fileID: 0}
-    treeBillboardPrefab: {fileID: 2187734985160261948, guid: 8b171c068f925b74999d21147046d6d5, type: 3}
-    grasslandMapleTreeBillboardPrefab: {fileID: 3842789560270380040, guid: 2765c206081e4df4db5876c1fb94f5cf, type: 3}
-    grasslandBirchAspenTreeBillboardPrefab: {fileID: 5515095018814835153, guid: 7e06b59d6389c6e4eba0246dbb6a80e3, type: 3}
-    grasslandWhitePineTreeBillboardPrefab: {fileID: 3112171756057442003, guid: 14dc1a9bff1a955439338363f273bc15, type: 3}
+    treeBillboardPrefab: {fileID: 6739425203414602236, guid: b5e156ee0a0918642b84e78907cbb6bb, type: 3}
+    grasslandMapleTreeBillboardPrefab: {fileID: 0}
+    grasslandBirchAspenTreeBillboardPrefab: {fileID: 0}
+    grasslandWhitePineTreeBillboardPrefab: {fileID: 0}
     grasslandOakTreeBillboardPrefab: {fileID: 0}
     grasslandWillowTreeBillboardPrefab: {fileID: 0}
-    grasslandTreeBillboardFallbackPrefab: {fileID: 2187734985160261948, guid: 8b171c068f925b74999d21147046d6d5, type: 3}
+    grasslandTreeBillboardFallbackPrefab: {fileID: 6739425203414602236, guid: b5e156ee0a0918642b84e78907cbb6bb, type: 3}
     treeCellSize: 12
     treeSpawnChance: 0.03
     treeMinDistance: 9
@@ -1096,18 +1096,23 @@ MonoBehaviour:
     grassExclusionRadius: 0.5
     bushGrassExclusionRadius: 0.45
     seedOffset: 12000
-    gameObjectTreeChunkRingRadius: 7
+    gameObjectTreeChunkRingRadius: 3
     billboardTreeChunkStartRingRadius: 18
     billboardTreeChunkRingRadius: 18
     enableDistantTrees: 1
     distantTreeDistanceChunks: 18
     distantTreeFadeWidthChunks: 2
-    distantTreeThinningStartChunks: 8
-    distantTreeDensity: 0.45
+    distantTreeThinningStartChunks: 4
+    distantTreeDensity: 0.35
+    distantTreeDensityAware: 1
+    distantTreeCrowdingThreshold: 0.2
+    distantTreeEdgeProtection: 0.8
     distantTreeProtectedCount: 2
     distantTreeTransitionSeconds: 0.65
     distantTreeTerrainConform: 1
     distantTreeHeightBlendSpeed: 20
+    distantTreeDepthOrdering: 1
+    distantTreeDepthBands: 32
     distantTreeWorkerCount: 1
     distantTreeResultsPerFrame: 1
     distantTreeCacheChunks: 2048
@@ -1235,8 +1240,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 100, z: 0}
+  m_LocalRotation: {x: 0, y: 0.9983217, z: 0, w: 0.057912625}
+  m_LocalPosition: {x: 53.00911, y: 100, z: -925.4793}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1262,7 +1267,7 @@ MonoBehaviour:
   mouseSensitivity: 0.08
   pitchMin: -80
   pitchMax: 80
-  gravity: -20
+  gravity: -20.06
   jumpHeight: 1.1
   standingHeight: 1.8
   crouchingHeight: 1.2

@@ -17,6 +17,10 @@ public sealed class DistantTreeManager : IDisposable
         public Bounds Bounds;
         public float LoadFade;
         public int LastUsed;
+        public readonly float[] CrownArea = new float[16];
+        public readonly int[] CellTrees = new int[16];
+        public float[] Crowding, EdgeExposure, Density;
+        public bool CrowdingDirty = true;
     }
     private sealed class Batch
     {
@@ -26,6 +30,16 @@ public sealed class DistantTreeManager : IDisposable
         public readonly Vector4[] Tints = new Vector4[1023], Fades = new Vector4[1023];
         public readonly MaterialPropertyBlock Properties = new MaterialPropertyBlock();
         public int Count;
+        public readonly List<OrderedInstance> Pending = new List<OrderedInstance>();
+        public int[] Order = Array.Empty<int>();
+        public readonly int[] BandOffsets = new int[64];
+        public float MinDepth, MaxDepth;
+    }
+    private struct OrderedInstance
+    {
+        public Matrix4x4 Matrix;
+        public Vector4 Tint, Fade;
+        public float Depth;
     }
     private readonly TreeSettings settings;
     private readonly int seed, chunkSize, octaves, tintSeed;
@@ -82,6 +96,8 @@ public sealed class DistantTreeManager : IDisposable
             return;
         }
         var material = new Material(renderer.sharedMaterial) { enableInstancing = true };
+        if (material.shader.name == "Custom/SpruceBillboardVariationSimpleLitCutout")
+            material.EnableKeyword("SPRUCE_FAR_SIMPLE");
         material.name += " (Distant Trees)";
         material.SetShaderPassEnabled("ShadowCaster", false);
         if (material.HasProperty("_WindStrength")) material.SetFloat("_WindStrength", 0f);
@@ -141,6 +157,9 @@ public sealed class DistantTreeManager : IDisposable
         float duration = Mathf.Max(0.05f, settings.distantTreeTransitionSeconds);
         float fadeStep = Time.unscaledDeltaTime / duration;
         float maxDistance = rangeChunks * chunkWorldSize;
+        bool orderByDepth = settings.distantTreeDepthOrdering && camera != null;
+        Vector3 cameraPosition = camera != null ? camera.transform.position : viewer;
+        Vector3 cameraForward = camera != null ? camera.transform.forward : Vector3.forward;
         float outerWidth = Mathf.Clamp(settings.distantTreeFadeWidthChunks * chunkWorldSize, 1f, maxDistance);
         float thinStart = Mathf.Max(handoffChunks, settings.distantTreeThinningStartChunks) * chunkWorldSize;
         foreach (var coord in wanted)
@@ -211,6 +230,7 @@ public sealed class DistantTreeManager : IDisposable
             }
             bounds.Expand(new Vector3(0f, largestShift * 2f, 0f));
             if (camera != null && !GeometryUtility.TestPlanesAABB(planes, bounds)) continue;
+            if (settings.distantTreeDensityAware && manifest.CrowdingDirty) RefreshCrowding(coord, manifest);
             for (int i = 0; i < manifest.Trees.Length; i++)
             {
                 var tree = manifest.Trees[i];
@@ -220,32 +240,62 @@ public sealed class DistantTreeManager : IDisposable
                 float distance = Mathf.Sqrt(dx * dx + dz * dz);
                 float outer = Mathf.Clamp01((maxDistance - distance) / outerWidth);
                 if (outer <= 0f) continue;
-                float density = Mathf.Lerp(1f, Mathf.Clamp01(settings.distantTreeDensity),
+                float outerDensity = Mathf.Clamp01(settings.distantTreeDensity);
+                if (settings.distantTreeDensityAware)
+                {
+                    float crowded = Mathf.InverseLerp(settings.distantTreeCrowdingThreshold,
+                        settings.distantTreeCrowdingThreshold * 2f + 0.001f, manifest.Crowding[i]);
+                    float reduction = crowded * (1f - manifest.EdgeExposure[i] * settings.distantTreeEdgeProtection);
+                    outerDensity = Mathf.Lerp(1f, outerDensity, reduction);
+                }
+                float density = Mathf.Lerp(1f, outerDensity,
                     Mathf.InverseLerp(thinStart, Mathf.Max(thinStart + 1f, maxDistance - outerWidth), distance));
+                // Neighbor manifests can arrive later: approach new density without a visibility jump.
+                manifest.Density[i] = distance <= thinStart ? 1f : Mathf.MoveTowards(manifest.Density[i], density, fadeStep);
+                density = manifest.Density[i];
                 // Smooth removal around a stable priority; never move surviving trees.
                 float thinning = manifest.ProtectionOrder[i] < Mathf.Max(0, settings.distantTreeProtectedCount)
                     ? 1f : Mathf.Clamp01((density - manifest.Priority[i]) / 0.08f);
                 float coverage = Mathf.Min(manifest.LoadFade, Mathf.Min(outer, thinning));
                 if (coverage <= 0f) continue;
                 matrix.m13 = manifest.Height[i];
-                int index = batch.Count++;
-                batch.Matrices[index] = matrix;
-                batch.Tints[index] = (Color)tree.leafTint;
-                batch.Fades[index] = new Vector4(coverage, billboardTransition, 0f, 0f);
-                if (batch.Count == 1023) Flush(batch, camera);
+                var instance = new OrderedInstance
+                {
+                    Matrix = matrix,
+                    Tint = (Color)tree.leafTint,
+                    Fade = new Vector4(coverage, billboardTransition, 0f, 0f)
+                };
+                if (orderByDepth)
+                {
+                    instance.Depth = Vector3.Dot(new Vector3(matrix.m03, matrix.m13, matrix.m23) - cameraPosition, cameraForward);
+                    if (batch.Pending.Count == 0) batch.MinDepth = batch.MaxDepth = instance.Depth;
+                    else
+                    {
+                        batch.MinDepth = Mathf.Min(batch.MinDepth, instance.Depth);
+                        batch.MaxDepth = Mathf.Max(batch.MaxDepth, instance.Depth);
+                    }
+                    batch.Pending.Add(instance);
+                }
+                else Append(batch, instance, camera);
             }
         }
-        foreach (var batch in uniqueBatches) Flush(batch, camera);
+        foreach (var batch in uniqueBatches)
+        {
+            if (orderByDepth) DrawOrdered(batch, camera);
+            Flush(batch, camera);
+        }
         Evict();
     }
 
     private Manifest Build(ChunkCoord coord, TreeInstanceData[] trees)
     {
+        InvalidateCrowding(coord);
         int count = trees.Length;
         var m = new Manifest { Trees = trees, Matrices = new Matrix4x4[count], Priority = new float[count],
             Height = new float[count], ProtectionOrder = new int[count], LastUsed = Time.frameCount };
         Vector3 origin = new Vector3((coord.x + 0.5f) * chunkWorldSize, 0f, (coord.z + 0.5f) * chunkWorldSize);
         m.Bounds = new Bounds(origin, Vector3.zero);
+        m.Crowding = new float[count]; m.EdgeExposure = new float[count]; m.Density = new float[count];
         bool hasBounds = false;
         for (int i = 0; i < count; i++)
         {
@@ -254,11 +304,17 @@ public sealed class DistantTreeManager : IDisposable
             m.Matrices[i] = Matrix4x4.TRS(position, t.localRotation, t.localScale);
             m.Height[i] = position.y;
             m.Priority[i] = StablePriority(coord, t);
+            m.Density[i] = 1f;
+            int cellX = Mathf.Clamp(Mathf.FloorToInt((t.localPosition.x / chunkWorldSize + 0.5f) * 4f), 0, 3);
+            int cellZ = Mathf.Clamp(Mathf.FloorToInt((t.localPosition.z / chunkWorldSize + 0.5f) * 4f), 0, 3);
+            int cell = cellX + cellZ * 4;
+            m.CellTrees[cell]++;
             if (batches.TryGetValue(t.variant, out var batch))
             {
                 var b = batch.Mesh.bounds;
                 float horizontal = Mathf.Max(Mathf.Abs(b.min.x), Mathf.Abs(b.max.x), Mathf.Abs(b.min.z), Mathf.Abs(b.max.z)) *
                     Mathf.Max(Mathf.Abs(t.localScale.x), Mathf.Abs(t.localScale.z));
+                m.CrownArea[cell] += Mathf.PI * horizontal * horizontal;
                 Vector3 minimum = position + new Vector3(-horizontal, b.min.y * t.localScale.y, -horizontal);
                 Vector3 maximum = position + new Vector3(horizontal, b.max.y * t.localScale.y, horizontal);
                 if (!hasBounds) { m.Bounds = new Bounds((minimum + maximum) * 0.5f, maximum - minimum); hasBounds = true; }
@@ -281,6 +337,47 @@ public sealed class DistantTreeManager : IDisposable
             chosen[best] = true; m.ProtectionOrder[best] = rank;
         }
         return m;
+    }
+
+    private void InvalidateCrowding(ChunkCoord coord)
+    {
+        for (int z = -1; z <= 1; z++)
+            for (int x = -1; x <= 1; x++)
+                if (cache.TryGetValue(new ChunkCoord(coord.x + x, coord.z + z), out var neighbor))
+                    neighbor.CrowdingDirty = true;
+    }
+
+    // Four cells per chunk, with a 3x3 cell neighborhood crossing chunk boundaries.
+    // Missing neighbors count as open space: streaming never invents a dense stand.
+    private void RefreshCrowding(ChunkCoord coord, Manifest manifest)
+    {
+        float cellArea = chunkWorldSize * chunkWorldSize / 16f;
+        for (int i = 0; i < manifest.Trees.Length; i++)
+        {
+            Vector3 p = manifest.Trees[i].localPosition;
+            int cx = Mathf.Clamp(Mathf.FloorToInt((p.x / chunkWorldSize + 0.5f) * 4f), 0, 3);
+            int cz = Mathf.Clamp(Mathf.FloorToInt((p.z / chunkWorldSize + 0.5f) * 4f), 0, 3);
+            float area = 0f;
+            int trees = 0, open = 0;
+            for (int z = -1; z <= 1; z++)
+                for (int x = -1; x <= 1; x++)
+                {
+                    int sx = cx + x, sz = cz + z;
+                    int ox = sx < 0 ? -1 : sx >= 4 ? 1 : 0;
+                    int oz = sz < 0 ? -1 : sz >= 4 ? 1 : 0;
+                    Manifest neighbor = manifest;
+                    if (ox != 0 || oz != 0)
+                        cache.TryGetValue(new ChunkCoord(coord.x + ox, coord.z + oz), out neighbor);
+                    int cell = (sx + 4) % 4 + ((sz + 4) % 4) * 4;
+                    int n = neighbor != null ? neighbor.CellTrees[cell] : 0;
+                    trees += n;
+                    area += neighbor != null ? neighbor.CrownArea[cell] : 0f;
+                    if ((x != 0 || z != 0) && n == 0) open++;
+                }
+            manifest.Crowding[i] = trees <= 3 ? 0f : area / (9f * cellArea);
+            manifest.EdgeExposure[i] = open / 8f;
+        }
+        manifest.CrowdingDirty = false;
     }
 
     public static float StablePriority(ChunkCoord coord, TreeInstanceData tree)
@@ -309,6 +406,46 @@ public sealed class DistantTreeManager : IDisposable
     private static int DistanceSquared(ChunkCoord a, ChunkCoord b)
     { int x = a.x - b.x, z = a.z - b.z; return x * x + z * z; }
 
+    // Stable counting sort: linear work, reusable scratch, and no per-band draw calls.
+    private void DrawOrdered(Batch batch, Camera camera)
+    {
+        int count = batch.Pending.Count;
+        if (count == 0) return;
+        int bands = Mathf.Clamp(settings.distantTreeDepthBands, 4, 64);
+        Array.Clear(batch.BandOffsets, 0, bands);
+        if (batch.Order.Length < count)
+            Array.Resize(ref batch.Order, Mathf.NextPowerOfTwo(count));
+        float scale = (bands - 1) / Mathf.Max(0.001f, batch.MaxDepth - batch.MinDepth);
+        for (int i = 0; i < count; i++)
+            batch.BandOffsets[GetDepthBand(batch.Pending[i].Depth, batch.MinDepth, scale, bands)]++;
+        int offset = 0;
+        for (int band = 0; band < bands; band++)
+        {
+            int size = batch.BandOffsets[band];
+            batch.BandOffsets[band] = offset;
+            offset += size;
+        }
+        for (int i = 0; i < count; i++)
+        {
+            int band = GetDepthBand(batch.Pending[i].Depth, batch.MinDepth, scale, bands);
+            batch.Order[batch.BandOffsets[band]++] = i;
+        }
+        for (int i = 0; i < count; i++) Append(batch, batch.Pending[batch.Order[i]], camera);
+        batch.Pending.Clear();
+    }
+
+    private static int GetDepthBand(float depth, float minimum, float scale, int bands)
+        => Mathf.Clamp((int)((depth - minimum) * scale), 0, bands - 1);
+
+    private void Append(Batch batch, OrderedInstance instance, Camera camera)
+    {
+        int index = batch.Count++;
+        batch.Matrices[index] = instance.Matrix;
+        batch.Tints[index] = instance.Tint;
+        batch.Fades[index] = instance.Fade;
+        if (batch.Count == 1023) Flush(batch, camera);
+    }
+
     private void Flush(Batch batch, Camera camera)
     {
         if (batch.Count == 0) return;
@@ -331,7 +468,11 @@ public sealed class DistantTreeManager : IDisposable
         evictions.Clear();
         foreach (var pair in cache) if (pair.Value.LastUsed < Time.frameCount - 1) evictions.Add(pair.Key);
         evictions.Sort((a, b) => cache[a].LastUsed.CompareTo(cache[b].LastUsed));
-        for (int i = 0; i < Mathf.Min(excess, evictions.Count); i++) cache.Remove(evictions[i]);
+        for (int i = 0; i < Mathf.Min(excess, evictions.Count); i++)
+        {
+            InvalidateCrowding(evictions[i]);
+            cache.Remove(evictions[i]);
+        }
     }
 
     public void Dispose()

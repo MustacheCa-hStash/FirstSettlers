@@ -12,7 +12,8 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _ALPHACUTOUTSHADOWS_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 1
@@ -26,7 +27,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: d531785d64d60e649a36406f169d35fc, type: 3}
+        m_Texture: {fileID: 2800000, guid: 3125a3ff43bd38048a902d66c3af44e8, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
@@ -85,18 +86,20 @@ Material:
     m_Floats:
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
+    - _AlphaCutoutShadows: 1
     - _AlphaToMask: 0
+    - _AmbientStrength: 0.3
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BlendOp: 0
+    - _TipStrength: 0.1
     - _Brightness: 1
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _ColorVariationStrength: 0.38
+    - _ColorVariationStrength: 0.52
     - _Cull: 0
     - _Cutoff: 0.5
-    - _AmbientStrength: 0.56
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
@@ -104,17 +107,17 @@ Material:
     - _EnvironmentReflections: 1
     - _FauxShadeStrength: 0.36
     - _ForceBillboardFacing: 0
-    - _LightWrap: 0.72
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _InteriorShadeStrength: 0.2
     - _LeafMaskSoftness: 0.08
-    - _LeafMaskThreshold: 0
-    - _LeafTintStrength: 0.85
+    - _LeafMaskThreshold: 0.25
+    - _LeafTintStrength: 1
+    - _LightWrap: 0.72
     - _LowerShadeStrength: 0.22
     - _Metallic: 0
-    - _NeedleContrast: 0.18
+    - _NeedleContrast: 0.34
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueOffset: 0

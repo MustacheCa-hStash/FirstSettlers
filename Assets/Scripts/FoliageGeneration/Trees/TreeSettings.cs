@@ -111,8 +111,14 @@ public class TreeSettings
     public float distantTreeFadeWidthChunks = 2f;
     [Min(0f), Tooltip("Distance in chunk widths where stable thinning starts. The near handoff always retains full density.")]
     public float distantTreeThinningStartChunks = 8f;
-    [Range(0.05f, 1f), Tooltip("Fraction of non-protected trees retained at the outer distance. Selection is stable across camera movement.")]
+    [Range(0.05f, 1f), Tooltip("Outer-distance retention target. With density awareness, applies to dense interiors; sparse stands retain more. Not multiplied by a second thinning factor.")]
     public float distantTreeDensity = 0.45f;
+    [Tooltip("Use cached local crown coverage to preserve sparse stands and thin dense interiors. Disabling restores uniform distance thinning.")]
+    public bool distantTreeDensityAware = true;
+    [Min(0.01f), Tooltip("Summed approximate crown area / ground area where thinning begins. Full dense-stand thinning at twice this value. Lower values thin more aggressively. Neighborhoods span three quarter-chunk cells.")]
+    public float distantTreeCrowdingThreshold = 0.35f;
+    [Range(0f, 1f), Tooltip("Reduce thinning near empty neighboring cells. 0 ignores forest edges; 1 gives strongest edge protection. Isolated groups of up to three trees in the sampled neighborhood are always protected.")]
+    public float distantTreeEdgeProtection = 0.8f;
     [Min(0), Tooltip("Preserve this many well-spaced representatives per logical chunk when thinning. Sparse chunks retain all their trees.")]
     public int distantTreeProtectedCount = 2;
     [Min(0.05f), Tooltip("Seconds for 3D/billboard and initial-load dither transitions. Replacement must be ready before outgoing trees fade.")]
@@ -121,6 +127,11 @@ public class TreeSettings
     public float distantTreeTerrainConform = 1f;
     [Min(0f), Tooltip("Vertical seating adjustment speed in world units per second. Zero snaps to the displayed ground immediately.")]
     public float distantTreeHeightBlendSpeed = 20f;
+    [Header("Distant Tree Draw Ordering")]
+    [Tooltip("Order visible far billboards approximately front-to-back per mesh/material using reusable camera-depth bands. Updates with camera movement; does not change density or near tree LODs.")]
+    public bool distantTreeDepthOrdering = true;
+    [Range(4, 64), Tooltip("Number of camera-depth bands per mesh/material. More bands improve ordering precision. Bands share full instanced draw batches; default 32.")]
+    public int distantTreeDepthBands = 32;
     [Header("Distant Tree Streaming")]
     [Range(1, 4), Tooltip("Maximum concurrent background placement jobs. Each job samples a single logical chunk; no meshes or GameObjects are built on workers.")]
     public int distantTreeWorkerCount = 1;
