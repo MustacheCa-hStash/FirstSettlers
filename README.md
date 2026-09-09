@@ -1,5 +1,20 @@
 # FirstSettlers Work Notes
 
+## Shared slope angles and mountain meadows
+
+- `SlopeMap` now stores degrees: atan(raw height gradient * meshHeightMultiplier). The terrain request passes the active multiplier; far mesh/control samples and sparse distant-tree placement use the same conversion. Uniform worldScale cancels. Raw gradient maps remain derivatives for normals and MountainSnow.
+- `TerrainSlopePolicy` centralizes biome decisions for managed, Burst near-map and far-control classification. The coarse far mesh uses the same policy with neutral climate because it has no climate grid.
+- Forest canopy fades from 25 to 45 degrees; forest/tree eligibility ends at 45. Grass remains eligible through 63 degrees (old 0.01 at multiplier 200 is 63.43 degrees). Warm strong-mountain benches below normalized height 3 can become Grassland; moderate mountain shoulders can become meadows. Cold snow and high alpine terrain remain protected. Existing grass generation/density/ranking consumes the new Grass surface normally.
+- Loose sand/mud limits are 40 degrees; cliffs begin at 70. Flower/clover/dandelion defaults and all three SmearScene values are 40 degrees. Forest floor exposure begins at 35 degrees. Debug overlay explicitly displays degrees. Existing slope-based ecology checks now use degree thresholds.
+- Runtime and editor C# compile checks passed (existing BerryBushManager warning only). Twelve executable checks passed against the actual shared policy and Unity.Mathematics, covering conversion, multiplier changes, forest/grass boundaries, cold/alpine/cliff/water exclusions. Also available via Tools > Validation > Terrain Slope Policy. Updated old validation fixtures to degrees. Unity scene visuals and Burst runtime execution still require validation; restart Play mode to regenerate cached terrain/ecology.
+
+
+## Terrain handoff hole fix
+
+- Found an asynchronous coverage gap in `RebuildActiveChunkSet`: outgoing macro tiles and individual chunks were destroyed before budgeted replacement mesh work finished. This can recur at particular macro-tile boundaries at any travel speed and affects terrain and water together.
+- Keep outgoing runtimes until all currently wanted replacement chunks have attached terrain meshes, or the replacement macro tile has attached its mesh. Generated-but-unapplied data does not count as ready. Outgoing individual chunks stop foliage and collider work. Runtimes outside the desired coverage are released; reversing direction reuses retained runtimes.
+- Runtime C# compilation passed against Unity 6000.4.8f1 references (existing BerryBushManager obsolete-API warning only). Scene reproduction/benchmarking remains for Unity. Temporary overlap of outgoing and incoming surfaces is possible during the handoff.
+
 ## Current Task: Compute-Driven Grass
 
 User authorized extending the successful tree approach to grass while preserving existing generation, density settings and selection-rank clumps.

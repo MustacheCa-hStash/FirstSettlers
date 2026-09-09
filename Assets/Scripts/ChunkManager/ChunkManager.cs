@@ -626,24 +626,18 @@ public class ChunkManager
             {
                 if (loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
                 {
-                    runtime.DestroyRuntime();
-                    loadedChunks.Remove(coord);
+                    // Retain outgoing terrain until its macro replacement is attached.
+                    runtime.SetRenderVisible(true);
+                    runtime.SetFoliageRenderVisible(false);
+                    runtime.SetFoliageShadowCasterVisible(false);
+                    runtime.RemoveCollider();
                     RemoveFrustumVisibleCoord(coord);
                 }
             }
         }
 
-        foreach (ChunkCoord farTileCoord in activeFarTilesLastUpdate)
-        {
-            if (!activeFarTilesThisUpdate.Contains(farTileCoord))
-            {
-                if (loadedFarTerrainTiles.TryGetValue(farTileCoord, out FarTerrainTileRuntime runtime))
-                {
-                    runtime.DestroyRuntime();
-                    loadedFarTerrainTiles.Remove(farTileCoord);
-                }
-            }
-        }
+        // Outgoing macro tiles remain until CompleteTerrainHandoffs observes
+        // attached replacement chunks, including their water meshes.
 
         var temp = activeLastUpdate;
         activeLastUpdate = activeThisUpdate;
@@ -676,7 +670,56 @@ public class ChunkManager
         RefreshRenderVisibility(viewerCoord, budgetStart);
 
         UpdateVisibleFarTerrainTiles(viewerCoord);
+        CompleteTerrainHandoffs();
         }
+    }
+
+    private readonly List<ChunkCoord> completedTerrainHandoffs = new();
+
+    private void CompleteTerrainHandoffs()
+    {
+        // Generated data alone is insufficient: budgeted queues must attach it first.
+        completedTerrainHandoffs.Clear();
+        foreach (var entry in loadedChunks)
+        {
+            if (activeLastUpdate.Contains(entry.Key))
+                continue;
+            ChunkCoord tile = GetFarTerrainTileCoord(entry.Key);
+            if (activeFarTilesLastUpdate.Contains(tile) &&
+                (!loadedFarTerrainTiles.TryGetValue(tile, out var replacement) || !replacement.HasTerrainMesh))
+                continue;
+            entry.Value.DestroyRuntime();
+            completedTerrainHandoffs.Add(entry.Key);
+        }
+        foreach (ChunkCoord coord in completedTerrainHandoffs)
+            loadedChunks.Remove(coord);
+
+        completedTerrainHandoffs.Clear();
+        foreach (var entry in loadedFarTerrainTiles)
+        {
+            if (activeFarTilesLastUpdate.Contains(entry.Key))
+                continue;
+            bool ready = true;
+            int originX = entry.Key.x * farTerrainMacroTileSize;
+            int originZ = entry.Key.z * farTerrainMacroTileSize;
+            for (int x = 0; x < farTerrainMacroTileSize && ready; x++)
+                for (int z = 0; z < farTerrainMacroTileSize; z++)
+                {
+                    ChunkCoord coord = new ChunkCoord(originX + x, originZ + z);
+                    if (activeLastUpdate.Contains(coord) &&
+                        (!loadedChunks.TryGetValue(coord, out var replacement) || !replacement.HasTerrainMesh))
+                    {
+                        ready = false;
+                        break;
+                    }
+                }
+            if (!ready)
+                continue;
+            entry.Value.DestroyRuntime();
+            completedTerrainHandoffs.Add(entry.Key);
+        }
+        foreach (ChunkCoord coord in completedTerrainHandoffs)
+            loadedFarTerrainTiles.Remove(coord);
     }
 
     private void RefreshUrgentVisibleChunks(
@@ -1440,7 +1483,8 @@ public class ChunkManager
             persistence,
             lacunarity,
             erosionStrength,
-            worldFeatureGenerationSettings
+            worldFeatureGenerationSettings,
+            meshHeightMultiplier
         );
 
         if (!submitted)

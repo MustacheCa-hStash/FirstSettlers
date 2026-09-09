@@ -153,7 +153,7 @@ public static class MountainSnowValidation
                 float left = Height(wx - 4f, wz), right = Height(wx + 4f, wz);
                 float down = Height(wx, wz - 4f), up = Height(wx, wz + 4f);
                 float2 gradient = new float2(right - left, up - down) / 8f;
-                float slope = math.length(gradient);
+                float slope = TerrainSlopePolicy.FromGradient(math.length(gradient), 200f);
                 var biome = BiomeClassifier.Classify(center.Height, m, t, slope, center.MountainMask, center.RiverMask, 0.24f);
                 var surface = SurfaceTypeClassifier.Classify(center.Height, slope, center.RiverMask, biome, 0.24f);
                 previous += surface == SurfaceType.Snow ? 1f : 0f;

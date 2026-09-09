@@ -165,7 +165,7 @@ public static class DistantTreeValidation
                     : (x / 16 % 2 == 0 ? BiomeType.Forest : BiomeType.Grassland);
                 s[x, z] = z > 48 && z < 58 ? SurfaceType.Riverbed : SurfaceType.Grass;
                 m[x, z] = 0.75f; t[x, z] = 0.5f;
-                slope[x, z] = x > 100 ? 0.15f : 0.005f;
+                slope[x, z] = x > 100 ? 80f : 20f;
                 river[x, z] = z > 48 && z < 58 ? 0.9f : 0.1f;
             }
             var settings = WorldFeatureGenerationSettings.Default;

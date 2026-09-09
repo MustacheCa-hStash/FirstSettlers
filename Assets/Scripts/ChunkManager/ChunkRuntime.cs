@@ -29,6 +29,7 @@ public class ChunkRuntime
     public GameObject Root => root;
     public Transform RootTransform => root != null ? root.transform : null;
     public bool IsVisible => visible;
+    public bool HasTerrainMesh => terrainMeshFilter != null && terrainMeshFilter.sharedMesh != null;
     public bool IsRenderVisible => renderVisible;
     public bool IsFoliageRenderVisible => foliageRenderVisible;
     public bool IsFoliageShadowCasterVisible => foliageShadowCasterVisible;

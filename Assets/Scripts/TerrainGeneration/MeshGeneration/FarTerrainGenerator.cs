@@ -44,7 +44,7 @@ public static class FarTerrainGenerator
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FarHeightGrid, stageStart);
 
         stageStart = TerrainGenerationProfiler.GetTimestamp();
-        float[,] slopeGrid = BuildSlopeGrid(heightGrid, chunkSize);
+        float[,] slopeGrid = BuildSlopeGrid(heightGrid, chunkSize, meshHeightMultiplier);
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FarSlopeGrid, stageStart);
 
         stageStart = TerrainGenerationProfiler.GetTimestamp();
@@ -182,7 +182,7 @@ public static class FarTerrainGenerator
         return heightGrid;
     }
 
-    private static float[,] BuildSlopeGrid(float[,] heightGrid, int chunkSize)
+    private static float[,] BuildSlopeGrid(float[,] heightGrid, int chunkSize, float heightMultiplier)
     {
         int resolution = heightGrid.GetLength(0);
         float[,] slopeGrid = new float[resolution, resolution];
@@ -198,6 +198,7 @@ public static class FarTerrainGenerator
 
             FarSlopeGridJob job = new FarSlopeGridJob
             {
+                heightMultiplier = heightMultiplier,
                 resolution = resolution,
                 sampleSpacing = sampleSpacing,
                 heightSamples = heightSamples,
@@ -698,6 +699,7 @@ public static class FarTerrainGenerator
     [BurstCompile]
     private struct FarSlopeGridJob : IJobParallelFor
     {
+        public float heightMultiplier;
         public int resolution;
         public float sampleSpacing;
 
@@ -718,7 +720,7 @@ public static class FarTerrainGenerator
             float dz = (heightSamples[x * resolution + z1] - heightSamples[x * resolution + z0]) /
                        math.max(sampleSpacing, 0.0001f);
 
-            slopes[index] = math.sqrt(dx * dx + dz * dz);
+            slopes[index] = TerrainSlopePolicy.FromGradient(math.sqrt(dx * dx + dz * dz), heightMultiplier);
         }
     }
 
@@ -980,7 +982,7 @@ public static class FarTerrainGenerator
             float dz = (up - down) / (slopeRadius * 2f);
             gradient = new float2(dx, dz);
             neighborMean = (left + right + down + up) * 0.25f;
-            return math.sqrt(dx * dx + dz * dz);
+            return TerrainSlopePolicy.FromGradient(math.sqrt(dx * dx + dz * dz), heightMultiplier);
         }
 
         private static BiomeType ClassifyBiome(
@@ -992,73 +994,7 @@ public static class FarTerrainGenerator
             float riverMask,
             float waterLevel)
         {
-            const float rockLevel = 0.8f;
-            const float coldTemp = 0.30f;
-            const float hotTemp = 0.65f;
-            const float dryMoisture = 0.35f;
-            const float wetMoisture = 0.65f;
-
-            slope *= 4f;
-
-            if (terrainHeight <= waterLevel)
-                return BiomeType.Water;
-
-            bool moderateMountain = mountainMask > 0.30f;
-            bool strongMountain = mountainMask > 0.45f;
-
-            if (strongMountain)
-            {
-                float heightSnowBias = InverseLerp(2f, 11f, terrainHeight);
-                float slopeRockThreshold = math.lerp(0.015f, 0.16f, heightSnowBias);
-                bool steepMountainSlope = slope > slopeRockThreshold;
-
-                if (steepMountainSlope)
-                    return BiomeType.Rock;
-
-                if (temperature < coldTemp)
-                    return BiomeType.Snow;
-
-                if (temperature < hotTemp)
-                {
-                    float temperateSnowHeight = InverseLerp(3.0f, 8f, terrainHeight);
-                    float gentleSlopeMask = 1f - InverseLerp(0.02f, 0.18f, slope);
-                    float snowChance = temperateSnowHeight * gentleSlopeMask;
-
-                    if (snowChance > 0.5f)
-                        return BiomeType.Snow;
-
-                    return BiomeType.Rock;
-                }
-
-                return BiomeType.Rock;
-            }
-
-            if (temperature < 0.18f)
-                return moisture < 0.35f ? BiomeType.Tundra : BiomeType.Snow;
-
-            if (temperature < coldTemp && moisture > wetMoisture)
-                return BiomeType.Taiga;
-
-            if (moderateMountain)
-            {
-                float mountainStrength = InverseLerp(0.30f, 0.45f, mountainMask);
-                float adjustedRockLevel = rockLevel;
-                adjustedRockLevel -= InverseLerp(0.05f, 0.45f, slope) * 0.14f;
-                adjustedRockLevel -= mountainStrength * 0.18f;
-                adjustedRockLevel = math.clamp(adjustedRockLevel, 0.62f, rockLevel);
-
-                if (terrainHeight > adjustedRockLevel)
-                    return BiomeType.Rock;
-            }
-
-            if (temperature > hotTemp && moisture < dryMoisture)
-                return BiomeType.Desert;
-
-            if (moisture > wetMoisture)
-                return BiomeType.Forest;
-
-            bool steepGrasslandSlope = slope > 0.03f && terrainHeight > waterLevel + 0.10f;
-            return steepGrasslandSlope ? BiomeType.Rock : BiomeType.Grassland;
+            return TerrainSlopePolicy.ClassifyBiome(terrainHeight, moisture, temperature, slope, mountainMask, riverMask, waterLevel);
         }
 
         private GroundCoverType ClassifyGroundCover(
@@ -1097,7 +1033,7 @@ public static class FarTerrainGenerator
         {
             float patchNoise = Sample01(seed + 8300, x, z, 0.055f);
             bool nearRiver = riverMask > 0.64f;
-            bool exposedOrDry = slope > 0.085f || moisture < 0.32f;
+            bool exposedOrDry = slope > TerrainSlopePolicy.GroundCoverExposedDegrees || moisture < 0.32f;
 
             if (nearRiver)
                 return patchNoise > 0.55f ? GroundCoverType.Moss : GroundCoverType.BareDirt;
@@ -1252,21 +1188,8 @@ public static class FarTerrainGenerator
 
     private static BiomeType ClassifyCrudeBiome(float height, float slope, float mountainMask, float riverMask, float waterLevel)
     {
-        if (height <= waterLevel)
-            return BiomeType.Water;
-
-        if (mountainMask > 0.46f)
-        {
-            if (height > 5.5f && slope < 0.12f)
-                return BiomeType.Snow;
-
-            return BiomeType.Rock;
-        }
-
-        if (mountainMask > 0.32f || slope > 0.08f)
-            return BiomeType.Rock;
-
-        return BiomeType.Grassland;
+        // Coarse mesh topology has no climate grid; material control maps use actual climate.
+        return TerrainSlopePolicy.ClassifyBiome(height, 0.5f, 0.5f, slope, mountainMask, riverMask, waterLevel);
     }
 
 }

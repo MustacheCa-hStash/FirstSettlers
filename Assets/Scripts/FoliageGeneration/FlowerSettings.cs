@@ -34,7 +34,8 @@ public class FlowerSettings
         BiomeType.Taiga
     };
 
-    public float maxSlope = 0.08f;
+    [Range(0f, 90f), Tooltip("Maximum terrain slope in degrees.")]
+    public float maxSlope = 40f;
     public float treeExclusionRadius = 1.0f;
 
     [Header("Petal Color")]

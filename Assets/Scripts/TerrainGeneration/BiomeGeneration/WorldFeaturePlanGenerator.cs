@@ -176,7 +176,7 @@ public static class WorldFeaturePlanGenerator
             PrepareTree(x, z);
             // Only valid grassland candidates consult adjacent biomes. Rock and forest
             // candidates do not pay for these extra terrain/climate samples.
-            if (!IsValidGrasslandLandSample(biomes, surfaces, slopes, rivers, x, z, 0.12f, 0.86f)) return;
+            if (!IsValidGrasslandLandSample(biomes, surfaces, slopes, rivers, x, z, TerrainSlopePolicy.ForestMaxDegrees, 0.86f)) return;
             for (int dx = -1; dx <= 1; dx++)
                 for (int dz = -1; dz <= 1; dz++)
                     sample(Mathf.Clamp(x + dx, 0, size - 1), Mathf.Clamp(z + dz, 0, size - 1));
@@ -219,7 +219,7 @@ public static class WorldFeaturePlanGenerator
                 float rockinessNoise = Sample01(worldX, worldZ, ForestRockinessScale, seed + 6103);
                 float fineBreakup = Sample01(worldX, worldZ, ForestFineBreakupScale, seed + 6104);
 
-                float slopeSuitability = Mathf.InverseLerp(0.14f, 0.03f, slopeMap[x, z]);
+                float slopeSuitability = Mathf.InverseLerp(TerrainSlopePolicy.ForestMaxDegrees, TerrainSlopePolicy.ForestFadeStartDegrees, slopeMap[x, z]);
                 float riverSuitability = 1f - SmoothStep(0.52f, 0.76f, riverMaskMap[x, z]);
                 float clearing = Mathf.Clamp01((clearingNoise - 0.62f) * 2.65f);
 
@@ -228,7 +228,7 @@ public static class WorldFeaturePlanGenerator
                 canopyIntent *= 1f - clearing * 0.72f;
 
                 float rockiness = Mathf.Clamp01((rockinessNoise - 0.55f) * 2.2f);
-                rockiness = Mathf.Clamp01(rockiness + Mathf.InverseLerp(0.055f, 0.13f, slopeMap[x, z]) * 0.42f);
+                rockiness = Mathf.Clamp01(rockiness + Mathf.InverseLerp(30f, 60f, slopeMap[x, z]) * 0.42f);
                 rockiness *= riverSuitability;
 
                 float dampShade = Mathf.Clamp01(moistureMap[x, z] * 0.5f + canopyIntent * 0.34f + riverMaskMap[x, z] * 0.16f);
@@ -291,7 +291,7 @@ public static class WorldFeaturePlanGenerator
             int paddedZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize) + 1;
             prepare?.Invoke(paddedX, paddedZ);
 
-            if (!IsValidForestLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, 0.15f, 0.68f))
+            if (!IsValidForestLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, TerrainSlopePolicy.ForestMaxDegrees, 0.68f))
                 continue;
 
             float rockiness = plan.ForestStructure.RockinessMap[paddedX, paddedZ];
@@ -358,7 +358,7 @@ public static class WorldFeaturePlanGenerator
                 float rockPatch = Sample01(worldX, worldZ, GrasslandRockPatchScale, seed + 6503);
                 float rockFine = Sample01(worldX, worldZ, GrasslandRockFineScale, seed + 6504);
 
-                float slopeSuitability = Mathf.InverseLerp(0.13f, 0.025f, slopeMap[x, z]);
+                float slopeSuitability = Mathf.InverseLerp(TerrainSlopePolicy.ForestMaxDegrees, TerrainSlopePolicy.ForestFadeStartDegrees, slopeMap[x, z]);
                 float riverMask = riverMaskMap[x, z];
                 float riparian = SmoothStep(0.50f, 0.82f, riverMask) * slopeSuitability;
                 float meadowMoisture = Mathf.Clamp01(moistureMap[x, z] * 0.72f + riparian * 0.28f);
@@ -369,7 +369,7 @@ public static class WorldFeaturePlanGenerator
                 groveIntent *= slopeSuitability;
 
                 float rockiness = Mathf.Clamp01((rockPatch - 0.50f) * 2.15f);
-                rockiness = Mathf.Clamp01(rockiness + Mathf.InverseLerp(0.045f, 0.12f, slopeMap[x, z]) * 0.34f);
+                rockiness = Mathf.Clamp01(rockiness + Mathf.InverseLerp(25f, 55f, slopeMap[x, z]) * 0.34f);
                 rockiness *= Mathf.Lerp(0.76f, 1.14f, rockFine);
                 rockiness *= 1f - riparian * 0.34f;
 
@@ -438,7 +438,7 @@ public static class WorldFeaturePlanGenerator
                 int paddedZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize) + 1;
             prepare?.Invoke(paddedX, paddedZ);
 
-                if (!IsValidGrasslandLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, 0.13f, 0.80f))
+                if (!IsValidGrasslandLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, TerrainSlopePolicy.ForestMaxDegrees, 0.80f))
                     continue;
 
                 GrasslandStructureFields fields = plan.GrasslandStructure;
@@ -491,7 +491,7 @@ public static class WorldFeaturePlanGenerator
             int paddedZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize) + 1;
             prepare?.Invoke(paddedX, paddedZ);
 
-            if (!IsValidGrasslandLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, 0.14f, 0.82f))
+            if (!IsValidGrasslandLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, TerrainSlopePolicy.ForestMaxDegrees, 0.82f))
                 continue;
 
             GrasslandStructureFields fields = plan.GrasslandStructure;
@@ -596,7 +596,7 @@ public static class WorldFeaturePlanGenerator
             int paddedZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize) + 1;
             prepare?.Invoke(paddedX, paddedZ);
 
-            if (!IsValidForestLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, 0.12f, 0.64f))
+            if (!IsValidForestLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, TerrainSlopePolicy.ForestMaxDegrees, 0.64f))
                 continue;
 
             ForestStructureFields fields = plan.ForestStructure;
@@ -776,7 +776,7 @@ public static class WorldFeaturePlanGenerator
             int paddedZ = Mathf.Clamp(Mathf.RoundToInt(sampleZ), 0, chunkSize) + 1;
             prepare?.Invoke(paddedX, paddedZ);
 
-            if (!IsValidGrasslandLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, 0.12f, 0.86f))
+            if (!IsValidGrasslandLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, TerrainSlopePolicy.ForestMaxDegrees, 0.86f))
                 continue;
 
             GrasslandStructureFields fields = plan.GrasslandStructure;
@@ -946,7 +946,7 @@ public static class WorldFeaturePlanGenerator
                 int centerPaddedX = centerMapX + 1;
                 int centerPaddedZ = centerMapZ + 1;
 
-                if (!IsValidForestLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, centerPaddedX, centerPaddedZ, 0.13f, 0.68f))
+                if (!IsValidForestLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, centerPaddedX, centerPaddedZ, TerrainSlopePolicy.ForestMaxDegrees, 0.68f))
                     continue;
 
                 ForestStructureFields fields = plan.ForestStructure;
@@ -1009,7 +1009,7 @@ public static class WorldFeaturePlanGenerator
                     int paddedX = mapX + 1;
                     int paddedZ = mapZ + 1;
 
-                    if (!IsValidForestLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, 0.13f, 0.68f))
+                    if (!IsValidForestLandSample(biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, paddedX, paddedZ, TerrainSlopePolicy.ForestMaxDegrees, 0.68f))
                         continue;
 
                     float localUnderstory = fields.UnderstoryDensityMap[paddedX, paddedZ];

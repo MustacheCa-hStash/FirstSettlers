@@ -5,6 +5,7 @@ public class TerrainDataRequestResult
     public float[,] HeightMap { get; }
     public float[,] GradientXMap { get; }
     public float[,] GradientZMap { get; }
+    // Smoothed terrain inclination in degrees; gradients remain unscaled derivatives.
     public float[,] SlopeMap { get; }
     public float[,] MoistureMap { get; }
     public float[,] TemperatureMap { get; }

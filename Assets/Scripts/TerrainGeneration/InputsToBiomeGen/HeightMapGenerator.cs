@@ -103,7 +103,8 @@ public static partial class HeightMapGenerator
         float sampleScale,
         ChunkCoord chunkCoord,
         float waterLevel,
-        float mountainHorizontalScale = 1f)
+        float mountainHorizontalScale = 1f,
+        float meshHeightMultiplier = 200f)
     {
         int width = chunkSize + 3;
         int height = chunkSize + 3;
@@ -174,6 +175,7 @@ public static partial class HeightMapGenerator
 
             HeightGradientJob gradientJob = new HeightGradientJob
             {
+                heightMultiplier = meshHeightMultiplier,
                 width = width,
                 height = height,
                 finalHeights = finalHeights,
@@ -988,6 +990,7 @@ public static partial class HeightMapGenerator
     [BurstCompile]
     private struct HeightGradientJob : IJobParallelFor
     {
+        public float heightMultiplier;
         public int width;
         public int height;
 
@@ -1043,7 +1046,7 @@ public static partial class HeightMapGenerator
             float wideDz = (finalHeights[x * height + z1] - finalHeights[x * height + z0]) /
                            math.max(1f, z1 - z0);
 
-            slopes[index] = math.sqrt(wideDx * wideDx + wideDz * wideDz);
+            slopes[index] = TerrainSlopePolicy.FromGradient(math.sqrt(wideDx * wideDx + wideDz * wideDz), heightMultiplier);
         }
     }
 }

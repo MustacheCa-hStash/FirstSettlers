@@ -102,7 +102,8 @@ public class TerrainRequestManager
         float persistence,
         float lacunarity,
         float erosionStrength,
-        WorldFeatureGenerationSettings worldFeatureGenerationSettings)
+        WorldFeatureGenerationSettings worldFeatureGenerationSettings,
+        float meshHeightMultiplier = 200f)
     {
         if (Interlocked.CompareExchange(ref activeTerrainDataJobs, 0, 0) >= maxActiveTerrainDataJobs)
             return false;
@@ -122,7 +123,8 @@ public class TerrainRequestManager
                     sampleScale,
                     chunkCoord,
                     waterSettings.WaterLevel,
-                    mountainHorizontalScale
+                    mountainHorizontalScale,
+                    meshHeightMultiplier
                 );
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainHeightField, stageStart);
 

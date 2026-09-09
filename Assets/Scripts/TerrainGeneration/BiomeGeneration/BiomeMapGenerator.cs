@@ -113,7 +113,7 @@ public static class BiomeMapGenerator
 
         public void Execute(int index)
         {
-            float biomeSlope = slopes[index] * 4f;
+            float biomeSlope = slopes[index];
             float terrainHeight = heights[index];
             float moisture = moistures[index];
             float temperature = temperatures[index];
@@ -132,71 +132,7 @@ public static class BiomeMapGenerator
             float riverMask,
             float waterLevel)
         {
-            const float rockLevel = 0.8f;
-            const float coldTemp = 0.30f;
-            const float hotTemp = 0.65f;
-            const float dryMoisture = 0.35f;
-            const float wetMoisture = 0.65f;
-
-            if (terrainHeight <= waterLevel)
-                return BiomeType.Water;
-
-            bool moderateMountain = mountainMask > 0.30f;
-            bool strongMountain = mountainMask > 0.45f;
-
-            if (strongMountain)
-            {
-                float heightSnowBias = InverseLerp(2f, 11f, terrainHeight);
-                float slopeRockThreshold = math.lerp(0.015f, 0.16f, heightSnowBias);
-                bool steepMountainSlope = slope > slopeRockThreshold;
-
-                if (steepMountainSlope)
-                    return BiomeType.Rock;
-
-                if (temperature < coldTemp)
-                    return BiomeType.Snow;
-
-                if (temperature < hotTemp)
-                {
-                    float temperateSnowHeight = InverseLerp(3.0f, 8f, terrainHeight);
-                    float gentleSlopeMask = 1f - InverseLerp(0.02f, 0.18f, slope);
-                    float snowChance = temperateSnowHeight * gentleSlopeMask;
-
-                    if (snowChance > 0.5f)
-                        return BiomeType.Snow;
-
-                    return BiomeType.Rock;
-                }
-
-                return BiomeType.Rock;
-            }
-
-            if (temperature < 0.18f)
-                return moisture < 0.35f ? BiomeType.Tundra : BiomeType.Snow;
-
-            if (temperature < coldTemp && moisture > wetMoisture)
-                return BiomeType.Taiga;
-
-            if (moderateMountain)
-            {
-                float mountainStrength = InverseLerp(0.30f, 0.45f, mountainMask);
-                float adjustedRockLevel = rockLevel;
-                adjustedRockLevel -= InverseLerp(0.05f, 0.45f, slope) * 0.14f;
-                adjustedRockLevel -= mountainStrength * 0.18f;
-                adjustedRockLevel = math.clamp(adjustedRockLevel, 0.62f, rockLevel);
-
-                if (terrainHeight > adjustedRockLevel)
-                    return BiomeType.Rock;
-            }
-
-            if (temperature > hotTemp && moisture < dryMoisture)
-                return BiomeType.Desert;
-
-            if (moisture > wetMoisture)
-                return BiomeType.Forest;
-
-            bool steepGrasslandSlope = slope > 0.03f && terrainHeight > waterLevel + 0.10f;
-            return steepGrasslandSlope ? BiomeType.Rock : BiomeType.Grassland;
+            return TerrainSlopePolicy.ClassifyBiome(terrainHeight, moisture, temperature, slope, mountainMask, riverMask, waterLevel);
         }
 
         private static float InverseLerp(float a, float b, float value)

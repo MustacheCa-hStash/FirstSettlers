@@ -49,7 +49,7 @@ public static class WaterGenerationValidation
                 {
                     heights[x, z] = level + (x - 9) * 0.01f;
                     masks[x, z] = z / (float)(size + 2);
-                    slopes[x, z] = z % 2 == 0 ? 0.7f : 0f;
+                    slopes[x, z] = z % 2 == 0 ? 80f : 0f;
                     moisture[x, z] = 0.8f;
                     temperature[x, z] = 0.5f;
                 }

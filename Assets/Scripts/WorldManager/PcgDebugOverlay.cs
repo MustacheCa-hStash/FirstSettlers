@@ -169,8 +169,8 @@ public class PcgDebugOverlay : MonoBehaviour
         builder.AppendLine(info.GroundCoverType.ToString());
         builder.Append("World Height: ");
         builder.AppendLine(info.WorldHeight.ToString("0.00"));
-        builder.Append("Slope: ");
-        builder.AppendLine(info.Slope.ToString("0.000"));
+        builder.Append("Slope (degrees): ");
+        builder.AppendLine(info.Slope.ToString("0.0"));
         builder.Append("Moisture: ");
         builder.AppendLine(info.Moisture.ToString("0.000"));
         builder.Append("Temperature: ");

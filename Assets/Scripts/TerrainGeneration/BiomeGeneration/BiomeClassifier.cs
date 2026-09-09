@@ -2,101 +2,11 @@
 
 public static class BiomeClassifier
 {
-    // Height thresholds
-    private const float RockLevel = 0.8f;
-    private const float SnowLevel = 0.93f;
-
-    // Temperature thresholds
-    private const float ColdTemp = 0.30f;
-    private const float HotTemp = 0.65f;
-
-    // Moisture thresholds
-    private const float DryMoisture = 0.35f;
-    private const float WetMoisture = 0.65f;
-
-    private const float slopeScale = 4f;
-
     public static BiomeType Classify(float height, float moisture, float temperature,
     float slope, float mountainMask, float riverMask, float waterLevel)
     {
-        slope *= slopeScale;
-
-        if (height <= waterLevel)
-            return BiomeType.Water;
-
-        bool moderateMountain = mountainMask > 0.30f;
-        bool strongMountain = mountainMask > 0.45f;
-
-        if (strongMountain)
-        {
-            float heightSnowBias = Mathf.InverseLerp(2f, 11f, height);
-
-            float slopeRockThreshold = Mathf.Lerp(0.015f, 0.16f, heightSnowBias);
-
-            bool steepMountainSlope = slope > slopeRockThreshold;
-
-            if (steepMountainSlope)
-                return BiomeType.Rock;
-
-            if (temperature < ColdTemp)
-                return BiomeType.Snow;
-
-            if (temperature < HotTemp)
-            {
-                float temperateSnowHeight = Mathf.InverseLerp(3.0f, 8f, height);
-                float gentleSlopeMask = 1f - Mathf.InverseLerp(0.02f, 0.18f, slope);
-
-                float snowChance = temperateSnowHeight * gentleSlopeMask;
-
-                if (snowChance > 0.5f)
-                    return BiomeType.Snow;
-
-                return BiomeType.Rock;
-            }
-
-            return BiomeType.Rock;
+        return TerrainSlopePolicy.ClassifyBiome(height, moisture, temperature, slope, mountainMask, riverMask, waterLevel);
         }
-
-        if (temperature < 0.18f)
-        {
-            if (moisture < 0.35f)
-                return BiomeType.Tundra;
-
-            return BiomeType.Snow;
-        }
-
-        if (temperature < ColdTemp)
-        {
-            if (moisture > WetMoisture)
-                return BiomeType.Taiga;
-        }
-
-        if (moderateMountain)
-        {
-            float mountainStrength = Mathf.InverseLerp(0.30f, 0.45f, mountainMask);
-
-            float adjustedRockLevel = RockLevel;
-            adjustedRockLevel -= Mathf.InverseLerp(0.05f, 0.45f, slope) * 0.14f;
-            adjustedRockLevel -= mountainStrength * 0.18f;
-            adjustedRockLevel = Mathf.Clamp(adjustedRockLevel, 0.62f, RockLevel);
-
-            if (height > adjustedRockLevel)
-                return BiomeType.Rock;
-        }
-
-        if (temperature > HotTemp && moisture < DryMoisture)
-            return BiomeType.Desert;
-
-        if (moisture > WetMoisture)
-            return BiomeType.Forest;
-
-        bool steepGrasslandSlope = slope > 0.03f && height > waterLevel + 0.10f;
-
-        if (steepGrasslandSlope)
-            return BiomeType.Rock;
-
-        return BiomeType.Grassland;
-    }
 
     public static Color GenerateColorFromBiomeType(BiomeType biomeType)
     {

@@ -59,6 +59,7 @@ public class ChunkRecord
         riverMaskMap != null &&
         controlMapData != null;
     public float[,] HeightMap => heightMap;
+    // Smoothed terrain inclination in degrees; gradients remain unscaled derivatives.
     public float[,] SlopeMap => slopeMap;
     public float[,] MoistureMap => moistureMap;
     public float[,] TemperatureMap => temperatureMap;

@@ -14,6 +14,7 @@ public class FarTerrainTileRuntime
     private bool renderVisible = true;
 
     public bool IsVisible => visible;
+    public bool HasTerrainMesh => meshFilter != null && meshFilter.sharedMesh != null;
 
     public FarTerrainTileRuntime(
         FarTerrainTileRecord record,

@@ -961,7 +961,7 @@ MonoBehaviour:
     randomizeYaw: 1
     seedOffset: 18000
     allowedBiomes: 02000000030000000700000008000000
-    maxSlope: 0.08
+    maxSlope: 40
     treeExclusionRadius: 1
     flowerPetalColorPropertyName: _FlowerPetalColor
     petalColorVariation: 0.08
@@ -1003,7 +1003,7 @@ MonoBehaviour:
     randomizeYaw: 1
     seedOffset: 24000
     cloverInstanceDataPropertyName: _CloverInstanceData
-    maxSlope: 0.08
+    maxSlope: 40
     treeExclusionRadius: 1.25
     bushExclusionRadius: 1.1
     rockExclusionRadius: 0.85
@@ -1027,7 +1027,7 @@ MonoBehaviour:
     randomizeYaw: 1
     seedOffset: 32000
     dandelionInstanceDataPropertyName: _DandelionInstanceData
-    maxSlope: 0.08
+    maxSlope: 40
     treeExclusionRadius: 1
     bushExclusionRadius: 0.9
     rockExclusionRadius: 0.75

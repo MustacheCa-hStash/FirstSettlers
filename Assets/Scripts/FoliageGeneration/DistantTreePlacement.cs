@@ -77,7 +77,7 @@ public static class DistantTreePlacement
                 int z0 = Mathf.Max(z - 4, 0), z1 = Mathf.Min(z + 4, size - 1);
                 float dx = (Height(x1, z).Height - Height(x0, z).Height) / Mathf.Max(1, x1 - x0);
                 float dz = (Height(x, z1).Height - Height(x, z0).Height) / Mathf.Max(1, z1 - z0);
-                slopes[x, z] = math.sqrt(dx * dx + dz * dz);
+                slopes[x, z] = TerrainSlopePolicy.FromGradient(math.sqrt(dx * dx + dz * dz), heightMultiplier);
                 float wx = coord.x * chunkSize + x - 1, wz = coord.z * chunkSize + z - 1;
                 moisture[x, z] = ClimateGenerator.SampleClimate01(wx, wz, seed + 1000, sampleScale * 10f,
                     persistence, lacunarity, climateMax, moistureOffsets);

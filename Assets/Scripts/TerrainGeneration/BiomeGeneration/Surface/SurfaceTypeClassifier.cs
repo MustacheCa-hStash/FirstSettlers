@@ -4,8 +4,8 @@ public static class SurfaceTypeClassifier
 {
     private const float RiverBankThreshold = TerrainWaterSettings.RiverBankThreshold;
 
-    private const float CliffSlopeThreshold = 0.6f;
-    private const float RockSlopeThreshold = 0.42f;
+    private const float CliffSlopeThreshold = TerrainSlopePolicy.CliffDegrees;
+    private const float RockSlopeThreshold = TerrainSlopePolicy.LooseSurfaceMaxDegrees;
 
     public static SurfaceType Classify(float height, float slope, float riverMask, BiomeType biome, float waterLevel)
     {
@@ -14,6 +14,16 @@ public static class SurfaceTypeClassifier
 
         if (slope >= CliffSlopeThreshold)
             return SurfaceType.Cliff;
+
+        if (biome == BiomeType.Snow)
+            return SurfaceType.Snow;
+
+        if (slope > TerrainSlopePolicy.GrassMaxDegrees)
+            return SurfaceType.Rock;
+
+        if (slope > RockSlopeThreshold && (riverMask >= RiverBankThreshold ||
+            height <= waterLevel + TerrainWaterSettings.ShoreBand || biome == BiomeType.Desert || biome == BiomeType.Beach))
+            return SurfaceType.Rock;
 
         if (height <= waterLevel + TerrainWaterSettings.ShoreBand)
             return SurfaceType.Sand;

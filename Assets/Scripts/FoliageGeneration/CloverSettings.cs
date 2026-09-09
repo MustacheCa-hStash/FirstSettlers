@@ -30,7 +30,8 @@ public class CloverSettings
     public string cloverInstanceDataPropertyName = "_CloverInstanceData";
 
     [Header("Surface Filters")]
-    public float maxSlope = 0.08f;
+    [Range(0f, 90f), Tooltip("Maximum terrain slope in degrees.")]
+    public float maxSlope = 40f;
     public float treeExclusionRadius = 1.25f;
     public float bushExclusionRadius = 1.1f;
     public float rockExclusionRadius = 0.85f;

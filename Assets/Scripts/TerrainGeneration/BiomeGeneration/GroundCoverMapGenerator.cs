@@ -232,7 +232,7 @@ public static class GroundCoverMapGenerator
             float dampShade = dampShades[index];
             float organicFloorIntent = organicFloorIntents[index];
             bool nearRiver = riverMask > 0.64f;
-            bool exposedOrDry = slope > 0.085f || moisture < 0.32f;
+            bool exposedOrDry = slope > TerrainSlopePolicy.GroundCoverExposedDegrees || moisture < 0.32f;
 
             if (nearRiver)
                 return dampShade > 0.58f && patchNoise > 0.55f ? GroundCoverType.Moss : GroundCoverType.BareDirt;
