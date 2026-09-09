@@ -130,8 +130,13 @@ public class TreeSettings
     [Header("Distant Tree Draw Ordering")]
     [Tooltip("Order visible far billboards approximately front-to-back per mesh/material using reusable camera-depth bands. Updates with camera movement; does not change density or near tree LODs.")]
     public bool distantTreeDepthOrdering = true;
-    [Range(4, 64), Tooltip("Number of camera-depth bands per mesh/material. More bands improve ordering precision. Bands share full instanced draw batches; default 32.")]
+    [Range(4, 64), Tooltip("Number of camera-depth bands per mesh/material. CPU batches use stable counting sort; compute uses stable GPU compaction into depth bands. Default 32.")]
     public int distantTreeDepthBands = 32;
+    [Header("Distant Tree GPU Compaction")]
+    [Tooltip("Use resident tree buffers with GPU culling, thinning, fading and depth ordering for compatible distant billboard materials. Falls back to CPU instanced batches when unsupported or unassigned.")]
+    public bool distantTreeGpuCompaction = true;
+    [Tooltip("Compute shader used to compact visible distant tree billboard instances before indirect rendering.")]
+    public ComputeShader distantTreeCompactShader;
     [Header("Distant Tree Streaming")]
     [Range(1, 4), Tooltip("Maximum concurrent background placement jobs. Each job samples a single logical chunk; no meshes or GameObjects are built on workers.")]
     public int distantTreeWorkerCount = 1;

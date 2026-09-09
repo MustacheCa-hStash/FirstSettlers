@@ -34,6 +34,7 @@ Shader "Custom/RedMapleBillboardSimpleLitCutout"
     {
         Tags
         {
+            "DistantTreeIndirect" = "True"
             "RenderType" = "TransparentCutout"
             "RenderPipeline" = "UniversalPipeline"
             "Queue" = "AlphaTest"
@@ -53,9 +54,11 @@ Shader "Custom/RedMapleBillboardSimpleLitCutout"
 
             HLSLPROGRAM
             #pragma target 3.0
+            #pragma target 4.5 PROCEDURAL_INSTANCING_ON
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupDistantTree
             #pragma multi_compile_fog
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
@@ -173,7 +176,7 @@ Shader "Custom/RedMapleBillboardSimpleLitCutout"
 
                 float3 normalPositionWS = TransformObjectToWorld(IN.positionOS.xyz);
 
-#if defined(UNITY_INSTANCING_ENABLED)
+#if defined(UNITY_INSTANCING_ENABLED) || defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
                 float useBillboardFacing = 1.0;
 #else
                 float useBillboardFacing = step(0.5, _ForceBillboardFacing);
@@ -216,7 +219,7 @@ Shader "Custom/RedMapleBillboardSimpleLitCutout"
                 half paleArtifactMask = smoothstep(0.28h, 0.58h, luma) * neutralness * canopyMask * _PaleArtifactStrength;
                 leafMask = max(leafMask, paleArtifactMask);
 
-                half4 instanceLeafTint = UNITY_ACCESS_INSTANCED_PROP(TreeBillboardInstanceProperties, _TreeLeafTint);
+                half4 instanceLeafTint = GetDistantTreeTint(UNITY_ACCESS_INSTANCED_PROP(TreeBillboardInstanceProperties, _TreeLeafTint));
                 half directTintAmount = 1.0h - saturate(instanceLeafTint.a);
                 half3 treeLeafTint = lerp(_BillboardLeafTint.rgb * instanceLeafTint.rgb, instanceLeafTint.rgb, directTintAmount);
                 half3 compressionTarget = lerp(_BillboardTintAverageColor.rgb, instanceLeafTint.rgb, directTintAmount);

@@ -59,7 +59,7 @@ PrefabInstance:
     - target: {fileID: -7511558181221131132, guid: 30319d49b1849a749834502a84a0e67c, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: e03618b150e973b4d90938c8dec37805, type: 2}
+      objectReference: {fileID: 2100000, guid: 53b60d7f9ef660d44bd364cc6fdbfe86, type: 2}
     - target: {fileID: -3170054850294369763, guid: 30319d49b1849a749834502a84a0e67c, type: 3}
       propertyPath: m_CastShadows
       value: 1
@@ -71,7 +71,7 @@ PrefabInstance:
     - target: {fileID: -3170054850294369763, guid: 30319d49b1849a749834502a84a0e67c, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 831f9e2db03a2a94184925dd4b2ab5c1, type: 2}
+      objectReference: {fileID: 2100000, guid: 4ac6e1a01d16fbf44b6f5f890f922459, type: 2}
     - target: {fileID: 919132149155446097, guid: 30319d49b1849a749834502a84a0e67c, type: 3}
       propertyPath: m_Name
       value: Spruce_LOD1_v01

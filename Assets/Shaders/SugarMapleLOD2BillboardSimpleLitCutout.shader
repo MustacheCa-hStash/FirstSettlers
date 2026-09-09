@@ -47,6 +47,7 @@ Shader "Custom/SugarMapleLOD2BillboardSimpleLitCutout"
     {
         Tags
         {
+            "DistantTreeIndirect" = "True"
             "RenderType" = "TransparentCutout"
             "RenderPipeline" = "UniversalPipeline"
             "Queue" = "AlphaTest"
@@ -66,9 +67,11 @@ Shader "Custom/SugarMapleLOD2BillboardSimpleLitCutout"
 
             HLSLPROGRAM
             #pragma target 3.0
+            #pragma target 4.5 PROCEDURAL_INSTANCING_ON
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupDistantTree
             #pragma multi_compile_fog
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
@@ -248,7 +251,7 @@ Shader "Custom/SugarMapleLOD2BillboardSimpleLitCutout"
 
                 half3 autumnColor = EvaluateAutumnColor(IN.viewUv, IN.positionWS);
                 half3 mapleLeaves = lerp(_SummerLeafColor.rgb, autumnColor, saturate(_SeasonAutumnAmount));
-                half3 treeLeafTint = UNITY_ACCESS_INSTANCED_PROP(TreeInstanceProperties, _TreeLeafTint).rgb;
+                half3 treeLeafTint = GetDistantTreeTint(UNITY_ACCESS_INSTANCED_PROP(TreeInstanceProperties, _TreeLeafTint)).rgb;
                 treeLeafTint = lerp(treeLeafTint, _BillboardTintAverageColor.rgb, saturate(_BillboardTintCompression));
                 mapleLeaves = lerp(mapleLeaves, treeLeafTint, saturate(_TreeTintStrength * _SeasonAutumnAmount));
                 mapleLeaves = lerp(mapleLeaves, _LeafShadowColor.rgb, shadeMask * leafMask);

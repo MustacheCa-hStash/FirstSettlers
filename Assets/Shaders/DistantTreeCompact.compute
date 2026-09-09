@@ -1,0 +1,147 @@
+#pragma kernel CompactDistantTrees
+#pragma kernel PrefixDistantTrees
+#pragma kernel ScatterDistantTrees
+#pragma kernel CopyDistantTreeDensity
+
+#include "Assets/Shaders/DistantTreeInstance.hlsl"
+
+struct DistantTreeSource
+{
+    float4x4 objectToWorld;
+    float4 tint;
+    float4 ecology;
+    float4 bounds;
+};
+
+StructuredBuffer<DistantTreeSource> _DistantTreeSources;
+StructuredBuffer<float4> _DistantTreeStates;
+RWStructuredBuffer<float> _DistantTreeDensity;
+StructuredBuffer<float> _DistantTreeOldDensity;
+RWStructuredBuffer<DistantTreeInstance> _DistantTreeEvaluated;
+RWStructuredBuffer<uint2> _DistantTreeOrder;
+RWStructuredBuffer<uint> _DistantTreeGroups;
+RWStructuredBuffer<DistantTreeInstance> _DistantTreeVisible;
+RWStructuredBuffer<uint> _DistantTreeArgs;
+
+uint _DistantTreeCandidateCount, _DistantTreeGroupCount, _DistantTreeBandCount;
+uint _DistantTreeFrustumEnabled, _DistantTreeProtectedCount, _DistantTreePreviousCapacity;
+float4 _DistantTreeFrustum[6];
+float3 _DistantTreeViewer, _DistantTreeCamera, _DistantTreeForward;
+float4 _DistantTreeRange, _DistantTreeDensitySettings;
+float _DistantTreeDepthRange;
+groupshared uint Bands[64];
+groupshared uint Totals[64];
+
+float InverseRange(float a, float b, float value)
+{
+    return saturate((value - a) / max(0.00001, b - a));
+}
+
+bool EvaluateTree(uint index, out DistantTreeInstance result, out uint band)
+{
+    result = (DistantTreeInstance)0;
+    band = 64;
+    if (index >= _DistantTreeCandidateCount) return false;
+    float4 state = _DistantTreeStates[index];
+    if (state.w > 0) _DistantTreeDensity[index] = state.w - 1;
+    if (state.z <= 0 || state.y <= 0) return false;
+    DistantTreeSource source = _DistantTreeSources[index];
+    float3 origin = float3(source.objectToWorld._m03, state.x, source.objectToWorld._m23);
+    float distanceToViewer = length(origin.xz - _DistantTreeViewer.xz);
+    float outer = saturate((_DistantTreeRange.x - distanceToViewer) / _DistantTreeRange.y);
+    if (outer <= 0) return false;
+    float density = saturate(_DistantTreeDensitySettings.x);
+    if (_DistantTreeDensitySettings.w > 0)
+    {
+        float crowded = InverseRange(_DistantTreeDensitySettings.y,
+            _DistantTreeDensitySettings.y * 2 + 0.001, source.ecology.z);
+        float reduction = crowded * (1 - source.ecology.w * _DistantTreeDensitySettings.z);
+        density = lerp(1, density, reduction);
+    }
+    density = lerp(1, density, InverseRange(_DistantTreeRange.z,
+        max(_DistantTreeRange.z + 1, _DistantTreeRange.x - _DistantTreeRange.y), distanceToViewer));
+    float previous = _DistantTreeDensity[index];
+    density = distanceToViewer <= _DistantTreeRange.z ? 1 :
+        previous + clamp(density - previous, -_DistantTreeRange.w, _DistantTreeRange.w);
+    _DistantTreeDensity[index] = density;
+    float thinning = source.ecology.y < _DistantTreeProtectedCount ? 1 :
+        saturate((density - source.ecology.x) / 0.08);
+    float coverage = min(state.y, min(outer, thinning));
+    if (coverage <= 0) return false;
+    // Same conservative scaled/offset bounds as the indirect draw.
+    float3 center = origin + float3(0, (source.bounds.y + source.bounds.z) * 0.5, 0);
+    float3 extent = float3(source.bounds.x, (source.bounds.z - source.bounds.y) * 0.5, source.bounds.x);
+    if (_DistantTreeFrustumEnabled != 0)
+        for (uint p = 0; p < 6; p++)
+            if (dot(_DistantTreeFrustum[p].xyz, center) + _DistantTreeFrustum[p].w +
+                dot(abs(_DistantTreeFrustum[p].xyz), extent) < 0) return false;
+    result.objectToWorld = source.objectToWorld;
+    result.objectToWorld._m13 = state.x;
+    result.tint = source.tint;
+    result.fade = float4(coverage, state.z, 0, 0);
+    float depth = dot(origin - _DistantTreeCamera, _DistantTreeForward);
+    band = min((uint)(saturate(depth / _DistantTreeDepthRange) * _DistantTreeBandCount),
+        _DistantTreeBandCount - 1);
+    return true;
+}
+
+[numthreads(64, 1, 1)]
+void CompactDistantTrees(uint3 id : SV_DispatchThreadID, uint lane : SV_GroupIndex, uint3 group : SV_GroupID)
+{
+    DistantTreeInstance result;
+    uint band;
+    bool visible = EvaluateTree(id.x, result, band);
+    Bands[lane] = band;
+    GroupMemoryBarrierWithGroupSync();
+    uint localOffset = 0;
+    uint bandCount = 0;
+    // Stable ranks followed by a prefix across groups preserve depth bands,
+    // regardless of wave scheduling (unlike an unordered append buffer).
+    for (uint i = 0; i < 64; i++)
+    {
+        if (i < lane && Bands[i] == band) localOffset++;
+        if (Bands[i] == lane) bandCount++;
+    }
+    _DistantTreeGroups[group.x * 64 + lane] = bandCount;
+    if (id.x < _DistantTreeCandidateCount)
+    {
+        _DistantTreeOrder[id.x] = uint2(band, localOffset);
+        if (visible) _DistantTreeEvaluated[id.x] = result;
+    }
+}
+
+[numthreads(64, 1, 1)]
+void PrefixDistantTrees(uint lane : SV_GroupIndex)
+{
+    uint total = 0;
+    for (uint g = 0; g < _DistantTreeGroupCount; g++)
+        total += _DistantTreeGroups[g * 64 + lane];
+    Totals[lane] = total;
+    GroupMemoryBarrierWithGroupSync();
+    uint offset = 0;
+    for (uint b = 0; b < lane; b++) offset += Totals[b];
+    if (lane == 63) _DistantTreeArgs[1] = offset + total;
+    for (uint group = 0; group < _DistantTreeGroupCount; group++)
+    {
+        uint size = _DistantTreeGroups[group * 64 + lane];
+        _DistantTreeGroups[group * 64 + lane] = offset;
+        offset += size;
+    }
+}
+
+[numthreads(64, 1, 1)]
+void ScatterDistantTrees(uint3 id : SV_DispatchThreadID, uint3 group : SV_GroupID)
+{
+    if (id.x >= _DistantTreeCandidateCount) return;
+    uint2 order = _DistantTreeOrder[id.x];
+    if (order.x >= 64) return;
+    uint offset = _DistantTreeGroups[group.x * 64 + order.x] + order.y;
+    _DistantTreeVisible[offset] = _DistantTreeEvaluated[id.x];
+}
+
+[numthreads(64, 1, 1)]
+void CopyDistantTreeDensity(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x < _DistantTreePreviousCapacity)
+        _DistantTreeDensity[id.x] = _DistantTreeOldDensity[id.x];
+}

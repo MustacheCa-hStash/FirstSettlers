@@ -14,6 +14,7 @@ public sealed class DistantTreeManager : IDisposable
         public Matrix4x4[] Matrices;
         public float[] Priority, Height;
         public int[] ProtectionOrder;
+        public int[] GpuSlots;
         public Bounds Bounds;
         public float LoadFade;
         public int LastUsed;
@@ -34,6 +35,8 @@ public sealed class DistantTreeManager : IDisposable
         public int[] Order = Array.Empty<int>();
         public readonly int[] BandOffsets = new int[64];
         public float MinDepth, MaxDepth;
+        public bool SupportsIndirect;
+        public DistantTreeGpuBatch Gpu;
     }
     private struct OrderedInstance
     {
@@ -52,6 +55,9 @@ public sealed class DistantTreeManager : IDisposable
     private readonly List<ChunkCoord> wanted = new List<ChunkCoord>(), completed = new List<ChunkCoord>();
     private readonly List<ChunkCoord> evictions = new List<ChunkCoord>();
     private readonly Plane[] planes = new Plane[6];
+    private readonly Vector4[] gpuPlanes = new Vector4[6];
+    private ComputeShader activeCompute;
+    private bool gpuEnabled;
     private ChunkCoord lastViewer;
     private int lastRadius = -1;
     private bool disposed;
@@ -109,7 +115,17 @@ public sealed class DistantTreeManager : IDisposable
         var bounds = mesh.bounds;
         float radius = Mathf.Max(Mathf.Abs(bounds.min.x), Mathf.Abs(bounds.max.x), Mathf.Abs(bounds.min.z), Mathf.Abs(bounds.max.z));
         mesh.bounds = new Bounds(new Vector3(0f, bounds.center.y, 0f), new Vector3(radius * 2f, bounds.size.y, radius * 2f));
-        var batch = new Batch { Mesh = mesh, SourceMesh = filter.sharedMesh, Material = material, SourceMaterial = renderer.sharedMaterial };
+        var batch = new Batch
+        {
+            Mesh = mesh,
+            SourceMesh = filter.sharedMesh,
+            Material = material,
+            SourceMaterial = renderer.sharedMaterial,
+            SupportsIndirect = material.GetTag("DistantTreeIndirect", false, "False") == "True"
+        };
+        // Procedural variants are selected by Unity for indirect draws only.
+        material.DisableKeyword("DISTANT_TREE_INDIRECT");
+        material.DisableKeyword("PROCEDURAL_INSTANCING_ON");
         batches.Add(variant, batch);
         uniqueBatches.Add(batch);
     }
@@ -118,6 +134,8 @@ public sealed class DistantTreeManager : IDisposable
     {
         if (disposed) return;
         RenderStats = default;
+        ConfigureGpu();
+        foreach (var batch in uniqueBatches) batch.Gpu?.BeginFrame();
         float handoffChunks = Mathf.Max(0, settings.gameObjectTreeChunkRingRadius) + 2f;
         float rangeChunks = Mathf.Max(handoffChunks + Mathf.Max(0.1f, settings.distantTreeFadeWidthChunks), settings.distantTreeDistanceChunks);
         int radius = Mathf.Min(Mathf.Max(1, terrainViewDistance), Mathf.CeilToInt(rangeChunks) + 1);
@@ -153,7 +171,12 @@ public sealed class DistantTreeManager : IDisposable
                 cache[coord] = Build(coord, task.Result);
         }
 
-        if (camera != null) GeometryUtility.CalculateFrustumPlanes(camera, planes);
+        if (camera != null)
+        {
+            GeometryUtility.CalculateFrustumPlanes(camera, planes);
+            for (int p = 0; p < 6; p++)
+                gpuPlanes[p] = new Vector4(planes[p].normal.x, planes[p].normal.y, planes[p].normal.z, planes[p].distance);
+        }
         float duration = Mathf.Max(0.05f, settings.distantTreeTransitionSeconds);
         float fadeStep = Time.unscaledDeltaTime / duration;
         float maxDistance = rangeChunks * chunkWorldSize;
@@ -193,6 +216,7 @@ public sealed class DistantTreeManager : IDisposable
             if (source != null && source.treeCubesGenerated && manifest.NearSource != source.treeCubeInstances)
             {
                 float previousFade = manifest.LoadFade;
+                ReleaseGpuSlots(manifest);
                 manifest = Build(coord, source.treeCubeInstances.ToArray());
                 manifest.NearSource = source.treeCubeInstances;
                 manifest.LoadFade = previousFade;
@@ -236,6 +260,15 @@ public sealed class DistantTreeManager : IDisposable
                 var tree = manifest.Trees[i];
                 if (!batches.TryGetValue(tree.variant, out var batch)) continue;
                 var matrix = manifest.Matrices[i];
+                if (gpuEnabled && batch.Gpu != null)
+                {
+                    var ecology = new Vector4(manifest.Priority[i], manifest.ProtectionOrder[i],
+                        manifest.Crowding[i], manifest.EdgeExposure[i]);
+                    if (manifest.GpuSlots[i] < 0)
+                        manifest.GpuSlots[i] = batch.Gpu.Register(matrix, (Color)tree.leafTint, ecology, manifest.Density[i]);
+                    batch.Gpu.Submit(manifest.GpuSlots[i], manifest.Height[i], manifest.LoadFade, billboardTransition, ecology);
+                    continue;
+                }
                 float dx = matrix.m03 - viewer.x, dz = matrix.m23 - viewer.z;
                 float distance = Mathf.Sqrt(dx * dx + dz * dz);
                 float outer = Mathf.Clamp01((maxDistance - distance) / outerWidth);
@@ -282,6 +315,13 @@ public sealed class DistantTreeManager : IDisposable
         foreach (var batch in uniqueBatches)
         {
             if (orderByDepth) DrawOrdered(batch, camera);
+            if (gpuEnabled && batch.Gpu != null)
+            {
+                batch.Gpu.Draw(settings, camera, viewer, gpuPlanes, maxDistance, outerWidth, thinStart, fadeStep);
+                var stats = RenderStats;
+                stats.AddMeshInstances(batch.Mesh, batch.Gpu.SubmittedCount);
+                RenderStats = stats;
+            }
             Flush(batch, camera);
         }
         Evict();
@@ -292,7 +332,8 @@ public sealed class DistantTreeManager : IDisposable
         InvalidateCrowding(coord);
         int count = trees.Length;
         var m = new Manifest { Trees = trees, Matrices = new Matrix4x4[count], Priority = new float[count],
-            Height = new float[count], ProtectionOrder = new int[count], LastUsed = Time.frameCount };
+            Height = new float[count], ProtectionOrder = new int[count], GpuSlots = new int[count], LastUsed = Time.frameCount };
+        Array.Fill(m.GpuSlots, -1);
         Vector3 origin = new Vector3((coord.x + 0.5f) * chunkWorldSize, 0f, (coord.z + 0.5f) * chunkWorldSize);
         m.Bounds = new Bounds(origin, Vector3.zero);
         m.Crowding = new float[count]; m.EdgeExposure = new float[count]; m.Density = new float[count];
@@ -315,8 +356,9 @@ public sealed class DistantTreeManager : IDisposable
                 float horizontal = Mathf.Max(Mathf.Abs(b.min.x), Mathf.Abs(b.max.x), Mathf.Abs(b.min.z), Mathf.Abs(b.max.z)) *
                     Mathf.Max(Mathf.Abs(t.localScale.x), Mathf.Abs(t.localScale.z));
                 m.CrownArea[cell] += Mathf.PI * horizontal * horizontal;
-                Vector3 minimum = position + new Vector3(-horizontal, b.min.y * t.localScale.y, -horizontal);
-                Vector3 maximum = position + new Vector3(horizontal, b.max.y * t.localScale.y, horizontal);
+                Vector4 envelope = DistantTreeGpuBatch.CalculateBounds(b, m.Matrices[i]);
+                Vector3 minimum = position + new Vector3(-envelope.x, envelope.y, -envelope.x);
+                Vector3 maximum = position + new Vector3(envelope.x, envelope.z, envelope.x);
                 if (!hasBounds) { m.Bounds = new Bounds((minimum + maximum) * 0.5f, maximum - minimum); hasBounds = true; }
                 else { m.Bounds.Encapsulate(minimum); m.Bounds.Encapsulate(maximum); }
             }
@@ -461,6 +503,32 @@ public sealed class DistantTreeManager : IDisposable
         batch.Count = 0;
     }
 
+    private void ConfigureGpu()
+    {
+        bool requested = settings.distantTreeGpuCompaction;
+        var compute = settings.distantTreeCompactShader;
+        if (activeCompute == compute && gpuEnabled == requested) return;
+        bool enabled = requested && DistantTreeGpuBatch.IsSupported(compute);
+        if (activeCompute == compute && gpuEnabled == enabled) return;
+        foreach (var batch in uniqueBatches)
+        {
+            batch.Gpu?.Dispose();
+            batch.Gpu = enabled && batch.SupportsIndirect ? new DistantTreeGpuBatch(compute, batch.Mesh, batch.Material) : null;
+        }
+        foreach (var manifest in cache.Values) Array.Fill(manifest.GpuSlots, -1);
+        activeCompute = compute;
+        gpuEnabled = enabled;
+    }
+
+    private void ReleaseGpuSlots(Manifest manifest)
+    {
+        for (int i = 0; i < manifest.GpuSlots.Length; i++)
+        {
+            if (batches.TryGetValue(manifest.Trees[i].variant, out var batch)) batch.Gpu?.Release(manifest.GpuSlots[i]);
+            manifest.GpuSlots[i] = -1;
+        }
+    }
+
     private void Evict()
     {
         int excess = cache.Count - Mathf.Max(64, settings.distantTreeCacheChunks);
@@ -471,6 +539,7 @@ public sealed class DistantTreeManager : IDisposable
         for (int i = 0; i < Mathf.Min(excess, evictions.Count); i++)
         {
             InvalidateCrowding(evictions[i]);
+            ReleaseGpuSlots(cache[evictions[i]]);
             cache.Remove(evictions[i]);
         }
     }
@@ -486,6 +555,7 @@ public sealed class DistantTreeManager : IDisposable
         {
             UnityEngine.Object.Destroy(batch.Material);
             UnityEngine.Object.Destroy(batch.Mesh);
+            batch.Gpu?.Dispose();
         }
         batches.Clear(); uniqueBatches.Clear();
     }

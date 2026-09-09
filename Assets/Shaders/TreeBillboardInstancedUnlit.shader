@@ -4,6 +4,7 @@ Shader "Custom/TreeBillboardInstancedSimpleLit"
     {
         [MainTexture] _BaseMap("Tree Billboard Texture", 2D) = "white" {}
         [MainColor] _BaseColor("Tint", Color) = (1, 1, 1, 1)
+        [PerRendererData] _TreeLeafTint("Tree Tint", Color) = (1, 1, 1, 1)
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.5
         [Toggle] _AlphaCutoutShadows("Alpha Cutout Shadows", Float) = 1
         _AmbientStrength("Ambient Strength", Range(0, 1)) = 0.58
@@ -17,6 +18,7 @@ Shader "Custom/TreeBillboardInstancedSimpleLit"
     {
         Tags
         {
+            "DistantTreeIndirect" = "True"
             "RenderType" = "TransparentCutout"
             "RenderPipeline" = "UniversalPipeline"
             "Queue" = "AlphaTest"
@@ -35,16 +37,17 @@ Shader "Custom/TreeBillboardInstancedSimpleLit"
 
             HLSLPROGRAM
             #pragma target 3.0
+            #pragma target 4.5 PROCEDURAL_INSTANCING_ON
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupDistantTree
             #pragma multi_compile_fog
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-            #include "Assets/Shaders/TreeSimpleLitCommon.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -76,6 +79,12 @@ Shader "Custom/TreeBillboardInstancedSimpleLit"
                 float4 shadowCoord : TEXCOORD3;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
+
+            UNITY_INSTANCING_BUFFER_START(TreeBillboardInstanceProperties)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _TreeLeafTint)
+            UNITY_INSTANCING_BUFFER_END(TreeBillboardInstanceProperties)
+
+            #include "Assets/Shaders/TreeSimpleLitCommon.hlsl"
 
             Varyings vert(Attributes IN)
             {
@@ -110,7 +119,7 @@ Shader "Custom/TreeBillboardInstancedSimpleLit"
 
                 float3 normalPositionWS = TransformObjectToWorld(IN.positionOS.xyz);
 
-#if defined(UNITY_INSTANCING_ENABLED)
+#if defined(UNITY_INSTANCING_ENABLED) || defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
                 float useBillboardFacing = 1.0;
 #else
                 float useBillboardFacing = step(0.5, _ForceBillboardFacing);
@@ -134,6 +143,7 @@ Shader "Custom/TreeBillboardInstancedSimpleLit"
                 UNITY_SETUP_INSTANCE_ID(IN);
 
                 half4 baseSample = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;
+                baseSample.rgb *= GetDistantTreeTint(UNITY_ACCESS_INSTANCED_PROP(TreeBillboardInstanceProperties, _TreeLeafTint)).rgb;
                 clip(baseSample.a - _Cutoff);
 
                 InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);

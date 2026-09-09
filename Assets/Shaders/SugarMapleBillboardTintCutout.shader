@@ -41,6 +41,7 @@ Shader "Custom/SugarMapleBillboardSimpleLitCutout"
     {
         Tags
         {
+            "DistantTreeIndirect" = "True"
             "RenderType" = "TransparentCutout"
             "RenderPipeline" = "UniversalPipeline"
             "Queue" = "AlphaTest"
@@ -60,9 +61,11 @@ Shader "Custom/SugarMapleBillboardSimpleLitCutout"
 
             HLSLPROGRAM
             #pragma target 3.0
+            #pragma target 4.5 PROCEDURAL_INSTANCING_ON
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupDistantTree
             #pragma multi_compile_fog
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
@@ -203,7 +206,7 @@ Shader "Custom/SugarMapleBillboardSimpleLitCutout"
 
                 float3 normalPositionWS = TransformObjectToWorld(IN.positionOS.xyz);
 
-#if defined(UNITY_INSTANCING_ENABLED)
+#if defined(UNITY_INSTANCING_ENABLED) || defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
                 float useBillboardFacing = 1.0;
 #else
                 float useBillboardFacing = step(0.5, _ForceBillboardFacing);
@@ -248,7 +251,7 @@ Shader "Custom/SugarMapleBillboardSimpleLitCutout"
 
                 half3 autumnColor = EvaluateAutumnColor(IN.uv, IN.positionWS);
                 half3 leafColor = lerp(_SummerLeafColor.rgb, autumnColor, saturate(_SeasonAutumnAmount));
-                half3 treeLeafTint = UNITY_ACCESS_INSTANCED_PROP(TreeBillboardInstanceProperties, _TreeLeafTint).rgb;
+                half3 treeLeafTint = GetDistantTreeTint(UNITY_ACCESS_INSTANCED_PROP(TreeBillboardInstanceProperties, _TreeLeafTint)).rgb;
                 treeLeafTint = lerp(treeLeafTint, _BillboardTintAverageColor.rgb, saturate(_BillboardTintCompression));
                 leafColor = lerp(leafColor, treeLeafTint, saturate(_TreeTintStrength * _SeasonAutumnAmount));
                 half3 color = lerp(baseSample.rgb, leafColor, leafMask * _LeafTintStrength);
