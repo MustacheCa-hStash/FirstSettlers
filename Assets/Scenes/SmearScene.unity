@@ -901,6 +901,8 @@ MonoBehaviour:
   chunkParent: {fileID: 1025920260}
   foliageParent: {fileID: 454788146}
   grassSettings:
+    gpuIndirectRendering: 1
+    grassCompactShader: {fileID: 7200000, guid: 96b7aefeee2f40ea87a0c87c4235a78c, type: 3}
     grassPrefab: {fileID: 4547928979500997360, guid: 7acbea810f367244183cc3fa9cf18e75, type: 3}
     cellsPerAxis: 125
     cellJitter: 1

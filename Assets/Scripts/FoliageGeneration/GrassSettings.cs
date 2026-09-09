@@ -5,6 +5,11 @@ public class GrassSettings
 {
     public GameObject grassPrefab;
 
+    [Header("Grass GPU Rendering")]
+    [Tooltip("Render the existing rank-selected grass clumps with resident buffers and compute visibility culling. Keeps all generation/density rules; falls back to CPU instancing when unavailable.")]
+    public bool gpuIndirectRendering = true;
+    public ComputeShader grassCompactShader;
+
     public int cellsPerAxis = 125;
     [Range(0f, 1f)] public float cellJitter = 1.0f;
     [Tooltip("Circular radius in whole chunks around the player chunk; diagonal chunks outside the radius are excluded.")]

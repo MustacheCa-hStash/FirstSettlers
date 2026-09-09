@@ -52,6 +52,7 @@ Shader "Custom/GrassInstancedTerrainTint"
     {
         Tags
         {
+            "GrassIndirect" = "True"
             "RenderType" = "TransparentCutout"
             "RenderPipeline" = "UniversalPipeline"
             "Queue" = "AlphaTest"
@@ -71,15 +72,18 @@ Shader "Custom/GrassInstancedTerrainTint"
 
             HLSLPROGRAM
             #pragma target 3.0
+            #pragma target 4.5 PROCEDURAL_INSTANCING_ON
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupGrassIndirect
             #pragma shader_feature_local _BILLBOARD_RENDER_FADE_ON
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Shaders/GrassIndirectInstance.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -218,7 +222,7 @@ Shader "Custom/GrassInstancedTerrainTint"
                 UNITY_SETUP_INSTANCE_ID(IN);
                 UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
 
-                half4 instanceData = UNITY_ACCESS_INSTANCED_PROP(GrassInstanceProperties, _GrassInstanceData);
+                half4 instanceData = GetGrassInstanceData(UNITY_ACCESS_INSTANCED_PROP(GrassInstanceProperties, _GrassInstanceData));
                 half bladeHeight = saturate((IN.positionOS.y - _BladeMinY) / max(_BladeMaxY - _BladeMinY, 0.0001h));
                 float instancePhase = instanceData.y * 6.2831853;
                 float3 positionWS = TransformObjectToWorld(IN.positionOS.xyz);
@@ -248,7 +252,7 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half cutoff = max(_Cutoff, _AlphaClipThreshold);
                 clip(baseSample.a - cutoff);
 
-                half4 instanceData = UNITY_ACCESS_INSTANCED_PROP(GrassInstanceProperties, _GrassInstanceData);
+                half4 instanceData = GetGrassInstanceData(UNITY_ACCESS_INSTANCED_PROP(GrassInstanceProperties, _GrassInstanceData));
                 half forestBlend = saturate(instanceData.x);
 
                 #if defined(_BILLBOARD_RENDER_FADE_ON)

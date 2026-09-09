@@ -549,7 +549,8 @@ public class ChunkManager
             this,
             viewerCoord,
             viewerGlobalSubChunk,
-            frustumVisibleCoords);
+            frustumVisibleCoords,
+            viewerCamera);
 
         distantTrees?.Update(this, viewer.position, viewerCamera, viewDistance);
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FoliageTotal, foliageStart);

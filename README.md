@@ -1,8 +1,41 @@
 # FirstSettlers Work Notes
 
-## Current Task: Compute-Driven Distant Trees
+## Current Task: Compute-Driven Grass
 
-User goal: complete/fix the tree compute path, including current shader errors. The user will validate appearance and benchmark in Unity. Do not implement grass.
+User authorized extending the successful tree approach to grass while preserving existing generation, density settings and selection-rank clumps.
+
+### Implemented
+
+- Added resident indirect rendering for near grass and billboard grass. Enabled in SmearScene through `GrassSettings.gpuIndirectRendering` and the assigned `grassCompactShader`.
+- Generation, exclusion rules, biome data, seeds, scales, bucket sorting and density selection remain authoritative on CPU. Near grass retains each subchunk's sorted prefix, including the minimum-one rule at positive density. Billboard grass retains the same per-cell prefixes with deterministic fractional rounding. No new random ranking or density distribution was introduced.
+- Factored the existing prefix-count calculations into shared helpers for correctness checks. Near-density edits now schedule reselection through the existing budgeted rebuild queue, including chunks returning onscreen after an edit.
+- `GrassIndirectRenderer` uploads the existing selected matrices and instance data only when render data/mesh bounds change. It merges the old 1,023-sized batches into one indirect draw per chunk and representation.
+- `GrassCompact.compute` performs wind-aware per-clump frustum culling and stable prefix/scatter compaction. It emits source indices rather than copying whole records; source order and rank-derived wind phase remain stable.
+- The grass shader adds a procedural variant while preserving CPU instancing, forest tint, wind, fade/dither, normals and shadow reception. Culling uses the configured viewer camera; a missing camera disables per-clump culling.
+- GPU counts stay on GPU during normal rendering. Buffer ownership follows the foliage root; clearing, disabling/destroying the root, switching off indirect rendering, or replacing assets releases/rebuilds resources.
+- Unsupported shaders/devices, an unassigned compute shader, or a custom instance-data property use the existing CPU fallback.
+- Trees, flowers, clover and dandelions retain their existing render paths.
+
+### How this differs from trees
+
+Grass has many more overlapping alpha-tested blades. Reduced CPU draw submission and GPU visibility work can help, but on-screen overdraw and wind/shading cost can still dominate. This implementation preserves CPU generation and rank-prefix selection; it does not move grass generation or the density selector to compute. It batches per chunk rather than globally across the world, retaining chunk streaming ownership and billboard fade behavior.
+
+### Verification and Unity handoff
+
+- Runtime and editor C# compilation passed against Unity 6000.4.8f1's generated references (the existing BerryBushManager obsolete-API warning remains).
+- Offline Direct3D compilation passed for all three grass compute kernels and 12 grass forward shader stages: ordinary, CPU-instanced and procedural vertex/fragment variants, with fade off/on.
+- The actual extracted prefix-count helpers passed 18,018 density/count combinations for monotonicity, zero/full density and bounded counts using equivalent managed Mathf operations.
+- `git diff --check` passed.
+- Run **Tools > Terrain > Validate Grass Compute (correctness only)** in Unity. This checks GPU ordering, nested density prefixes, forest/wind instance data, more than 1,023 clumps, growth/replacement/disposal, frustum rejection and wind bounds. GPU readback occurs only in this explicit validation command.
+- Unity import, GPU correctness execution, scene visuals and benchmarks remain for the user. Compare `gpuIndirectRendering` on/off using the same warmed-up route and density settings. Inspect near/billboard transitions, clump identity while changing density, wind at screen edges and returning to streamed chunks.
+- CPU profiler markers: `FS.Grass.IndirectUpload` and `FS.Grass.IndirectCull`. Upload work should occur on rebuilds, not every frame.
+- Existing render geometry statistics report selected candidates, not post-culling indirect counts. Use the Frame Debugger/GPU profiler for actual draws and GPU timing.
+- CPU fallback arrays are retained to allow switching paths. GPU capacity is retained until clear/dispose; very small batches may not gain from compute dispatch overhead.
+- Other scenes must assign `Assets/Shaders/GrassCompact.compute` to the new grass setting to enable this path.
+
+## Previous Task: Compute-Driven Distant Trees
+
+Previous task: complete/fix the tree compute path. The user subsequently reported a noticeable latency/performance improvement and authorized extending the approach to grass.
 
 ### Current implementation
 
@@ -47,4 +80,4 @@ User goal: complete/fix the tree compute path, including current shader errors. 
 - Runtime render statistics report submitted candidates, not the GPU-visible count. Use the Frame Debugger/profiler or the explicit correctness check when inspecting actual indirect counts.
 - CPU and GPU maintain separate density histories. Switching modes rebuilds GPU buffers; allow the configured transition interval to settle before comparing screenshots or timings.
 - Distant tree shadows remain disabled, as before.
-- Grass can use a similar architecture later, but no grass implementation is included.
+- Grass now has its own implementation described above; the tree path is unchanged in this pass.

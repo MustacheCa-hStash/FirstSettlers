@@ -1,0 +1,56 @@
+#pragma kernel CullGrass
+#pragma kernel PrefixGrass
+#pragma kernel ScatterGrass
+#include "Assets/Shaders/GrassIndirectInstance.hlsl"
+
+StructuredBuffer<GrassIndirectInstance> _GrassInstances;
+RWStructuredBuffer<uint> _GrassOffsets;
+RWStructuredBuffer<uint> _GrassGroups;
+RWStructuredBuffer<uint> _GrassVisibleIndices;
+RWStructuredBuffer<uint> _GrassArgs;
+uint _GrassCount, _GrassGroupCount, _GrassFrustumEnabled;
+float4 _GrassFrustum[6];
+float3 _GrassMeshCenter, _GrassMeshExtents, _GrassWindPadding;
+groupshared uint Selected[64];
+
+[numthreads(64, 1, 1)]
+void CullGrass(uint3 id : SV_DispatchThreadID, uint lane : SV_GroupIndex, uint3 group : SV_GroupID)
+{
+    bool visible = id.x < _GrassCount;
+    if (visible && _GrassFrustumEnabled != 0)
+    {
+        float4x4 transform = _GrassInstances[id.x].objectToWorld;
+        float3 center = mul(transform, float4(_GrassMeshCenter, 1)).xyz;
+        float3 extents = mul(abs((float3x3)transform), _GrassMeshExtents) + _GrassWindPadding;
+        for (uint p = 0; p < 6; p++)
+            if (dot(_GrassFrustum[p].xyz, center) + _GrassFrustum[p].w +
+                dot(abs(_GrassFrustum[p].xyz), extents) < 0) visible = false;
+    }
+    Selected[lane] = visible ? 1 : 0;
+    GroupMemoryBarrierWithGroupSync();
+    uint offset = 0;
+    for (uint i = 0; i < lane; i++) offset += Selected[i];
+    if (id.x < _GrassCount) _GrassOffsets[id.x] = visible ? offset : 0xffffffff;
+    if (lane == 63) _GrassGroups[group.x] = offset + Selected[lane];
+}
+
+[numthreads(1, 1, 1)]
+void PrefixGrass(uint3 id : SV_DispatchThreadID)
+{
+    uint offset = 0;
+    for (uint g = 0; g < _GrassGroupCount; g++)
+    {
+        uint count = _GrassGroups[g];
+        _GrassGroups[g] = offset;
+        offset += count;
+    }
+    _GrassArgs[1] = offset;
+}
+
+[numthreads(64, 1, 1)]
+void ScatterGrass(uint3 id : SV_DispatchThreadID, uint3 group : SV_GroupID)
+{
+    if (id.x >= _GrassCount) return;
+    uint offset = _GrassOffsets[id.x];
+    if (offset != 0xffffffff) _GrassVisibleIndices[_GrassGroups[group.x] + offset] = id.x;
+}

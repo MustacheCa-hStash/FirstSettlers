@@ -51,6 +51,9 @@ public class FoliageManager
     private Mesh grassMesh;
     private Material grassMaterial;
     private int grassInstanceDataPropertyId;
+    private Camera grassRenderCamera;
+    private readonly Plane[] grassFrustum = new Plane[6];
+    private readonly Vector4[] grassGpuPlanes = new Vector4[6];
 
     private Mesh billboardGrassMesh;
     private Material billboardGrassMaterial;
@@ -189,10 +192,19 @@ public class FoliageManager
         ChunkManager chunkManager,
         ChunkCoord viewerCoord,
         SubChunkCoord viewerGlobalSubChunk,
-        List<ChunkCoord> orderedActiveCoords)
+        List<ChunkCoord> orderedActiveCoords,
+        Camera renderCamera = null)
     {
         using (DrawVisibleFoliageEveryFrameMarker.Auto())
         {
+            grassRenderCamera = renderCamera;
+            if (renderCamera != null && grassSettings.gpuIndirectRendering)
+            {
+                GeometryUtility.CalculateFrustumPlanes(renderCamera, grassFrustum);
+                for (int i = 0; i < 6; i++)
+                    grassGpuPlanes[i] = new Vector4(grassFrustum[i].normal.x, grassFrustum[i].normal.y,
+                        grassFrustum[i].normal.z, grassFrustum[i].distance);
+            }
             long stageStart = TerrainGenerationProfiler.GetTimestamp();
             long workBudgetStart = TerrainGenerationProfiler.GetTimestamp();
             float foregroundBudgetMs = Mathf.Max(0f, grassSettings.foregroundFoliageWorkBudgetMsPerFrame);
@@ -301,15 +313,20 @@ public class FoliageManager
 
         if (useNearGrass)
         {
+            bool nearGrassReady = IsCloverReadyForGrass(record, viewerCoord);
+            // Density edits reselect the existing sorted buckets through the normal
+            // budgeted queue, including chunks that were offscreen during the edit.
+            if (nearGrassReady && runtime.FoliageRuntime.CachedGrassDensitySettings != CurrentGrassDensitySettings)
+                EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.NearGrass);
             if (useClover && HasCloverRenderAssets())
                 runtime.FoliageRuntime.DrawClover();
 
-            if (IsCloverReadyForGrass(record, viewerCoord))
-                runtime.FoliageRuntime.DrawGrass();
+            if (nearGrassReady)
+                runtime.FoliageRuntime.DrawGrass(grassSettings, grassRenderCamera, grassGpuPlanes);
         }
         else if (useBillboardGrass)
         {
-            runtime.FoliageRuntime.DrawBillboards();
+            runtime.FoliageRuntime.DrawBillboards(grassSettings, grassRenderCamera, grassGpuPlanes);
         }
 
         if (useFlowers && HasFlowerRenderAssets())
@@ -2467,12 +2484,7 @@ public class FoliageManager
                     data.nearGrassInstancesBySubChunk[localSubX, localSubZ];
 
                 int totalCount = subChunkInstances.Count;
-                int renderCount = Mathf.FloorToInt(totalCount * density);
-
-                if (density > 0f && totalCount > 0)
-                {
-                    renderCount = Mathf.Clamp(renderCount, 1, totalCount);
-                }
+                int renderCount = GetNearGrassRenderCount(totalCount, density);
 
                 selectedInstanceCount += renderCount;
             }
@@ -2481,6 +2493,7 @@ public class FoliageManager
         if (selectedInstanceCount == 0)
         {
             foliageRuntime.CacheGrassMatrices(Array.Empty<Matrix4x4>(), Array.Empty<Vector4>());
+            foliageRuntime.CachedGrassDensitySettings = CurrentGrassDensitySettings;
             TerrainGenerationProfiler.Record(
                 TerrainGenerationProfileStage.FoliageGrassRenderBatchBuild,
                 stageStart);
@@ -2515,12 +2528,7 @@ public class FoliageManager
                         data.nearGrassInstancesBySubChunk[localSubX, localSubZ];
 
                     int totalCount = subChunkInstances.Count;
-                    int renderCount = Mathf.FloorToInt(totalCount * density);
-
-                    if (density > 0f && totalCount > 0)
-                    {
-                        renderCount = Mathf.Clamp(renderCount, 1, totalCount);
-                    }
+                    int renderCount = GetNearGrassRenderCount(totalCount, density);
 
                     for (int i = 0; i < renderCount; i++)
                     {
@@ -2570,6 +2578,7 @@ public class FoliageManager
             }
 
             foliageRuntime.CacheGrassMatrices(worldMatrices, instanceData);
+            foliageRuntime.CachedGrassDensitySettings = CurrentGrassDensitySettings;
             TerrainGenerationProfiler.Record(
                 TerrainGenerationProfileStage.FoliageGrassRenderBatchBuild,
                 stageStart);
@@ -3013,6 +3022,20 @@ public class FoliageManager
         int cellX,
         int cellZ)
     {
+        return GetStochasticGrassRenderCount(totalCount, densityMultiplier,
+            Hash01(Hash6(worldSeed, chunkCoord.x, chunkCoord.z, cellX, cellZ, 1301)));
+    }
+
+    // Both render paths use these exact prefix counts. No independent GPU rank/hash
+    // conversion: ties, minimum-one behavior and billboard rounding stay identical.
+    public static int GetNearGrassRenderCount(int totalCount, float density)
+    {
+        int count = Mathf.FloorToInt(totalCount * density);
+        return density > 0f && totalCount > 0 ? Mathf.Clamp(count, 1, totalCount) : count;
+    }
+
+    public static int GetStochasticGrassRenderCount(int totalCount, float densityMultiplier, float stableRoundingSample)
+    {
         if (totalCount <= 0)
             return 0;
 
@@ -3022,7 +3045,7 @@ public class FoliageManager
 
         if (renderCount < totalCount &&
             fractionalCount > 0f &&
-            Hash01(Hash6(worldSeed, chunkCoord.x, chunkCoord.z, cellX, cellZ, 1301)) < fractionalCount)
+            stableRoundingSample < fractionalCount)
         {
             renderCount++;
         }
@@ -3075,6 +3098,9 @@ public class FoliageManager
             return value / 4294967295f;
         }
     }
+
+    private Vector4 CurrentGrassDensitySettings => new Vector4(grassSettings.densityRadius3,
+        grassSettings.densityRadius6, grassSettings.densityRadius10, grassSettings.densityBeyond10);
 
     private float GetDensityForDistanceSqr(int distSqr)
     {
