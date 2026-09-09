@@ -1096,7 +1096,7 @@ MonoBehaviour:
     grassExclusionRadius: 0.5
     bushGrassExclusionRadius: 0.45
     seedOffset: 12000
-    gameObjectTreeChunkRingRadius: 3
+    gameObjectTreeChunkRingRadius: 4
     billboardTreeChunkStartRingRadius: 18
     billboardTreeChunkRingRadius: 18
     enableDistantTrees: 1
