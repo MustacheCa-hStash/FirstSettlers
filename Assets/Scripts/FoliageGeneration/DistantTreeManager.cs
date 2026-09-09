@@ -184,7 +184,8 @@ public sealed class DistantTreeManager : IDisposable
         Vector3 cameraPosition = camera != null ? camera.transform.position : viewer;
         Vector3 cameraForward = camera != null ? camera.transform.forward : Vector3.forward;
         float outerWidth = Mathf.Clamp(settings.distantTreeFadeWidthChunks * chunkWorldSize, 1f, maxDistance);
-        float thinStart = Mathf.Max(handoffChunks, settings.distantTreeThinningStartChunks) * chunkWorldSize;
+        float protectionChunks = Mathf.Max(0, settings.gameObjectTreeChunkRingRadius) + 1f;
+        float thinStart = Mathf.Max(protectionChunks, settings.distantTreeThinningStartChunks) * chunkWorldSize;
         foreach (var coord in wanted)
         {
             if (!manager.TryGetDistantTreeSurface(coord, out var runtime, out var heights, out var origin, out float surfaceSize)) continue;

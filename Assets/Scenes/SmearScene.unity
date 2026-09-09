@@ -901,9 +901,9 @@ MonoBehaviour:
   chunkParent: {fileID: 1025920260}
   foliageParent: {fileID: 454788146}
   grassSettings:
+    grassPrefab: {fileID: 4547928979500997360, guid: 7acbea810f367244183cc3fa9cf18e75, type: 3}
     gpuIndirectRendering: 1
     grassCompactShader: {fileID: 7200000, guid: 96b7aefeee2f40ea87a0c87c4235a78c, type: 3}
-    grassPrefab: {fileID: 4547928979500997360, guid: 7acbea810f367244183cc3fa9cf18e75, type: 3}
     cellsPerAxis: 125
     cellJitter: 1
     activeRingRadius: 1
@@ -1104,11 +1104,11 @@ MonoBehaviour:
     enableDistantTrees: 1
     distantTreeDistanceChunks: 18
     distantTreeFadeWidthChunks: 2
-    distantTreeThinningStartChunks: 4
-    distantTreeDensity: 0.35
+    distantTreeThinningStartChunks: 5
+    distantTreeDensity: 0.16
     distantTreeDensityAware: 1
-    distantTreeCrowdingThreshold: 0.2
-    distantTreeEdgeProtection: 0.8
+    distantTreeCrowdingThreshold: 0.15
+    distantTreeEdgeProtection: 0.65
     distantTreeProtectedCount: 2
     distantTreeTransitionSeconds: 0.65
     distantTreeTerrainConform: 1

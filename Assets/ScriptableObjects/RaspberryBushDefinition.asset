@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: RaspberryBushDefinition
   m_EditorClassIdentifier: Assembly-CSharp::BerryBushDefinition
   variant: 9
-  fruitVisualPrefab: {fileID: 236106674415841674, guid: b9e3aaac184b6e44ab5fac276d9adafd, type: 3}
+  fruitVisualPrefab: {fileID: 0}
   harvestAmount: 1
   regrowCycleLength: 1
   maxHP: 3
