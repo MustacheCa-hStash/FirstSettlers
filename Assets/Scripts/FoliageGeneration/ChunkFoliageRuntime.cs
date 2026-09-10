@@ -156,7 +156,7 @@ public class ChunkFoliageRuntime
     public bool isVisible;
 
     private readonly List<GrassRenderBatch> grassRenderBatches = new List<GrassRenderBatch>();
-    private readonly List<GrassRenderBatch> billboardRenderBatches = new List<GrassRenderBatch>();
+    private List<GrassRenderBatch> billboardRenderBatches = new List<GrassRenderBatch>();
     private readonly MaterialPropertyBlock grassPropertyBlock = new MaterialPropertyBlock();
     private GrassIndirectRenderer grassIndirectRenderer;
     private int grassRevision, billboardRevision;
@@ -486,6 +486,15 @@ public class ChunkFoliageRuntime
     {
         hasBuiltGrassRenderData = CacheGrassRenderBatches(worldMatrices, instanceData, grassRenderBatches);
         InvalidateGrassIndirect(false);
+    }
+
+    // Transfers ownership of fully prepared batches; callers must not mutate them afterwards.
+    public void PublishBillboardBatches(List<GrassRenderBatch> batches)
+    {
+        billboardRenderBatches = batches;
+        hasBuiltBillboardRenderData = true;
+        InvalidateGrassIndirect(true);
+        ResetBillboardGrassRenderFade();
     }
 
     public void CacheBillboardMatrices(List<Matrix4x4> worldMatrices, List<Vector4> instanceData)

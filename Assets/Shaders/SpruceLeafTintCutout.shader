@@ -116,6 +116,18 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 return frac((p3.x + p3.y) * p3.z);
             }
 
+            float ValueNoise(float2 p)
+            {
+                float2 i = floor(p);
+                float2 f = frac(p);
+                float a = Hash12(i);
+                float b = Hash12(i + float2(1.0, 0.0));
+                float c = Hash12(i + float2(0.0, 1.0));
+                float d = Hash12(i + float2(1.0, 1.0));
+                float2 u = f * f * (3.0 - 2.0 * f);
+                return lerp(lerp(a, b, u.x), lerp(c, d, u.x), u.y);
+            }
+
             float3 ApplyLeafWind(float3 positionWS, float3 positionOS, float2 uv)
             {
                 float2 windDir = normalize(_WindDirection.xz + float2(0.0001, 0.0));
@@ -160,8 +172,9 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
 
             half3 EvaluateSpruceNeedleColor(float2 uv, float3 positionWS)
             {
-                half branchNoise = Hash12(floor(positionWS.xz * 0.34h) + floor(uv * 4.0h));
-                half fineNoise = Hash12(floor(positionWS.xz * 1.15h) + floor(uv * 17.0h));
+                half branchNoise = ValueNoise(positionWS.xz * 0.18h + uv * 7.5h);
+                half fineNoise = ValueNoise(positionWS.xz * 0.72h + uv.yx * 23.0h);
+                branchNoise = lerp(branchNoise, fineNoise, 0.18h);
 
                 half coolMix = smoothstep(0.18h, 0.78h, branchNoise) * _ColorVariationStrength;
                 half deepMix = smoothstep(0.68h, 0.98h, 1.0h - fineNoise + branchNoise * 0.24h) * _ColorVariationStrength * 0.82h;

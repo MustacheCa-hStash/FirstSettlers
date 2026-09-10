@@ -39,8 +39,8 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: d37578f72ac0bc54b8914b60f47d921c, type: 3}
-        m_Scale: {x: 4, y: 4}
+        m_Texture: {fileID: 2800000, guid: 6cc3a3be2ff65da458ad55bac97d1ddd, type: 3}
+        m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
         m_Texture: {fileID: 0}
@@ -99,18 +99,18 @@ Material:
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
     - _AlphaToMask: 0
-    - _AmbientStrength: 0.24
+    - _AmbientStrength: 0.18
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BlendOp: 0
-    - _Brightness: 1.16
+    - _Brightness: 2
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _ColorVariationStrength: 0.675
-    - _CrackDarkness: 0.537
-    - _CrackSoftness: 0.025
-    - _CrackThreshold: 0.82
+    - _ColorVariationStrength: 0.215
+    - _CrackDarkness: 0.68
+    - _CrackSoftness: 0.045
+    - _CrackThreshold: 0.42
     - _Cull: 2
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
@@ -128,7 +128,7 @@ Material:
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _ReceiveShadows: 1
-    - _RidgeStrength: 0.24
+    - _RidgeStrength: 0.18
     - _SampleGI: 0
     - _Smoothness: 0.12
     - _SmoothnessTextureChannel: 0
@@ -143,12 +143,12 @@ Material:
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0.2, g: 0.145, b: 0.085, a: 1}
-    - _Color: {r: 0.2, g: 0.145, b: 0.085, a: 1}
-    - _CoolShadowColor: {r: 0.12, g: 0.115, b: 0.085, a: 1}
-    - _CreviceColor: {r: 0.032, g: 0.024, b: 0.014, a: 1}
+    - _BaseColor: {r: 0.692, g: 0.613, b: 0.552, a: 1}
+    - _Color: {r: 0.24, g: 0.15, b: 0.075, a: 1}
+    - _CoolShadowColor: {r: 0.13, g: 0.095, b: 0.06, a: 1}
+    - _CreviceColor: {r: 0.028, g: 0.018, b: 0.01, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _RidgeColor: {r: 0.36, g: 0.255, b: 0.135, a: 1}
+    - _RidgeColor: {r: 0.42, g: 0.27, b: 0.13, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

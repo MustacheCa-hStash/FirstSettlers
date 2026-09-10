@@ -167,7 +167,8 @@ Shader "Custom/SpruceBarkSimpleLit"
                 UNITY_SETUP_INSTANCE_ID(IN);
                 ApplyDistantTreeFade(IN.positionCS.xy);
 
-                half barkLuma = dot(SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).rgb, half3(0.299h, 0.587h, 0.114h));
+                half4 barkSample = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
+                half barkLuma = dot(barkSample.rgb, half3(0.299h, 0.587h, 0.114h));
                 half crackMask = 1.0h - smoothstep(_CrackThreshold, _CrackThreshold + _CrackSoftness, barkLuma);
                 half ridgeMask = smoothstep(0.58h, 0.98h, barkLuma);
 
@@ -181,6 +182,8 @@ Shader "Custom/SpruceBarkSimpleLit"
 
                 half heightShade = lerp(1.0h - _VerticalGradientStrength, 1.0h + _VerticalGradientStrength, saturate(IN.uv.y));
                 barkColor *= heightShade * _Brightness;
+                half barkDetail = lerp(0.72h, 1.22h, smoothstep(0.16h, 0.92h, barkLuma));
+                barkColor *= barkDetail;
                 barkColor = lerp(barkColor, _CreviceColor.rgb, saturate(crackMask * _CrackDarkness));
                 barkColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
 

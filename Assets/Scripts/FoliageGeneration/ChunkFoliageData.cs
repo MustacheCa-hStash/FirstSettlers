@@ -9,6 +9,7 @@ public class ChunkFoliageData
     public bool[,] nearGrassSubChunkGenerated;
 
     public bool billboardGenerated;
+    public int billboardRevision { get; private set; }
     public List<BillboardFoliageInstanceData> billboardGrassInstances = new List<BillboardFoliageInstanceData>();
 
     public bool flowersGenerated;
@@ -137,6 +138,7 @@ public class ChunkFoliageData
 
     public void ClearBillboards()
     {
+        billboardRevision++;
         billboardGenerated = false;
         billboardGrassInstances.Clear();
     }
