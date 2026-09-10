@@ -7,6 +7,7 @@ public class ChunkRuntime
     private GameObject root;
     private bool visible;
     private bool renderVisible = true;
+    private bool terrainHandoffHidden;
     private bool foliageRenderVisible = true;
     private bool foliageShadowCasterVisible = true;
 
@@ -30,7 +31,7 @@ public class ChunkRuntime
     public Transform RootTransform => root != null ? root.transform : null;
     public bool IsVisible => visible;
     public bool HasTerrainMesh => terrainMeshFilter != null && terrainMeshFilter.sharedMesh != null;
-    public bool IsRenderVisible => renderVisible;
+    public bool IsRenderVisible => renderVisible && !terrainHandoffHidden;
     public bool IsFoliageRenderVisible => foliageRenderVisible;
     public bool IsFoliageShadowCasterVisible => foliageShadowCasterVisible;
     public int CurrentLOD => currentLOD;
@@ -180,11 +181,21 @@ public class ChunkRuntime
         renderVisible = visible;
 
         if (terrainMeshRenderer != null)
-            terrainMeshRenderer.enabled = visible;
+            terrainMeshRenderer.enabled = visible && !terrainHandoffHidden;
 
         if (waterMeshRenderer != null)
-            waterMeshRenderer.enabled = visible;
+            waterMeshRenderer.enabled = visible && !terrainHandoffHidden;
 
+    }
+
+    // Visibility refreshes cannot accidentally reveal a replacement underneath an
+    // outgoing macro tile. Both terrain and water switch together at handoff.
+    public void SetTerrainHandoffHidden(bool hidden)
+    {
+        if (terrainHandoffHidden == hidden) return;
+        terrainHandoffHidden = hidden;
+        if (terrainMeshRenderer != null) terrainMeshRenderer.enabled = renderVisible && !hidden;
+        if (waterMeshRenderer != null) waterMeshRenderer.enabled = renderVisible && !hidden;
     }
 
     public void SetFoliageRenderVisible(bool visible)

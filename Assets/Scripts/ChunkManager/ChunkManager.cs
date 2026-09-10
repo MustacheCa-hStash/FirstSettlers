@@ -60,7 +60,6 @@ public class ChunkManager
     private readonly int octaves;
     private readonly float persistence;
     private readonly float lacunarity;
-    private readonly float erosionStrength;
     private readonly float meshHeightMultiplier;
     private readonly Material terrainMaterial;
     private readonly Material waterMaterial;
@@ -141,7 +140,6 @@ public class ChunkManager
         int octaves,
         float persistence,
         float lacunarity,
-        float erosionStrength,
         float meshHeightMultiplier,
         Material terrainMaterial,
         Material waterMaterial,
@@ -168,7 +166,7 @@ public class ChunkManager
         float lodMeshApplyBudgetMsPerFrame,
         float colliderApplyBudgetMsPerFrame,
         float mountainHorizontalScale = 1f,
-        float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma)
+        float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma, WorldErosionSettings erosion = default)
     {
         this.viewDistance = viewDistance;
         this.colliderDistance = colliderDistance;
@@ -188,7 +186,6 @@ public class ChunkManager
         this.octaves = octaves;
         this.persistence = persistence;
         this.lacunarity = lacunarity;
-        this.erosionStrength = erosionStrength;
         this.meshHeightMultiplier = meshHeightMultiplier;
         this.terrainMaterial = terrainMaterial;
         this.waterMaterial = waterMaterial;
@@ -237,7 +234,7 @@ public class ChunkManager
             this.maxActiveFarTerrainJobs,
             this.maxActiveMeshJobs,
             this.maxActiveColliderJobs,
-            waterSettings, mountainHorizontalScale, mountainSnowRenderCoverageGamma);
+            waterSettings, mountainHorizontalScale, mountainSnowRenderCoverageGamma, erosion);
         foliageManager = new FoliageManager(
             foliageParent,
             grassSettings,
@@ -252,7 +249,7 @@ public class ChunkManager
         if (treeSettings != null && treeSettings.enableDistantTrees)
             distantTrees = new DistantTreeManager(treeSettings, seed, chunkSize, sampleScale, octaves, persistence,
                 lacunarity, worldScale, meshHeightMultiplier, waterSettings.WaterLevel, mountainHorizontalScale,
-                worldFeatureGenerationSettings);
+                worldFeatureGenerationSettings, erosion);
     }
 
     public void Dispose()
@@ -678,6 +675,8 @@ public class ChunkManager
 
     private void CompleteTerrainHandoffs()
     {
+        foreach (var runtime in loadedChunks.Values)
+            runtime.SetTerrainHandoffHidden(false);
         // Generated data alone is insufficient: budgeted queues must attach it first.
         completedTerrainHandoffs.Clear();
         foreach (var entry in loadedChunks)
@@ -714,7 +713,14 @@ public class ChunkManager
                     }
                 }
             if (!ready)
+            {
+                if (entry.Value.HasTerrainMesh)
+                    for (int x = 0; x < farTerrainMacroTileSize; x++)
+                        for (int z = 0; z < farTerrainMacroTileSize; z++)
+                            if (loadedChunks.TryGetValue(new ChunkCoord(originX + x, originZ + z), out var incoming))
+                                incoming.SetTerrainHandoffHidden(true);
                 continue;
+            }
             entry.Value.DestroyRuntime();
             completedTerrainHandoffs.Add(entry.Key);
         }
@@ -1482,7 +1488,6 @@ public class ChunkManager
             octaves,
             persistence,
             lacunarity,
-            erosionStrength,
             worldFeatureGenerationSettings,
             meshHeightMultiplier
         );

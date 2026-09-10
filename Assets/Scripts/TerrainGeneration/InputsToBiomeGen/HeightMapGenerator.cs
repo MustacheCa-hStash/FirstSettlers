@@ -27,10 +27,12 @@ public readonly struct TerrainHeightSamplingContext
     public readonly int RiverSeed;
     public readonly float WaterLevel;
     public readonly float MountainHorizontalScale;
+    public readonly WorldErosionSettings Erosion;
 
-    public TerrainHeightSamplingContext(int seed, float waterLevel, float mountainHorizontalScale = 1f)
+    public TerrainHeightSamplingContext(int seed, float waterLevel, float mountainHorizontalScale = 1f, WorldErosionSettings erosion = default)
     {
         WaterLevel = waterLevel;
+        Erosion = erosion.Sanitized();
         MountainHorizontalScale = HeightMapGenerator.SanitizeMountainHorizontalScale(mountainHorizontalScale);
         BaseLandOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 20000, 2);
         MountainMaskOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 30000, 3);
@@ -42,14 +44,16 @@ public readonly struct TerrainHeightSamplingContext
 
 public static partial class HeightMapGenerator
 {
+    private const int GameplaySlopeRadius = 4;
+    private const int HeightFieldSampleBorder = GameplaySlopeRadius + 1;
     public static float SanitizeMountainHorizontalScale(float value)
     {
         return math.isfinite(value) ? math.clamp(value, 1f, 3f) : 1f;
     }
 
-    public static TerrainHeightSamplingContext CreateSamplingContext(int seed, float waterLevel, float mountainHorizontalScale = 1f)
+    public static TerrainHeightSamplingContext CreateSamplingContext(int seed, float waterLevel, float mountainHorizontalScale = 1f, WorldErosionSettings erosion = default)
     {
-        return new TerrainHeightSamplingContext(seed, waterLevel, mountainHorizontalScale);
+        return new TerrainHeightSamplingContext(seed, waterLevel, mountainHorizontalScale, erosion);
     }
 
     public static TerrainHeightSample SampleTerrainHeight(
@@ -68,7 +72,7 @@ public static partial class HeightMapGenerator
             context.MountainRuggedOffsets,
             context.RiverSeed,
             context.WaterLevel, context.MountainHorizontalScale,
-            GetMountainAnchors(new float2(worldX, worldZ), new float2(worldX, worldZ), sampleScale, context));
+            GetMountainAnchors(new float2(worldX, worldZ), new float2(worldX, worldZ), sampleScale, context), context.Erosion);
         return new TerrainHeightSample(sample.Height, sample.MountainMask, sample.RiverMask);
     }
 
@@ -83,7 +87,7 @@ public static partial class HeightMapGenerator
         int riverSeed,
         float waterLevel,
         float mountainHorizontalScale = 1f,
-        NativeArray<MountainExpansionAnchor> mountainAnchors = default)
+        NativeArray<MountainExpansionAnchor> mountainAnchors = default, WorldErosionSettings erosion = default)
     {
         TerrainHeightSampleData sample = SampleTerrainHeight(
             worldX,
@@ -93,7 +97,7 @@ public static partial class HeightMapGenerator
             mountainMaskOffsets,
             mountainTerrainOffsets,
             mountainRuggedOffsets,
-            riverSeed, waterLevel, SanitizeMountainHorizontalScale(mountainHorizontalScale), mountainAnchors);
+            riverSeed, waterLevel, SanitizeMountainHorizontalScale(mountainHorizontalScale), mountainAnchors, erosion);
         return new TerrainHeightSample(sample.Height, sample.MountainMask, sample.RiverMask);
     }
 
@@ -104,22 +108,25 @@ public static partial class HeightMapGenerator
         ChunkCoord chunkCoord,
         float waterLevel,
         float mountainHorizontalScale = 1f,
-        float meshHeightMultiplier = 200f)
+        float meshHeightMultiplier = 200f, WorldErosionSettings erosion = default)
     {
-        int width = chunkSize + 3;
-        int height = chunkSize + 3;
+        // Keep the public one-sample halo, but generate four extra samples on each side
+        // so the four-unit gameplay slope stencil is identical across chunk boundaries.
+        int mapSize = chunkSize + 3;
+        int width = mapSize + GameplaySlopeRadius * 2;
+        int height = mapSize + GameplaySlopeRadius * 2;
 
-        float[,] finalHeightMap = new float[width, height];
-        float[,] mountainMaskMap = new float[width, height];
-        float[,] riverMaskMap = new float[width, height];
-        float[,] gradientXMap = new float[width, height];
-        float[,] gradientZMap = new float[width, height];
-        float[,] slopeMap = new float[width, height];
+        float[,] finalHeightMap = new float[mapSize, mapSize];
+        float[,] mountainMaskMap = new float[mapSize, mapSize];
+        float[,] riverMaskMap = new float[mapSize, mapSize];
+        float[,] gradientXMap = new float[mapSize, mapSize];
+        float[,] gradientZMap = new float[mapSize, mapSize];
+        float[,] slopeMap = new float[mapSize, mapSize];
 
         if (sampleScale <= 0f)
             sampleScale = 0.0001f;
 
-        TerrainHeightSamplingContext samplingContext = CreateSamplingContext(seed, waterLevel, mountainHorizontalScale);
+        TerrainHeightSamplingContext samplingContext = CreateSamplingContext(seed, waterLevel, mountainHorizontalScale, erosion);
         int sampleCount = width * height;
 
         NativeArray<float> finalHeights = default;
@@ -136,9 +143,9 @@ public static partial class HeightMapGenerator
 
         try
         {
-            float2 minimum = new float2(chunkCoord.x * chunkSize - 1, chunkCoord.z * chunkSize - 1);
+            float2 minimum = new float2(chunkCoord.x * chunkSize - HeightFieldSampleBorder, chunkCoord.z * chunkSize - HeightFieldSampleBorder);
             mountainAnchors = new NativeArray<MountainExpansionAnchor>(
-                GetMountainAnchors(minimum, minimum + chunkSize + 2, sampleScale, samplingContext), Allocator.TempJob);
+                GetMountainAnchors(minimum, minimum + chunkSize + HeightFieldSampleBorder * 2, sampleScale, samplingContext), Allocator.TempJob);
             finalHeights = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             mountainMasks = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             riverMasks = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
@@ -161,6 +168,7 @@ public static partial class HeightMapGenerator
                 riverSeed = samplingContext.RiverSeed,
                 waterLevel = waterLevel,
                 mountainHorizontalScale = samplingContext.MountainHorizontalScale,
+                erosion = samplingContext.Erosion,
                 mountainAnchors = mountainAnchors,
                 baseLandOffsets = baseLandOffsets,
                 mountainMaskOffsets = mountainMaskOffsets,
@@ -187,12 +195,12 @@ public static partial class HeightMapGenerator
             JobHandle gradientHandle = gradientJob.Schedule(sampleCount, 64, sampleHandle);
             gradientHandle.Complete();
 
-            CopyToMap(finalHeights, finalHeightMap);
-            CopyToMap(mountainMasks, mountainMaskMap);
-            CopyToMap(riverMasks, riverMaskMap);
-            CopyToMap(gradientX, gradientXMap);
-            CopyToMap(gradientZ, gradientZMap);
-            CopyToMap(slopes, slopeMap);
+            CopyHeightFieldInteriorToMap(finalHeights, finalHeightMap);
+            CopyHeightFieldInteriorToMap(mountainMasks, mountainMaskMap);
+            CopyHeightFieldInteriorToMap(riverMasks, riverMaskMap);
+            CopyHeightFieldInteriorToMap(gradientX, gradientXMap);
+            CopyHeightFieldInteriorToMap(gradientZ, gradientZMap);
+            CopyHeightFieldInteriorToMap(slopes, slopeMap);
         }
         finally
         {
@@ -240,18 +248,18 @@ public static partial class HeightMapGenerator
         return nativeOffsets;
     }
 
-    private static void CopyToMap(NativeArray<float> source, float[,] target)
+    private static void CopyHeightFieldInteriorToMap(NativeArray<float> source, float[,] target)
     {
         int width = target.GetLength(0);
         int height = target.GetLength(1);
 
         for (int x = 0; x < width; x++)
         {
-            int rowOffset = x * height;
+            int rowOffset = (x + GameplaySlopeRadius) * (height + GameplaySlopeRadius * 2);
 
             for (int z = 0; z < height; z++)
             {
-                target[x, z] = source[rowOffset + z];
+                target[x, z] = source[rowOffset + z + GameplaySlopeRadius];
             }
         }
     }
@@ -272,25 +280,9 @@ public static partial class HeightMapGenerator
         int riverSeed,
         float waterLevel,
         float mountainHorizontalScale = 1f,
-        MountainExpansionAnchor[] mountainAnchors = null)
+        MountainExpansionAnchor[] mountainAnchors = null, WorldErosionSettings erosion = default)
     {
-        if (sampleScale <= 0f)
-            sampleScale = 0.0001f;
-
-        float baseLandSampleX = worldX / (sampleScale * 1.6f);
-        float baseLandSampleZ = worldZ / (sampleScale * 1.6f);
-        float baseLand = SampleBaseLand(baseLandSampleX, baseLandSampleZ, baseLandOffsets);
-
-        MountainShape mountain = SampleExpandedMountain(
-            new float2(worldX, worldZ), sampleScale, baseLand, waterLevel,
-            mountainMaskOffsets, mountainTerrainOffsets, mountainRuggedOffsets, mountainHorizontalScale, mountainAnchors);
-        float riverMask = SampleRiverMask(worldX / (sampleScale * 10f), worldZ / (sampleScale * 10f), riverSeed, out float basinInfluence);
-        float riverEligibility = (1f - math.smoothstep(0.012f, 0.03f, mountain.Contribution)) *
-                                 (1f - math.smoothstep(0.20f, 0.55f, mountain.Weight));
-        float carvedRiverMask = riverMask * riverEligibility;
-        float finalHeight = CarveRiverBasin(baseLand + mountain.Relief,
-            basinInfluence * riverEligibility, carvedRiverMask, waterLevel);
-        return new TerrainHeightSampleData(finalHeight, mountain.Mask, carvedRiverMask);
+        return SampleWorldHeight(new float2(worldX, worldZ), sampleScale, riverSeed, waterLevel, mountainHorizontalScale, erosion.Sanitized());
     }
 
     private static TerrainHeightSampleData SampleTerrainHeight(
@@ -304,281 +296,40 @@ public static partial class HeightMapGenerator
         int riverSeed,
         float waterLevel,
         float mountainHorizontalScale = 1f,
-        NativeArray<MountainExpansionAnchor> mountainAnchors = default)
+        NativeArray<MountainExpansionAnchor> mountainAnchors = default, WorldErosionSettings erosion = default)
     {
-        if (sampleScale <= 0f)
-            sampleScale = 0.0001f;
-
-        float baseLandSampleX = worldX / (sampleScale * 1.6f);
-        float baseLandSampleZ = worldZ / (sampleScale * 1.6f);
-        float baseLand = SampleBaseLand(baseLandSampleX, baseLandSampleZ, baseLandOffsets);
-
-        MountainShape mountain = SampleExpandedMountain(
-            new float2(worldX, worldZ), sampleScale, baseLand, waterLevel,
-            mountainMaskOffsets, mountainTerrainOffsets, mountainRuggedOffsets, mountainHorizontalScale, mountainAnchors);
-        float riverMask = SampleRiverMask(worldX / (sampleScale * 10f), worldZ / (sampleScale * 10f), riverSeed, out float basinInfluence);
-        float riverEligibility = (1f - math.smoothstep(0.012f, 0.03f, mountain.Contribution)) *
-                                 (1f - math.smoothstep(0.20f, 0.55f, mountain.Weight));
-        float carvedRiverMask = riverMask * riverEligibility;
-        float finalHeight = CarveRiverBasin(baseLand + mountain.Relief,
-            basinInfluence * riverEligibility, carvedRiverMask, waterLevel);
-        return new TerrainHeightSampleData(finalHeight, mountain.Mask, carvedRiverMask);
+        return SampleWorldHeight(new float2(worldX, worldZ), sampleScale, riverSeed, waterLevel, mountainHorizontalScale, erosion.Sanitized());
     }
 
-    private static float SampleMountainDetail(
-        float2 worldPosition, float sampleScale, float baseLand, float mountainHeight, float waterLevel,
-        float2 offset0, float2 offset1, float2 offset2)
+    private static TerrainHeightSampleData SampleWorldHeight(float2 position, float sampleScale, int riverSeed,
+        float waterLevel, float coverage, in WorldErosionSettings erosion)
     {
-        const float relativeRelief = 0.08f;
-        const float maxRelief = 1.5f;
-        // Detail starts only after the broad mountain signal has fully excluded rivers.
-        float foothillFade = math.smoothstep(0.03f, 0.10f, mountainHeight / 45f);
-        float dryClearance = math.max(0f, baseLand + mountainHeight - waterLevel - TerrainWaterSettings.RiverShoulderHeight);
-        float amplitude = math.min(math.min(mountainHeight * relativeRelief, maxRelief), dryClearance * 0.5f);
-        amplitude *= foothillFade * math.smoothstep(0f, 0.25f, dryClearance);
-        if (amplitude <= 0f)
-            return 0f;
-
-        // Only detail coordinates are warped; the mountain envelope and river masks are untouched.
-        float2 p = worldPosition / (sampleScale * 0.6f);
-        float2 warp = new float2(
-            noise.cnoise(p * 0.35f + offset0 * 0.01f),
-            noise.cnoise(p * 0.35f + offset1 * 0.01f));
-        p += warp * 0.45f;
-        float n0 = noise.cnoise(p + offset0 * 0.01f);
-        float n1 = noise.cnoise(p * 2f + offset1 * 0.01f);
-        float n2 = noise.cnoise(p * 4f + offset2 * 0.01f);
-        float ridges = (MountainRidge(n0) + 0.45f * MountainRidge(n1) + 0.2025f * MountainRidge(n2)) / 1.6525f;
-        // Broad, offset channels share the ridge field instead of requiring another noise stack.
-        float channels = 1f - math.smoothstep(0.08f, 0.38f, math.abs(n0 + 0.42f));
-        float detail = math.clamp((ridges - 0.5f) * 2f - channels * 0.35f, -1f, 1f);
-        return detail * amplitude;
+        int seed = riverSeed - 60000;
+        WorldBaseSample input = WorldTerrainHeight.Base(position, sampleScale, seed, coverage, erosion);
+        float height = WorldTerrainHeight.Erode(position, input, sampleScale, seed, coverage, erosion);
+        float carvedRiverMask = 0f;
+        if (erosion.carveRivers)
+        {
+            float scale = math.max(sampleScale, 0.0001f) * 10f;
+            float riverMask = SampleRiverMask(position.x / scale, position.y / scale, riverSeed, out float basin);
+            float eligibility = (1f - math.smoothstep(0.012f, 0.03f, input.MountainContribution)) *
+                (1f - math.smoothstep(0.20f, 0.55f, input.MountainWeight));
+            carvedRiverMask = riverMask * eligibility;
+            height = CarveRiverBasin(height, basin * eligibility, carvedRiverMask, waterLevel,
+                erosion.riverValleyWidth, erosion.riverValleyFlattening);
+        }
+        return new TerrainHeightSampleData(height, input.MountainMask, carvedRiverMask);
     }
-
-    private static float MountainRidge(float value)
-    {
-        // Round the absolute-value cusp so crests survive coarse collision/LOD sampling.
-        float ridge = math.saturate(1f - math.sqrt(value * value + 0.0064f));
-        return ridge * ridge;
-    }
-
-    private static float CarveRiverBasin(float originalHeight, float basinInfluence, float riverMask, float waterLevel)
+    private static float CarveRiverBasin(float originalHeight, float basinInfluence, float riverMask, float waterLevel,
+        float valleyWidth = 1f, float valleyFlattening = 1f)
     {
         // The broad valley stays dry; only the narrow channel crosses the water plane.
         float shoulder = waterLevel + TerrainWaterSettings.RiverShoulderHeight;
-        float basinBlend = math.smoothstep(0f, 1f, basinInfluence);
+        float basinBlend = math.smoothstep(0f, 1f, math.pow(math.saturate(basinInfluence), 1f / valleyWidth)) * valleyFlattening;
         float basinHeight = math.lerp(originalHeight, math.min(originalHeight, shoulder), basinBlend);
         float channelBlend = math.smoothstep(TerrainWaterSettings.RiverCarveStart, 1f, riverMask);
         float bed = waterLevel - TerrainWaterSettings.RiverBedDepth;
         return math.lerp(basinHeight, math.min(basinHeight, bed), channelBlend);
-    }
-
-    private static float SampleBaseLand(float sampleX, float sampleZ, Vector2[] octaveOffsets)
-    {
-        const int octaves = 1;
-        const float persistence = 0.5f;
-        const float lacunarity = 1.2f;
-        const float flatteningFactor = 1.0f;
-
-        float maxPossibleHeight = ComputeMaxPossibleHeight(octaves, persistence);
-        float raw = SampleGradientFbm(sampleX, sampleZ, octaves, persistence, lacunarity, octaveOffsets);
-        float normalized = NormalizeSymmetric01(raw, maxPossibleHeight);
-        return math.pow(normalized, flatteningFactor);
-    }
-
-    private static float SampleBaseLand(float sampleX, float sampleZ, NativeArray<float2> octaveOffsets)
-    {
-        const int octaves = 1;
-        const float persistence = 0.5f;
-        const float lacunarity = 1.2f;
-        const float flatteningFactor = 1.0f;
-
-        float maxPossibleHeight = ComputeMaxPossibleHeight(octaves, persistence);
-        float raw = SampleGradientFbm(sampleX, sampleZ, octaves, persistence, lacunarity, octaveOffsets);
-        float normalized = NormalizeSymmetric01(raw, maxPossibleHeight);
-        return math.pow(normalized, flatteningFactor);
-    }
-
-    private static float SampleMountainMask(float sampleX, float sampleZ, Vector2[] octaveOffsets)
-    {
-        const int octaves = 3;
-        const float persistence = 0.5f;
-        const float lacunarity = 2f;
-
-        float maxPossibleHeight = ComputeMaxPossibleHeight(octaves, persistence);
-        float raw = SampleBasicFbm(sampleX, sampleZ, 0, octaves, persistence, lacunarity, octaveOffsets);
-        float normalized = NormalizeSymmetric01(raw, maxPossibleHeight);
-        float mask = math.pow(normalized, 3.0f);
-        return math.smoothstep(0.01f, 0.9f, mask);
-    }
-
-    private static float SampleMountainMask(float sampleX, float sampleZ, NativeArray<float2> octaveOffsets)
-    {
-        const int octaves = 3;
-        const float persistence = 0.5f;
-        const float lacunarity = 2f;
-
-        float maxPossibleHeight = ComputeMaxPossibleHeight(octaves, persistence);
-        float raw = SampleBasicFbm(sampleX, sampleZ, 0, octaves, persistence, lacunarity, octaveOffsets);
-        float normalized = NormalizeSymmetric01(raw, maxPossibleHeight);
-        float mask = math.pow(normalized, 3.0f);
-        return math.smoothstep(0.01f, 0.9f, mask);
-    }
-
-    private static float SampleMountainTerrain(float sampleX, float sampleZ, Vector2[] octaveOffsets)
-    {
-        const int octaves = 4;
-        const float persistence = 0.5f;
-        const float lacunarity = 2f;
-
-        float maxPossibleHeight = ComputeMaxPossibleHeight(octaves, persistence);
-        float raw = SampleBasicFbm(sampleX, sampleZ, 0, octaves, persistence, lacunarity, octaveOffsets);
-        float normalized = NormalizeSymmetric01(raw, maxPossibleHeight);
-        return math.pow(normalized, 2.2f);
-    }
-
-    private static float SampleMountainTerrain(float sampleX, float sampleZ, NativeArray<float2> octaveOffsets)
-    {
-        const int octaves = 4;
-        const float persistence = 0.5f;
-        const float lacunarity = 2f;
-
-        float maxPossibleHeight = ComputeMaxPossibleHeight(octaves, persistence);
-        float raw = SampleBasicFbm(sampleX, sampleZ, 0, octaves, persistence, lacunarity, octaveOffsets);
-        float normalized = NormalizeSymmetric01(raw, maxPossibleHeight);
-        return math.pow(normalized, 2.2f);
-    }
-
-    private static float SampleGradientFbm(
-        float x,
-        float z,
-        int octaves,
-        float persistence,
-        float lacunarity,
-        Vector2[] octaveOffsets)
-    {
-        float amplitude = 1f;
-        float frequency = 1f;
-        float value = 0f;
-
-        for (int o = 0; o < octaves; o++)
-        {
-            float octaveX = (x + octaveOffsets[o].x) * frequency;
-            float octaveZ = (z + octaveOffsets[o].y) * frequency;
-
-            value += noise.cnoise(new float2(octaveX, octaveZ)) * amplitude;
-
-            amplitude *= persistence;
-            frequency *= lacunarity;
-        }
-
-        return value;
-    }
-
-    private static float SampleGradientFbm(
-        float x,
-        float z,
-        int octaves,
-        float persistence,
-        float lacunarity,
-        NativeArray<float2> octaveOffsets)
-    {
-        float amplitude = 1f;
-        float frequency = 1f;
-        float value = 0f;
-
-        for (int o = 0; o < octaves; o++)
-        {
-            float2 offset = octaveOffsets[o];
-            float octaveX = (x + offset.x) * frequency;
-            float octaveZ = (z + offset.y) * frequency;
-
-            value += noise.cnoise(new float2(octaveX, octaveZ)) * amplitude;
-
-            amplitude *= persistence;
-            frequency *= lacunarity;
-        }
-
-        return value;
-    }
-
-    private static float SampleBasicFbm(
-        float x,
-        float z,
-        int seed,
-        int octaves,
-        float persistence,
-        float lacunarity,
-        Vector2[] octaveOffsets)
-    {
-        float amplitude = 1f;
-        float frequency = 1f;
-        float value = 0f;
-
-        for (int o = 0; o < octaves; o++)
-        {
-            float octaveX = (x + octaveOffsets[o].x) * frequency;
-            float octaveZ = (z + octaveOffsets[o].y) * frequency;
-
-            value += SampleValueNoise(octaveX, octaveZ, seed + o * 1009) * amplitude;
-
-            amplitude *= persistence;
-            frequency *= lacunarity;
-        }
-
-        return value;
-    }
-
-    private static float SampleBasicFbm(
-        float x,
-        float z,
-        int seed,
-        int octaves,
-        float persistence,
-        float lacunarity,
-        NativeArray<float2> octaveOffsets)
-    {
-        float amplitude = 1f;
-        float frequency = 1f;
-        float value = 0f;
-
-        for (int o = 0; o < octaves; o++)
-        {
-            float2 offset = octaveOffsets[o];
-            float octaveX = (x + offset.x) * frequency;
-            float octaveZ = (z + offset.y) * frequency;
-
-            value += SampleValueNoise(octaveX, octaveZ, seed + o * 1009) * amplitude;
-
-            amplitude *= persistence;
-            frequency *= lacunarity;
-        }
-
-        return value;
-    }
-
-    private static float SampleValueNoise(float x, float z, int seed)
-    {
-        int ix = (int)math.floor(x);
-        int iz = (int)math.floor(z);
-
-        float fx = x - ix;
-        float fz = z - iz;
-
-        float u = Quintic(fx);
-        float v = Quintic(fz);
-
-        float a = HashToSignedValue(ix, iz, seed);
-        float b = HashToSignedValue(ix + 1, iz, seed);
-        float c = HashToSignedValue(ix, iz + 1, seed);
-        float d = HashToSignedValue(ix + 1, iz + 1, seed);
-
-        float k0 = a;
-        float k1 = b - a;
-        float k2 = c - a;
-        float k3 = a - b - c + d;
-
-        return k0 + k1 * u + k2 * v + k3 * u * v;
     }
 
     private static float SampleRiverMask(float sampleX, float sampleZ, int seed, out float basinInfluence)
@@ -950,6 +701,7 @@ public static partial class HeightMapGenerator
         public int riverSeed;
         public float waterLevel;
         public float mountainHorizontalScale;
+        public WorldErosionSettings erosion;
         [ReadOnly] public NativeArray<MountainExpansionAnchor> mountainAnchors;
 
         [ReadOnly] public NativeArray<float2> baseLandOffsets;
@@ -965,8 +717,8 @@ public static partial class HeightMapGenerator
         {
             int x = index / height;
             int z = index - x * height;
-            int localSampleX = x - 1;
-            int localSampleZ = z - 1;
+            int localSampleX = x - HeightFieldSampleBorder;
+            int localSampleZ = z - HeightFieldSampleBorder;
 
             float worldX = chunkX * chunkSize + localSampleX;
             float worldZ = chunkZ * chunkSize + localSampleZ;
@@ -979,7 +731,7 @@ public static partial class HeightMapGenerator
                 mountainMaskOffsets,
                 mountainTerrainOffsets,
                 mountainRuggedOffsets,
-                riverSeed, waterLevel, mountainHorizontalScale, mountainAnchors);
+                riverSeed, waterLevel, mountainHorizontalScale, mountainAnchors, erosion);
 
             finalHeights[index] = sample.Height;
             mountainMasks[index] = sample.MountainMask;
@@ -1001,7 +753,7 @@ public static partial class HeightMapGenerator
 
         public void Execute(int index)
         {
-            const int slopeRadius = 4;
+            const int slopeRadius = GameplaySlopeRadius;
 
             int x = index / height;
             int z = index - x * height;

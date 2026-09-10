@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading;
 using Unity.Profiling;
 using UnityEngine;
@@ -31,6 +31,7 @@ public class TerrainRequestManager
     private readonly int maxActiveColliderJobs;
     private readonly TerrainWaterSettings waterSettings;
     private readonly float mountainHorizontalScale;
+    private readonly WorldErosionSettings erosion;
     private readonly float mountainSnowRenderCoverageGamma;
 
     public int CompletedTerrainDataResultCount
@@ -81,9 +82,10 @@ public class TerrainRequestManager
         int maxActiveColliderJobs,
         TerrainWaterSettings waterSettings,
         float mountainHorizontalScale = 1f,
-        float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma)
+        float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma, WorldErosionSettings erosion = default)
     {
         this.waterSettings = waterSettings;
+        this.erosion = erosion.Sanitized();
         this.mountainHorizontalScale = HeightMapGenerator.SanitizeMountainHorizontalScale(mountainHorizontalScale);
         this.mountainSnowRenderCoverageGamma = MountainSnow.SanitizeRenderCoverageGamma(mountainSnowRenderCoverageGamma);
         this.maxActiveTerrainDataJobs = Mathf.Max(1, maxActiveTerrainDataJobs);
@@ -101,7 +103,6 @@ public class TerrainRequestManager
         int octaves,
         float persistence,
         float lacunarity,
-        float erosionStrength,
         WorldFeatureGenerationSettings worldFeatureGenerationSettings,
         float meshHeightMultiplier = 200f)
     {
@@ -124,7 +125,7 @@ public class TerrainRequestManager
                     chunkCoord,
                     waterSettings.WaterLevel,
                     mountainHorizontalScale,
-                    meshHeightMultiplier
+                    meshHeightMultiplier, erosion
                 );
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainHeightField, stageStart);
 
@@ -188,7 +189,7 @@ public class TerrainRequestManager
 
                 stageStart = TerrainGenerationProfiler.GetTimestamp();
                 var mountainSnow = MountainSnow.Generate(finalHeightMap, mountainMaskMap, riverMaskMap,
-                    temperatureMap, moistureMap, chunkSize, chunkCoord, seed, sampleScale, waterSettings, mountainHorizontalScale);
+                    temperatureMap, moistureMap, chunkSize, chunkCoord, seed, sampleScale, waterSettings, mountainHorizontalScale, erosion);
                 ControlMapPixelData controlMapRawData = TerrainControlMapBuilder.BuildRaw(
                     surfaceTypeMap,
                     groundCoverMap,
@@ -265,7 +266,7 @@ public class TerrainRequestManager
                     mountainSnowRenderCoverageGamma,
                     climateOctaves,
                     climatePersistence,
-                    climateLacunarity);
+                    climateLacunarity, erosion);
 
                 lock (farTerrainResultsLock)
                 {
@@ -292,6 +293,9 @@ public class TerrainRequestManager
         BiomeType[,] biomeMap, SurfaceType[,] surfaceTypeMap, WaterState[,] waterStateMap, float meshHeightMultiplier, 
         int stepIncrement, float worldScale, float[,] riverMaskMap)
     {
+        stepIncrement = Mathf.Min(stepIncrement, erosion.maxMeshSpacing);
+        int meshChunkSize = heightMap.GetLength(0) - 3;
+        while (stepIncrement > 1 && meshChunkSize % stepIncrement != 0) stepIncrement--;
         if (Interlocked.CompareExchange(ref activeMeshJobs, 0, 0) >= maxActiveMeshJobs)
             return false;
 

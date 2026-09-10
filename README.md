@@ -1,6 +1,27 @@
 # FirstSettlers Work Notes
 
-## Shared slope angles and mountain meadows
+## Current terrain system: whole-world erosion overhaul
+
+User scope: erosion across the entire world, adjustable Inspector parameters and spatial scale, remove legacy fake mountain ruggedness, investigate circled stipple/striping artifacts, preserve flatter river-shaped broad valleys and rounded gully floors. Heightmap quality takes priority over old biome/slope placement rules. User deleted MountainDetailValidation and MountainErosionValidation during development to compile. They remain removed; WorldErosionValidation is the replacement.
+
+Implemented:
+
+- WorldErosionSettings: serializable snapshot on WorldManager; base elevation/relief/roughness, global erosion amplitude/wavelength/octaves, stretch/rotation/offset, gully/rounding/fade controls, minimum wavelength, maximum terrain vertex spacing. Regenerate Terrain Inspector button recreates the world with a consistent snapshot.
+- WorldTerrainHeight: smooth rotated gradient-noise base with analytical derivatives, one world-coordinate erosion pass after base composition. Mountain width now expands the smooth broad mask; old summit stretching and max-unioned eroded copies are retired. Legacy sampling-array/anchor arguments remain compatibility plumbing but are not used to form terrain.
+- Erosion settings are threaded through near requests, far/macro jobs, snow resampling and distant-tree placement. Existing final-height normals/slopes/collision stay coherent. Far meshes now respect maxMeshSpacing; near LODs cap spacing to a divisor of chunk size.
+- Reproduced a real artifact source: the upstream cubic float hash collapsed 1,024 cells to ONE offset at seed 568317; integer replacement yields 1,024 unique offsets. Also smooth internal direction changes at crests and remove finite-difference input slopes.
+- Fixed outgoing macro/incoming chunk overlap by suppressing incoming terrain/water until complete macro handoff, retaining coverage without simultaneous overlapping draws.
+- Added riverValleyWidth / riverValleyFlattening; broad dry river valley shaping is applied after global erosion, while valleyRounding controls erosion gully floors.
+
+Verification / current handoff:
+
+- Runtime compilation currently passes (existing BerryBushManager obsolete API warning).
+- Offline current-base test: 12,675 positions, eroded lowlands 7,531 / mountains 1,910 / seabed 1,275. Analytic-gradient comparison maximum error 1.85e-5; bounded global displacement and disabled/zero bypass passed. Temporary harness and preview in .utmp/erosion-check.
+- WorldErosionValidation is added and passed in isolated headless Unity 6000.4.8f1 with synchronous Burst compilation. Covers 5,043 base/erosion samples (3,001 lowland / 763 mountain / 514 seabed changed; max derivative error 1.08e-5), off/zero bypass, real sampler valley shaping, 3 large hash seeds, handoff visibility, default/custom rotation/stretch/amplitude/spacing settings, near/far/macro/collider agreement and X/Z height/slope seams across three seeds. Logs: .utmp/erosion-check/world-unity-validation.log. Runtime/editor compilation passes.
+- User opened/saved SmearScene with settings during work; their choices were preserved. Settings version 2 migrates only the newly added river valley controls in version-1 snapshots. Old mountain validation files remain deleted; use Tools > Terrain > Validate World Erosion.
+- Generated hillshade inspected. The exact user screenshot has not been reproduced in the live scene. Remaining user-facing review: appearance at their camera and streaming/GPU frame cost with their chosen mesh spacing; do not claim measured performance improvement. See MOUNTAIN_DETAIL.md for the full current controls and behavior. No compute migration has been attempted.
+
+## Historical notes: shared slope angles and mountain meadows
 
 - `SlopeMap` now stores degrees: atan(raw height gradient * meshHeightMultiplier). The terrain request passes the active multiplier; far mesh/control samples and sparse distant-tree placement use the same conversion. Uniform worldScale cancels. Raw gradient maps remain derivatives for normals and MountainSnow.
 - `TerrainSlopePolicy` centralizes biome decisions for managed, Burst near-map and far-control classification. The coarse far mesh uses the same policy with neutral climate because it has no climate grid.
@@ -13,9 +34,9 @@
 
 - Found an asynchronous coverage gap in `RebuildActiveChunkSet`: outgoing macro tiles and individual chunks were destroyed before budgeted replacement mesh work finished. This can recur at particular macro-tile boundaries at any travel speed and affects terrain and water together.
 - Keep outgoing runtimes until all currently wanted replacement chunks have attached terrain meshes, or the replacement macro tile has attached its mesh. Generated-but-unapplied data does not count as ready. Outgoing individual chunks stop foliage and collider work. Runtimes outside the desired coverage are released; reversing direction reuses retained runtimes.
-- Runtime C# compilation passed against Unity 6000.4.8f1 references (existing BerryBushManager obsolete-API warning only). Scene reproduction/benchmarking remains for Unity. Temporary overlap of outgoing and incoming surfaces is possible during the handoff.
+- Runtime C# compilation passed against Unity 6000.4.8f1 references (existing BerryBushManager obsolete-API warning only). Scene reproduction/benchmarking remains for Unity. The whole-world erosion overhaul above supersedes the temporary-overlap behavior by suppressing incoming terrain/water until the macro handoff completes.
 
-## Current Task: Compute-Driven Grass
+## Earlier Task: Compute-Driven Grass
 
 User authorized extending the successful tree approach to grass while preserving existing generation, density settings and selection-rank clumps.
 

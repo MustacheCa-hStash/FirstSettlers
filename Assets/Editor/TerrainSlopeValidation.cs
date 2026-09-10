@@ -15,8 +15,8 @@ public static class TerrainSlopeValidation
         Check(TerrainSlopePolicy.FromGradient(0f, 200f) == 0f, "Flat terrain");
         Check(B(20f, 0f, 0.8f) == BiomeType.Forest, "Gentle wet forest");
         Check(B(45f, 0f, 0.8f) == BiomeType.Grassland, "Forest cutoff");
-        Check(B(63f, 0.8f) == BiomeType.Grassland, "Mountain meadow limit");
-        Check(B(63.1f, 0.8f) == BiomeType.Rock, "Mountain meadow exclusion");
+        Check(B(TerrainSlopePolicy.GrassMaxDegrees, 0.8f) == BiomeType.Grassland, "Mountain meadow limit");
+        Check(B(TerrainSlopePolicy.GrassMaxDegrees + 0.1f, 0.8f) == BiomeType.Rock, "Mountain meadow exclusion");
         Check(B(20f, 0.8f, 0.5f, 0.2f) == BiomeType.Snow, "Cold mountain protection");
         Check(B(20f, 0.8f, 0.5f, 0.5f, 4f) == BiomeType.Rock, "Alpine protection");
         Check(B(70f, 0f, 0.8f, 0.2f) == BiomeType.Rock, "Taiga cannot bypass cliffs");

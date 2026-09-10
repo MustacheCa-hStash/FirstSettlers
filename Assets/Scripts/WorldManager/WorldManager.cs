@@ -24,18 +24,22 @@ public class WorldManager : MonoBehaviour
     [SerializeField] CloverSettings cloverSettings = new CloverSettings();
     [SerializeField] DandelionSettings dandelionSettings = new DandelionSettings();
     [SerializeField] TreeSettings treeSettings;
+    [Header("Broad Terrain")]
+    [Tooltip("Scale of the base landforms. Erosion Wavelength has its own independent terrain-space scale.")]
     [SerializeField] float sampleScale = 10f;
-    [Tooltip("Stretches mountain profiles around detected local peaks. 1 preserves the original world; try 1.5. Does not spread mountain locations apart. Expanded ranges can merge. Rivers follow the expanded footprint. Restart Play Mode after changing.")]
+    [Tooltip("Broadens the smooth mountain mask before global erosion. Higher values create more mountainous land; no duplicated or stretched mountain surfaces. Regenerate after changing.")]
     [UnityEngine.Serialization.FormerlySerializedAs("mountainHorizontalScale")]
     [UnityEngine.Serialization.FormerlySerializedAs("mountainCoverage")]
-    [SerializeField, Range(1f, 3f)] float mountainWidth = 1f;
+    [SerializeField, Range(1f, 3f), InspectorName("Mountain Coverage")] float mountainWidth = 1f;
     [Tooltip("Render-only gamma for mountain snow coverage. 1 disables the boost; lower values make blended mountain snow brighter without changing other surface transitions. Restart Play Mode after changing.")]
     [SerializeField, Range(0.35f, 1.25f)] float mountainSnowBlendGamma = MountainSnow.DefaultRenderCoverageGamma;
     [SerializeField] float worldScale = 1.0f;
+    [Header("Climate Noise (not terrain erosion)")]
     [SerializeField] int octaves = 3;
     [SerializeField] float persistence = 0.5f;
     [SerializeField] float lacunarity = 2f;
-    [SerializeField] float erosionStrength = 1.0f;
+    [Header("Heightfield overhaul")]
+    [SerializeField] WorldErosionSettings erosion = WorldErosionSettings.Default;
     [SerializeField] float meshHeightMultiplier = 10f;
     [SerializeField] Material terrainMaterial;
     [SerializeField] Material waterMaterial;
@@ -82,7 +86,7 @@ public class WorldManager : MonoBehaviour
             farTerrainMacroTileSize, farTerrainHeightGridResolution, farTerrainControlMapResolution, farTerrainSkirtDepth,
             chunkSize, worldSeed, viewer, viewerCamera,
             chunkParent, foliageParent, grassSettings, flowerSettings, cloverSettings, dandelionSettings, treeSettings, sampleScale, worldScale, octaves, persistence,
-            lacunarity, erosionStrength, meshHeightMultiplier, terrainMaterial, waterMaterial,
+            lacunarity, meshHeightMultiplier, terrainMaterial, waterMaterial,
             terrainReceiveShadows, new TerrainWaterSettings(globalWaterY, meshHeightMultiplier, worldScale),
             maxActiveTerrainDataJobs, maxActiveFarTerrainJobs, maxActiveMeshJobs,
             maxActiveColliderJobs, maxTerrainDataResultsAppliedPerFrame,
@@ -94,7 +98,19 @@ public class WorldManager : MonoBehaviour
             farTerrainTileContentBudgetMsPerFrame,
             completedRequestApplyBudgetMsPerFrame,
             terrainDataApplyBudgetMsPerFrame, farTerrainApplyBudgetMsPerFrame,
-            lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame, mountainWidth, mountainSnowBlendGamma);
+            lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame, mountainWidth, mountainSnowBlendGamma, erosion.Sanitized());
+    }
+
+    void OnValidate() { erosion = erosion.Sanitized(); }
+
+    [ContextMenu("Regenerate Terrain")]
+    public void RegenerateTerrain()
+    {
+        if (!Application.isPlaying || !isActiveAndEnabled) return;
+        chunkManager?.Dispose();
+        chunkManager = null;
+        Awake();
+        chunkManager.UpdateActiveChunks();
     }
 
     void Start()

@@ -45,6 +45,7 @@ public sealed class DistantTreeManager : IDisposable
         public float Depth;
     }
     private readonly TreeSettings settings;
+    private readonly WorldErosionSettings erosion;
     private readonly int seed, chunkSize, octaves, tintSeed;
     private readonly float sampleScale, persistence, lacunarity, worldScale, heightMultiplier, waterLevel, mountainScale, chunkWorldSize;
     private readonly WorldFeatureGenerationSettings placementSettings;
@@ -65,8 +66,9 @@ public sealed class DistantTreeManager : IDisposable
 
     public DistantTreeManager(TreeSettings settings, int seed, int chunkSize, float sampleScale,
         int octaves, float persistence, float lacunarity, float worldScale, float heightMultiplier,
-        float waterLevel, float mountainScale, WorldFeatureGenerationSettings placementSettings)
+        float waterLevel, float mountainScale, WorldFeatureGenerationSettings placementSettings, WorldErosionSettings erosion = default)
     {
+        this.erosion = erosion.Sanitized();
         this.settings = settings; this.seed = seed; this.chunkSize = chunkSize; this.sampleScale = sampleScale;
         this.octaves = octaves; this.persistence = persistence; this.lacunarity = lacunarity;
         this.worldScale = worldScale; this.heightMultiplier = heightMultiplier; this.waterLevel = waterLevel;
@@ -206,7 +208,7 @@ public sealed class DistantTreeManager : IDisposable
                         ChunkCoord requested = coord;
                         jobs.Add(coord, Task.Run(() => DistantTreePlacement.Generate(requested, chunkSize, seed,
                             sampleScale, octaves, persistence, lacunarity, worldScale, heightMultiplier,
-                            waterLevel, mountainScale, tintSeed, placementSettings)));
+                            waterLevel, mountainScale, tintSeed, placementSettings, erosion)));
                     }
                     // Keep existing GameObjects fully visible until we can draw their replacement.
                     runtime?.FoliageRuntime?.SetDistantTreeNearFade(0f);

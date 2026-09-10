@@ -24,13 +24,15 @@ public static class FarTerrainGenerator
         float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma,
         int climateOctaves = 3,
         float climatePersistence = 0.5f,
-        float climateLacunarity = 2f)
+        float climateLacunarity = 2f, WorldErosionSettings erosion = default)
     {
         long totalStart = TerrainGenerationProfiler.GetTimestamp();
-        int safeHeightGridResolution = Mathf.Clamp(heightGridResolution, 2, chunkSize + 1);
+        erosion = erosion.Sanitized();
+        int minimumResolution = Mathf.CeilToInt(chunkSize / (float)erosion.maxMeshSpacing) + 1;
+        int safeHeightGridResolution = Mathf.Clamp(Mathf.Max(heightGridResolution, minimumResolution), 2, chunkSize + 1);
         int safeControlMapResolution = Mathf.Clamp(controlMapResolution, 2, 128);
 
-        TerrainHeightSamplingContext samplingContext = HeightMapGenerator.CreateSamplingContext(seed, waterLevel, mountainHorizontalScale);
+        TerrainHeightSamplingContext samplingContext = HeightMapGenerator.CreateSamplingContext(seed, waterLevel, mountainHorizontalScale, erosion);
 
         long stageStart = TerrainGenerationProfiler.GetTimestamp();
         float[,] heightGrid = BuildHeightGrid(
@@ -143,6 +145,7 @@ public static class FarTerrainGenerator
                 riverSeed = samplingContext.RiverSeed,
                 waterLevel = samplingContext.WaterLevel,
                 mountainHorizontalScale = samplingContext.MountainHorizontalScale,
+                erosion = samplingContext.Erosion,
                 mountainAnchors = mountainAnchors,
                 baseLandOffsets = baseLandOffsets,
                 mountainMaskOffsets = mountainMaskOffsets,
@@ -511,6 +514,7 @@ public static class FarTerrainGenerator
                 sampleScale = sampleScale,
                 riverSeed = samplingContext.RiverSeed,
                 mountainHorizontalScale = samplingContext.MountainHorizontalScale,
+                erosion = samplingContext.Erosion,
                 climatePersistence = climatePersistence,
                 climateLacunarity = climateLacunarity,
                 climateMaxPossibleNoise = climateMaxPossibleNoise,
@@ -655,6 +659,7 @@ public static class FarTerrainGenerator
         public int chunkZ;
         public float sampleScale;
         public float mountainHorizontalScale;
+        public WorldErosionSettings erosion;
         [ReadOnly] public NativeArray<MountainExpansionAnchor> mountainAnchors;
         public int riverSeed;
         public float waterLevel;
@@ -688,7 +693,7 @@ public static class FarTerrainGenerator
                 mountainMaskOffsets,
                 mountainTerrainOffsets,
                 mountainRuggedOffsets,
-                riverSeed, waterLevel, mountainHorizontalScale, mountainAnchors);
+                riverSeed, waterLevel, mountainHorizontalScale, mountainAnchors, erosion);
 
             heights[index] = sample.Height;
             mountainMasks[index] = sample.MountainMask;
@@ -869,6 +874,7 @@ public static class FarTerrainGenerator
         public float sampleScale;
         public int riverSeed;
         public float mountainHorizontalScale;
+        public WorldErosionSettings erosion;
         public float climatePersistence;
         public float climateLacunarity;
         public float climateMaxPossibleNoise;
@@ -966,7 +972,7 @@ public static class FarTerrainGenerator
                 riverSeed,
                 waterLevel,
                 mountainHorizontalScale,
-                mountainAnchors);
+                mountainAnchors, erosion);
         }
 
         private float SampleSlope(float worldX, float worldZ, out float2 gradient, out float neighborMean)

@@ -1,22 +1,36 @@
-# Mountain Detail and Art Setup
+# World Terrain Generation and Art Setup
 
-## Mountain Coverage (Inspector)
+## Whole-world erosion
 
-On WorldManager, adjust **Mountain Coverage** (next to Sample Scale). The default **1** preserves the original mountain footprint. Try **1.5** to expand mountain shoulders into neighboring land; higher values increase the overall mountainous XZ area. The supported range is 0.5 to 3. This is a coverage-shaping control, not a literal distance or area multiplier.
+The current generator replaces the previous mountain-only detail integration. It uses a smooth, rotated gradient-noise base with analytical derivatives and applies the advanced erosion filter once in global terrain coordinates. Lowlands, mountains and seabed all receive erosion. Legacy warped ridges, fake ruggedness, summit stretching and max-unioned mountain copies are no longer used to form the heightmap. Mountain Width now broadens the smooth mountain mask. Existing world seeds produce a new layout.
 
-Noise coordinates and frequencies remain unchanged. The control remaps the lower part of the mountain mask, smoothly joining the unchanged strong mountain cores at mask 0.45. This preserves those cores and their heights while increasing the surrounding mountain footprint. River exclusion and biome classification use the expanded mask. Near terrain, far terrain (including macro tiles), and the height data used by colliders and placement all receive the same setting. Base-land noise, climate coordinates, river path coordinates, and global water Y remain unchanged.
+Select WorldManager and expand **Erosion** under **Heightfield Overhaul**. Settings are copied into each world's generation requests. In Play mode, use **Regenerate Terrain** at the bottom of the Inspector to apply edits consistently to near chunks, distant/macro tiles, collision, snow resampling and placement. Alternatively restart Play mode. Editing fields alone intentionally does not mix old/new terrain across already loaded chunks.
 
-Restart Play Mode/regenerate the world after changing it. This replaces the earlier horizontal-rescaling behavior: the same serialized setting now controls coverage, so reset to 1 before comparing. Increasing it does not move the noise pattern or spread ranges farther apart; nearby foothills can join at higher values. Minor shoulder peaks can rise, but strong cores remain unchanged. Do not use the general Sample Scale for this adjustment.
+## Controls and units
 
-## Geometry
+- **Base Elevation / Lowland Relief / Mountain Relief** control broad landforms. **Base Octaves / Base Roughness / Mountain Shape** control the smooth input; two gentle octaves are the default so erosion provides the surface structure.
+- **Amplitude** is the maximum accumulated erosion displacement in normalized height units. It works as an actual amplitude control; zero and Enabled=false bypass erosion. World vertical distance equals normalized height * Mesh Height Multiplier * World Scale (60 in SmearScene).
+- **Wavelength** controls the largest gully scale, independently of Sample Scale. All XZ scales are terrain units: multiply by World Scale (0.3 in SmearScene) for world distance. Default 512 corresponds to 153.6 world units. Individual features can be narrower than their nominal wavelength.
+- **Octaves / Lacunarity / Persistence** control the count, scale ratio and amplitude falloff of gully layers. **Minimum Wavelength** excludes finer octaves everywhere; it does not change with mesh LOD. Defaults yield nominal wavelengths 512, 256, 128, 64.
+- **Stretch / Rotation / Offset / Seed Offset** control the erosion pattern's spatial layout. The input gradient transforms with the domain so directions remain consistent. Stretch 1,1 is isotropic.
+- **Gully Weight / Branching / Cell Size / Normalization** adjust the branching pattern. **Ridge Rounding / Valley Rounding** separately soften crests and gully floors; increase Valley Rounding for gentler drainage bottoms.
+- **Direction Smoothing** reduces abrupt internal direction flips at crests. **Slope Response / Height Scale** control how the base slope influences the filter and its branching.
+- **Fade Target=Local Relief** compares the base height with its neighborhood so a high-altitude valley can still receive a valley target. **Relief Radius / Relief Contrast** define that neighborhood and response. **Altitude** is an alternate artistic mode with explicit Valley And Peak Heights.
+- **Max Mesh Spacing** limits near/far/macro terrain vertex spacing. Smaller values preserve gully silhouettes at increased CPU/memory/render cost. Existing resolution settings can request denser meshes. Use roughly four or more samples across the smallest nominal wavelength. A heightmap cannot make a coarse triangle represent a narrow gully.
 
-At coverage 1, the existing mountain mask, primary four-octave height field, frequency, and height multiplier are unchanged. The old positive-only ruggedness layer is replaced by three rounded ridge octaves, a shared two-sample domain warp, and shallow channels derived from the first ridge sample. Everything samples absolute terrain coordinates through the same helper in managed and Burst/native generation.
+## Flatter river valleys and gully floors
 
-Detail is bounded to 8% of broad mountain relief, with an additional cap of 1.5 normalized height units. It fades across the lower flanks and cannot enter regions where the broad mountain signal still permits rivers. A water-clearance limit also prevents this layer from moving terrain across the global water plane. These limits preserve the broad profile, not every individual peak height.
+Erosion shapes the entire base first. With **Carve Rivers** enabled, the existing river field then creates broad dry valley shoulders and a narrower submerged channel. **River Valley Width** expands/contracts the broad corridor; **River Valley Flattening** blends it toward its flat dry floor (1 is the full original flattening behavior). Channel paths are independent of those two controls. Mountain exclusion still keeps this lowland river system from slicing level channels through high ridges.
 
-At the current sampleScale of 600, the nominal octave scales are 360, 180, and 90 terrain units (108, 54, and 27 world units at worldScale 0.3). These are noise scales, not guaranteed feature widths. Crests are rounded to reduce sharp features missed by coarse meshes. Collision and distant terrain still sample the same height function; coarse triangles inevitably approximate the intervening terrain.
+The erosion filter itself supplies smaller gullies with rounded floors via Valley Rounding. Those gullies are an erosion-like procedural pattern, not a hydrologically connected water simulation. Global erosion is no longer bounded by the old mountain-only 8% relief or shoreline protection, so changing its settings can change coastlines and lakes. Biomes/placement consume the new heights without retaining the old world distribution.
 
-The geometry tuning constants are grouped in HeightMapGenerator.SampleMountainDetail. Biome, surface, and placement labels continue to use generated terrain slopes. Mountain snow rendering now uses the separate continuous coverage described below. Rivers still use the original broad mountain signal, never the detailed height.
+## Artifact fixes and verification
+
+The earlier float cell hash could collapse to repeated offsets at project-sized seeds. It is replaced with integer hashing. Analytical input gradients replace subtraction of nearly equal float heights; smooth internal slope-direction transitions reduce crest artifacts. Erosion is evaluated after composing one base field, rather than on overlapping stretched mountain copies. Incoming chunk terrain/water are suppressed while an outgoing macro tile still covers them, avoiding overlapping draws during handoff.
+
+Run **Tools > Terrain > Validate World Erosion**. Runtime/editor compilation and headless Unity 6000.4.8f1 checks passed for analytical gradients, world-wide coverage, zero/off bypass, valley controls, hash diversity, handoff visibility, customized settings, near/far/macro/collider agreement and X/Z seams across three seeds. A generated hillshade was inspected; the user's exact in-scene camera view has not been reproduced. Scene appearance and streaming performance still need assessment with chosen settings.
+
+This remains CPU/Burst generation. Larger erosion/mesh detail settings add work. Source and attribution are under `Assets/Scripts/TerrainGeneration/ThirdParty/AdvancedTerrainErosion`.
 
 ## Mountain Snow Coverage
 

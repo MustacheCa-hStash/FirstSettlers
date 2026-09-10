@@ -33,7 +33,7 @@ public static class DistantTreePlacement
     public static TreeInstanceData[] Generate(ChunkCoord coord, int chunkSize, int seed,
         float sampleScale, int octaves, float persistence, float lacunarity,
         float worldScale, float heightMultiplier, float waterLevel, float mountainScale,
-        int tintSeedOffset, WorldFeatureGenerationSettings settings)
+        int tintSeedOffset, WorldFeatureGenerationSettings settings, WorldErosionSettings erosion = default)
     {
         int size = chunkSize + 3;
         if (!scratchPool.TryTake(out var scratch) || scratch.Size != size) scratch = new Scratch(size);
@@ -44,7 +44,7 @@ public static class DistantTreePlacement
         Array.Clear(sampled, 0, sampled.Length); heights.Clear();
         try
         {
-            var context = HeightMapGenerator.CreateSamplingContext(seed, waterLevel, mountainScale);
+            var context = HeightMapGenerator.CreateSamplingContext(seed, waterLevel, mountainScale, erosion);
             float2 minimum = new float2(coord.x * chunkSize - 1, coord.z * chunkSize - 1);
             using var anchors = new NativeArray<MountainExpansionAnchor>(
                 HeightMapGenerator.GetMountainAnchors(minimum, minimum + chunkSize + 2, sampleScale, context), Allocator.Persistent);
@@ -64,7 +64,7 @@ public static class DistantTreePlacement
                 {
                     value = HeightMapGenerator.SampleTerrainHeightNative(coord.x * chunkSize + x - 1,
                         coord.z * chunkSize + z - 1, sampleScale, land, mask, terrain, rugged,
-                        context.RiverSeed, waterLevel, mountainScale, anchors);
+                        context.RiverSeed, waterLevel, mountainScale, anchors, context.Erosion);
                     heights.Add(key, value);
                 }
                 return value;
