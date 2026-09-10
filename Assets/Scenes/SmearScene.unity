@@ -1144,7 +1144,7 @@ MonoBehaviour:
   persistence: 0.05
   lacunarity: 10
   erosion:
-    version: 1
+    version: 2
     baseElevation: 0.45
     lowlandRelief: 0.8
     mountainRelief: 14
@@ -1152,6 +1152,8 @@ MonoBehaviour:
     baseRoughness: 0.3
     mountainShape: 1.5
     carveRivers: 1
+    riverValleyWidth: 1.4
+    riverValleyFlattening: 1
     enabled: 1
     amplitude: 0.6
     wavelength: 512
@@ -1278,7 +1280,7 @@ Transform:
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 300, z: 0}
+  m_LocalPosition: {x: 214, y: 1000, z: 1330}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
