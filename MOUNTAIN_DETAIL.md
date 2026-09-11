@@ -8,6 +8,15 @@ Select WorldManager and expand **Erosion** under **Heightfield Overhaul**. Setti
 
 ## Controls and units
 
+- **Mountain Spatial Scale** defaults to 2.4. Both mountain shapes and their distribution stretch in XZ, giving wider, less frequent mountains with the same vertical relief range. Seeded mountain locations change. The ordinary rolling land noise is not stretched, providing hills within the broader mountain slopes.
+- **Mountain Sparsity** defaults to 0.12. Higher values leave more open lowlands by raising the region-mask onset, while the fully mountainous mask remains 1. This is independent of horizontal scale; the existing Mountain Coverage setting still applies.
+- **Gentle Mountain Erosion** defaults to 0.45. Gentle base slopes retain 45% of erosion, transitioning smoothly to full erosion on steep slopes. Selection is based on local slope, never repeated elevation bands. No terrace or bench remapping remains.
+- **Lowland Hill Variation / Scale** default to 0.8 / 900 terrain units. Occasional smooth dry-land patches increase the usual half-height ratio up to 0.9, without adding noise octaves or changing the shoreline. River carving remains last so channel beds and broad valley floors stay controlled. Set variation to zero for the previous uniform lowland relief.
+
+- **Lowland Height Ratio** defaults to 0.5: compresses final eroded lowland height around global water, preserving XZ footprint and shore crossings. The effect fades out as mountain contribution rises. It also compresses shallow seabed relief.
+- **Shore Height Band / Shore Slope Ratio** default to 0.25 / 0.2: progressively flatten heights near water. The band applies to the already compressed surface; river carving runs afterward to preserve channels and dry valley floors.
+- Settings version 4 removes terraces and adds the spatial controls below, preserving existing erosion and shoreline choices.
+
 - **Base Elevation / Lowland Relief / Mountain Relief** control broad landforms. **Base Octaves / Base Roughness / Mountain Shape** control the smooth input; two gentle octaves are the default so erosion provides the surface structure.
 - **Amplitude** is the maximum accumulated erosion displacement in normalized height units. It works as an actual amplitude control; zero and Enabled=false bypass erosion. World vertical distance equals normalized height * Mesh Height Multiplier * World Scale (60 in SmearScene).
 - **Wavelength** controls the largest gully scale, independently of Sample Scale. All XZ scales are terrain units: multiply by World Scale (0.3 in SmearScene) for world distance. Default 512 corresponds to 153.6 world units. Individual features can be narrower than their nominal wavelength.

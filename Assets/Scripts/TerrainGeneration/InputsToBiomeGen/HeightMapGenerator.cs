@@ -307,6 +307,7 @@ public static partial class HeightMapGenerator
         int seed = riverSeed - 60000;
         WorldBaseSample input = WorldTerrainHeight.Base(position, sampleScale, seed, coverage, erosion);
         float height = WorldTerrainHeight.Erode(position, input, sampleScale, seed, coverage, erosion);
+        height = WorldTerrainHeight.ShapeForAccess(position, input, height, waterLevel, seed, erosion);
         float carvedRiverMask = 0f;
         if (erosion.carveRivers)
         {

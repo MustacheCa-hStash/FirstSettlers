@@ -1,5 +1,13 @@
 # FirstSettlers Work Notes
 
+## September 11 correction: broad sparse mountains, no terraces
+
+User rejected the bench/terrace approach after seeing repeated horizontal bands. Removed all bench settings and height remapping. MountainSpatialScale defaults to 2.4, stretching both profile and region noise in XZ while keeping mountainRelief unchanged. MountainSparsity defaults to 0.12, raising only the lower mask threshold to reduce coverage while retaining a maximum mask of 1. Layout changes on regeneration. Existing rolling base land noise supplies hills at varying elevations inside larger mountain regions. GentleMountainErosion defaults to 0.45 on shallow base slopes, smoothly restoring full erosion on steeper faces; no altitude bands.
+
+Retained lowland half-height and shoreline smoothing. LowlandHillVariation 0.8 and LowlandHillScale 900 add spatially varied positive relief boosts on dry land, with river carving last. Settings version 4 migrates the new fields while retaining prior lowland/erosion choices. Scene edits belong to user and remain untouched. CPU/GPU refactoring explicitly prohibited for this task.
+
+Runtime/editor compilation passed (existing BerryBushManager obsolete API warning). Isolated Unity with synchronous Burst passed all checks: spatial scale preserves the isolated mountain height profile and divides gradients by 2.4; sparsity eliminated mountain mask at 2,608 sampled locations; 4,851 samples exhibited larger lowland hills; shoreline continuity and absence of mountain height remapping passed. Existing full near/far/macro/collider/seam suite passed across three seeds and custom settings. Log: .utmp/erosion-check/spatial-unity-validation.log. Previous bench slope statistics are obsolete. Visual appearance still needs live camera review; regenerate terrain.
+
 ## Current terrain system: whole-world erosion overhaul
 
 User scope: erosion across the entire world, adjustable Inspector parameters and spatial scale, remove legacy fake mountain ruggedness, investigate circled stipple/striping artifacts, preserve flatter river-shaped broad valleys and rounded gully floors. Heightmap quality takes priority over old biome/slope placement rules. User deleted MountainDetailValidation and MountainErosionValidation during development to compile. They remain removed; WorldErosionValidation is the replacement.

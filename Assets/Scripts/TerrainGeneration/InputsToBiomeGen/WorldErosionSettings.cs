@@ -22,6 +22,21 @@ public struct WorldErosionSettings
     [Range(0.25f, 3f)] public float riverValleyWidth;
     [Tooltip("Blend toward a flat dry valley floor alongside river channels. 1 retains the original flat-floor behavior; 0 keeps eroded slopes.")]
     [Range(0f, 1f)] public float riverValleyFlattening;
+    [Header("Playable landforms")]
+    [Tooltip("Lowland height relative to water; 0.5 halves relief without moving shorelines. Fades out on mountains.")]
+    [Range(0.1f, 1f)] public float lowlandHeightRatio;
+    [Tooltip("Normalized height band around water where slopes soften.")]
+    [Min(0.001f)] public float shoreHeightBand;
+    [Range(0.05f, 1f)] public float shoreSlopeRatio;
+    [Tooltip("XZ scale multiplier for mountain shapes and regions. Larger values make broader, less frequent mountains without reducing relief.")]
+    [Range(1f, 6f)] public float mountainSpatialScale;
+    [Tooltip("Raises the mountain region threshold, leaving more open lowlands. Does not lower the maximum mountain mask.")]
+    [Range(0f, 0.3f)] public float mountainSparsity;
+    [Tooltip("Erosion retained on gentle mountain slopes; steep faces retain full erosion.")]
+    [Range(0f, 1f)] public float gentleMountainErosion;
+    [Tooltip("Occasional extra lowland hill height relative to the usual ratio. Zero gives uniform relief.")]
+    [Range(0f, 2f)] public float lowlandHillVariation;
+    [Min(32f)] public float lowlandHillScale;
     [Header("World erosion")]
     public bool enabled;
     [Tooltip("Maximum accumulated displacement in normalized height units; zero bypasses erosion. Applies to lowlands, mountains and seabed.")]
@@ -66,7 +81,10 @@ public struct WorldErosionSettings
     [Range(2, 32)] public int maxMeshSpacing;
 
     public static WorldErosionSettings Default => new WorldErosionSettings {
-        version = 2, baseElevation = 0.45f, lowlandRelief = 0.8f, mountainRelief = 14f,
+        version = 4, baseElevation = 0.45f, lowlandRelief = 0.8f, mountainRelief = 14f,
+        lowlandHeightRatio = 0.5f, shoreHeightBand = 0.25f, shoreSlopeRatio = 0.2f,
+        mountainSpatialScale = 2.4f, mountainSparsity = 0.12f, gentleMountainErosion = 0.45f,
+        lowlandHillVariation = 0.8f, lowlandHillScale = 900f,
         baseOctaves = 2, baseRoughness = 0.3f, mountainShape = 1.5f, carveRivers = true,
         riverValleyWidth = 1.4f, riverValleyFlattening = 1f,
         enabled = true, amplitude = 0.6f, wavelength = 512f, octaves = 4, lacunarity = 2f,
@@ -87,6 +105,28 @@ public struct WorldErosionSettings
             s.riverValleyFlattening = 1f;
             s.version = 2;
         }
+        if (s.version < 3)
+        {
+            var d = Default;
+            s.lowlandHeightRatio = d.lowlandHeightRatio; s.shoreHeightBand = d.shoreHeightBand;
+            s.shoreSlopeRatio = d.shoreSlopeRatio; s.version = 3;
+        }
+        s.lowlandHeightRatio = Safe(s.lowlandHeightRatio, 0.5f, 0.1f, 1f);
+        s.shoreHeightBand = Safe(s.shoreHeightBand, 0.25f, 0.001f, 10f);
+        s.shoreSlopeRatio = Safe(s.shoreSlopeRatio, 0.2f, 0.05f, 1f);
+        if (s.version < 4)
+        {
+            var d = Default;
+            s.mountainSpatialScale = d.mountainSpatialScale; s.mountainSparsity = d.mountainSparsity;
+            s.gentleMountainErosion = d.gentleMountainErosion;
+            s.lowlandHillVariation = d.lowlandHillVariation; s.lowlandHillScale = d.lowlandHillScale;
+            s.version = 4;
+        }
+        s.mountainSpatialScale = Safe(s.mountainSpatialScale, 2.4f, 1f, 6f);
+        s.mountainSparsity = Safe(s.mountainSparsity, 0.12f, 0f, 0.3f);
+        s.gentleMountainErosion = Safe(s.gentleMountainErosion, 0.45f, 0f, 1f);
+        s.lowlandHillVariation = Safe(s.lowlandHillVariation, 0.8f, 0f, 2f);
+        s.lowlandHillScale = Safe(s.lowlandHillScale, 900f, 32f, 100000f);
         s.baseElevation = Safe(s.baseElevation, 0.45f, -100f, 100f);
         s.lowlandRelief = Safe(s.lowlandRelief, 0.8f, 0f, 100f);
         s.mountainRelief = Safe(s.mountainRelief, 14f, 0f, 100f);

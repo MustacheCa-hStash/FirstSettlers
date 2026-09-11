@@ -16,6 +16,7 @@ public static class WorldErosionValidation
     public static void Run()
     {
         ValidateField();
+        ValidateAccessShaping();
         ValidateValleys();
         ValidateHash();
         ValidateHandoffVisibility();
@@ -35,6 +36,47 @@ public static class WorldErosionValidation
     {
         try { Run(); EditorApplication.Exit(0); }
         catch (Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+    }
+
+    private static void ValidateAccessShaping()
+    {
+        var s = WorldErosionSettings.Default;
+        var low = new WorldBaseSample(0f, float2.zero, 0f, 0f, 0f);
+        const float water = 0.24f;
+        Check(WorldTerrainHeight.ShapeForAccess(float2.zero, low, water, water, 7, s) == water, "Shoreline moved.");
+        var uniform = s; uniform.lowlandHillVariation = 0f;
+        Check(math.abs(WorldTerrainHeight.ShapeForAccess(float2.zero, low, water + 1f, water, 7, uniform) - water - 0.5f) < 1e-6f, "Lowland relief not halved.");
+        float previous = -100f;
+        for (int i = -1000; i <= 1000; i++)
+        {
+            float d = i * 0.001f;
+            float h = WorldTerrainHeight.ShapeForAccess(float2.zero, low, water + d, water, 7, s);
+            Check(h >= previous && (i == 0 || math.sign(h - water) == math.sign(d)), "Shore remap inverted terrain or crossed water.");
+            previous = h;
+        }
+        var original = s; original.mountainSpatialScale = 1f; original.mountainSparsity = 0f; original.lowlandRelief = 0f;
+        var wide = original; wide.mountainSpatialScale = s.mountainSpatialScale;
+        int removed = 0, boosted = 0;
+        foreach (int seed in new[] { 7, 42, 12345 })
+        for (int x = -40; x <= 40; x++) for (int z = -40; z <= 40; z++)
+        {
+            float2 p = new float2(x * 317.7f, z * 319.3f);
+            var a = WorldTerrainHeight.Base(p, 600f, seed, 1.3f, original);
+            var b = WorldTerrainHeight.Base(p * wide.mountainSpatialScale, 600f, seed, 1.3f, wide);
+            Check(math.abs(a.Height - b.Height) < 0.0001f, "Spatial scaling changed mountain height envelope.");
+            Check(math.distance(a.Gradient / wide.mountainSpatialScale, b.Gradient) < 0.00001f, "Spatial scaling did not reduce mountain slope.");
+            var sparse = wide; sparse.mountainSparsity = s.mountainSparsity;
+            var c = WorldTerrainHeight.Base(p * wide.mountainSpatialScale, 600f, seed, 1.3f, sparse);
+            Check(c.MountainMask <= b.MountainMask + 0.00001f, "Sparsity expanded mountain coverage.");
+            if (b.MountainMask > 0f && c.MountainMask == 0f) removed++;
+            float h = WorldTerrainHeight.ShapeForAccess(p, low, water + 1f, water, seed, s);
+            Check(h >= water + 0.5f - 1e-6f && h <= water + 0.9f + 1e-6f, "Lowland hill variation out of bounds.");
+            if (h > water + 0.65f) boosted++;
+            var mountain = new WorldBaseSample(4f, float2.zero, 1f, 1f, 1f);
+            Check(math.abs(WorldTerrainHeight.ShapeForAccess(p, mountain, 4f, water, seed, s) - 4f) < 1e-6f, "Mountain height remapping/terracing remains.");
+        }
+        Check(removed > 100 && boosted > 100, "Missing sparse mountain regions or occasional larger hills.");
+        Debug.Log($"ACCESS SHAPING PASS: shoreline continuity, mountain XZ scaling preserves heights and reduces gradients, no mountain terracing; sparse mask removed {removed} samples; larger hill patches {boosted}.");
     }
 
     private static void ValidateField()

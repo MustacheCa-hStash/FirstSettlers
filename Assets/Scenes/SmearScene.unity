@@ -886,7 +886,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 5
+  worldSeed: 7
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -1102,7 +1102,7 @@ MonoBehaviour:
     billboardTreeChunkStartRingRadius: 18
     billboardTreeChunkRingRadius: 18
     enableDistantTrees: 1
-    distantTreeDistanceChunks: 18
+    distantTreeDistanceChunks: 20
     distantTreeFadeWidthChunks: 2
     distantTreeThinningStartChunks: 5
     distantTreeDensity: 0.16
@@ -1144,16 +1144,24 @@ MonoBehaviour:
   persistence: 0.05
   lacunarity: 10
   erosion:
-    version: 2
+    version: 4
     baseElevation: 0.45
     lowlandRelief: 0.8
-    mountainRelief: 14
+    mountainRelief: 20
     baseOctaves: 2
     baseRoughness: 0.3
     mountainShape: 1.5
     carveRivers: 1
     riverValleyWidth: 1.4
     riverValleyFlattening: 1
+    lowlandHeightRatio: 0.5
+    shoreHeightBand: 0.25
+    shoreSlopeRatio: 0.2
+    mountainSpatialScale: 3.3
+    mountainSparsity: 0.01
+    gentleMountainErosion: 0.45
+    lowlandHillVariation: 0.8
+    lowlandHillScale: 900
     enabled: 1
     amplitude: 0.6
     wavelength: 512
@@ -1280,7 +1288,7 @@ Transform:
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 214, y: 1000, z: 1330}
+  m_LocalPosition: {x: 1500, y: 1000, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

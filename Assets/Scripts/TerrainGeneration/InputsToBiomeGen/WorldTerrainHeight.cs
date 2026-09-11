@@ -56,12 +56,12 @@ public static class WorldTerrainHeight
     {
         float scale = math.max(sampleScale, 0.0001f);
         float3 land = Fbm(p, scale * 1.6f, seed + 20000, s.baseOctaves, s.baseRoughness);
-        float3 maskNoise = Fbm(p, scale * 6f, seed + 30000, 2, 0.3f);
-        float lower = 0.05f - (math.clamp(coverage, 1f, 3f) - 1f) * 0.15f;
+        float3 maskNoise = Fbm(p, scale * 6f * s.mountainSpatialScale, seed + 30000, 2, 0.3f);
+        float lower = 0.05f + s.mountainSparsity - (math.clamp(coverage, 1f, 3f) - 1f) * 0.15f;
         float t = math.saturate((maskNoise.x - lower) / (0.65f - lower));
         float mask = t * t * (3f - 2f * t);
         float2 maskGradient = maskNoise.yz * (6f * t * (1f - t) / (0.65f - lower));
-        float3 profile = Fbm(p, scale * 3f, seed + 40000, s.baseOctaves, s.baseRoughness);
+        float3 profile = Fbm(p, scale * 3f * s.mountainSpatialScale, seed + 40000, s.baseOctaves, s.baseRoughness);
         float v = math.saturate(0.5f + 0.5f * profile.x);
         float shaped = math.pow(v, s.mountainShape);
         float2 shapedGradient = v > 0f && v < 1f ? profile.yz * (0.5f * s.mountainShape * math.pow(v, s.mountainShape - 1f)) : float2.zero;
@@ -69,6 +69,18 @@ public static class WorldTerrainHeight
         float h = s.baseElevation + land.x * s.lowlandRelief + contribution * s.mountainRelief;
         float2 gradient = land.yz * s.lowlandRelief + (maskGradient * shaped + mask * shapedGradient) * s.mountainRelief;
         return new WorldBaseSample(h, gradient, mask, mask, contribution);
+    }
+
+    // River carving follows this point-evaluable stage, retaining channel beds and broad dry floors.
+    public static float ShapeForAccess(float2 position, WorldBaseSample input, float height, float waterLevel, int seed, in WorldErosionSettings s)
+    {
+        float aboveWater = height - waterLevel;
+        float mountain = math.smoothstep(0.015f, 0.12f, input.MountainContribution);
+        float hillPatch = math.smoothstep(0.05f, 0.55f, Noise(position / s.lowlandHillScale, seed + 71003).x);
+        float hillBoost = 1f + s.lowlandHillVariation * hillPatch * math.smoothstep(0f, s.shoreHeightBand, aboveWater);
+        float shaped = aboveWater * math.lerp(s.lowlandHeightRatio * hillBoost, 1f, mountain);
+        shaped *= math.lerp(s.shoreSlopeRatio, 1f, math.smoothstep(0f, s.shoreHeightBand, math.abs(shaped)));
+        return waterLevel + shaped;
     }
 
     public static float Erode(float2 position, WorldBaseSample input, float sampleScale, int seed, float coverage, in WorldErosionSettings s)
@@ -100,6 +112,11 @@ public static class WorldTerrainHeight
             new float4(s.ridgeRounding, s.valleyRounding, 1f, s.lacunarity), new float4(s.slopeResponse, 1.25f, s.slopeResponse, 1.5f),
             new float2(0.7f, 0f), 1f, count, s.lacunarity, s.persistence, s.cellSize, s.normalization,
             seed + s.seedOffset, out _, s.directionSmoothing);
-        return input.Height + erosion.x * s.heightScale;
+        // Local slope, not elevation bands, selects gentler mountain ground. The low-frequency
+        // mountain profile and existing rolling land noise supply shoulders at varying heights.
+        float mountain = math.smoothstep(0.015f, 0.12f, input.MountainContribution);
+        float gentle = 1f - math.smoothstep(0.001f, 0.004f, math.length(input.Gradient));
+        float retention = math.lerp(1f, s.gentleMountainErosion, mountain * gentle);
+        return input.Height + erosion.x * s.heightScale * retention;
     }
 }
