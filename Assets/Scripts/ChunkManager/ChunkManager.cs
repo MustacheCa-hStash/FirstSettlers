@@ -549,6 +549,8 @@ public class ChunkManager
             frustumVisibleCoords,
             viewerCamera);
 
+        foliageManager.UpdateGrassStreaming(this, orderedActiveCoords, viewer.position, viewerCamera);
+
         distantTrees?.Update(this, viewer.position, viewerCamera, viewDistance);
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FoliageTotal, foliageStart);
 

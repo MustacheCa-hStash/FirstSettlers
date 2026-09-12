@@ -311,7 +311,6 @@ public static class MeshGenerator
         Vector3[] normals = new Vector3[nativeNormals.Length];
         Vector2[] uvs = new Vector2[nativeUvs.Length];
         Color[] colors = new Color[nativeColors.Length];
-        int[] triangles = triangleList.ToArray();
 
         for (int i = 0; i < nativeVertices.Length; i++)
         {
@@ -326,7 +325,7 @@ public static class MeshGenerator
             colors[i] = new Color(color.x, color.y, color.z, color.w);
         }
 
-        return new MeshData(vertices, normals, uvs, colors, triangles);
+        return new MeshData(vertices, normals, uvs, colors, triangleList);
     }
 
     [BurstCompile]
@@ -472,6 +471,16 @@ public class MeshData
         this.uvs = uvs;
         this.colors = colors;
         this.triangles = new List<int>(triangles);
+    }
+
+    // Takes ownership of the completed builder's index list; callers must not mutate it afterwards.
+    internal MeshData(Vector3[] vertices, Vector3[] normals, Vector2[] uvs, Color[] colors, List<int> triangles)
+    {
+        this.vertices = vertices;
+        this.normals = normals;
+        this.uvs = uvs;
+        this.colors = colors;
+        this.triangles = triangles;
     }
 
     public int AddVertex(Vector3 vertex, Vector3 normal, Vector2 uv, Color color)

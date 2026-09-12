@@ -674,6 +674,18 @@ public static class FoliageGenerator
         float worldScale,
         float meshHeightMultiplier)
     {
+        using var steps = GenerateFlowersIncrementally(record, flowerSettings, worldSeed, chunkSize, worldScale, meshHeightMultiplier);
+        while (steps.MoveNext()) { }
+    }
+
+    public static IEnumerator<bool> GenerateFlowersIncrementally(
+        ChunkRecord record,
+        FlowerSettings flowerSettings,
+        int worldSeed,
+        int chunkSize,
+        float worldScale,
+        float meshHeightMultiplier)
+    {
         if (record.FoliageData == null)
         {
             record.FoliageData = new ChunkFoliageData();
@@ -681,12 +693,18 @@ public static class FoliageGenerator
 
         ChunkFoliageData foliageData = record.FoliageData;
         foliageData.ClearFlowers();
+        int revision = foliageData.FlowersRevision;
+        var originalHeight = record.HeightMap;
+        var originalSurface = record.SurfaceTypeMap;
+        var originalBiome = record.BiomeMap;
+        var originalGround = record.GroundCoverMap;
+        var originalSlope = record.SlopeMap;
 
         if (flowerSettings == null || !flowerSettings.enableFlowers)
-            return;
+            yield break;
 
         if (record.SurfaceTypeMap == null || record.HeightMap == null || record.BiomeMap == null)
-            return;
+            yield break;
 
         float chunkSampleMinX = record.ChunkCoord.x * chunkSize;
         float chunkSampleMinZ = record.ChunkCoord.z * chunkSize;
@@ -726,17 +744,25 @@ public static class FoliageGenerator
         int patchCandidateCount = globalCellCountX * globalCellCountZ * maxPatchCentersPerCell;
         int flowerCandidateCount = patchCandidateCount * maxFlowersPerPatch;
 
-        NativeArray<float> heightMap = FlattenFloatMap(record.HeightMap, Allocator.TempJob, out int heightMapWidth, out int heightMapHeight);
-        NativeArray<SurfaceType> surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.TempJob, out int surfaceMapWidth, out int surfaceMapHeight);
-        NativeArray<BiomeType> biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.TempJob, out int biomeMapWidth, out int biomeMapHeight);
-        NativeArray<float> slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.TempJob, out int slopeMapWidth, out int slopeMapHeight);
-        NativeArray<byte> allowedBiomeMask = CreateAllowedBiomeMask(flowerSettings, Allocator.TempJob);
-        NativeArray<float2> treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.TempJob);
-        NativeArray<FlowerDiscoveryResult> results =
-            new NativeArray<FlowerDiscoveryResult>(flowerCandidateCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-
+        NativeArray<float> heightMap = default;
+        NativeArray<SurfaceType> surfaceMap = default;
+        NativeArray<BiomeType> biomeMap = default;
+        NativeArray<float> slopeMap = default;
+        NativeArray<byte> allowedBiomeMask = default;
+        NativeArray<float2> treeExclusionPositions = default;
+        NativeArray<FlowerDiscoveryResult> results = default;
+        JobHandle handle = default;
         try
         {
+            heightMap = FlattenFloatMap(record.HeightMap, Allocator.Persistent, out int heightMapWidth, out int heightMapHeight);
+            surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.Persistent, out int surfaceMapWidth, out int surfaceMapHeight);
+            biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.Persistent, out int biomeMapWidth, out int biomeMapHeight);
+            slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.Persistent, out int slopeMapWidth, out int slopeMapHeight);
+            allowedBiomeMask = CreateAllowedBiomeMask(flowerSettings, Allocator.Persistent);
+            treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.Persistent);
+            results =
+                new NativeArray<FlowerDiscoveryResult>(flowerCandidateCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+
             FlowerDiscoveryJob job = new FlowerDiscoveryJob
             {
                 heightMap = heightMap,
@@ -785,11 +811,27 @@ public static class FoliageGenerator
                 maxScale = flowerSettings.uniformScaleRange.y
             };
 
-            JobHandle handle = job.Schedule(flowerCandidateCount, 64);
+            handle = job.Schedule(flowerCandidateCount, 64);
+            JobHandle.ScheduleBatchedJobs();
+            yield return false;
+            while (!handle.IsCompleted) yield return false;
             handle.Complete();
+            if (!ReferenceEquals(record.FoliageData, foliageData) || revision != foliageData.FlowersRevision ||
+                !ReferenceEquals(record.HeightMap, originalHeight) || !ReferenceEquals(record.SurfaceTypeMap, originalSurface) ||
+                !ReferenceEquals(record.BiomeMap, originalBiome) || !ReferenceEquals(record.GroundCoverMap, originalGround) ||
+                !ReferenceEquals(record.SlopeMap, originalSlope)) yield break;
 
             for (int i = 0; i < results.Length; i++)
             {
+                if (i > 0 && (i & 255) == 0) yield return true;
+                if ((i & 255) == 0)
+                {
+                    if (!ReferenceEquals(record.FoliageData, foliageData) || revision != foliageData.FlowersRevision ||
+                        !ReferenceEquals(record.HeightMap, originalHeight) || !ReferenceEquals(record.SurfaceTypeMap, originalSurface) ||
+                        !ReferenceEquals(record.BiomeMap, originalBiome) || !ReferenceEquals(record.GroundCoverMap, originalGround) ||
+                        !ReferenceEquals(record.SlopeMap, originalSlope)) yield break;
+                }
+
                 FlowerDiscoveryResult result = results[i];
                 if (result.valid == 0)
                     continue;
@@ -808,6 +850,8 @@ public static class FoliageGenerator
         }
         finally
         {
+            // Disposal is the only cancellation/shutdown path allowed to wait.
+            handle.Complete();
             if (heightMap.IsCreated)
                 heightMap.Dispose();
             if (surfaceMap.IsCreated)
@@ -836,6 +880,19 @@ public static class FoliageGenerator
         float worldScale,
         float meshHeightMultiplier)
     {
+        using var steps = GenerateCloverIncrementally(record, cloverSettings, cloverPrefabCount, worldSeed, chunkSize, worldScale, meshHeightMultiplier);
+        while (steps.MoveNext()) { }
+    }
+
+    public static IEnumerator<bool> GenerateCloverIncrementally(
+        ChunkRecord record,
+        CloverSettings cloverSettings,
+        int cloverPrefabCount,
+        int worldSeed,
+        int chunkSize,
+        float worldScale,
+        float meshHeightMultiplier)
+    {
         if (record.FoliageData == null)
         {
             record.FoliageData = new ChunkFoliageData();
@@ -843,17 +900,23 @@ public static class FoliageGenerator
 
         ChunkFoliageData foliageData = record.FoliageData;
         foliageData.ClearClover();
+        int revision = foliageData.CloverRevision;
+        var originalHeight = record.HeightMap;
+        var originalSurface = record.SurfaceTypeMap;
+        var originalBiome = record.BiomeMap;
+        var originalGround = record.GroundCoverMap;
+        var originalSlope = record.SlopeMap;
 
         if (cloverSettings == null || !cloverSettings.enableClover || cloverPrefabCount <= 0)
         {
             foliageData.cloverGenerated = true;
-            return;
+            yield break;
         }
 
         if (record.SurfaceTypeMap == null || record.HeightMap == null || record.BiomeMap == null)
         {
             foliageData.cloverGenerated = true;
-            return;
+            yield break;
         }
 
         float chunkSampleMinX = record.ChunkCoord.x * chunkSize;
@@ -893,19 +956,29 @@ public static class FoliageGenerator
         int patchCandidateCount = globalCellCountX * globalCellCountZ * maxPatchCentersPerCell;
         int clumpCandidateCount = patchCandidateCount * maxClumpsPerPatch;
 
-        NativeArray<float> heightMap = FlattenFloatMap(record.HeightMap, Allocator.TempJob, out int heightMapWidth, out int heightMapHeight);
-        NativeArray<SurfaceType> surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.TempJob, out int surfaceMapWidth, out int surfaceMapHeight);
-        NativeArray<BiomeType> biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.TempJob, out int biomeMapWidth, out int biomeMapHeight);
-        NativeArray<GroundCoverType> groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.TempJob, out int groundCoverMapWidth, out int groundCoverMapHeight);
-        NativeArray<float> slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.TempJob, out int slopeMapWidth, out int slopeMapHeight);
-        NativeArray<float2> treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.TempJob);
-        NativeArray<float2> bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, Allocator.TempJob);
-        NativeArray<float2> rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, Allocator.TempJob);
-        NativeArray<CloverDiscoveryResult> results =
-            new NativeArray<CloverDiscoveryResult>(clumpCandidateCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-
+        NativeArray<float> heightMap = default;
+        NativeArray<SurfaceType> surfaceMap = default;
+        NativeArray<BiomeType> biomeMap = default;
+        NativeArray<GroundCoverType> groundCoverMap = default;
+        NativeArray<float> slopeMap = default;
+        NativeArray<float2> treeExclusionPositions = default;
+        NativeArray<float2> bushExclusionPositions = default;
+        NativeArray<float2> rockExclusionPositions = default;
+        NativeArray<CloverDiscoveryResult> results = default;
+        JobHandle handle = default;
         try
         {
+            heightMap = FlattenFloatMap(record.HeightMap, Allocator.Persistent, out int heightMapWidth, out int heightMapHeight);
+            surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.Persistent, out int surfaceMapWidth, out int surfaceMapHeight);
+            biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.Persistent, out int biomeMapWidth, out int biomeMapHeight);
+            groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.Persistent, out int groundCoverMapWidth, out int groundCoverMapHeight);
+            slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.Persistent, out int slopeMapWidth, out int slopeMapHeight);
+            treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.Persistent);
+            bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, Allocator.Persistent);
+            rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, Allocator.Persistent);
+            results =
+                new NativeArray<CloverDiscoveryResult>(clumpCandidateCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+
             CloverDiscoveryJob job = new CloverDiscoveryJob
             {
                 heightMap = heightMap,
@@ -963,11 +1036,27 @@ public static class FoliageGenerator
                 grassInfluenceRadius = Mathf.Max(0.01f, cloverSettings.grassInfluenceRadius)
             };
 
-            JobHandle handle = job.Schedule(clumpCandidateCount, 64);
+            handle = job.Schedule(clumpCandidateCount, 64);
+            JobHandle.ScheduleBatchedJobs();
+            yield return false;
+            while (!handle.IsCompleted) yield return false;
             handle.Complete();
+            if (!ReferenceEquals(record.FoliageData, foliageData) || revision != foliageData.CloverRevision ||
+                !ReferenceEquals(record.HeightMap, originalHeight) || !ReferenceEquals(record.SurfaceTypeMap, originalSurface) ||
+                !ReferenceEquals(record.BiomeMap, originalBiome) || !ReferenceEquals(record.GroundCoverMap, originalGround) ||
+                !ReferenceEquals(record.SlopeMap, originalSlope)) yield break;
 
             for (int i = 0; i < results.Length; i++)
             {
+                if (i > 0 && (i & 255) == 0) yield return true;
+                if ((i & 255) == 0)
+                {
+                    if (!ReferenceEquals(record.FoliageData, foliageData) || revision != foliageData.CloverRevision ||
+                        !ReferenceEquals(record.HeightMap, originalHeight) || !ReferenceEquals(record.SurfaceTypeMap, originalSurface) ||
+                        !ReferenceEquals(record.BiomeMap, originalBiome) || !ReferenceEquals(record.GroundCoverMap, originalGround) ||
+                        !ReferenceEquals(record.SlopeMap, originalSlope)) yield break;
+                }
+
                 CloverDiscoveryResult result = results[i];
                 if (result.valid == 0)
                     continue;
@@ -987,6 +1076,8 @@ public static class FoliageGenerator
         }
         finally
         {
+            // Disposal is the only cancellation/shutdown path allowed to wait.
+            handle.Complete();
             if (heightMap.IsCreated)
                 heightMap.Dispose();
             if (surfaceMap.IsCreated)
@@ -1018,6 +1109,18 @@ public static class FoliageGenerator
         float worldScale,
         float meshHeightMultiplier)
     {
+        using var steps = GenerateDandelionsIncrementally(record, dandelionSettings, worldSeed, chunkSize, worldScale, meshHeightMultiplier);
+        while (steps.MoveNext()) { }
+    }
+
+    public static IEnumerator<bool> GenerateDandelionsIncrementally(
+        ChunkRecord record,
+        DandelionSettings dandelionSettings,
+        int worldSeed,
+        int chunkSize,
+        float worldScale,
+        float meshHeightMultiplier)
+    {
         if (record.FoliageData == null)
         {
             record.FoliageData = new ChunkFoliageData();
@@ -1025,17 +1128,23 @@ public static class FoliageGenerator
 
         ChunkFoliageData foliageData = record.FoliageData;
         foliageData.ClearDandelions();
+        int revision = foliageData.DandelionsRevision;
+        var originalHeight = record.HeightMap;
+        var originalSurface = record.SurfaceTypeMap;
+        var originalBiome = record.BiomeMap;
+        var originalGround = record.GroundCoverMap;
+        var originalSlope = record.SlopeMap;
 
         if (dandelionSettings == null || !dandelionSettings.enableDandelions)
         {
             foliageData.dandelionsGenerated = true;
-            return;
+            yield break;
         }
 
         if (record.SurfaceTypeMap == null || record.HeightMap == null || record.BiomeMap == null)
         {
             foliageData.dandelionsGenerated = true;
-            return;
+            yield break;
         }
 
         float chunkSampleMinX = record.ChunkCoord.x * chunkSize;
@@ -1075,19 +1184,29 @@ public static class FoliageGenerator
         int patchCandidateCount = globalCellCountX * globalCellCountZ * maxPatchCentersPerCell;
         int dandelionCandidateCount = patchCandidateCount * maxDandelionsPerPatch;
 
-        NativeArray<float> heightMap = FlattenFloatMap(record.HeightMap, Allocator.TempJob, out int heightMapWidth, out int heightMapHeight);
-        NativeArray<SurfaceType> surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.TempJob, out int surfaceMapWidth, out int surfaceMapHeight);
-        NativeArray<BiomeType> biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.TempJob, out int biomeMapWidth, out int biomeMapHeight);
-        NativeArray<GroundCoverType> groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.TempJob, out int groundCoverMapWidth, out int groundCoverMapHeight);
-        NativeArray<float> slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.TempJob, out int slopeMapWidth, out int slopeMapHeight);
-        NativeArray<float2> treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.TempJob);
-        NativeArray<float2> bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, Allocator.TempJob);
-        NativeArray<float2> rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, Allocator.TempJob);
-        NativeArray<CloverDiscoveryResult> results =
-            new NativeArray<CloverDiscoveryResult>(dandelionCandidateCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-
+        NativeArray<float> heightMap = default;
+        NativeArray<SurfaceType> surfaceMap = default;
+        NativeArray<BiomeType> biomeMap = default;
+        NativeArray<GroundCoverType> groundCoverMap = default;
+        NativeArray<float> slopeMap = default;
+        NativeArray<float2> treeExclusionPositions = default;
+        NativeArray<float2> bushExclusionPositions = default;
+        NativeArray<float2> rockExclusionPositions = default;
+        NativeArray<CloverDiscoveryResult> results = default;
+        JobHandle handle = default;
         try
         {
+            heightMap = FlattenFloatMap(record.HeightMap, Allocator.Persistent, out int heightMapWidth, out int heightMapHeight);
+            surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.Persistent, out int surfaceMapWidth, out int surfaceMapHeight);
+            biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.Persistent, out int biomeMapWidth, out int biomeMapHeight);
+            groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.Persistent, out int groundCoverMapWidth, out int groundCoverMapHeight);
+            slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.Persistent, out int slopeMapWidth, out int slopeMapHeight);
+            treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.Persistent);
+            bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, Allocator.Persistent);
+            rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, Allocator.Persistent);
+            results =
+                new NativeArray<CloverDiscoveryResult>(dandelionCandidateCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+
             CloverDiscoveryJob job = new CloverDiscoveryJob
             {
                 heightMap = heightMap,
@@ -1145,11 +1264,27 @@ public static class FoliageGenerator
                 grassInfluenceRadius = 0.01f
             };
 
-            JobHandle handle = job.Schedule(dandelionCandidateCount, 64);
+            handle = job.Schedule(dandelionCandidateCount, 64);
+            JobHandle.ScheduleBatchedJobs();
+            yield return false;
+            while (!handle.IsCompleted) yield return false;
             handle.Complete();
+            if (!ReferenceEquals(record.FoliageData, foliageData) || revision != foliageData.DandelionsRevision ||
+                !ReferenceEquals(record.HeightMap, originalHeight) || !ReferenceEquals(record.SurfaceTypeMap, originalSurface) ||
+                !ReferenceEquals(record.BiomeMap, originalBiome) || !ReferenceEquals(record.GroundCoverMap, originalGround) ||
+                !ReferenceEquals(record.SlopeMap, originalSlope)) yield break;
 
             for (int i = 0; i < results.Length; i++)
             {
+                if (i > 0 && (i & 255) == 0) yield return true;
+                if ((i & 255) == 0)
+                {
+                    if (!ReferenceEquals(record.FoliageData, foliageData) || revision != foliageData.DandelionsRevision ||
+                        !ReferenceEquals(record.HeightMap, originalHeight) || !ReferenceEquals(record.SurfaceTypeMap, originalSurface) ||
+                        !ReferenceEquals(record.BiomeMap, originalBiome) || !ReferenceEquals(record.GroundCoverMap, originalGround) ||
+                        !ReferenceEquals(record.SlopeMap, originalSlope)) yield break;
+                }
+
                 CloverDiscoveryResult result = results[i];
                 if (result.valid == 0)
                     continue;
@@ -1167,6 +1302,8 @@ public static class FoliageGenerator
         }
         finally
         {
+            // Disposal is the only cancellation/shutdown path allowed to wait.
+            handle.Complete();
             if (heightMap.IsCreated)
                 heightMap.Dispose();
             if (surfaceMap.IsCreated)

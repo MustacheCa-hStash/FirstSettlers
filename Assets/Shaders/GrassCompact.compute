@@ -54,3 +54,45 @@ void ScatterGrass(uint3 id : SV_DispatchThreadID, uint3 group : SV_GroupID)
     uint offset = _GrassOffsets[id.x];
     if (offset != 0xffffffff) _GrassVisibleIndices[_GrassGroups[group.x] + offset] = id.x;
 }
+
+// Candidate discovery remains deterministic Burst CPU work. Resident GPU selection uses these
+// same candidates for both meshes, with no readback or per-frame CPU matrix rebuilding.
+#pragma kernel CullResidentGrass
+StructuredBuffer<float4> _ResidentSlots;
+AppendStructuredBuffer<uint> _ResidentVisible;
+uint _ResidentSlotSize, _ResidentSlotCount, _ResidentRepresentation;
+int _ResidentForce;
+float3 _ResidentViewer;
+float4 _ResidentDensities, _ResidentDistances;
+float ResidentDensity(float d)
+{
+    if (d <= 3) return _ResidentDensities.x;
+    if (d <= 6) return lerp(_ResidentDensities.x, _ResidentDensities.y, saturate((d-3)/3));
+    if (d <= 10) return lerp(_ResidentDensities.y, _ResidentDensities.z, saturate((d-6)/4));
+    return lerp(_ResidentDensities.z, _ResidentDensities.w, saturate((d-10)/4));
+}
+[numthreads(64, 1, 1)]
+void CullResidentGrass(uint3 id : SV_DispatchThreadID)
+{
+    uint slot = id.x / _ResidentSlotSize;
+    if (slot >= _ResidentSlotCount) return;
+    float4 metadata = _ResidentSlots[slot];
+    if (id.x % _ResidentSlotSize >= (uint)metadata.x) return;
+    GrassIndirectInstance instance = _GrassInstances[id.x];
+    float3 position = mul(instance.objectToWorld, float4(0,0,0,1)).xyz;
+    float distance = length(position.xz - _ResidentViewer.xz);
+    float blend = _ResidentForce < 0 ? metadata.y : (float)_ResidentForce;
+    float edge = 1 - smoothstep(_ResidentDistances.y - _ResidentDistances.z, _ResidentDistances.y, distance);
+    float density = lerp(ResidentDensity(distance / _ResidentDistances.x), _ResidentDistances.w, blend) * edge;
+    if (instance.data.z >= density) return;
+    uint representation = instance.data.w < blend ? 1 : 0;
+    if (representation != _ResidentRepresentation) return;
+    if (_GrassFrustumEnabled != 0)
+    {
+        float3 center = mul(instance.objectToWorld, float4(_GrassMeshCenter, 1)).xyz;
+        float3 extents = mul(abs((float3x3)instance.objectToWorld), _GrassMeshExtents) + _GrassWindPadding;
+        for (uint p = 0; p < 6; p++)
+            if (dot(_GrassFrustum[p].xyz, center) + _GrassFrustum[p].w + dot(abs(_GrassFrustum[p].xyz), extents) < 0) return;
+    }
+    _ResidentVisible.Append(id.x);
+}

@@ -14,7 +14,7 @@ public sealed class GrassIndirectRenderer : MonoBehaviour
     public static bool IsSupported(ComputeShader shader, Material material)
     {
         return shader != null && material != null && material.enableInstancing &&
-            material.GetTag("GrassIndirect", false, "False") == "True" &&
+            string.Equals(material.GetTag("GrassIndirect", false, "False"), "True", StringComparison.OrdinalIgnoreCase) &&
             SystemInfo.supportsComputeShaders && SystemInfo.supportsInstancing &&
             SystemInfo.supportsIndirectArgumentsBuffer && SystemInfo.graphicsShaderLevel >= 45 &&
             shader.HasKernel("CullGrass") && shader.HasKernel("PrefixGrass") && shader.HasKernel("ScatterGrass");

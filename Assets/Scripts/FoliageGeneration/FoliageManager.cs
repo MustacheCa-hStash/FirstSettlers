@@ -141,13 +141,37 @@ public class FoliageManager
         ResolveCloverRenderAssets();
         ResolveDandelionRenderAssets();
         ResolveTreeRenderAssets();
+        grassStream = new GrassStream(grassSettings, cloverSettings, treeSettings, worldSeed, chunkSize, worldScale, meshHeightMultiplier, PrepareStreamingGrass, () => IsCloverSystemEnabled() && HasCloverRenderAssets());
         lastObservedBillboardSpawnChance = grassSettings.billboardSpawnChance;
         lastObservedBillboardCellsPerAxis = Mathf.Max(1, grassSettings.billboardCellsPerAxis);
         lastObservedNearGrassPrecomputeChunkPadding = Mathf.Max(0, grassSettings.nearGrassPrecomputeChunkPadding);
     }
 
+    private readonly List<Matrix4x4> groundMatrixScratch = new();
+    private readonly List<Vector4> groundDataScratch = new();
+    private List<Matrix4x4>[] cloverMatrixScratch = Array.Empty<List<Matrix4x4>>();
+    private List<Vector4>[] cloverDataScratch = Array.Empty<List<Vector4>>();
+    private readonly GrassStream grassStream;
+    private IEnumerator<bool> activeGroundGeneration;
+    private GroundFoliageGenerationWorkKey activeGroundKey;
+    private ChunkRecord activeGroundRecord;
+    public void UpdateGrassStreaming(ChunkManager manager, List<ChunkCoord> activeCoords, Vector3 viewer, Camera camera)
+    {
+        grassStream.Update(manager, activeCoords, viewer, camera, camera != null ? grassGpuPlanes : null,
+            grassMesh, grassMaterial, billboardGrassMesh, billboardGrassMaterial);
+    }
+    private void PrepareStreamingGrass(ChunkRecord record)
+    {
+        EnsureTreesGenerated(record); EnsureBushesGenerated(record); EnsureRocksGenerated(record);
+        if (IsCloverSystemEnabled() && HasCloverRenderAssets() && !record.FoliageData.cloverGenerated)
+            EnqueueGroundFoliageGeneration(record, GroundFoliageGenerationType.Clover);
+    }
+
     public void Dispose()
     {
+        grassStream.Dispose();
+        activeGroundGeneration?.Dispose();
+        activeGroundGeneration = null;
         foreach (var job in activeBillboardGenerationWork) job.Dispose();
         activeBillboardGenerationWork.Clear();
         activeBillboardBatch?.Steps.Dispose();
@@ -183,7 +207,7 @@ public class FoliageManager
             dirtyGrassChunks.Count,
             pendingFoliageBatchWork.Count,
             treeRepresentationWorkCount,
-            pendingGroundFoliageGenerationWork.Count);
+            pendingGroundFoliageGenerationWork.Count + (activeGroundGeneration != null ? 1 : 0));
     }
 
     public void HandleViewerSubChunkChanged(
@@ -233,17 +257,9 @@ public class FoliageManager
             float foregroundBudgetMs = Mathf.Max(0f, grassSettings.foregroundFoliageWorkBudgetMsPerFrame);
 
             PruneStaleFoliageQueues(chunkManager, viewerCoord, viewerGlobalSubChunk);
-            EnqueueFoliageWorkForSettingsChanges(chunkManager, viewerCoord, orderedActiveCoords);
-            CompleteActiveGrassSubChunkGenerationWork(
-                chunkManager,
-                viewerCoord,
-                viewerGlobalSubChunk,
-                workBudgetStart,
-                foregroundBudgetMs);
-            ProcessReadyBillboardGeneration(chunkManager, viewerCoord, workBudgetStart, foregroundBudgetMs);
             ProcessPendingFoliageManagementWork(chunkManager, viewerCoord, viewerGlobalSubChunk, workBudgetStart, foregroundBudgetMs);
             ProcessPendingGroundFoliageGenerationWork(chunkManager, viewerCoord, workBudgetStart, foregroundBudgetMs);
-            ProcessPendingGrassSubChunkWork(chunkManager, viewerCoord, viewerGlobalSubChunk, workBudgetStart, foregroundBudgetMs);
+
             ProcessPendingFoliageBatchWork(chunkManager, viewerCoord, viewerGlobalSubChunk, workBudgetStart, foregroundBudgetMs);
             ProcessPendingTreeRepresentationWork(chunkManager, viewerCoord, workBudgetStart, foregroundBudgetMs);
 
@@ -335,23 +351,8 @@ public class FoliageManager
         if (!(useNearGrass || useBillboardGrass || useFlowers || useClover || useDandelions || useTrees))
             return;
 
-        if (useNearGrass)
-        {
-            bool nearGrassReady = IsCloverReadyForGrass(record, viewerCoord);
-            // Density edits reselect the existing sorted buckets through the normal
-            // budgeted queue, including chunks that were offscreen during the edit.
-            if (nearGrassReady && runtime.FoliageRuntime.CachedGrassDensitySettings != CurrentGrassDensitySettings)
-                EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.NearGrass);
-            if (useClover && HasCloverRenderAssets())
-                runtime.FoliageRuntime.DrawClover();
-
-            if (nearGrassReady)
-                runtime.FoliageRuntime.DrawGrass(grassSettings, grassRenderCamera, grassGpuPlanes);
-        }
-        else if (useBillboardGrass)
-        {
-            runtime.FoliageRuntime.DrawBillboards(grassSettings, grassRenderCamera, grassGpuPlanes);
-        }
+        if (useClover && HasCloverRenderAssets())
+            runtime.FoliageRuntime.DrawClover();
 
         if (useFlowers && HasFlowerRenderAssets())
             runtime.FoliageRuntime.DrawFlowers();
@@ -455,9 +456,9 @@ public class FoliageManager
 
         using (HandleSubChunkRangeChecksMarker.Auto())
         {
-            useNearGrass = IsWithinNearGrass(viewerCoord, coord);
-            preGenerateNearGrass = IsWithinNearGrassGenerationRange(viewerCoord, coord);
-            useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
+            useNearGrass = false;
+            preGenerateNearGrass = false;
+            useBillboardGrass = false;
             useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
             useClover = IsWithinCloverRenderRange(viewerCoord, coord);
             preGenerateClover = IsWithinCloverGenerationRange(viewerCoord, coord);
@@ -1598,58 +1599,81 @@ public class FoliageManager
         using var processGroundFoliageGenerationScope = ProcessGroundFoliageGenerationMarker.Auto();
 
         int maxGenerations = Mathf.Max(1, grassSettings.maxGroundFoliageGenerationsPerFrame);
-        float budgetMs = Mathf.Max(0f, grassSettings.groundFoliageGenerationBudgetMsPerFrame);
+        float budgetMs = Mathf.Max(0.05f, grassSettings.groundFoliageGenerationBudgetMsPerFrame);
         long frameStart = TerrainGenerationProfiler.GetTimestamp();
-        int generationCount = 0;
-
-        while (pendingGroundFoliageGenerationWork.Count > 0 && generationCount < maxGenerations)
+        int started = 0;
+        // One resident discovery job bounds native memory and prevents worker flooding.
+        // Always make one step of progress even when earlier foreground work used its budget.
+        do
         {
-            if (!HasFoliageWorkBudgetRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs))
-                break;
-
-            GroundFoliageGenerationWorkItem workItem = PopNearestGroundFoliageGenerationWork(viewerCoord);
-            queuedGroundFoliageGenerationWork.Remove(workItem.Key);
-
-            ChunkRecord record = chunkManager.GetChunkRecord(workItem.Key.ChunkCoord);
-            ChunkRuntime runtime = chunkManager.GetChunkRuntime(record);
-
-            if (record == null || runtime == null || runtime.FoliageRuntime == null || !HasRequiredTerrainData(record))
-                continue;
-
-            if (!IsGroundFoliageGenerationStillWanted(record, viewerCoord, workItem.Key.GenerationType))
-                continue;
-
-            switch (workItem.Key.GenerationType)
+            if (activeGroundGeneration == null)
             {
-                case GroundFoliageGenerationType.Flower:
-                    EnsureFlowersGenerated(record);
-                    if (record.FoliageData != null && record.FoliageData.flowersGenerated)
-                        EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.Flower);
-                    generationCount++;
-                    break;
-                case GroundFoliageGenerationType.Clover:
-                    EnsureCloverGenerated(record);
-                    if (record.FoliageData != null && record.FoliageData.cloverGenerated)
-                    {
-                        record.FoliageData.ClearNearGrass();
-                        runtime.FoliageRuntime.ClearGrassBatches();
-                        if (IsWithinCloverRenderRange(viewerCoord, record.ChunkCoord))
-                            EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.Clover);
-                    }
-
-                    generationCount++;
-                    break;
-                case GroundFoliageGenerationType.Dandelion:
-                    EnsureDandelionsGenerated(record);
-                    if (record.FoliageData != null && record.FoliageData.dandelionsGenerated)
-                        EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.Dandelion);
-                    generationCount++;
-                    break;
+                if (pendingGroundFoliageGenerationWork.Count == 0 || started >= maxGenerations) break;
+                var work = pendingGroundFoliageGenerationWork[0];
+                pendingGroundFoliageGenerationWork.RemoveAt(0); // FIFO: distant requests cannot starve.
+                queuedGroundFoliageGenerationWork.Remove(work.Key);
+                var record = chunkManager.GetChunkRecord(work.Key.ChunkCoord);
+                if (record == null || !HasRequiredTerrainData(record) ||
+                    !IsGroundFoliageGenerationStillWanted(record, viewerCoord, work.Key.GenerationType)) continue;
+                EnsureTreesGenerated(record);
+                if (work.Key.GenerationType != GroundFoliageGenerationType.Flower)
+                {
+                    EnsureBushesGenerated(record);
+                    EnsureRocksGenerated(record);
+                }
+                activeGroundKey = work.Key;
+                activeGroundRecord = record;
+                switch (work.Key.GenerationType)
+                {
+                    case GroundFoliageGenerationType.Flower:
+                        activeGroundGeneration = FoliageGenerator.GenerateFlowersIncrementally(record,
+                            flowerSettings, worldSeed, chunkSize, worldScale, meshHeightMultiplier);
+                        break;
+                    case GroundFoliageGenerationType.Clover:
+                        activeGroundGeneration = FoliageGenerator.GenerateCloverIncrementally(record,
+                            cloverSettings, GetCloverRenderAssetCount(), worldSeed, chunkSize, worldScale, meshHeightMultiplier);
+                        break;
+                    default:
+                        activeGroundGeneration = FoliageGenerator.GenerateDandelionsIncrementally(record,
+                            dandelionSettings, worldSeed, chunkSize, worldScale, meshHeightMultiplier);
+                        break;
+                }
+                queuedGroundFoliageGenerationWork.Add(activeGroundKey);
+                started++;
             }
-
-            if (!HasFoliageWorkBudgetRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs))
-                break;
-        }
+            if (activeGroundGeneration.MoveNext())
+            {
+                if (!activeGroundGeneration.Current) break; // Waiting: never Complete on the main thread.
+            }
+            else
+            {
+                activeGroundGeneration.Dispose();
+                activeGroundGeneration = null;
+                queuedGroundFoliageGenerationWork.Remove(activeGroundKey);
+                var record = activeGroundRecord;
+                activeGroundRecord = null;
+                if (ReferenceEquals(chunkManager.GetChunkRecord(record.ChunkCoord), record))
+                {
+                    switch (activeGroundKey.GenerationType)
+                    {
+                        case GroundFoliageGenerationType.Flower:
+                            if (record.FoliageData.flowersGenerated) EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.Flower);
+                            break;
+                        case GroundFoliageGenerationType.Clover:
+                            if (record.FoliageData.cloverGenerated)
+                            {
+                                // Invalidate any cached candidates built against older exclusions.
+                                record.FoliageData.ClearNearGrass();
+                                EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.Clover);
+                            }
+                            break;
+                        default:
+                            if (record.FoliageData.dandelionsGenerated) EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.Dandelion);
+                            break;
+                    }
+                }
+            }
+        } while (HasFoliageWorkBudgetRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs));
 
         RecordFoliageQueueSnapshot();
     }
@@ -1873,6 +1897,7 @@ public class FoliageManager
         }
 
         queuedGroundFoliageGenerationWork.Clear();
+        if (activeGroundGeneration != null) queuedGroundFoliageGenerationWork.Add(activeGroundKey);
         for (int i = pendingGroundFoliageGenerationWork.Count - 1; i >= 0; i--)
         {
             GroundFoliageGenerationWorkItem workItem = pendingGroundFoliageGenerationWork[i];
@@ -2153,7 +2178,7 @@ public class FoliageManager
             case GroundFoliageGenerationType.Clover:
                 return IsCloverSystemEnabled() &&
                        HasCloverRenderAssets() &&
-                       IsWithinCloverGenerationRange(viewerCoord, record.ChunkCoord) &&
+                       // Grass also requests exclusions beyond clover's own rendering radius.
                        (record.FoliageData == null || !record.FoliageData.cloverGenerated);
             case GroundFoliageGenerationType.Dandelion:
                 return IsDandelionSystemEnabled() &&
@@ -2317,13 +2342,15 @@ public class FoliageManager
             JobHandle handle = job.Schedule(instanceCount, 64);
             handle.Complete();
 
-            Matrix4x4[] worldMatrices = new Matrix4x4[instanceCount];
-            Vector4[] petalColors = new Vector4[instanceCount];
+            var worldMatrices = groundMatrixScratch;
+            worldMatrices.Clear();
+            var petalColors = groundDataScratch;
+            petalColors.Clear();
 
             for (int i = 0; i < instanceCount; i++)
             {
-                worldMatrices[i] = ToMatrix4x4(nativeMatrices[i]);
-                petalColors[i] = ToVector4(nativePetalColors[i]);
+                worldMatrices.Add(ToMatrix4x4(nativeMatrices[i]));
+                petalColors.Add(ToVector4(nativePetalColors[i]));
             }
 
             foliageRuntime.CacheFlowerBatches(worldMatrices, petalColors);
@@ -2408,13 +2435,23 @@ public class FoliageManager
             JobHandle handle = job.Schedule(instanceCount, 64);
             handle.Complete();
 
-            List<Matrix4x4>[] worldMatricesByPrefab = new List<Matrix4x4>[prefabCount];
-            List<Vector4>[] instanceDataByPrefab = new List<Vector4>[prefabCount];
+            if (cloverMatrixScratch.Length != prefabCount)
+            {
+                cloverMatrixScratch = new List<Matrix4x4>[prefabCount];
+                cloverDataScratch = new List<Vector4>[prefabCount];
+                for (int i = 0; i < prefabCount; i++)
+                {
+                    cloverMatrixScratch[i] = new List<Matrix4x4>();
+                    cloverDataScratch[i] = new List<Vector4>();
+                }
+            }
+            var worldMatricesByPrefab = cloverMatrixScratch;
+            var instanceDataByPrefab = cloverDataScratch;
 
             for (int i = 0; i < prefabCount; i++)
             {
-                worldMatricesByPrefab[i] = new List<Matrix4x4>();
-                instanceDataByPrefab[i] = new List<Vector4>();
+                worldMatricesByPrefab[i].Clear();
+                instanceDataByPrefab[i].Clear();
             }
 
             for (int i = 0; i < instanceCount; i++)
@@ -2504,13 +2541,15 @@ public class FoliageManager
             JobHandle handle = job.Schedule(instanceCount, 64);
             handle.Complete();
 
-            Matrix4x4[] worldMatrices = new Matrix4x4[instanceCount];
-            Vector4[] instanceData = new Vector4[instanceCount];
+            var worldMatrices = groundMatrixScratch;
+            worldMatrices.Clear();
+            var instanceData = groundDataScratch;
+            instanceData.Clear();
 
             for (int i = 0; i < instanceCount; i++)
             {
-                worldMatrices[i] = ToMatrix4x4(nativeMatrices[i]);
-                instanceData[i] = ToVector4(nativeInstanceData[i]);
+                worldMatrices.Add(ToMatrix4x4(nativeMatrices[i]));
+                instanceData.Add(ToVector4(nativeInstanceData[i]));
             }
 
             foliageRuntime.CacheDandelionBatches(worldMatrices, instanceData);

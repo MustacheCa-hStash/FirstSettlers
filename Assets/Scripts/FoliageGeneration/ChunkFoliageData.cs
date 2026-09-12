@@ -2,6 +2,11 @@ using System.Collections.Generic;
 
 public class ChunkFoliageData
 {
+    // Identifies cached candidates across renderer eviction/re-entry. Not serialized world data.
+    public int streamingGrassSignature;
+    public object streamingGrassHeight, streamingGrassSurface, streamingGrassGround, streamingGrassBiome;
+    public bool streamingGrassCacheValid;
+    public int nearGrassRevision { get; private set; }
     public bool nearGrassGenerated;
     public bool nearGrassUsesCloverInfluence;
     public int subChunksPerChunk;
@@ -47,6 +52,7 @@ public class ChunkFoliageData
 
     public void ClearNearGrass()
     {
+        nearGrassRevision++;
         nearGrassGenerated = false;
         nearGrassUsesCloverInfluence = false;
 
@@ -143,20 +149,29 @@ public class ChunkFoliageData
         billboardGrassInstances.Clear();
     }
 
+    public int FlowersRevision { get; private set; }
+
     public void ClearFlowers()
     {
+        FlowersRevision++;
         flowersGenerated = false;
         flowerInstances.Clear();
     }
 
+    public int CloverRevision { get; private set; }
+
     public void ClearClover()
     {
+        CloverRevision++;
         cloverGenerated = false;
         cloverInstances.Clear();
     }
 
+    public int DandelionsRevision { get; private set; }
+
     public void ClearDandelions()
     {
+        DandelionsRevision++;
         dandelionsGenerated = false;
         dandelionInstances.Clear();
     }

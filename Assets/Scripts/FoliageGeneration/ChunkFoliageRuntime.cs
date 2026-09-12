@@ -713,6 +713,11 @@ public class ChunkFoliageRuntime
         hasBuiltCloverRenderData = true;
     }
 
+    public void CacheDandelionBatches(List<Matrix4x4> worldMatrices, List<Vector4> instanceData)
+    {
+        hasBuiltDandelionRenderData = CacheGrassRenderBatches(worldMatrices, instanceData, dandelionRenderBatches);
+    }
+
     public void CacheDandelionBatches(Matrix4x4[] worldMatrices, Vector4[] instanceData)
     {
         hasBuiltDandelionRenderData = CacheGrassRenderBatches(worldMatrices, instanceData, dandelionRenderBatches);
