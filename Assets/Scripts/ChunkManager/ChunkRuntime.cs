@@ -43,29 +43,19 @@ public class ChunkRuntime
     public ChunkRuntime(ChunkRecord chunkRecord, int chunkSize, float worldScale, Transform parent,
         Material terrainMaterial, Material waterMaterial, bool terrainReceiveShadows)
     {
-        this.chunkRecord = chunkRecord;
+        CreateObjects(terrainMaterial, waterMaterial, terrainReceiveShadows);
+        Reinitialize(chunkRecord, chunkSize, worldScale, parent, terrainReceiveShadows);
+    }
 
-        ChunkCoord chunkCoord = chunkRecord.ChunkCoord;
-        Vector3 worldPosition = new Vector3(
-            (chunkCoord.x * chunkSize + chunkSize * 0.5f) * worldScale,
-            0f,
-            (chunkCoord.z * chunkSize + chunkSize * 0.5f) * worldScale
-        );
-
-        root = new GameObject($"Chunk_{chunkCoord.x}_{chunkCoord.z}");
-        root.transform.position = worldPosition;
-        root.transform.parent = parent;
-
+    private void CreateObjects(Material terrainMaterial, Material waterMaterial, bool terrainReceiveShadows)
+    {
+        root = new GameObject("Chunk_Runtime");
         terrainMeshFilter = root.AddComponent<MeshFilter>();
         terrainMeshRenderer = root.AddComponent<MeshRenderer>();
 
         runtimeTerrainMaterial = new Material(terrainMaterial);
-        if (runtimeTerrainMaterial.HasProperty("_ReceiveShadows"))
-            runtimeTerrainMaterial.SetFloat("_ReceiveShadows", terrainReceiveShadows ? 1f : 0f);
-
         terrainMeshRenderer.material = runtimeTerrainMaterial;
         terrainMeshRenderer.shadowCastingMode = ShadowCastingMode.Off;
-        terrainMeshRenderer.receiveShadows = terrainReceiveShadows;
 
         waterRoot = new GameObject("Water");
         waterRoot.transform.SetParent(root.transform, false);
@@ -78,11 +68,73 @@ public class ChunkRuntime
 
         runtimeWaterMaterial = new Material(waterMaterial);
         waterMeshRenderer.material = runtimeWaterMaterial;
+        waterMeshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        waterMeshRenderer.receiveShadows = false;
 
+        ConfigureRenderSettings(terrainReceiveShadows);
         waterRoot.SetActive(false);
 
         SetVisible(false);
+    }
+
+    public void Reinitialize(ChunkRecord chunkRecord, int chunkSize, float worldScale, Transform parent,
+        bool terrainReceiveShadows)
+    {
+        this.chunkRecord = chunkRecord;
+
+        ChunkCoord chunkCoord = chunkRecord.ChunkCoord;
+        Vector3 worldPosition = new Vector3(
+            (chunkCoord.x * chunkSize + chunkSize * 0.5f) * worldScale,
+            0f,
+            (chunkCoord.z * chunkSize + chunkSize * 0.5f) * worldScale
+        );
+
+        root.name = $"Chunk_{chunkCoord.x}_{chunkCoord.z}";
+        root.transform.SetParent(parent, false);
+        root.transform.position = worldPosition;
+        root.transform.localRotation = Quaternion.identity;
+        root.transform.localScale = Vector3.one;
+
+        ConfigureRenderSettings(terrainReceiveShadows);
+        ResetRenderState();
+        ClearMeshes();
+        if (foliageRuntime != null && foliageRuntime.root != null)
+        {
+            foliageRuntime.root.gameObject.name = $"Foliage_{chunkCoord.x}_{chunkCoord.z}";
+            foliageRuntime.root.SetParent(root.transform, false);
+            foliageRuntime.root.localPosition = Vector3.zero;
+            foliageRuntime.root.localRotation = Quaternion.identity;
+            foliageRuntime.root.localScale = Vector3.one;
+        }
         chunkRecord.SetActiveRuntime(this);
+    }
+
+    private void ConfigureRenderSettings(bool terrainReceiveShadows)
+    {
+        if (runtimeTerrainMaterial != null && runtimeTerrainMaterial.HasProperty("_ReceiveShadows"))
+            runtimeTerrainMaterial.SetFloat("_ReceiveShadows", terrainReceiveShadows ? 1f : 0f);
+
+        if (terrainMeshRenderer != null)
+        {
+            terrainMeshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            terrainMeshRenderer.receiveShadows = terrainReceiveShadows;
+        }
+    }
+
+    private void ResetRenderState()
+    {
+        visible = false;
+        renderVisible = true;
+        terrainHandoffHidden = false;
+        foliageRenderVisible = true;
+        foliageShadowCasterVisible = true;
+        currentLOD = -1;
+
+        if (terrainMeshRenderer != null)
+            terrainMeshRenderer.enabled = true;
+
+        if (waterMeshRenderer != null)
+            waterMeshRenderer.enabled = true;
     }
 
     public void SetControlMaps(Texture2D[] controlMaps)
@@ -128,8 +180,12 @@ public class ChunkRuntime
         if (terrainMeshCollider == null)
             return;
 
-        terrainMeshCollider.sharedMesh = null;
-        Object.Destroy(terrainMeshCollider);
+        if (terrainMeshCollider)
+        {
+            terrainMeshCollider.sharedMesh = null;
+            Object.Destroy(terrainMeshCollider);
+        }
+
         terrainMeshCollider = null;
     }
 
@@ -140,10 +196,13 @@ public class ChunkRuntime
 
     public void ClearMeshes()
     {
-        terrainMeshFilter.sharedMesh = null;
-        waterMeshFilter.sharedMesh = null;
+        if (terrainMeshFilter)
+            terrainMeshFilter.sharedMesh = null;
 
-        if (waterRoot != null)
+        if (waterMeshFilter)
+            waterMeshFilter.sharedMesh = null;
+
+        if (waterRoot)
             waterRoot.SetActive(false);
 
         currentLOD = -1;
@@ -219,29 +278,67 @@ public class ChunkRuntime
     public void SetVisible(bool visible)
     {
         this.visible = visible;
-        root.SetActive(visible);
+        if (root)
+            root.SetActive(visible);
     }
+    public void ReleaseToPool(Transform poolParent)
+    {
+        chunkRecord?.ClearActiveRuntime(this);
+
+        RemoveCollider();
+        ClearMeshes();
+        visible = false;
+        ResetControlMaps();
+
+        if (foliageRuntime != null)
+        {
+            foliageRuntime.ClearCachedBatches();
+            foliageRuntime.SetVisible(false);
+            if (foliageRuntime.root)
+                foliageRuntime.root.gameObject.name = "Foliage_Pooled";
+        }
+
+        chunkRecord = null;
+        if (root)
+        {
+            root.name = "Chunk_Pooled";
+            root.transform.SetParent(poolParent, false);
+            root.SetActive(false);
+        }
+    }
+
     public void DestroyRuntime()
     {
-        chunkRecord.ClearActiveRuntime(this);
+        chunkRecord?.ClearActiveRuntime(this);
 
         RemoveCollider();
         ClearMeshes();
         visible = false;
 
-        if (runtimeTerrainMaterial != null)
+        if (foliageRuntime != null)
+        {
+            foliageRuntime.ClearCachedBatches();
+            if (foliageRuntime.root)
+            {
+                Object.Destroy(foliageRuntime.root.gameObject);
+                foliageRuntime.root = null;
+            }
+            foliageRuntime = null;
+        }
+
+        if (runtimeTerrainMaterial)
         {
             Object.Destroy(runtimeTerrainMaterial);
             runtimeTerrainMaterial = null;
         }
 
-        if (runtimeWaterMaterial != null)
+        if (runtimeWaterMaterial)
         {
             Object.Destroy(runtimeWaterMaterial);
             runtimeWaterMaterial = null;
         }
 
-        if (root != null)
+        if (root)
         {
             Object.Destroy(root);
             root = null;
@@ -255,6 +352,19 @@ public class ChunkRuntime
         terrainMeshCollider = null;
         chunkRecord = null;
         currentLOD = -1;
+    }
+
+    private void ResetControlMaps()
+    {
+        if (runtimeTerrainMaterial == null)
+            return;
+
+        if (runtimeTerrainMaterial.HasProperty("_ControlMap0"))
+            runtimeTerrainMaterial.SetTexture("_ControlMap0", null);
+        if (runtimeTerrainMaterial.HasProperty("_ControlMap1"))
+            runtimeTerrainMaterial.SetTexture("_ControlMap1", null);
+        if (runtimeTerrainMaterial.HasProperty("_ControlMap2"))
+            runtimeTerrainMaterial.SetTexture("_ControlMap2", null);
     }
 
 }

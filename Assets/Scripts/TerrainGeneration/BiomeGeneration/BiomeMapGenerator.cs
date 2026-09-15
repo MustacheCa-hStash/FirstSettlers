@@ -68,6 +68,40 @@ public static class BiomeMapGenerator
         return biomeMap;
     }
 
+    public static BiomeType[,] GenerateBiomeMap(
+        NativeArray<float> heights,
+        NativeArray<float> moistures,
+        NativeArray<float> temperatures,
+        NativeArray<float> slopes,
+        NativeArray<float> mountainMasks,
+        NativeArray<float> riverMasks,
+        int width,
+        int height,
+        float waterLevel,
+        Allocator resultAllocator,
+        out NativeArray<BiomeType> nativeBiomes)
+    {
+        nativeBiomes = new NativeArray<BiomeType>(width * height, resultAllocator, NativeArrayOptions.UninitializedMemory);
+        BiomeMapJob job = new BiomeMapJob
+        {
+            waterLevel = waterLevel,
+            heights = heights,
+            moistures = moistures,
+            temperatures = temperatures,
+            slopes = slopes,
+            mountainMasks = mountainMasks,
+            riverMasks = riverMasks,
+            biomes = nativeBiomes
+        };
+
+        JobHandle handle = job.Schedule(nativeBiomes.Length, 64);
+        handle.Complete();
+
+        BiomeType[,] biomeMap = new BiomeType[width, height];
+        TerrainMapNativeUtility.CopyNativeToMap(nativeBiomes, biomeMap);
+        return biomeMap;
+    }
+
     private static NativeArray<float> CopyFloatMapToNative(float[,] source, Allocator allocator, out int width, out int height)
     {
         width = source.GetLength(0);

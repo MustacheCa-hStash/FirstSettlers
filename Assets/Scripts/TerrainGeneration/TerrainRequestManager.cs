@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading;
+using Unity.Collections;
 using Unity.Profiling;
 using UnityEngine;
 
@@ -142,69 +143,154 @@ public class TerrainRequestManager
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainClimateMoisture, stageStart);
 
                 stageStart = TerrainGenerationProfiler.GetTimestamp();
-                float[,] temperatureMap = ClimateGenerator.GenerateTerrainTemperatureMap(chunkSize, seed, 
+                float[,] temperatureMap = ClimateGenerator.GenerateTerrainTemperatureMap(chunkSize, seed,
                     sampleScale, octaves, persistence, lacunarity, chunkCoord);
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainClimateTemperature, stageStart);
 
-                stageStart = TerrainGenerationProfiler.GetTimestamp();
-                BiomeType[,] biomeMap = BiomeMapGenerator.GenerateBiomeMap(finalHeightMap, moistureMap, 
-                    temperatureMap, slopeMap, mountainMaskMap, riverMaskMap, waterSettings.WaterLevel);
-                TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainBiomeMap, stageStart);
+                NativeArray<float> nativeHeights = default;
+                NativeArray<float> nativeMoistures = default;
+                NativeArray<float> nativeTemperatures = default;
+                NativeArray<float> nativeSlopes = default;
+                NativeArray<float> nativeMountainMasks = default;
+                NativeArray<float> nativeRiverMasks = default;
+                NativeArray<BiomeType> nativeBiomes = default;
+                NativeArray<SurfaceType> nativeSurfaces = default;
+                NativeArray<WaterState> nativeWaterStates = default;
+                NativeArray<float> nativeCanopyDensities = default;
+                NativeArray<float> nativeClearings = default;
+                NativeArray<float> nativeRockInfluences = default;
+                NativeArray<float> nativeDampShades = default;
+                NativeArray<float> nativeOrganicFloorIntents = default;
+                NativeArray<GroundCoverType> nativeGroundCovers = default;
 
-                stageStart = TerrainGenerationProfiler.GetTimestamp();
-                SurfaceType[,] surfaceTypeMap = SurfaceMapGenerator.GenerateSurfaceTypeMap(finalHeightMap, slopeMap, 
-                    riverMaskMap, biomeMap, waterSettings.WaterLevel);
-                TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainSurfaceMap, stageStart);
-
-                stageStart = TerrainGenerationProfiler.GetTimestamp();
-                WaterState[,] waterStateMap = WaterStateMapGenerator.GenerateWaterStateMap(finalHeightMap, riverMaskMap, waterSettings.WaterLevel);
-                TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainWaterStateMap, stageStart);
-
-                stageStart = TerrainGenerationProfiler.GetTimestamp();
-                WorldFeaturePlan worldFeaturePlan = WorldFeaturePlanGenerator.Generate(
-                    chunkCoord,
-                    chunkSize,
-                    seed,
-                    biomeMap,
-                    surfaceTypeMap,
-                    moistureMap,
-                    temperatureMap,
-                    slopeMap,
-                    riverMaskMap,
-                    worldFeatureGenerationSettings);
-                TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainWorldFeaturePlan, stageStart);
-
-                stageStart = TerrainGenerationProfiler.GetTimestamp();
-                GroundCoverType[,] groundCoverMap = GroundCoverMapGenerator.GenerateGroundCoverMap(
-                    biomeMap,
-                    surfaceTypeMap,
-                    moistureMap,
-                    slopeMap,
-                    riverMaskMap,
-                    worldFeaturePlan,
-                    chunkSize,
-                    seed,
-                    chunkCoord);
-                TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainGroundCoverMap, stageStart);
-
-                stageStart = TerrainGenerationProfiler.GetTimestamp();
-                var mountainSnow = MountainSnow.Generate(finalHeightMap, mountainMaskMap, riverMaskMap,
-                    temperatureMap, moistureMap, chunkSize, chunkCoord, seed, sampleScale, waterSettings, mountainHorizontalScale, erosion);
-                ControlMapPixelData controlMapRawData = TerrainControlMapBuilder.BuildRaw(
-                    surfaceTypeMap,
-                    groundCoverMap,
-                    mountainSnow,
-                    mountainSnowRenderCoverageGamma);
-                TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainControlMapBuild, stageStart);
-
-                TerrainDataRequestResult result = new TerrainDataRequestResult(chunkCoord, requestVersion, 
-                    finalHeightMap, gradientXMap, gradientZMap, slopeMap, moistureMap, temperatureMap, biomeMap, 
-                    surfaceTypeMap, waterStateMap, groundCoverMap, worldFeaturePlan, riverMaskMap, controlMapRawData);
-                TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainDataTotal, totalStart);
-
-                lock (terrainDataResultsLock)
+                try
                 {
-                    completedTerrainDataResults.Enqueue(result);
+                    int unusedMapWidth;
+                    int unusedMapHeight;
+                    nativeHeights = TerrainMapNativeUtility.CopyFloatMapToNative(finalHeightMap, Allocator.TempJob, out int mapWidth, out int mapHeight);
+                    nativeMoistures = TerrainMapNativeUtility.CopyFloatMapToNative(moistureMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+                    nativeTemperatures = TerrainMapNativeUtility.CopyFloatMapToNative(temperatureMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+                    nativeSlopes = TerrainMapNativeUtility.CopyFloatMapToNative(slopeMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+                    nativeMountainMasks = TerrainMapNativeUtility.CopyFloatMapToNative(mountainMaskMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+                    nativeRiverMasks = TerrainMapNativeUtility.CopyFloatMapToNative(riverMaskMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+
+                    stageStart = TerrainGenerationProfiler.GetTimestamp();
+                    BiomeType[,] biomeMap = BiomeMapGenerator.GenerateBiomeMap(
+                        nativeHeights,
+                        nativeMoistures,
+                        nativeTemperatures,
+                        nativeSlopes,
+                        nativeMountainMasks,
+                        nativeRiverMasks,
+                        mapWidth,
+                        mapHeight,
+                        waterSettings.WaterLevel,
+                        Allocator.TempJob,
+                        out nativeBiomes);
+                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainBiomeMap, stageStart);
+
+                    stageStart = TerrainGenerationProfiler.GetTimestamp();
+                    SurfaceType[,] surfaceTypeMap = SurfaceMapGenerator.GenerateSurfaceTypeMap(
+                        nativeHeights,
+                        nativeSlopes,
+                        nativeRiverMasks,
+                        nativeBiomes,
+                        mapWidth,
+                        mapHeight,
+                        waterSettings.WaterLevel,
+                        Allocator.TempJob,
+                        out nativeSurfaces);
+                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainSurfaceMap, stageStart);
+
+                    stageStart = TerrainGenerationProfiler.GetTimestamp();
+                    WaterState[,] waterStateMap = WaterStateMapGenerator.GenerateWaterStateMap(
+                        nativeHeights,
+                        nativeRiverMasks,
+                        mapWidth,
+                        mapHeight,
+                        waterSettings.WaterLevel,
+                        Allocator.TempJob,
+                        out nativeWaterStates);
+                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainWaterStateMap, stageStart);
+
+                    stageStart = TerrainGenerationProfiler.GetTimestamp();
+                    WorldFeaturePlan worldFeaturePlan = WorldFeaturePlanGenerator.Generate(
+                        chunkCoord,
+                        chunkSize,
+                        seed,
+                        biomeMap,
+                        surfaceTypeMap,
+                        moistureMap,
+                        temperatureMap,
+                        slopeMap,
+                        riverMaskMap,
+                        worldFeatureGenerationSettings);
+                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainWorldFeaturePlan, stageStart);
+
+                    nativeCanopyDensities = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.CanopyDensityMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+                    nativeClearings = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.ClearingMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+                    nativeRockInfluences = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.RockInfluenceMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+                    nativeDampShades = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.DampShadeMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+                    nativeOrganicFloorIntents = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.OrganicFloorIntentMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+
+                    stageStart = TerrainGenerationProfiler.GetTimestamp();
+                    GroundCoverType[,] groundCoverMap = GroundCoverMapGenerator.GenerateGroundCoverMap(
+                        nativeBiomes,
+                        nativeSurfaces,
+                        nativeMoistures,
+                        nativeSlopes,
+                        nativeRiverMasks,
+                        nativeCanopyDensities,
+                        nativeClearings,
+                        nativeRockInfluences,
+                        nativeDampShades,
+                        nativeOrganicFloorIntents,
+                        mapWidth,
+                        mapHeight,
+                        chunkSize,
+                        seed,
+                        chunkCoord,
+                        Allocator.TempJob,
+                        out nativeGroundCovers);
+                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainGroundCoverMap, stageStart);
+
+                    stageStart = TerrainGenerationProfiler.GetTimestamp();
+                    var mountainSnow = MountainSnow.Generate(finalHeightMap, mountainMaskMap, riverMaskMap,
+                        temperatureMap, moistureMap, chunkSize, chunkCoord, seed, sampleScale, waterSettings, mountainHorizontalScale, erosion);
+                    ControlMapPixelData controlMapRawData = TerrainControlMapBuilder.BuildRaw(
+                        surfaceTypeMap,
+                        groundCoverMap,
+                        mountainSnow,
+                        mountainSnowRenderCoverageGamma);
+                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainControlMapBuild, stageStart);
+
+                    TerrainDataRequestResult result = new TerrainDataRequestResult(chunkCoord, requestVersion,
+                        finalHeightMap, gradientXMap, gradientZMap, slopeMap, moistureMap, temperatureMap, biomeMap,
+                        surfaceTypeMap, waterStateMap, groundCoverMap, worldFeaturePlan, riverMaskMap, controlMapRawData);
+                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainDataTotal, totalStart);
+
+                    lock (terrainDataResultsLock)
+                    {
+                        completedTerrainDataResults.Enqueue(result);
+                    }
+                }
+                finally
+                {
+                    if (nativeHeights.IsCreated) nativeHeights.Dispose();
+                    if (nativeMoistures.IsCreated) nativeMoistures.Dispose();
+                    if (nativeTemperatures.IsCreated) nativeTemperatures.Dispose();
+                    if (nativeSlopes.IsCreated) nativeSlopes.Dispose();
+                    if (nativeMountainMasks.IsCreated) nativeMountainMasks.Dispose();
+                    if (nativeRiverMasks.IsCreated) nativeRiverMasks.Dispose();
+                    if (nativeBiomes.IsCreated) nativeBiomes.Dispose();
+                    if (nativeSurfaces.IsCreated) nativeSurfaces.Dispose();
+                    if (nativeWaterStates.IsCreated) nativeWaterStates.Dispose();
+                    if (nativeCanopyDensities.IsCreated) nativeCanopyDensities.Dispose();
+                    if (nativeClearings.IsCreated) nativeClearings.Dispose();
+                    if (nativeRockInfluences.IsCreated) nativeRockInfluences.Dispose();
+                    if (nativeDampShades.IsCreated) nativeDampShades.Dispose();
+                    if (nativeOrganicFloorIntents.IsCreated) nativeOrganicFloorIntents.Dispose();
+                    if (nativeGroundCovers.IsCreated) nativeGroundCovers.Dispose();
                 }
             }
             catch (ThreadAbortException)
@@ -290,7 +376,7 @@ public class TerrainRequestManager
     }
 
     public bool RequestLODMesh(ChunkCoord chunkCoord, int lod, int requestVersion, float[,] heightMap,
-        BiomeType[,] biomeMap, SurfaceType[,] surfaceTypeMap, WaterState[,] waterStateMap, float meshHeightMultiplier, 
+        BiomeType[,] biomeMap, SurfaceType[,] surfaceTypeMap, WaterState[,] waterStateMap, float meshHeightMultiplier,
         int stepIncrement, float worldScale, float[,] riverMaskMap)
     {
         stepIncrement = Mathf.Min(stepIncrement, erosion.maxMeshSpacing);
@@ -532,5 +618,69 @@ public class TerrainRequestManager
 
         result = null;
         return false;
+    }
+}
+
+public static class TerrainMapNativeUtility
+{
+    public static NativeArray<float> CopyFloatMapToNative(float[,] source, Allocator allocator, out int width, out int height)
+    {
+        width = source.GetLength(0);
+        height = source.GetLength(1);
+        NativeArray<float> result =
+            new NativeArray<float>(width * height, allocator, NativeArrayOptions.UninitializedMemory);
+
+        for (int x = 0; x < width; x++)
+        {
+            int rowOffset = x * height;
+            for (int z = 0; z < height; z++)
+                result[rowOffset + z] = source[x, z];
+        }
+
+        return result;
+    }
+
+    public static NativeArray<T> CopyMapToNative<T>(T[,] source, Allocator allocator, out int width, out int height)
+        where T : unmanaged
+    {
+        width = source.GetLength(0);
+        height = source.GetLength(1);
+        NativeArray<T> result =
+            new NativeArray<T>(width * height, allocator, NativeArrayOptions.UninitializedMemory);
+
+        for (int x = 0; x < width; x++)
+        {
+            int rowOffset = x * height;
+            for (int z = 0; z < height; z++)
+                result[rowOffset + z] = source[x, z];
+        }
+
+        return result;
+    }
+
+    public static void CopyNativeToFloatMap(NativeArray<float> source, float[,] target)
+    {
+        int width = target.GetLength(0);
+        int height = target.GetLength(1);
+
+        for (int x = 0; x < width; x++)
+        {
+            int rowOffset = x * height;
+            for (int z = 0; z < height; z++)
+                target[x, z] = source[rowOffset + z];
+        }
+    }
+
+    public static void CopyNativeToMap<T>(NativeArray<T> source, T[,] target) where T : unmanaged
+    {
+        int width = target.GetLength(0);
+        int height = target.GetLength(1);
+
+        for (int x = 0; x < width; x++)
+        {
+            int rowOffset = x * height;
+            for (int z = 0; z < height; z++)
+                target[x, z] = source[rowOffset + z];
+        }
     }
 }

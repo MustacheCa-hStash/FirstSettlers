@@ -46,6 +46,32 @@ public static class WaterStateMapGenerator
         return map;
     }
 
+    public static WaterState[,] GenerateWaterStateMap(
+        NativeArray<float> heights,
+        NativeArray<float> riverMasks,
+        int width,
+        int height,
+        float waterLevel,
+        Allocator resultAllocator,
+        out NativeArray<WaterState> nativeWaterStates)
+    {
+        nativeWaterStates = new NativeArray<WaterState>(width * height, resultAllocator, NativeArrayOptions.UninitializedMemory);
+        WaterStateMapJob job = new WaterStateMapJob
+        {
+            waterLevel = waterLevel,
+            heights = heights,
+            riverMasks = riverMasks,
+            waterStates = nativeWaterStates
+        };
+
+        JobHandle handle = job.Schedule(nativeWaterStates.Length, 64);
+        handle.Complete();
+
+        WaterState[,] map = new WaterState[width, height];
+        TerrainMapNativeUtility.CopyNativeToMap(nativeWaterStates, map);
+        return map;
+    }
+
     private static NativeArray<float> CopyFloatMapToNative(float[,] source, Allocator allocator, out int width, out int height)
     {
         width = source.GetLength(0);

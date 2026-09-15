@@ -5,7 +5,15 @@ using UnityEngine;
 public class ChunkManager
 {
     private const int FarTerrainLOD = 5;
+    private const int MaxRuntimeCreationsPerFrame = 4;
+    private const double RuntimeCreationBudgetMs = 0.35;
+    private readonly Queue<ChunkCoord> pendingRuntimeCreations = new();
+    private static readonly ProfilerMarker RuntimeCreationQueueMarker = new ProfilerMarker("FS.Streaming.RuntimeCreationQueue");
+    private static readonly ProfilerMarker CreateRuntimeMarker = new ProfilerMarker("FS.Streaming.CreateOneChunkRuntime");
     private static readonly ProfilerMarker UpdateActiveChunksMarker = new ProfilerMarker("FS.Streaming.ChunkManager.UpdateActiveChunks");
+    private static readonly ProfilerMarker ViewerSubChunkChangedMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleViewerSubChunkChanged");
+    private static readonly ProfilerMarker UpdateGrassStreamingMarker = new ProfilerMarker("FS.Streaming.Grass.UpdateStreaming");
+    private static readonly ProfilerMarker UpdateDistantTreesMarker = new ProfilerMarker("FS.Streaming.DistantTrees.Update");
     private static readonly ProfilerMarker ProcessCompletedRequestsMarker = new ProfilerMarker("FS.Streaming.ProcessCompletedRequests");
     private static readonly ProfilerMarker ApplyTerrainDataResultsMarker = new ProfilerMarker("FS.Streaming.ApplyTerrainDataResults");
     private static readonly ProfilerMarker ApplyTerrainDataResultMarker = new ProfilerMarker("FS.Streaming.ApplyTerrainDataResult");
@@ -89,6 +97,9 @@ public class ChunkManager
     private readonly Dictionary<ChunkCoord, ChunkRuntime> loadedChunks = new();
     private readonly Dictionary<ChunkCoord, FarTerrainTileRecord> farTerrainTileRecords = new();
     private readonly Dictionary<ChunkCoord, FarTerrainTileRuntime> loadedFarTerrainTiles = new();
+    private readonly Stack<ChunkRuntime> chunkRuntimePool = new();
+    private readonly Stack<FarTerrainTileRuntime> farTerrainTileRuntimePool = new();
+    private Transform runtimePoolParent;
 
     private HashSet<ChunkCoord> activeLastUpdate;
     private HashSet<ChunkCoord> activeThisUpdate;
@@ -256,6 +267,23 @@ public class ChunkManager
     {
         distantTrees?.Dispose();
         foliageManager?.Dispose();
+        foreach (var runtime in loadedChunks.Values)
+            runtime.DestroyRuntime();
+        loadedChunks.Clear();
+        while (chunkRuntimePool.Count > 0)
+            chunkRuntimePool.Pop().DestroyRuntime();
+        foreach (var runtime in loadedFarTerrainTiles.Values)
+            runtime.DestroyRuntime();
+        loadedFarTerrainTiles.Clear();
+        while (farTerrainTileRuntimePool.Count > 0)
+            farTerrainTileRuntimePool.Pop().DestroyRuntime();
+        if (runtimePoolParent != null)
+        {
+            Object.Destroy(runtimePoolParent.gameObject);
+            runtimePoolParent = null;
+        }
+        foreach (var record in chunkRecords.Values)
+            record.Dispose();
     }
 
     public bool TryGetDistantTreeSurface(ChunkCoord coord, out ChunkRuntime runtime,
@@ -528,18 +556,22 @@ public class ChunkManager
             lastUpdateViewerCoord = viewerCoord;
         }
 
+        ProcessRuntimeCreationQueue();
         UpdateVisibleChunkContent(viewerCoord);
 
         long foliageStart = TerrainGenerationProfiler.GetTimestamp();
 
         if (viewerChunkChanged || viewerSubChunkChanged)
         {
+            using (ViewerSubChunkChangedMarker.Auto())
+            {
             foliageManager.HandleViewerSubChunkChanged(
                 this,
                 viewerCoord,
                 viewerGlobalSubChunk,
                 orderedActiveCoords,
                 viewerChunkChanged);
+            }
         }
 
         foliageManager.DrawVisibleFoliageEveryFrame(
@@ -549,9 +581,15 @@ public class ChunkManager
             frustumVisibleCoords,
             viewerCamera);
 
-        foliageManager.UpdateGrassStreaming(this, orderedActiveCoords, viewer.position, viewerCamera);
+        using (UpdateGrassStreamingMarker.Auto())
+        {
+            foliageManager.UpdateGrassStreaming(this, orderedActiveCoords, viewer.position, viewerCamera);
+        }
 
-        distantTrees?.Update(this, viewer.position, viewerCamera, viewDistance);
+        using (UpdateDistantTreesMarker.Auto())
+        {
+            distantTrees?.Update(this, viewer.position, viewerCamera, viewDistance);
+        }
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FoliageTotal, foliageStart);
 
         lastViewerGlobalSubChunk = viewerGlobalSubChunk;
@@ -599,13 +637,19 @@ public class ChunkManager
         SortOrderedActiveCoords(viewerCoord);
         SortOrderedActiveFarTileCoords(viewerCoord);
 
+        // Rebuild from current priorities so a direction change cannot leave stale
+        // requests ahead of the chunks nearest the viewer.
+        pendingRuntimeCreations.Clear();
         foreach (ChunkCoord targetCoord in orderedActiveCoords)
         {
             ChunkRecord record = GetOrCreateChunkRecord(targetCoord);
-            ChunkRuntime runtime = GetOrCreateChunkRuntime(record);
-
-            if (!runtime.IsVisible)
-                runtime.SetVisible(true);
+            if (loadedChunks.TryGetValue(targetCoord, out ChunkRuntime runtime))
+            {
+                if (!runtime.IsVisible)
+                    runtime.SetVisible(true);
+            }
+            else
+                pendingRuntimeCreations.Enqueue(targetCoord);
 
             if (IsUrgentVisibleChunk(viewerCoord, targetCoord))
                 EnsureTerrainVisualRequested(record, viewerCoord, targetCoord);
@@ -645,7 +689,41 @@ public class ChunkManager
         temp = activeFarTilesLastUpdate;
         activeFarTilesLastUpdate = activeFarTilesThisUpdate;
         activeFarTilesThisUpdate = temp;
+        // Reconcile from loaded runtimes on each active-set change. This includes
+        // older handoffs still waiting and excludes chunks that have re-entered.
+        outgoingNormalChunks.Clear();
+        foreach (var entry in loadedChunks)
+            if (!activeLastUpdate.Contains(entry.Key))
+                outgoingNormalChunks.Add(entry.Key);
         renderVisibilityCursor = 0;
+        }
+    }
+
+    private void ProcessRuntimeCreationQueue()
+    {
+        using (RuntimeCreationQueueMarker.Auto())
+        {
+            long start = TerrainGenerationProfiler.GetTimestamp();
+            int created = 0;
+            while (pendingRuntimeCreations.Count > 0 && created < MaxRuntimeCreationsPerFrame)
+            {
+                ChunkCoord coord = pendingRuntimeCreations.Dequeue();
+                if (!activeLastUpdate.Contains(coord) || loadedChunks.ContainsKey(coord))
+                    continue;
+
+                using (CreateRuntimeMarker.Auto())
+                {
+                    ChunkRuntime runtime = GetOrCreateChunkRuntime(GetOrCreateChunkRecord(coord));
+                    runtime.SetVisible(true);
+                }
+                // The content queue may already have visited this coordinate while
+                // its runtime was pending. Creation must wake it again.
+                QueueVisibleChunkContentWork(coord);
+                created++;
+                // One constructor is indivisible; stop before starting another.
+                if (TerrainGenerationProfiler.GetElapsedMilliseconds(start) >= RuntimeCreationBudgetMs)
+                    break;
+            }
         }
     }
 
@@ -674,27 +752,54 @@ public class ChunkManager
     }
 
     private readonly List<ChunkCoord> completedTerrainHandoffs = new();
+    private readonly List<ChunkCoord> outgoingNormalChunks = new();
+    private readonly Dictionary<ChunkCoord, bool> normalReplacementReadiness = new();
+    private readonly HashSet<ChunkCoord> terrainHandoffHiddenCoords = new();
+    private static readonly ProfilerMarker TerrainHandoffsMarker = new ProfilerMarker("FS.Streaming.TerrainHandoffs");
+    private static readonly ProfilerMarker NormalHandoffsMarker = new ProfilerMarker("FS.Streaming.TerrainHandoffs.NormalCleanup");
+    private static readonly ProfilerMarker FarHandoffsMarker = new ProfilerMarker("FS.Streaming.TerrainHandoffs.FarReadinessAndCleanup");
+    private static readonly ProfilerMarker ReleaseNormalHandoffMarker = new ProfilerMarker("FS.Streaming.TerrainHandoffs.ReleaseNormalRuntime");
+    private static readonly ProfilerMarker ReleaseFarHandoffMarker = new ProfilerMarker("FS.Streaming.TerrainHandoffs.ReleaseFarRuntime");
+    private static readonly ProfilerMarker HandoffVisibilityMarker = new ProfilerMarker("FS.Streaming.TerrainHandoffs.ApplyVisibility");
 
     private void CompleteTerrainHandoffs()
     {
-        foreach (var runtime in loadedChunks.Values)
-            runtime.SetTerrainHandoffHidden(false);
-        // Generated data alone is insufficient: budgeted queues must attach it first.
-        completedTerrainHandoffs.Clear();
-        foreach (var entry in loadedChunks)
+        using (TerrainHandoffsMarker.Auto())
         {
-            if (activeLastUpdate.Contains(entry.Key))
+        // Resolve the final hidden set before changing renderers, so waiting handoffs
+        // do not reveal and re-hide the same terrain and water every frame.
+        terrainHandoffHiddenCoords.Clear();
+        // Generated data alone is insufficient: budgeted queues must attach it first.
+        using (NormalHandoffsMarker.Auto())
+        {
+        normalReplacementReadiness.Clear();
+        int retainedCount = 0;
+        for (int i = 0; i < outgoingNormalChunks.Count; i++)
+        {
+            ChunkCoord coord = outgoingNormalChunks[i];
+            if (!loadedChunks.TryGetValue(coord, out var runtime))
                 continue;
-            ChunkCoord tile = GetFarTerrainTileCoord(entry.Key);
-            if (activeFarTilesLastUpdate.Contains(tile) &&
-                (!loadedFarTerrainTiles.TryGetValue(tile, out var replacement) || !replacement.HasTerrainMesh))
+            ChunkCoord tile = GetFarTerrainTileCoord(coord);
+            if (!normalReplacementReadiness.TryGetValue(tile, out bool ready))
+            {
+                ready = !activeFarTilesLastUpdate.Contains(tile) ||
+                    (loadedFarTerrainTiles.TryGetValue(tile, out var replacement) && replacement.HasTerrainMesh);
+                normalReplacementReadiness.Add(tile, ready);
+            }
+            if (!ready)
+            {
+                outgoingNormalChunks[retainedCount++] = coord;
                 continue;
-            entry.Value.DestroyRuntime();
-            completedTerrainHandoffs.Add(entry.Key);
-        }
-        foreach (ChunkCoord coord in completedTerrainHandoffs)
+            }
+            using (ReleaseNormalHandoffMarker.Auto()) ReleaseChunkRuntime(coord, runtime);
             loadedChunks.Remove(coord);
+        }
+        if (retainedCount < outgoingNormalChunks.Count)
+            outgoingNormalChunks.RemoveRange(retainedCount, outgoingNormalChunks.Count - retainedCount);
+        }
 
+        using (FarHandoffsMarker.Auto())
+        {
         completedTerrainHandoffs.Clear();
         foreach (var entry in loadedFarTerrainTiles)
         {
@@ -719,15 +824,21 @@ public class ChunkManager
                 if (entry.Value.HasTerrainMesh)
                     for (int x = 0; x < farTerrainMacroTileSize; x++)
                         for (int z = 0; z < farTerrainMacroTileSize; z++)
-                            if (loadedChunks.TryGetValue(new ChunkCoord(originX + x, originZ + z), out var incoming))
-                                incoming.SetTerrainHandoffHidden(true);
+                            terrainHandoffHiddenCoords.Add(new ChunkCoord(originX + x, originZ + z));
                 continue;
             }
-            entry.Value.DestroyRuntime();
+            using (ReleaseFarHandoffMarker.Auto()) ReleaseFarTerrainTileRuntime(entry.Value);
             completedTerrainHandoffs.Add(entry.Key);
         }
         foreach (ChunkCoord coord in completedTerrainHandoffs)
             loadedFarTerrainTiles.Remove(coord);
+        }
+        using (HandoffVisibilityMarker.Auto())
+        {
+            foreach (var entry in loadedChunks)
+                entry.Value.SetTerrainHandoffHidden(terrainHandoffHiddenCoords.Contains(entry.Key));
+        }
+        }
     }
 
     private void RefreshUrgentVisibleChunks(
@@ -1259,18 +1370,34 @@ public class ChunkManager
 
         if (!loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
         {
-            runtime = new ChunkRuntime(
-                record,
-                chunkSize,
-                worldScale,
-                chunkParent,
-                terrainMaterial,
-                waterMaterial,
-                terrainReceiveShadows);
+            if (chunkRuntimePool.Count > 0)
+            {
+                runtime = chunkRuntimePool.Pop();
+                runtime.Reinitialize(record, chunkSize, worldScale, chunkParent, terrainReceiveShadows);
+            }
+            else
+            {
+                runtime = new ChunkRuntime(
+                    record,
+                    chunkSize,
+                    worldScale,
+                    chunkParent,
+                    terrainMaterial,
+                    waterMaterial,
+                    terrainReceiveShadows);
+            }
+
             loadedChunks.Add(coord, runtime);
         }
 
         return runtime;
+    }
+
+    private void ReleaseChunkRuntime(ChunkCoord coord, ChunkRuntime runtime)
+    {
+        runtime.ReleaseToPool(GetRuntimePoolParent());
+        chunkRuntimePool.Push(runtime);
+        RemoveFrustumVisibleCoord(coord);
     }
 
     private FarTerrainTileRecord GetOrCreateFarTerrainTileRecord(ChunkCoord tileCoord)
@@ -1290,18 +1417,51 @@ public class ChunkManager
 
         if (!loadedFarTerrainTiles.TryGetValue(tileCoord, out FarTerrainTileRuntime runtime))
         {
-            runtime = new FarTerrainTileRuntime(
-                record,
-                chunkSize * farTerrainMacroTileSize,
-                worldScale,
-                chunkParent,
-                terrainMaterial,
-                terrainReceiveShadows,
-                waterMaterial);
+            if (farTerrainTileRuntimePool.Count > 0)
+            {
+                runtime = farTerrainTileRuntimePool.Pop();
+                runtime.Reinitialize(
+                    record,
+                    chunkSize * farTerrainMacroTileSize,
+                    worldScale,
+                    chunkParent,
+                    terrainReceiveShadows);
+            }
+            else
+            {
+                runtime = new FarTerrainTileRuntime(
+                    record,
+                    chunkSize * farTerrainMacroTileSize,
+                    worldScale,
+                    chunkParent,
+                    terrainMaterial,
+                    terrainReceiveShadows,
+                    waterMaterial);
+            }
+
             loadedFarTerrainTiles.Add(tileCoord, runtime);
         }
 
         return runtime;
+    }
+
+    private void ReleaseFarTerrainTileRuntime(FarTerrainTileRuntime runtime)
+    {
+        runtime.ReleaseToPool(GetRuntimePoolParent());
+        farTerrainTileRuntimePool.Push(runtime);
+    }
+
+    private Transform GetRuntimePoolParent()
+    {
+        if (runtimePoolParent != null)
+            return runtimePoolParent;
+
+        GameObject poolRoot = new GameObject("Terrain_Runtime_Pool");
+        poolRoot.SetActive(false);
+        runtimePoolParent = poolRoot.transform;
+        if (chunkParent != null)
+            runtimePoolParent.SetParent(chunkParent, false);
+        return runtimePoolParent;
     }
 
     private void EnsureTerrainVisualRequested(ChunkRecord record, ChunkCoord viewerCoord, ChunkCoord targetCoord)

@@ -1,8 +1,133 @@
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
 
-public class ChunkRecord
+public class ChunkRecord : System.IDisposable
 {
+    public sealed class NativeTerrainData : System.IDisposable
+    {
+        public NativeArray<float> HeightMap { get; private set; }
+        public NativeArray<float> SlopeMap { get; private set; }
+        public NativeArray<BiomeType> BiomeMap { get; private set; }
+        public NativeArray<SurfaceType> SurfaceTypeMap { get; private set; }
+        public NativeArray<WaterState> WaterStateMap { get; private set; }
+        public NativeArray<GroundCoverType> GroundCoverMap { get; private set; }
+        public NativeArray<float> RiverMaskMap { get; private set; }
+
+        public int HeightMapWidth { get; private set; }
+        public int HeightMapHeight { get; private set; }
+        public int SlopeMapWidth { get; private set; }
+        public int SlopeMapHeight { get; private set; }
+        public int BiomeMapWidth { get; private set; }
+        public int BiomeMapHeight { get; private set; }
+        public int SurfaceTypeMapWidth { get; private set; }
+        public int SurfaceTypeMapHeight { get; private set; }
+        public int WaterStateMapWidth { get; private set; }
+        public int WaterStateMapHeight { get; private set; }
+        public int GroundCoverMapWidth { get; private set; }
+        public int GroundCoverMapHeight { get; private set; }
+        public int RiverMaskMapWidth { get; private set; }
+        public int RiverMaskMapHeight { get; private set; }
+
+        public bool HasGrassMaps =>
+            HeightMap.IsCreated &&
+            SurfaceTypeMap.IsCreated &&
+            BiomeMap.IsCreated;
+
+        public bool HasGroundCoverMap => GroundCoverMap.IsCreated;
+
+        public NativeTerrainData(
+            float[,] heightMap,
+            float[,] slopeMap,
+            BiomeType[,] biomeMap,
+            SurfaceType[,] surfaceTypeMap,
+            WaterState[,] waterStateMap,
+            GroundCoverType[,] groundCoverMap,
+            float[,] riverMaskMap)
+        {
+            HeightMap = CopyFloatMap(heightMap, out int heightWidth, out int heightHeight);
+            HeightMapWidth = heightWidth;
+            HeightMapHeight = heightHeight;
+
+            SlopeMap = CopyFloatMap(slopeMap, out int slopeWidth, out int slopeHeight);
+            SlopeMapWidth = slopeWidth;
+            SlopeMapHeight = slopeHeight;
+
+            BiomeMap = CopyMap(biomeMap, out int biomeWidth, out int biomeHeight);
+            BiomeMapWidth = biomeWidth;
+            BiomeMapHeight = biomeHeight;
+
+            SurfaceTypeMap = CopyMap(surfaceTypeMap, out int surfaceWidth, out int surfaceHeight);
+            SurfaceTypeMapWidth = surfaceWidth;
+            SurfaceTypeMapHeight = surfaceHeight;
+
+            WaterStateMap = CopyMap(waterStateMap, out int waterWidth, out int waterHeight);
+            WaterStateMapWidth = waterWidth;
+            WaterStateMapHeight = waterHeight;
+
+            GroundCoverMap = CopyMap(groundCoverMap, out int groundWidth, out int groundHeight);
+            GroundCoverMapWidth = groundWidth;
+            GroundCoverMapHeight = groundHeight;
+
+            RiverMaskMap = CopyFloatMap(riverMaskMap, out int riverWidth, out int riverHeight);
+            RiverMaskMapWidth = riverWidth;
+            RiverMaskMapHeight = riverHeight;
+        }
+
+        private static NativeArray<float> CopyFloatMap(float[,] source, out int width, out int height)
+        {
+            if (source == null)
+            {
+                width = 0;
+                height = 0;
+                return default;
+            }
+
+            width = source.GetLength(0);
+            height = source.GetLength(1);
+            var result = new NativeArray<float>(width * height, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            for (int x = 0; x < width; x++)
+            {
+                int rowOffset = x * height;
+                for (int z = 0; z < height; z++)
+                    result[rowOffset + z] = source[x, z];
+            }
+            return result;
+        }
+
+        private static NativeArray<T> CopyMap<T>(T[,] source, out int width, out int height) where T : unmanaged
+        {
+            if (source == null)
+            {
+                width = 0;
+                height = 0;
+                return default;
+            }
+
+            width = source.GetLength(0);
+            height = source.GetLength(1);
+            var result = new NativeArray<T>(width * height, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            for (int x = 0; x < width; x++)
+            {
+                int rowOffset = x * height;
+                for (int z = 0; z < height; z++)
+                    result[rowOffset + z] = source[x, z];
+            }
+            return result;
+        }
+
+        public void Dispose()
+        {
+            if (HeightMap.IsCreated) HeightMap.Dispose();
+            if (SlopeMap.IsCreated) SlopeMap.Dispose();
+            if (BiomeMap.IsCreated) BiomeMap.Dispose();
+            if (SurfaceTypeMap.IsCreated) SurfaceTypeMap.Dispose();
+            if (WaterStateMap.IsCreated) WaterStateMap.Dispose();
+            if (GroundCoverMap.IsCreated) GroundCoverMap.Dispose();
+            if (RiverMaskMap.IsCreated) RiverMaskMap.Dispose();
+        }
+    }
+
     public float[,] FarTreeHeightGrid { get; private set; }
     public Mesh FarTerrainWaterMesh { get; private set; }
     private ChunkCoord chunkCoord;
@@ -18,6 +143,7 @@ public class ChunkRecord
     private WorldFeaturePlan worldFeaturePlan;
     private float[,] riverMaskMap;
     private Texture2D[] controlMapData;
+    private NativeTerrainData nativeTerrainData;
     private ChunkFoliageData foliageData;
     private Mesh farTerrainMesh;
     private Texture2D[] farTerrainControlMapData;
@@ -70,6 +196,7 @@ public class ChunkRecord
     public WorldFeaturePlan WorldFeaturePlan => worldFeaturePlan;
     public float[,] RiverMaskMap => riverMaskMap;
     public Texture2D[] ControlMapData => controlMapData;
+    public NativeTerrainData NativeData => nativeTerrainData;
     public Texture2D[] FarTerrainControlMapData => farTerrainControlMapData;
     public ChunkFoliageData FoliageData {
         get => foliageData;
@@ -221,6 +348,15 @@ public class ChunkRecord
         worldFeaturePlan = returnedWorldFeaturePlan;
         riverMaskMap = returnedRiverMaskMap;
         controlMapData = returnedControlMapData;
+        nativeTerrainData?.Dispose();
+        nativeTerrainData = new NativeTerrainData(
+            heightMap,
+            slopeMap,
+            biomeMap,
+            surfaceTypeMap,
+            waterStateMap,
+            groundCoverMap,
+            riverMaskMap);
 
         terrainDataRequestInFlight = false;
         return true;
@@ -314,6 +450,12 @@ public class ChunkRecord
         LODWaterMeshes[lod] = waterMesh;
         meshRequestsInFlight.Remove(lod);
         return true;
+    }
+
+    public void Dispose()
+    {
+        nativeTerrainData?.Dispose();
+        nativeTerrainData = null;
     }
 
 }

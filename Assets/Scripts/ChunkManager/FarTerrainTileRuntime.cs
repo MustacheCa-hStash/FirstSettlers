@@ -3,11 +3,12 @@ using UnityEngine.Rendering;
 
 public class FarTerrainTileRuntime
 {
-    private readonly FarTerrainTileRecord record;
+    private FarTerrainTileRecord record;
     private GameObject root;
     private MeshFilter meshFilter;
     private MeshRenderer meshRenderer;
     private Material runtimeMaterial;
+    private GameObject waterRoot;
     private MeshFilter waterMeshFilter;
     private MeshRenderer waterMeshRenderer;
     private bool visible;
@@ -24,28 +25,20 @@ public class FarTerrainTileRuntime
         Material terrainMaterial,
         bool terrainReceiveShadows, Material waterMaterial = null)
     {
-        this.record = record;
-        ChunkCoord tileCoord = record.TileCoord;
-        Vector3 worldPosition = new Vector3(
-            (tileCoord.x * tileWorldChunkSize + tileWorldChunkSize * 0.5f) * worldScale,
-            0f,
-            (tileCoord.z * tileWorldChunkSize + tileWorldChunkSize * 0.5f) * worldScale);
+        CreateObjects(terrainMaterial, terrainReceiveShadows, waterMaterial);
+        Reinitialize(record, tileWorldChunkSize, worldScale, parent, terrainReceiveShadows);
+    }
 
-        root = new GameObject($"FarTile_{tileCoord.x}_{tileCoord.z}");
-        root.transform.position = worldPosition;
-        root.transform.parent = parent;
-
+    private void CreateObjects(Material terrainMaterial, bool terrainReceiveShadows, Material waterMaterial)
+    {
+        root = new GameObject("FarTile_Runtime");
         meshFilter = root.AddComponent<MeshFilter>();
         meshRenderer = root.AddComponent<MeshRenderer>();
         runtimeMaterial = new Material(terrainMaterial);
-        if (runtimeMaterial.HasProperty("_ReceiveShadows"))
-            runtimeMaterial.SetFloat("_ReceiveShadows", terrainReceiveShadows ? 1f : 0f);
-
         meshRenderer.material = runtimeMaterial;
         meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
-        meshRenderer.receiveShadows = terrainReceiveShadows;
 
-        var waterRoot = new GameObject("Water");
+        waterRoot = new GameObject("Water");
         waterRoot.transform.SetParent(root.transform, false);
         waterMeshFilter = waterRoot.AddComponent<MeshFilter>();
         waterMeshRenderer = waterRoot.AddComponent<MeshRenderer>();
@@ -54,7 +47,47 @@ public class FarTerrainTileRuntime
         waterMeshRenderer.receiveShadows = false;
         waterRoot.SetActive(false);
 
+        ConfigureRenderSettings(terrainReceiveShadows);
         SetVisible(false);
+    }
+
+    public void Reinitialize(
+        FarTerrainTileRecord record,
+        int tileWorldChunkSize,
+        float worldScale,
+        Transform parent,
+        bool terrainReceiveShadows)
+    {
+        this.record = record;
+        ChunkCoord tileCoord = record.TileCoord;
+        Vector3 worldPosition = new Vector3(
+            (tileCoord.x * tileWorldChunkSize + tileWorldChunkSize * 0.5f) * worldScale,
+            0f,
+            (tileCoord.z * tileWorldChunkSize + tileWorldChunkSize * 0.5f) * worldScale);
+
+        root.name = $"FarTile_{tileCoord.x}_{tileCoord.z}";
+        root.transform.SetParent(parent, false);
+        root.transform.position = worldPosition;
+        root.transform.localRotation = Quaternion.identity;
+        root.transform.localScale = Vector3.one;
+
+        ConfigureRenderSettings(terrainReceiveShadows);
+        visible = false;
+        renderVisible = false;
+        SetMesh(null, null);
+        SetRenderVisible(true);
+    }
+
+    private void ConfigureRenderSettings(bool terrainReceiveShadows)
+    {
+        if (runtimeMaterial != null && runtimeMaterial.HasProperty("_ReceiveShadows"))
+            runtimeMaterial.SetFloat("_ReceiveShadows", terrainReceiveShadows ? 1f : 0f);
+
+        if (meshRenderer != null)
+        {
+            meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            meshRenderer.receiveShadows = terrainReceiveShadows;
+        }
     }
 
     public void SetControlMaps(Texture2D[] controlMaps)
@@ -74,10 +107,13 @@ public class FarTerrainTileRuntime
 
     public void SetMesh(Mesh mesh, Mesh waterMesh = null)
     {
-        if (meshFilter != null && meshFilter.sharedMesh != mesh)
+        if (meshFilter && meshFilter.sharedMesh != mesh)
             meshFilter.sharedMesh = mesh;
-        waterMeshFilter.sharedMesh = waterMesh;
-        waterMeshFilter.gameObject.SetActive(waterMesh != null && waterMesh.vertexCount > 0);
+        if (waterMeshFilter)
+        {
+            waterMeshFilter.sharedMesh = waterMesh;
+            waterMeshFilter.gameObject.SetActive(waterMesh != null && waterMesh.vertexCount > 0);
+        }
     }
 
     public void SetRenderVisible(bool renderVisible)
@@ -87,9 +123,9 @@ public class FarTerrainTileRuntime
 
         this.renderVisible = renderVisible;
 
-        if (meshRenderer != null)
+        if (meshRenderer)
             meshRenderer.enabled = renderVisible;
-        if (waterMeshRenderer != null)
+        if (waterMeshRenderer)
             waterMeshRenderer.enabled = renderVisible;
     }
 
@@ -97,7 +133,7 @@ public class FarTerrainTileRuntime
     {
         visible = nextVisible;
 
-        if (root != null)
+        if (root)
             root.SetActive(nextVisible);
     }
 
@@ -126,13 +162,15 @@ public class FarTerrainTileRuntime
     {
         visible = false;
 
-        if (runtimeMaterial != null)
+        SetMesh(null, null);
+
+        if (runtimeMaterial)
         {
             Object.Destroy(runtimeMaterial);
             runtimeMaterial = null;
         }
 
-        if (root != null)
+        if (root)
         {
             Object.Destroy(root);
             root = null;
@@ -140,7 +178,40 @@ public class FarTerrainTileRuntime
 
         waterMeshFilter = null;
         waterMeshRenderer = null;
+        waterRoot = null;
         meshFilter = null;
         meshRenderer = null;
+        record = null;
+    }
+
+    public void ReleaseToPool(Transform poolParent)
+    {
+        visible = false;
+        renderVisible = false;
+        SetMesh(null, null);
+        SetRenderVisible(true);
+        ResetControlMaps();
+
+        if (root)
+        {
+            root.name = "FarTile_Pooled";
+            root.transform.SetParent(poolParent, false);
+            root.SetActive(false);
+        }
+
+        record = null;
+    }
+
+    private void ResetControlMaps()
+    {
+        if (runtimeMaterial == null)
+            return;
+
+        if (runtimeMaterial.HasProperty("_ControlMap0"))
+            runtimeMaterial.SetTexture("_ControlMap0", null);
+        if (runtimeMaterial.HasProperty("_ControlMap1"))
+            runtimeMaterial.SetTexture("_ControlMap1", null);
+        if (runtimeMaterial.HasProperty("_ControlMap2"))
+            runtimeMaterial.SetTexture("_ControlMap2", null);
     }
 }

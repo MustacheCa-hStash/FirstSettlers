@@ -1,11 +1,35 @@
 using System;
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
 
 // Persistent state is the backlog. Scheduling lists are rebuilt from unmet versions, so bounded
 // work cannot lose a request. GPU publication and job completion have independent progress budgets.
 public sealed class GrassStream : IDisposable
 {
+    private static readonly ProfilerMarker RefreshMarker = new ProfilerMarker("FS.Streaming.Grass.Refresh");
+    // Per-chunk scopes expose workload through Calls without per-tile profiling overhead.
+    private static readonly ProfilerMarker RefreshChunkMarker = new ProfilerMarker("FS.Streaming.Grass.Refresh.CheckOneChunk");
+    private static readonly ProfilerMarker LookupChunkMarker = new ProfilerMarker("FS.Streaming.Grass.Refresh.LookupAndCheckData");
+    private static readonly ProfilerMarker ReadTransformMarker = new ProfilerMarker("FS.Streaming.Grass.Refresh.ReadTransform");
+    private static readonly ProfilerMarker RangeCheckMarker = new ProfilerMarker("FS.Streaming.Grass.Refresh.CheckRange");
+    private static readonly ProfilerMarker CreateEntryMarker = new ProfilerMarker("FS.Streaming.Grass.Refresh.CreateEntry");
+    private static readonly ProfilerMarker ReconcileEntryMarker = new ProfilerMarker("FS.Streaming.Grass.Refresh.ReconcileEntry");
+    private static readonly ProfilerMarker UpdateTilesMarker = new ProfilerMarker("FS.Streaming.Grass.Refresh.UpdateChunkTiles");
+    private static readonly ProfilerMarker FindRetiredMarker = new ProfilerMarker("FS.Streaming.Grass.Refresh.FindRetiredEntries");
+    private static readonly ProfilerMarker RetireEntryMarker = new ProfilerMarker("FS.Streaming.Grass.Refresh.RetireOneEntry");
+    private static readonly ProfilerMarker ReleaseRendererMarker = new ProfilerMarker("FS.Streaming.Grass.Refresh.ReleaseRetiredRenderer");
+    private static readonly ProfilerMarker BlendMarker = new ProfilerMarker("FS.Streaming.Grass.UpdateBlends");
+    private static readonly ProfilerMarker CompleteMarker = new ProfilerMarker("FS.Streaming.Grass.CompleteJobs");
+    private static readonly ProfilerMarker PublishMarker = new ProfilerMarker("FS.Streaming.Grass.Publish");
+    private static readonly ProfilerMarker ScheduleMarker = new ProfilerMarker("FS.Streaming.Grass.Schedule");
+    private static readonly ProfilerMarker DrawMarker = new ProfilerMarker("FS.Streaming.Grass.Draw");
+    private static readonly ProfilerMarker RetiredMarker = new ProfilerMarker("FS.Streaming.Grass.CleanupRetiredJobs");
+    private static readonly ProfilerMarker ScanJobsMarker = new ProfilerMarker("FS.Streaming.Grass.ScanAndCompleteJobs");
+    private static readonly ProfilerMarker ApplyJobMarker = new ProfilerMarker("FS.Streaming.Grass.ApplyOneJob");
+    private static readonly ProfilerMarker DiscardJobMarker = new ProfilerMarker("FS.Streaming.Grass.DiscardOneJob");
+    private static readonly ProfilerMarker BuildUploadsMarker = new ProfilerMarker("FS.Streaming.Grass.BuildUploadQueue");
+    private static readonly ProfilerMarker SortUploadsMarker = new ProfilerMarker("FS.Streaming.Grass.SortUploadQueue");
 #if UNITY_EDITOR
     public static double RefreshMs, CompleteMs, PublishMs, ScheduleMs, DrawMs;
     public static int PendingCount, ActiveCount;
@@ -110,15 +134,33 @@ public sealed class GrassStream : IDisposable
             (viewer - lastViewer).sqrMagnitude > 0.000001f || Time.realtimeSinceStartupAsDouble >= nextRefresh;
         if (refresh)
         {
+            using (RefreshMarker.Auto())
+            {
             nextRefresh = Time.realtimeSinceStartupAsDouble + 0.1; lastViewer = viewer; lastActiveCount = activeCoords.Count;
             touched.Clear();
             foreach (var coord in activeCoords)
             {
-                var record = manager.GetChunkRecord(coord); var runtime = manager.GetChunkRuntime(record);
-                if (record == null || runtime == null || runtime.RootTransform == null || record.HeightMap == null || record.SurfaceTypeMap == null || record.BiomeMap == null) continue;
-                Vector3 origin = runtime.RootTransform.position;
-                float distance = GrassStreamingPolicy.DistanceToSquare(player, new Vector2(origin.x, origin.z), chunkWorld * 0.5f);
-                if (distance > outer + prefetch + width) continue;
+                using (RefreshChunkMarker.Auto())
+                {
+                ChunkRecord record;
+                ChunkRuntime runtime;
+                using (LookupChunkMarker.Auto())
+                {
+                    record = manager.GetChunkRecord(coord); runtime = manager.GetChunkRuntime(record);
+                    if (record == null || runtime == null || record.HeightMap == null || record.SurfaceTypeMap == null || record.BiomeMap == null) continue;
+                }
+                Vector3 origin;
+                using (ReadTransformMarker.Auto())
+                {
+                    Transform rootTransform = runtime.RootTransform;
+                    if (rootTransform == null) continue;
+                    origin = rootTransform.position;
+                }
+                using (RangeCheckMarker.Auto())
+                {
+                    float distance = GrassStreamingPolicy.DistanceToSquare(player, new Vector2(origin.x, origin.z), chunkWorld * 0.5f);
+                    if (distance > outer + prefetch + width) continue;
+                }
                 touched.Add(coord);
                 if (entries.TryGetValue(coord, out var entry) &&
                     (!ReferenceEquals(entry.Record, record) || !ReferenceEquals(entry.Runtime, runtime) ||
@@ -129,6 +171,8 @@ public sealed class GrassStream : IDisposable
                 { Retire(entry); entries.Remove(coord); entry = null; }
                 if (entry == null)
                 {
+                    using (CreateEntryMarker.Auto())
+                    {
                     if (record.FoliageData == null) record.FoliageData = new ChunkFoliageData();
                     // This streamer exclusively owns grass storage; other foliage retains its own fields.
                     var data = record.FoliageData;
@@ -150,7 +194,10 @@ public sealed class GrassStream : IDisposable
                             State = new State { WaitingSince = now, Blend = 1, DataVersion = data.IsNearGrassSubChunkGenerated(x, z) ? 1 : 0 },
                             Candidates = data.nearGrassInstancesBySubChunk[x, z] };
                     entries.Add(coord, entry);
+                    }
                 }
+                using (ReconcileEntryMarker.Auto())
+                {
                 if (entry.Version != version)
                 {
                     // Keep the displayed arena until each replacement subchunk is published.
@@ -169,6 +216,9 @@ public sealed class GrassStream : IDisposable
                     entry.Transform = runtime.RootTransform.localToWorldMatrix;
                     foreach (var tile in entry.Tiles) tile.State.DisplayVersion = 0;
                 }
+                }
+                using (UpdateTilesMarker.Auto())
+                {
                 foreach (var tile in entry.Tiles)
                 {
                     if (tile.Job == null && tile.State.DataVersion == tile.State.DesiredVersion &&
@@ -181,41 +231,62 @@ public sealed class GrassStream : IDisposable
                     tile.State.Wanted = GrassStreamingPolicy.DistanceToSquare(player, new Vector2(center.x, center.z), subSize * 0.5f) <= outer + prefetch;
                     tile.TargetBlend = GrassStreamingPolicy.TargetBlend(tile.Distance, nearRadius, width);
                 }
+                }
+                }
             }
+            using (FindRetiredMarker.Auto())
+            {
             remove.Clear();
             foreach (var pair in entries) if (!touched.Contains(pair.Key)) remove.Add(pair.Key);
+            }
             foreach (var coord in remove) { Retire(entries[coord]); entries.Remove(coord); }
+            }
         }
+        using (BlendMarker.Auto())
+        {
         foreach (var entry in entries.Values) foreach (var tile in entry.Tiles)
         {
             tile.State.Blend = GrassStreamingPolicy.AdvanceBlend(tile.State.Blend, tile.TargetBlend, Time.unscaledDeltaTime,
                 settings.representationTransitionSeconds, settings.representationHysteresis);
             entry.Renderer.SetBlend(tile.Index, tile.State.Blend);
         }
+        }
 #if UNITY_EDITOR
         RefreshMs = TerrainGenerationProfiler.GetElapsedMilliseconds(phaseStart);
 #endif
         phaseStart = TerrainGenerationProfiler.GetTimestamp();
-        CompleteJobs();
+        using (CompleteMarker.Auto())
+        {
+            CompleteJobs();
+        }
 #if UNITY_EDITOR
         CompleteMs = TerrainGenerationProfiler.GetElapsedMilliseconds(phaseStart);
 #endif
         phaseStart = TerrainGenerationProfiler.GetTimestamp();
-        Publish(nearMesh, farMesh);
+        using (PublishMarker.Auto())
+        {
+            Publish(nearMesh, farMesh);
+        }
 #if UNITY_EDITOR
         PublishMs = TerrainGenerationProfiler.GetElapsedMilliseconds(phaseStart);
 #endif
         phaseStart = TerrainGenerationProfiler.GetTimestamp();
-        Schedule(now, outer);
+        using (ScheduleMarker.Auto())
+        {
+            Schedule(now, outer);
+        }
 #if UNITY_EDITOR
         ScheduleMs = TerrainGenerationProfiler.GetElapsedMilliseconds(phaseStart);
         ResidentGrassRenderer.GpuChunks = ResidentGrassRenderer.FallbackChunks = 0;
         PendingCount = requests.Count; ActiveCount = activeJobs;
 #endif
         phaseStart = TerrainGenerationProfiler.GetTimestamp();
+        using (DrawMarker.Auto())
+        {
         foreach (var entry in entries.Values)
             if (entry.Runtime.IsVisible && entry.Runtime.HasTerrainMesh && entry.Runtime.IsFoliageRenderVisible)
                 entry.Renderer.Draw(settings, nearMesh, nearMaterial, farMesh, farMaterial, camera, planes, viewer, subSize, outer, width);
+        }
 #if UNITY_EDITOR
         DrawMs = TerrainGenerationProfiler.GetElapsedMilliseconds(phaseStart);
 #endif
@@ -223,29 +294,39 @@ public sealed class GrassStream : IDisposable
     private void CompleteJobs()
     {
         long start = TerrainGenerationProfiler.GetTimestamp(); int completed = 0;
+        using (RetiredMarker.Auto())
+        {
         for (int i = retiredJobs.Count - 1; i >= 0; i--)
-            if (retiredJobs[i].Job.IsCompleted) { retiredJobs[i].Job.Dispose(); retiredJobs.RemoveAt(i); activeJobs--; }
+            if (retiredJobs[i].Job.IsCompleted) { using (DiscardJobMarker.Auto()) retiredJobs[i].Job.Dispose(); retiredJobs.RemoveAt(i); activeJobs--; }
+        }
+        using (ScanJobsMarker.Auto())
+        {
         foreach (var entry in entries.Values) foreach (var tile in entry.Tiles)
         {
             if (tile.Job == null || !tile.Job.IsCompleted) continue;
             if (tile.JobVersion == tile.State.DesiredVersion)
             {
-                tile.Job.CompleteAndApply();
+                using (ApplyJobMarker.Auto()) tile.Job.CompleteAndApply();
                 tile.Candidates = entry.Data.nearGrassInstancesBySubChunk[tile.X, tile.Z];
                 tile.State.DataVersion = tile.JobVersion;
             }
-            else tile.Job.Dispose();
+            else { using (DiscardJobMarker.Auto()) tile.Job.Dispose(); }
             tile.Job = null; activeJobs--; completed++;
             if (completed >= Mathf.Max(1, settings.maxSubChunkGenerationsPerFrame) ||
                 TerrainGenerationProfiler.GetElapsedMilliseconds(start) >= Mathf.Max(0.05f, settings.grassCompletionBudgetMs)) return;
         }
+        }
     }
     private void Publish(Mesh near, Mesh far)
     {
+        using (BuildUploadsMarker.Auto())
+        {
         requests.Clear();
         foreach (var entry in entries.Values) foreach (var tile in entry.Tiles)
             if (tile.State.NeedsUpload) requests.Add(tile);
-        SortRequests(Time.unscaledTime, Mathf.Max(1, settings.billboardRingRadius * chunkSize * worldScale));
+        }
+        using (SortUploadsMarker.Auto())
+            SortRequests(Time.unscaledTime, Mathf.Max(1, settings.billboardRingRadius * chunkSize * worldScale));
         long start = TerrainGenerationProfiler.GetTimestamp(); int count = 0;
         foreach (var tile in requests)
         {
@@ -299,8 +380,11 @@ public sealed class GrassStream : IDisposable
 
     private void Retire(Entry entry)
     {
+        using (RetireEntryMarker.Auto())
+        {
         foreach (var tile in entry.Tiles) if (tile.Job != null) retiredJobs.Add(tile);
-        entry.Dispose();
+        using (ReleaseRendererMarker.Auto()) entry.Dispose();
+        }
     }
 #if UNITY_EDITOR
     public bool IsSettledForValidation()

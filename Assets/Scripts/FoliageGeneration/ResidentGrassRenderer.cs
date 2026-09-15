@@ -2,11 +2,16 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Unity.Profiling;
 
 // One resident arena per chunk, with fixed subchunk slots and two indirect draws.
 // Uploading a completed subchunk never repacks/reuploads its neighbors.
 public sealed class ResidentGrassRenderer : IDisposable
 {
+    private static readonly ProfilerMarker UploadMarker = new ProfilerMarker("FS.Streaming.Grass.UploadOneTile");
+    private static readonly ProfilerMarker PrepareMarker = new ProfilerMarker("FS.Streaming.Grass.PrepareUploadInstances");
+    private static readonly ProfilerMarker SetDataMarker = new ProfilerMarker("FS.Streaming.Grass.UploadSetData");
+    private static readonly ProfilerMarker ResizeMarker = new ProfilerMarker("FS.Streaming.Grass.ReleaseForSlotGrowth");
 #if UNITY_EDITOR
     public static int GpuChunks, FallbackChunks;
 #endif
@@ -32,8 +37,13 @@ public sealed class ResidentGrassRenderer : IDisposable
     public bool HasSlot(int index) => cpuSlots[index] != null;
     public void Upload(int index, List<FoliageInstanceData> candidates, Matrix4x4 localToWorld, Mesh near, Mesh far)
     {
-        if (candidates.Count > slotSize) { ReleaseBuffers(); slotSize = Mathf.NextPowerOfTwo(candidates.Count); }
-        var upload = new GrassIndirectRenderer.Instance[candidates.Count];
+        using (UploadMarker.Auto())
+        {
+        if (candidates.Count > slotSize) { using (ResizeMarker.Auto()) ReleaseBuffers(); slotSize = Mathf.NextPowerOfTwo(candidates.Count); }
+        GrassIndirectRenderer.Instance[] upload;
+        using (PrepareMarker.Auto())
+        {
+        upload = new GrassIndirectRenderer.Instance[candidates.Count];
         for (int i = 0; i < candidates.Count; i++)
         {
             var c = candidates[i];
@@ -48,7 +58,12 @@ public sealed class ResidentGrassRenderer : IDisposable
         cpuSlots[index] = upload;
         metadata[index].x = upload.Length;
         metadataDirty = true;
-        if (sources != null && upload.Length > 0) sources.SetData(upload, 0, index * slotSize, upload.Length);
+        }
+        if (sources != null && upload.Length > 0)
+        {
+            using (SetDataMarker.Auto()) sources.SetData(upload, 0, index * slotSize, upload.Length);
+        }
+        }
     }
     private void IncludeBounds(Bounds b) { if (!hasBounds) { bounds = b; hasBounds = true; } else bounds.Encapsulate(b); }
     public void SetBlend(int index, float blend)

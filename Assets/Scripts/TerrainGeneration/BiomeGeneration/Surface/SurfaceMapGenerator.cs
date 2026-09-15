@@ -59,6 +59,38 @@ public static class SurfaceMapGenerator
         return map;
     }
 
+    public static SurfaceType[,] GenerateSurfaceTypeMap(
+        NativeArray<float> heights,
+        NativeArray<float> slopes,
+        NativeArray<float> riverMasks,
+        NativeArray<BiomeType> biomes,
+        int width,
+        int height,
+        float waterLevel,
+        Allocator resultAllocator,
+        out NativeArray<SurfaceType> nativeSurfaces)
+    {
+        nativeSurfaces = new NativeArray<SurfaceType>(width * height, resultAllocator, NativeArrayOptions.UninitializedMemory);
+        SurfaceMapJob job = new SurfaceMapJob
+        {
+            width = width,
+            height = height,
+            waterLevel = waterLevel,
+            heights = heights,
+            slopes = slopes,
+            riverMasks = riverMasks,
+            biomes = biomes,
+            surfaces = nativeSurfaces
+        };
+
+        JobHandle handle = job.Schedule(nativeSurfaces.Length, 64);
+        handle.Complete();
+
+        SurfaceType[,] map = new SurfaceType[width, height];
+        TerrainMapNativeUtility.CopyNativeToMap(nativeSurfaces, map);
+        return map;
+    }
+
     private static NativeArray<float> CopyFloatMapToNative(float[,] source, Allocator allocator, out int width, out int height)
     {
         width = source.GetLength(0);

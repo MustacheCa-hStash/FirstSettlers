@@ -102,6 +102,56 @@ public static class GroundCoverMapGenerator
         return groundCoverMap;
     }
 
+    public static GroundCoverType[,] GenerateGroundCoverMap(
+        NativeArray<BiomeType> biomes,
+        NativeArray<SurfaceType> surfaces,
+        NativeArray<float> moistures,
+        NativeArray<float> slopes,
+        NativeArray<float> riverMasks,
+        NativeArray<float> canopyDensities,
+        NativeArray<float> clearings,
+        NativeArray<float> rockInfluences,
+        NativeArray<float> dampShades,
+        NativeArray<float> organicFloorIntents,
+        int width,
+        int height,
+        int chunkSize,
+        int seed,
+        ChunkCoord chunkCoord,
+        Allocator resultAllocator,
+        out NativeArray<GroundCoverType> nativeGroundCovers)
+    {
+        nativeGroundCovers =
+            new NativeArray<GroundCoverType>(width * height, resultAllocator, NativeArrayOptions.UninitializedMemory);
+
+        GroundCoverMapJob job = new GroundCoverMapJob
+        {
+            height = height,
+            chunkSize = chunkSize,
+            seed = seed,
+            chunkX = chunkCoord.x,
+            chunkZ = chunkCoord.z,
+            biomes = biomes,
+            surfaces = surfaces,
+            moistures = moistures,
+            slopes = slopes,
+            riverMasks = riverMasks,
+            canopyDensities = canopyDensities,
+            clearings = clearings,
+            rockInfluences = rockInfluences,
+            dampShades = dampShades,
+            organicFloorIntents = organicFloorIntents,
+            groundCovers = nativeGroundCovers
+        };
+
+        JobHandle handle = job.Schedule(nativeGroundCovers.Length, 64);
+        handle.Complete();
+
+        GroundCoverType[,] groundCoverMap = new GroundCoverType[width, height];
+        TerrainMapNativeUtility.CopyNativeToMap(nativeGroundCovers, groundCoverMap);
+        return groundCoverMap;
+    }
+
     private static NativeArray<float> CopyFloatMapToNative(float[,] source, Allocator allocator, out int width, out int height)
     {
         width = source.GetLength(0);

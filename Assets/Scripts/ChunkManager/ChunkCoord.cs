@@ -1,6 +1,7 @@
 using System;
 
-public struct ChunkCoord
+// Generic collection lookups must use typed equality to avoid boxing coordinates.
+public struct ChunkCoord : IEquatable<ChunkCoord>
 {
     public int x;
     public int z;

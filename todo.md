@@ -4,6 +4,7 @@ Updated September 12, 2026. Use the user's walking route and camera for performa
 
 ## Current pass: priorities 1 and 2
 
+- [x] September 13: implement `IEquatable<ChunkCoord>` to eliminate coordinate boxing in generic dictionary/hash-set comparisons (captured in grass record lookup and terrain handoff checks). Audited other custom collection keys: SubChunkCoord and foliage work keys already implement typed equality. Runtime compilation passed; standalone .NET regression checks passed with zero bytes allocated across 400,000 warmed hit/miss lookups. Unity walking-route performance verification remains pending, with allocation call stacks off for timing comparisons.
 - [x] Remove redundant LOD triangle list -> array -> list copies; transfer ownership of the completed builder list.
 - [x] Reuse flower/dandelion matrix and instance-data scratch lists and per-prefab clover scratch lists between chunks. Final runtime render batches still own their arrays.
 - [x] Cache the grass scheduling comparison delegate instead of allocating a capturing lambda every scheduling pass.

@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using Unity.Profiling;
 
 public static class FoliageGenerator
 {
@@ -98,7 +99,8 @@ public static class FoliageGenerator
 
         foliageData.ClearNearGrassSubChunk(localSubChunkX, localSubChunkZ);
 
-        if (record.SurfaceTypeMap == null || record.HeightMap == null || record.BiomeMap == null)
+        ChunkRecord.NativeTerrainData nativeData = record.NativeData;
+        if (nativeData == null || !nativeData.HasGrassMaps)
         {
             foliageData.MarkNearGrassSubChunkGenerated(localSubChunkX, localSubChunkZ, applyCloverInfluence);
             return false;
@@ -138,10 +140,6 @@ public static class FoliageGenerator
         int candidateCount = cellCountX * cellCountZ;
 
         const Allocator asyncAllocator = Allocator.Persistent;
-        NativeArray<float> heightMap = FlattenFloatMap(record.HeightMap, asyncAllocator, out int heightMapWidth, out int heightMapHeight);
-        NativeArray<SurfaceType> surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, asyncAllocator, out int surfaceMapWidth, out int surfaceMapHeight);
-        NativeArray<BiomeType> biomeMap = FlattenBiomeMap(record.BiomeMap, asyncAllocator, out int biomeMapWidth, out int biomeMapHeight);
-        NativeArray<GroundCoverType> groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, asyncAllocator, out int groundCoverMapWidth, out int groundCoverMapHeight);
         NativeArray<float2> treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, asyncAllocator);
         NativeArray<float2> bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, asyncAllocator);
         NativeArray<float2> rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, asyncAllocator);
@@ -156,19 +154,19 @@ public static class FoliageGenerator
         {
             GrassSubChunkDiscoveryJob job = new GrassSubChunkDiscoveryJob
             {
-                heightMap = heightMap,
-                heightMapWidth = heightMapWidth,
-                heightMapHeight = heightMapHeight,
-                surfaceMap = surfaceMap,
-                surfaceMapWidth = surfaceMapWidth,
-                surfaceMapHeight = surfaceMapHeight,
-                biomeMap = biomeMap,
-                biomeMapWidth = biomeMapWidth,
-                biomeMapHeight = biomeMapHeight,
-                groundCoverMap = groundCoverMap,
-                groundCoverMapWidth = groundCoverMapWidth,
-                groundCoverMapHeight = groundCoverMapHeight,
-                hasGroundCoverMap = record.GroundCoverMap != null,
+                heightMap = nativeData.HeightMap,
+                heightMapWidth = nativeData.HeightMapWidth,
+                heightMapHeight = nativeData.HeightMapHeight,
+                surfaceMap = nativeData.SurfaceTypeMap,
+                surfaceMapWidth = nativeData.SurfaceTypeMapWidth,
+                surfaceMapHeight = nativeData.SurfaceTypeMapHeight,
+                biomeMap = nativeData.BiomeMap,
+                biomeMapWidth = nativeData.BiomeMapWidth,
+                biomeMapHeight = nativeData.BiomeMapHeight,
+                groundCoverMap = nativeData.GroundCoverMap,
+                groundCoverMapWidth = nativeData.GroundCoverMapWidth,
+                groundCoverMapHeight = nativeData.GroundCoverMapHeight,
+                hasGroundCoverMap = nativeData.HasGroundCoverMap,
                 treeExclusionPositions = treeExclusionPositions,
                 bushExclusionPositions = bushExclusionPositions,
                 rockExclusionPositions = rockExclusionPositions,
@@ -212,10 +210,6 @@ public static class FoliageGenerator
                 localSubChunkZ,
                 applyCloverInfluence,
                 handle,
-                heightMap,
-                surfaceMap,
-                biomeMap,
-                groundCoverMap,
                 treeExclusionPositions,
                 bushExclusionPositions,
                 rockExclusionPositions,
@@ -225,14 +219,6 @@ public static class FoliageGenerator
         }
         catch
         {
-            if (heightMap.IsCreated)
-                heightMap.Dispose();
-            if (surfaceMap.IsCreated)
-                surfaceMap.Dispose();
-            if (biomeMap.IsCreated)
-                biomeMap.Dispose();
-            if (groundCoverMap.IsCreated)
-                groundCoverMap.Dispose();
             if (treeExclusionPositions.IsCreated)
                 treeExclusionPositions.Dispose();
             if (bushExclusionPositions.IsCreated)
@@ -250,15 +236,15 @@ public static class FoliageGenerator
 
     public sealed class GrassSubChunkGenerationJob : System.IDisposable
     {
+        private static readonly ProfilerMarker ConvertMarker = new ProfilerMarker("FS.Streaming.Grass.ConvertJobResults");
+        private static readonly ProfilerMarker SortMarker = new ProfilerMarker("FS.Streaming.Grass.SortInstances");
+        private static readonly ProfilerMarker FlagsMarker = new ProfilerMarker("FS.Streaming.Grass.MarkGenerated");
+        private static readonly ProfilerMarker DisposeMarker = new ProfilerMarker("FS.Streaming.Grass.DisposeJobArrays");
         private readonly ChunkRecord record;
         private readonly int localSubChunkX;
         private readonly int localSubChunkZ;
         private readonly bool applyCloverInfluence;
         private JobHandle handle;
-        private NativeArray<float> heightMap;
-        private NativeArray<SurfaceType> surfaceMap;
-        private NativeArray<BiomeType> biomeMap;
-        private NativeArray<GroundCoverType> groundCoverMap;
         private NativeArray<float2> treeExclusionPositions;
         private NativeArray<float2> bushExclusionPositions;
         private NativeArray<float2> rockExclusionPositions;
@@ -272,10 +258,6 @@ public static class FoliageGenerator
             int localSubChunkZ,
             bool applyCloverInfluence,
             JobHandle handle,
-            NativeArray<float> heightMap,
-            NativeArray<SurfaceType> surfaceMap,
-            NativeArray<BiomeType> biomeMap,
-            NativeArray<GroundCoverType> groundCoverMap,
             NativeArray<float2> treeExclusionPositions,
             NativeArray<float2> bushExclusionPositions,
             NativeArray<float2> rockExclusionPositions,
@@ -287,10 +269,6 @@ public static class FoliageGenerator
             this.localSubChunkZ = localSubChunkZ;
             this.applyCloverInfluence = applyCloverInfluence;
             this.handle = handle;
-            this.heightMap = heightMap;
-            this.surfaceMap = surfaceMap;
-            this.biomeMap = biomeMap;
-            this.groundCoverMap = groundCoverMap;
             this.treeExclusionPositions = treeExclusionPositions;
             this.bushExclusionPositions = bushExclusionPositions;
             this.rockExclusionPositions = rockExclusionPositions;
@@ -313,6 +291,8 @@ public static class FoliageGenerator
                 List<FoliageInstanceData> subChunkInstances =
                     foliageData.nearGrassInstancesBySubChunk[localSubChunkX, localSubChunkZ];
 
+                using (ConvertMarker.Auto())
+                {
                 for (int i = 0; i < results.Length; i++)
                 {
                     GrassSubChunkDiscoveryResult result = results[i];
@@ -327,8 +307,11 @@ public static class FoliageGenerator
                         result.forestBlend));
                 }
 
-                SortSubChunkBucketBySelectionRank(foliageData, localSubChunkX, localSubChunkZ);
-                foliageData.MarkNearGrassSubChunkGenerated(localSubChunkX, localSubChunkZ, applyCloverInfluence);
+                }
+                using (SortMarker.Auto())
+                    SortSubChunkBucketBySelectionRank(foliageData, localSubChunkX, localSubChunkZ);
+                using (FlagsMarker.Auto())
+                    foliageData.MarkNearGrassSubChunkGenerated(localSubChunkX, localSubChunkZ, applyCloverInfluence);
             }
             finally
             {
@@ -347,14 +330,8 @@ public static class FoliageGenerator
 
         private void DisposeArrays()
         {
-            if (heightMap.IsCreated)
-                heightMap.Dispose();
-            if (surfaceMap.IsCreated)
-                surfaceMap.Dispose();
-            if (biomeMap.IsCreated)
-                biomeMap.Dispose();
-            if (groundCoverMap.IsCreated)
-                groundCoverMap.Dispose();
+            using (DisposeMarker.Auto())
+            {
             if (treeExclusionPositions.IsCreated)
                 treeExclusionPositions.Dispose();
             if (bushExclusionPositions.IsCreated)
@@ -367,6 +344,7 @@ public static class FoliageGenerator
                 results.Dispose();
 
             disposed = true;
+            }
         }
     }
 
