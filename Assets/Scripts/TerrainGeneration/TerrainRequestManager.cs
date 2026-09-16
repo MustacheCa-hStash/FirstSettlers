@@ -375,12 +375,11 @@ public class TerrainRequestManager
         return true;
     }
 
-    public bool RequestLODMesh(ChunkCoord chunkCoord, int lod, int requestVersion, float[,] heightMap,
-        BiomeType[,] biomeMap, SurfaceType[,] surfaceTypeMap, WaterState[,] waterStateMap, float meshHeightMultiplier,
-        int stepIncrement, float worldScale, float[,] riverMaskMap)
+    public bool RequestLODMesh(ChunkCoord chunkCoord, int lod, int requestVersion, ChunkRecord.NativeTerrainData nativeData, float meshHeightMultiplier,
+        int stepIncrement, float worldScale)
     {
         stepIncrement = Mathf.Min(stepIncrement, erosion.maxMeshSpacing);
-        int meshChunkSize = heightMap.GetLength(0) - 3;
+        int meshChunkSize = nativeData.HeightMapWidth - 3;
         while (stepIncrement > 1 && meshChunkSize % stepIncrement != 0) stepIncrement--;
         if (Interlocked.CompareExchange(ref activeMeshJobs, 0, 0) >= maxActiveMeshJobs)
             return false;
@@ -392,14 +391,10 @@ public class TerrainRequestManager
             chunkCoord,
             lod,
             requestVersion,
-            heightMap,
-            biomeMap,
-            surfaceTypeMap,
-            waterStateMap,
+            nativeData,
             meshHeightMultiplier,
             stepIncrement,
-            worldScale,
-            riverMaskMap);
+            worldScale);
 
         if (!ThreadPool.UnsafeQueueUserWorkItem(ProcessLODMeshRequest, workItem))
         {
@@ -421,19 +416,16 @@ public class TerrainRequestManager
             long stageStart = TerrainGenerationProfiler.GetTimestamp();
             MeshData terrainMeshData = MeshGenerator.GenerateTerrainMesh(
                 workItem.ChunkCoord,
-                workItem.HeightMap,
-                workItem.BiomeMap,
-                workItem.SurfaceTypeMap,
-                workItem.WaterStateMap,
+                workItem.NativeData,
                 workItem.MeshHeightMultiplier,
                 workItem.StepIncrement,
-                workItem.WorldScale,
-                workItem.RiverMaskMap);
+                workItem.WorldScale);
             TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainMeshBuild, stageStart);
 
             stageStart = TerrainGenerationProfiler.GetTimestamp();
             WaterMeshData waterMeshData = WaterMeshGenerator.GenerateWaterMesh(
-                workItem.WaterStateMap,
+                workItem.NativeData.WaterStateMap,
+                workItem.NativeData.WaterStateMapWidth,
                 workItem.StepIncrement,
                 workItem.WorldScale,
                 workItem.Manager.waterSettings.SurfaceY);
@@ -469,41 +461,29 @@ public class TerrainRequestManager
         public readonly ChunkCoord ChunkCoord;
         public readonly int LOD;
         public readonly int RequestVersion;
-        public readonly float[,] HeightMap;
-        public readonly BiomeType[,] BiomeMap;
-        public readonly SurfaceType[,] SurfaceTypeMap;
-        public readonly WaterState[,] WaterStateMap;
+        public readonly ChunkRecord.NativeTerrainData NativeData;
         public readonly float MeshHeightMultiplier;
         public readonly int StepIncrement;
         public readonly float WorldScale;
-        public readonly float[,] RiverMaskMap;
 
         public LODMeshRequestWorkItem(
             TerrainRequestManager manager,
             ChunkCoord chunkCoord,
             int lod,
             int requestVersion,
-            float[,] heightMap,
-            BiomeType[,] biomeMap,
-            SurfaceType[,] surfaceTypeMap,
-            WaterState[,] waterStateMap,
+            ChunkRecord.NativeTerrainData nativeData,
             float meshHeightMultiplier,
             int stepIncrement,
-            float worldScale,
-            float[,] riverMaskMap)
+            float worldScale)
         {
             Manager = manager;
             ChunkCoord = chunkCoord;
             LOD = lod;
             RequestVersion = requestVersion;
-            HeightMap = heightMap;
-            BiomeMap = biomeMap;
-            SurfaceTypeMap = surfaceTypeMap;
-            WaterStateMap = waterStateMap;
+            NativeData = nativeData;
             MeshHeightMultiplier = meshHeightMultiplier;
             StepIncrement = stepIncrement;
             WorldScale = worldScale;
-            RiverMaskMap = riverMaskMap;
         }
     }
 
@@ -559,6 +539,18 @@ public class TerrainRequestManager
 
         return true;
     }
+
+    public void WaitForActiveRequestsToFinish(int timeoutMilliseconds = 2000)
+    {
+        int waitedMilliseconds = 0;
+        while (waitedMilliseconds < timeoutMilliseconds &&
+               (ActiveTerrainDataJobCount > 0 || ActiveFarTerrainJobCount > 0 || ActiveMeshJobCount > 0 || ActiveColliderJobCount > 0))
+        {
+            Thread.Sleep(1);
+            waitedMilliseconds++;
+        }
+    }
+
 
     public bool TryDequeueTerrainDataResult(out TerrainDataRequestResult result)
     {

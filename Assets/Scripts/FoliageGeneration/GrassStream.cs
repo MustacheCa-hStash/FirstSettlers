@@ -306,7 +306,14 @@ public sealed class GrassStream : IDisposable
             if (tile.Job == null || !tile.Job.IsCompleted) continue;
             if (tile.JobVersion == tile.State.DesiredVersion)
             {
-                using (ApplyJobMarker.Auto()) tile.Job.CompleteAndApply();
+                bool applied;
+                using (ApplyJobMarker.Auto())
+                    applied = tile.Job.CompleteAndApplyIncremental(
+                        start,
+                        Mathf.Max(0.05f, settings.grassCompletionBudgetMs));
+                if (!applied)
+                    return;
+
                 tile.Candidates = entry.Data.nearGrassInstancesBySubChunk[tile.X, tile.Z];
                 tile.State.DataVersion = tile.JobVersion;
             }

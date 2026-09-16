@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System;
 using Unity.Burst;
 using Unity.Collections;
@@ -8,6 +8,50 @@ using UnityEngine;
 
 public static class WaterMeshGenerator
 {
+    public static WaterMeshData GenerateWaterMesh(
+        NativeArray<WaterState> waterStateMap, int mapSize, int stepIncrement, float worldScale, float waterY)
+    {
+        int chunkSize = mapSize - 3;
+        if (chunkSize <= 0 || !waterStateMap.IsCreated)
+            throw new ArgumentException("Water state map must be a square padded chunk.", nameof(waterStateMap));
+
+        int step = math.clamp(stepIncrement, 1, chunkSize);
+        int blocksPerAxis = (chunkSize + step - 1) / step;
+        using var blocks = new NativeArray<byte>(blocksPerAxis * blocksPerAxis, Allocator.TempJob);
+        using var rectangles = new NativeList<int4>(blocksPerAxis * blocksPerAxis, Allocator.TempJob);
+
+        var coverageJob = new WaterCoverageJob
+        {
+            states = waterStateMap, blocks = blocks, mapSize = mapSize,
+            chunkSize = chunkSize, step = step, blocksPerAxis = blocksPerAxis
+        };
+        JobHandle coverage = coverageJob.Schedule(blocks.Length, 64);
+        var mergeJob = new MergeWaterBlocksJob
+        {
+            blocks = blocks, rectangles = rectangles, blocksPerAxis = blocksPerAxis
+        };
+        mergeJob.Schedule(coverage).Complete();
+
+        var mesh = new WaterMeshData(rectangles.Length);
+        float origin = chunkSize / -2f;
+        foreach (int4 rect in rectangles)
+        {
+            int x0 = rect.x * step;
+            int z0 = rect.y * step;
+            int x1 = math.min((rect.x + rect.z) * step, chunkSize);
+            int z1 = math.min((rect.y + rect.w) * step, chunkSize);
+            mesh.AddCell(
+                new Vector3((origin + x0) * worldScale, waterY, (origin + z0) * worldScale),
+                new Vector3((origin + x1) * worldScale, waterY, (origin + z0) * worldScale),
+                new Vector3((origin + x0) * worldScale, waterY, (origin + z1) * worldScale),
+                new Vector3((origin + x1) * worldScale, waterY, (origin + z1) * worldScale),
+                new Vector2(x0 / (float)chunkSize, z0 / (float)chunkSize),
+                new Vector2(x1 / (float)chunkSize, z0 / (float)chunkSize),
+                new Vector2(x0 / (float)chunkSize, z1 / (float)chunkSize),
+                new Vector2(x1 / (float)chunkSize, z1 / (float)chunkSize));
+        }
+        return mesh;
+    }
     public static WaterMeshData GenerateWaterMesh(
         WaterState[,] waterStateMap, int stepIncrement, float worldScale, float waterY)
     {

@@ -9,6 +9,58 @@ public static class MeshGenerator
 {
     public static MeshData GenerateTerrainMesh(
         ChunkCoord chunkCoord,
+        ChunkRecord.NativeTerrainData nativeData,
+        float heightMultiplier,
+        int stepIncrement,
+        float worldScale)
+    {
+        int paddedWidth = nativeData.HeightMapWidth;
+        int chunkSize = paddedWidth - 3;
+        int safeStepIncrement = Mathf.Max(1, stepIncrement);
+        int estimatedVertexCapacity = EstimateTerrainVertexCapacity(chunkSize, safeStepIncrement);
+        List<int2> vertexCoordinates = new List<int2>(estimatedVertexCapacity);
+        List<int> triangles = new List<int>(estimatedVertexCapacity * 6);
+        int[] vertexIndicesByGridCoordinate = new int[(chunkSize + 1) * (chunkSize + 1)];
+        for (int i = 0; i < vertexIndicesByGridCoordinate.Length; i++)
+            vertexIndicesByGridCoordinate[i] = -1;
+
+        int gridVerticesPerLine = chunkSize + 1;
+
+        int GetVertexIndex(int x, int z)
+        {
+            int key = z * gridVerticesPerLine + x;
+            int existingIndex = vertexIndicesByGridCoordinate[key];
+            if (existingIndex >= 0)
+                return existingIndex;
+
+            int newIndex = vertexCoordinates.Count;
+            vertexCoordinates.Add(new int2(x, z));
+            vertexIndicesByGridCoordinate[key] = newIndex;
+            return newIndex;
+        }
+
+        void AddTriangle(int a, int b, int c)
+        {
+            triangles.Add(a);
+            triangles.Add(b);
+            triangles.Add(c);
+        }
+
+        BuildTerrainTopology(chunkSize, safeStepIncrement, GetVertexIndex, AddTriangle);
+
+        return BuildTerrainMeshData(
+            nativeData.HeightMap,
+            nativeData.HeightMapHeight,
+            nativeData.SurfaceTypeMap,
+            nativeData.WaterStateMap,
+            vertexCoordinates,
+            triangles,
+            chunkSize,
+            heightMultiplier,
+            worldScale);
+    }
+    public static MeshData GenerateTerrainMesh(
+        ChunkCoord chunkCoord,
         float[,] heightMap,
         BiomeType[,] biomeMap,
         SurfaceType[,] surfaceTypeMap,
@@ -159,6 +211,112 @@ public static class MeshGenerator
             worldScale);
     }
 
+    private static void BuildTerrainTopology(
+        int chunkSize,
+        int safeStepIncrement,
+        System.Func<int, int, int> getVertexIndex,
+        System.Action<int, int, int> addTriangle)
+    {
+        int strip = safeStepIncrement;
+        int interiorMin = strip;
+        int interiorMax = chunkSize - strip;
+
+        for (int z = interiorMin; z < interiorMax; z += safeStepIncrement)
+        {
+            for (int x = interiorMin; x < interiorMax; x += safeStepIncrement)
+            {
+                int a = getVertexIndex(x, z);
+                int b = getVertexIndex(x, z + safeStepIncrement);
+                int c = getVertexIndex(x + safeStepIncrement, z + safeStepIncrement);
+                int d = getVertexIndex(x + safeStepIncrement, z);
+
+                addTriangle(a, b, c);
+                addTriangle(a, c, d);
+            }
+        }
+
+        for (int x0 = 0; x0 < chunkSize; x0 += safeStepIncrement)
+        {
+            int x1 = Mathf.Min(x0 + safeStepIncrement, chunkSize);
+
+            int anchor = getVertexIndex(x0, 0);
+
+            int prev = getVertexIndex(x0 + 1, 0);
+            for (int x = x0 + 2; x <= x1; x++)
+            {
+                int next = getVertexIndex(x, 0);
+                addTriangle(anchor, next, prev);
+                prev = next;
+            }
+
+            int innerRight = getVertexIndex(x1, strip);
+            int innerLeft = getVertexIndex(x0, strip);
+
+            addTriangle(anchor, innerRight, prev);
+            addTriangle(anchor, innerLeft, innerRight);
+        }
+
+        for (int x0 = 0; x0 < chunkSize; x0 += safeStepIncrement)
+        {
+            int x1 = Mathf.Min(x0 + safeStepIncrement, chunkSize);
+
+            int anchor = getVertexIndex(x0, chunkSize - strip);
+
+            int prev = getVertexIndex(x0, chunkSize);
+            for (int x = x0 + 1; x <= x1; x++)
+            {
+                int next = getVertexIndex(x, chunkSize);
+                addTriangle(anchor, prev, next);
+                prev = next;
+            }
+
+            int innerRight = getVertexIndex(x1, chunkSize - strip);
+            addTriangle(anchor, prev, innerRight);
+        }
+
+        for (int z0 = strip; z0 < chunkSize - strip; z0 += safeStepIncrement)
+        {
+            int z1 = Mathf.Min(z0 + safeStepIncrement, chunkSize - strip);
+
+            int anchor = getVertexIndex(0, z0);
+
+            int prev = getVertexIndex(0, z0 + 1);
+            for (int z = z0 + 2; z <= z1; z++)
+            {
+                int next = getVertexIndex(0, z);
+                addTriangle(anchor, prev, next);
+                prev = next;
+            }
+
+            int innerBottom = getVertexIndex(strip, z1);
+            int innerTop = getVertexIndex(strip, z0);
+
+            addTriangle(anchor, prev, innerBottom);
+            addTriangle(anchor, innerBottom, innerTop);
+        }
+
+        for (int z0 = strip; z0 < chunkSize - strip; z0 += safeStepIncrement)
+        {
+            int z1 = Mathf.Min(z0 + safeStepIncrement, chunkSize - strip);
+
+            int anchor = getVertexIndex(chunkSize - strip, z0);
+
+            int prev = getVertexIndex(chunkSize - strip, z1);
+
+            int first = getVertexIndex(chunkSize, z1);
+            addTriangle(anchor, prev, first);
+            prev = first;
+
+            for (int z = z1 - 1; z >= z0; z--)
+            {
+                int next = getVertexIndex(chunkSize, z);
+                addTriangle(anchor, prev, next);
+                prev = next;
+            }
+        }
+    }
+
+
     private static int EstimateTerrainVertexCapacity(int chunkSize, int stepIncrement)
     {
         if (stepIncrement <= 1)
@@ -182,6 +340,78 @@ public static class MeshGenerator
 
         return new Vector3(-dx, 2f, -dz).normalized;
     }
+
+    private static MeshData BuildTerrainMeshData(
+        NativeArray<float> heights,
+        int mapHeight,
+        NativeArray<SurfaceType> surfaces,
+        NativeArray<WaterState> waterStates,
+        List<int2> vertexCoordinates,
+        List<int> triangleList,
+        int chunkSize,
+        float heightMultiplier,
+        float worldScale)
+    {
+        NativeArray<int2> coordinates = default;
+        NativeArray<float3> nativeVertices = default;
+        NativeArray<float3> nativeNormals = default;
+        NativeArray<float2> nativeUvs = default;
+        NativeArray<float4> nativeColors = default;
+
+        try
+        {
+            coordinates =
+                new NativeArray<int2>(vertexCoordinates.Count, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+
+            for (int i = 0; i < vertexCoordinates.Count; i++)
+                coordinates[i] = vertexCoordinates[i];
+
+            nativeVertices =
+                new NativeArray<float3>(vertexCoordinates.Count, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            nativeNormals =
+                new NativeArray<float3>(vertexCoordinates.Count, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            nativeUvs =
+                new NativeArray<float2>(vertexCoordinates.Count, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            nativeColors =
+                new NativeArray<float4>(vertexCoordinates.Count, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+
+            TerrainVertexBuildJob vertexJob = new TerrainVertexBuildJob
+            {
+                heightMap = heights,
+                surfaceTypeMap = surfaces,
+                waterStateMap = waterStates,
+                vertexCoordinates = coordinates,
+                mapHeight = mapHeight,
+                chunkSize = chunkSize,
+                topLeftX = chunkSize / -2f,
+                bottomLeftZ = chunkSize / -2f,
+                heightMultiplier = heightMultiplier,
+                worldScale = worldScale,
+                vertices = nativeVertices,
+                normals = nativeNormals,
+                uvs = nativeUvs,
+                colors = nativeColors
+            };
+            JobHandle vertexHandle = vertexJob.Schedule(vertexCoordinates.Count, 64);
+            vertexHandle.Complete();
+
+            return CreateMeshData(nativeVertices, nativeNormals, nativeUvs, nativeColors, triangleList);
+        }
+        finally
+        {
+            if (coordinates.IsCreated)
+                coordinates.Dispose();
+            if (nativeVertices.IsCreated)
+                nativeVertices.Dispose();
+            if (nativeNormals.IsCreated)
+                nativeNormals.Dispose();
+            if (nativeUvs.IsCreated)
+                nativeUvs.Dispose();
+            if (nativeColors.IsCreated)
+                nativeColors.Dispose();
+        }
+    }
+
 
     private static MeshData BuildTerrainMeshData(
         float[,] heightMap,

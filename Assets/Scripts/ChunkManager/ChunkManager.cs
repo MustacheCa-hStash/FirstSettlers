@@ -282,6 +282,7 @@ public class ChunkManager
             Object.Destroy(runtimePoolParent.gameObject);
             runtimePoolParent = null;
         }
+        terrainRequestManager?.WaitForActiveRequestsToFinish();
         foreach (var record in chunkRecords.Values)
             record.Dispose();
     }
@@ -1775,14 +1776,10 @@ public class ChunkManager
             record.ChunkCoord,
             lod,
             requestVersion,
-            record.HeightMap,
-            record.BiomeMap,
-            record.SurfaceTypeMap,
-            record.WaterStateMap,
+            record.NativeData,
             meshHeightMultiplier,
             stepIncrement,
-            worldScale,
-            record.RiverMaskMap
+            worldScale
         );
 
         if (!submitted)
@@ -1907,6 +1904,10 @@ public class ChunkManager
 
                     if (completed)
                         QueueVisibleChunkContentWork(record.ChunkCoord);
+                    else
+                    {
+                        DestroyLODMeshAssets(terrainMesh, waterMesh);
+                    }
                 }
             }
         }
@@ -2087,6 +2088,14 @@ public class ChunkManager
         return false;
     }
 
+    private static void DestroyLODMeshAssets(Mesh terrainMesh, Mesh waterMesh)
+    {
+        if (terrainMesh != null)
+            UnityEngine.Object.Destroy(terrainMesh);
+
+        if (waterMesh != null)
+            UnityEngine.Object.Destroy(waterMesh);
+    }
     private static void DestroyFarTerrainAssets(Mesh terrainMesh, Texture2D[] controlMaps, Mesh waterMesh)
     {
         if (terrainMesh != null)

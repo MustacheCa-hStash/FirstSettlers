@@ -251,6 +251,8 @@ public static class FoliageGenerator
         private NativeArray<float4> cloverInfluences;
         private NativeArray<GrassSubChunkDiscoveryResult> results;
         private bool disposed;
+        private bool applyStarted;
+        private int applyIndex;
 
         internal GrassSubChunkGenerationJob(
             ChunkRecord record,
@@ -283,35 +285,62 @@ public static class FoliageGenerator
             if (disposed)
                 return;
 
-            handle.Complete();
+            long start = TerrainGenerationProfiler.GetTimestamp();
+            CompleteAndApplyIncremental(start, float.PositiveInfinity, int.MaxValue);
+        }
+
+        public bool CompleteAndApplyIncremental(long budgetStart, float budgetMs, int resultSliceSize = 128)
+        {
+            if (disposed)
+                return true;
+
+            if (!applyStarted)
+            {
+                handle.Complete();
+                applyStarted = true;
+            }
+
+            ChunkFoliageData foliageData = record.FoliageData;
+            List<FoliageInstanceData> subChunkInstances =
+                foliageData.nearGrassInstancesBySubChunk[localSubChunkX, localSubChunkZ];
+
+            int safeSliceSize = Mathf.Max(1, resultSliceSize);
+            using (ConvertMarker.Auto())
+            {
+                int sliceCounter = 0;
+                while (applyIndex < results.Length)
+                {
+                    GrassSubChunkDiscoveryResult result = results[applyIndex++];
+                    if (result.valid != 0)
+                    {
+                        subChunkInstances.Add(new FoliageInstanceData(
+                            new Vector3(result.localPosition.x, result.localPosition.y, result.localPosition.z),
+                            Quaternion.Euler(0f, result.yaw, 0f),
+                            Vector3.one * result.uniformScale,
+                            result.selectionRank,
+                            result.forestBlend));
+                    }
+
+                    sliceCounter++;
+                    if (sliceCounter >= safeSliceSize)
+                    {
+                        sliceCounter = 0;
+                        if (TerrainGenerationProfiler.GetElapsedMilliseconds(budgetStart) >= budgetMs)
+                            return false;
+                    }
+                }
+            }
+
+            if (TerrainGenerationProfiler.GetElapsedMilliseconds(budgetStart) >= budgetMs)
+                return false;
 
             try
             {
-                ChunkFoliageData foliageData = record.FoliageData;
-                List<FoliageInstanceData> subChunkInstances =
-                    foliageData.nearGrassInstancesBySubChunk[localSubChunkX, localSubChunkZ];
-
-                using (ConvertMarker.Auto())
-                {
-                for (int i = 0; i < results.Length; i++)
-                {
-                    GrassSubChunkDiscoveryResult result = results[i];
-                    if (result.valid == 0)
-                        continue;
-
-                    subChunkInstances.Add(new FoliageInstanceData(
-                        new Vector3(result.localPosition.x, result.localPosition.y, result.localPosition.z),
-                        Quaternion.Euler(0f, result.yaw, 0f),
-                        Vector3.one * result.uniformScale,
-                        result.selectionRank,
-                        result.forestBlend));
-                }
-
-                }
                 using (SortMarker.Auto())
                     SortSubChunkBucketBySelectionRank(foliageData, localSubChunkX, localSubChunkZ);
                 using (FlagsMarker.Auto())
                     foliageData.MarkNearGrassSubChunkGenerated(localSubChunkX, localSubChunkZ, applyCloverInfluence);
+                return true;
             }
             finally
             {
@@ -325,6 +354,8 @@ public static class FoliageGenerator
                 return;
 
             handle.Complete();
+            if (applyStarted && applyIndex > 0 && record.FoliageData != null)
+                record.FoliageData.ClearNearGrassSubChunk(localSubChunkX, localSubChunkZ);
             DisposeArrays();
         }
 
