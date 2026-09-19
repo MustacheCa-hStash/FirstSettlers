@@ -5,6 +5,9 @@ using UnityEngine;
 public class ChunkManager
 {
     private const int FarTerrainLOD = 5;
+    // The first leaf keeps the current 4x4 macro footprint. Larger leaves are
+    // selected only when their complete footprint is beyond the preceding band.
+    private const int FarTerrainMaxPatchSizeInChunks = 32;
     private const int MaxRuntimeCreationsPerFrame = 4;
     private const double RuntimeCreationBudgetMs = 0.35;
     private readonly Queue<ChunkCoord> pendingRuntimeCreations = new();
@@ -95,25 +98,25 @@ public class ChunkManager
 
     private readonly Dictionary<ChunkCoord, ChunkRecord> chunkRecords = new();
     private readonly Dictionary<ChunkCoord, ChunkRuntime> loadedChunks = new();
-    private readonly Dictionary<ChunkCoord, FarTerrainTileRecord> farTerrainTileRecords = new();
-    private readonly Dictionary<ChunkCoord, FarTerrainTileRuntime> loadedFarTerrainTiles = new();
+    private readonly Dictionary<FarTerrainPatchKey, FarTerrainTileRecord> farTerrainTileRecords = new();
+    private readonly Dictionary<FarTerrainPatchKey, FarTerrainTileRuntime> loadedFarTerrainTiles = new();
     private readonly Stack<ChunkRuntime> chunkRuntimePool = new();
     private readonly Stack<FarTerrainTileRuntime> farTerrainTileRuntimePool = new();
     private Transform runtimePoolParent;
 
     private HashSet<ChunkCoord> activeLastUpdate;
     private HashSet<ChunkCoord> activeThisUpdate;
-    private HashSet<ChunkCoord> activeFarTilesLastUpdate;
-    private HashSet<ChunkCoord> activeFarTilesThisUpdate;
+    private HashSet<FarTerrainPatchKey> activeFarTilesLastUpdate;
+    private HashSet<FarTerrainPatchKey> activeFarTilesThisUpdate;
     private readonly List<ChunkCoord> orderedActiveCoords;
     private readonly List<ChunkCoord> frustumVisibleCoords;
-    private readonly List<ChunkCoord> orderedActiveFarTileCoords;
+    private readonly List<FarTerrainPatchKey> orderedActiveFarTileCoords;
     private readonly Queue<ChunkCoord> pendingVisibleChunkContentWork;
     private readonly HashSet<ChunkCoord> queuedVisibleChunkContentCoords;
     private readonly List<ChunkCoord> deferredVisibleChunkContentRetries;
-    private readonly Queue<ChunkCoord> pendingFarTerrainTileContentWork;
-    private readonly HashSet<ChunkCoord> queuedFarTerrainTileContentCoords;
-    private readonly List<ChunkCoord> deferredFarTerrainTileContentRetries;
+    private readonly Queue<FarTerrainPatchKey> pendingFarTerrainTileContentWork;
+    private readonly HashSet<FarTerrainPatchKey> queuedFarTerrainTileContentCoords;
+    private readonly List<FarTerrainPatchKey> deferredFarTerrainTileContentRetries;
     private readonly HashSet<ChunkCoord> frustumVisibleCoordSet;
     private readonly Plane[] frustumPlanes = new Plane[6];
     private int renderVisibilityCursor;
@@ -226,17 +229,17 @@ public class ChunkManager
 
         activeLastUpdate = new HashSet<ChunkCoord>(maxChunks);
         activeThisUpdate = new HashSet<ChunkCoord>(maxChunks);
-        activeFarTilesLastUpdate = new HashSet<ChunkCoord>(maxChunks);
-        activeFarTilesThisUpdate = new HashSet<ChunkCoord>(maxChunks);
+        activeFarTilesLastUpdate = new HashSet<FarTerrainPatchKey>(maxChunks);
+        activeFarTilesThisUpdate = new HashSet<FarTerrainPatchKey>(maxChunks);
         orderedActiveCoords = new List<ChunkCoord>(maxChunks);
         frustumVisibleCoords = new List<ChunkCoord>(maxChunks);
-        orderedActiveFarTileCoords = new List<ChunkCoord>(maxChunks);
+        orderedActiveFarTileCoords = new List<FarTerrainPatchKey>(maxChunks);
         pendingVisibleChunkContentWork = new Queue<ChunkCoord>(maxChunks);
         queuedVisibleChunkContentCoords = new HashSet<ChunkCoord>(maxChunks);
         deferredVisibleChunkContentRetries = new List<ChunkCoord>(maxChunks);
-        pendingFarTerrainTileContentWork = new Queue<ChunkCoord>(maxChunks);
-        queuedFarTerrainTileContentCoords = new HashSet<ChunkCoord>(maxChunks);
-        deferredFarTerrainTileContentRetries = new List<ChunkCoord>(maxChunks);
+        pendingFarTerrainTileContentWork = new Queue<FarTerrainPatchKey>(maxChunks);
+        queuedFarTerrainTileContentCoords = new HashSet<FarTerrainPatchKey>(maxChunks);
+        deferredFarTerrainTileContentRetries = new List<FarTerrainPatchKey>(maxChunks);
         frustumVisibleCoordSet = new HashSet<ChunkCoord>(maxChunks);
 
         worldFeatureGenerationSettings = BuildWorldFeatureGenerationSettings(treeSettings);
@@ -301,13 +304,14 @@ public class ChunkManager
                 heights = runtime.ChunkRecord.FarTreeHeightGrid;
             return true;
         }
-        ChunkCoord tile = GetFarTerrainTileCoord(coord);
-        if (loadedFarTerrainTiles.TryGetValue(tile, out var far) && far.IsVisible &&
-            farTerrainTileRecords.TryGetValue(tile, out var record) && record.HasTerrain)
+        if (TryGetFarTerrainPatch(GetViewerChunkCoord(), coord, out FarTerrainPatchKey patch) &&
+            loadedFarTerrainTiles.TryGetValue(patch, out var far) && far.IsVisible &&
+            farTerrainTileRecords.TryGetValue(patch, out var record) && record.HasTerrain)
         {
             heights = record.FarTreeHeightGrid;
-            size *= farTerrainMacroTileSize;
-            origin = new Vector2(tile.x * size, tile.z * size);
+            size *= patch.SizeInChunks;
+            origin = new Vector2(patch.Origin.x * patch.SizeInChunks * chunkSize * worldScale,
+                patch.Origin.z * patch.SizeInChunks * chunkSize * worldScale);
             return heights != null;
         }
         return false;
@@ -432,8 +436,8 @@ public class ChunkManager
 
         for (int i = 0; i < orderedActiveFarTileCoords.Count; i++)
         {
-            ChunkCoord tileCoord = orderedActiveFarTileCoords[i];
-            if (!loadedFarTerrainTiles.TryGetValue(tileCoord, out FarTerrainTileRuntime runtime))
+            FarTerrainPatchKey patch = orderedActiveFarTileCoords[i];
+            if (!loadedFarTerrainTiles.TryGetValue(patch, out FarTerrainTileRuntime runtime))
                 continue;
 
             runtime.AccumulateRenderStats(ref stats);
@@ -622,10 +626,10 @@ public class ChunkManager
 
                 ChunkCoord targetCoord = new ChunkCoord(viewerCoord.x + x, viewerCoord.z + z);
 
-                if (ShouldUseMacroFarTerrain(viewerCoord, targetCoord, out ChunkCoord farTileCoord))
+                if (TryGetFarTerrainPatch(viewerCoord, targetCoord, out FarTerrainPatchKey farPatch))
                 {
-                    if (activeFarTilesThisUpdate.Add(farTileCoord))
-                        orderedActiveFarTileCoords.Add(farTileCoord);
+                    if (activeFarTilesThisUpdate.Add(farPatch))
+                        orderedActiveFarTileCoords.Add(farPatch);
 
                     continue;
                 }
@@ -658,10 +662,10 @@ public class ChunkManager
                 QueueVisibleChunkContentWork(targetCoord);
         }
 
-        foreach (ChunkCoord farTileCoord in orderedActiveFarTileCoords)
+        foreach (FarTerrainPatchKey farPatch in orderedActiveFarTileCoords)
         {
-            GetOrCreateFarTerrainTileRecord(farTileCoord);
-            QueueFarTerrainTileContentWork(farTileCoord);
+            GetOrCreateFarTerrainTileRecord(farPatch);
+            QueueFarTerrainTileContentWork(farPatch);
         }
 
         foreach (ChunkCoord coord in activeLastUpdate)
@@ -687,9 +691,9 @@ public class ChunkManager
         activeLastUpdate = activeThisUpdate;
         activeThisUpdate = temp;
 
-        temp = activeFarTilesLastUpdate;
+        var farTemp = activeFarTilesLastUpdate;
         activeFarTilesLastUpdate = activeFarTilesThisUpdate;
-        activeFarTilesThisUpdate = temp;
+        activeFarTilesThisUpdate = farTemp;
         // Reconcile from loaded runtimes on each active-set change. This includes
         // older handoffs still waiting and excludes chunks that have re-entered.
         outgoingNormalChunks.Clear();
@@ -752,9 +756,9 @@ public class ChunkManager
         }
     }
 
-    private readonly List<ChunkCoord> completedTerrainHandoffs = new();
+    private readonly List<FarTerrainPatchKey> completedTerrainHandoffs = new();
     private readonly List<ChunkCoord> outgoingNormalChunks = new();
-    private readonly Dictionary<ChunkCoord, bool> normalReplacementReadiness = new();
+    private readonly Dictionary<FarTerrainPatchKey, bool> normalReplacementReadiness = new();
     private readonly HashSet<ChunkCoord> terrainHandoffHiddenCoords = new();
     private static readonly ProfilerMarker TerrainHandoffsMarker = new ProfilerMarker("FS.Streaming.TerrainHandoffs");
     private static readonly ProfilerMarker NormalHandoffsMarker = new ProfilerMarker("FS.Streaming.TerrainHandoffs.NormalCleanup");
@@ -780,12 +784,13 @@ public class ChunkManager
             ChunkCoord coord = outgoingNormalChunks[i];
             if (!loadedChunks.TryGetValue(coord, out var runtime))
                 continue;
-            ChunkCoord tile = GetFarTerrainTileCoord(coord);
-            if (!normalReplacementReadiness.TryGetValue(tile, out bool ready))
+            if (!TryGetFarTerrainPatch(GetViewerChunkCoord(), coord, out FarTerrainPatchKey patch))
+                continue;
+            if (!normalReplacementReadiness.TryGetValue(patch, out bool ready))
             {
-                ready = !activeFarTilesLastUpdate.Contains(tile) ||
-                    (loadedFarTerrainTiles.TryGetValue(tile, out var replacement) && replacement.HasTerrainMesh);
-                normalReplacementReadiness.Add(tile, ready);
+                ready = !activeFarTilesLastUpdate.Contains(patch) ||
+                    (loadedFarTerrainTiles.TryGetValue(patch, out var replacement) && replacement.HasTerrainMesh);
+                normalReplacementReadiness.Add(patch, ready);
             }
             if (!ready)
             {
@@ -806,11 +811,32 @@ public class ChunkManager
         {
             if (activeFarTilesLastUpdate.Contains(entry.Key))
                 continue;
+
+            // A moving viewer can replace one far leaf with several finer leaves
+            // (or vice versa). Retain the outgoing mesh until every overlapping
+            // incoming leaf has attached its mesh, just as normal/far handoffs
+            // retain their outgoing representation.
+            bool farReplacementReady = true;
+            foreach (FarTerrainPatchKey candidate in activeFarTilesLastUpdate)
+            {
+                if (!FarTerrainPatchesOverlap(entry.Key, candidate))
+                    continue;
+
+                if (!loadedFarTerrainTiles.TryGetValue(candidate, out var replacement) || !replacement.HasTerrainMesh)
+                {
+                    farReplacementReady = false;
+                    break;
+                }
+            }
+            if (!farReplacementReady)
+                continue;
+
             bool ready = true;
-            int originX = entry.Key.x * farTerrainMacroTileSize;
-            int originZ = entry.Key.z * farTerrainMacroTileSize;
-            for (int x = 0; x < farTerrainMacroTileSize && ready; x++)
-                for (int z = 0; z < farTerrainMacroTileSize; z++)
+            int patchSize = entry.Key.SizeInChunks;
+            int originX = entry.Key.Origin.x * patchSize;
+            int originZ = entry.Key.Origin.z * patchSize;
+            for (int x = 0; x < patchSize && ready; x++)
+                for (int z = 0; z < patchSize; z++)
                 {
                     ChunkCoord coord = new ChunkCoord(originX + x, originZ + z);
                     if (activeLastUpdate.Contains(coord) &&
@@ -823,16 +849,16 @@ public class ChunkManager
             if (!ready)
             {
                 if (entry.Value.HasTerrainMesh)
-                    for (int x = 0; x < farTerrainMacroTileSize; x++)
-                        for (int z = 0; z < farTerrainMacroTileSize; z++)
+                    for (int x = 0; x < patchSize; x++)
+                        for (int z = 0; z < patchSize; z++)
                             terrainHandoffHiddenCoords.Add(new ChunkCoord(originX + x, originZ + z));
                 continue;
             }
             using (ReleaseFarHandoffMarker.Auto()) ReleaseFarTerrainTileRuntime(entry.Value);
             completedTerrainHandoffs.Add(entry.Key);
         }
-        foreach (ChunkCoord coord in completedTerrainHandoffs)
-            loadedFarTerrainTiles.Remove(coord);
+        foreach (FarTerrainPatchKey patch in completedTerrainHandoffs)
+            loadedFarTerrainTiles.Remove(patch);
         }
         using (HandoffVisibilityMarker.Auto())
         {
@@ -840,6 +866,16 @@ public class ChunkManager
                 entry.Value.SetTerrainHandoffHidden(terrainHandoffHiddenCoords.Contains(entry.Key));
         }
         }
+    }
+
+    private static bool FarTerrainPatchesOverlap(FarTerrainPatchKey a, FarTerrainPatchKey b)
+    {
+        int aMinX = a.Origin.x * a.SizeInChunks;
+        int aMinZ = a.Origin.z * a.SizeInChunks;
+        int bMinX = b.Origin.x * b.SizeInChunks;
+        int bMinZ = b.Origin.z * b.SizeInChunks;
+        return aMinX < bMinX + b.SizeInChunks && bMinX < aMinX + a.SizeInChunks &&
+               aMinZ < bMinZ + b.SizeInChunks && bMinZ < aMinZ + a.SizeInChunks;
     }
 
     private void RefreshUrgentVisibleChunks(
@@ -1215,14 +1251,14 @@ public class ChunkManager
                    processedCount < maxFarTerrainTileContentUpdatesPerFrame &&
                    HasFarTerrainTileContentBudgetRemaining(budgetStart))
             {
-                ChunkCoord farTileCoord = pendingFarTerrainTileContentWork.Dequeue();
-                queuedFarTerrainTileContentCoords.Remove(farTileCoord);
+                FarTerrainPatchKey farPatch = pendingFarTerrainTileContentWork.Dequeue();
+                queuedFarTerrainTileContentCoords.Remove(farPatch);
                 processedCount++;
 
-                if (!activeFarTilesLastUpdate.Contains(farTileCoord))
+                if (!activeFarTilesLastUpdate.Contains(farPatch))
                     continue;
 
-                FarTerrainTileRecord record = GetOrCreateFarTerrainTileRecord(farTileCoord);
+                FarTerrainTileRecord record = GetOrCreateFarTerrainTileRecord(farPatch);
                 FarTerrainTileRuntime runtime = GetOrCreateFarTerrainTileRuntime(record);
 
                 EnsureFarTerrainTileRequested(record);
@@ -1233,8 +1269,8 @@ public class ChunkManager
 
                 runtime.SetRenderVisible(true);
 
-                if (FarTerrainTileNeedsContentWork(farTileCoord))
-                    deferredFarTerrainTileContentRetries.Add(farTileCoord);
+                if (FarTerrainTileNeedsContentWork(farPatch))
+                    deferredFarTerrainTileContentRetries.Add(farPatch);
             }
 
             for (int i = 0; i < deferredFarTerrainTileContentRetries.Count; i++)
@@ -1244,24 +1280,24 @@ public class ChunkManager
         }
     }
 
-    private void QueueFarTerrainTileContentWork(ChunkCoord farTileCoord)
+    private void QueueFarTerrainTileContentWork(FarTerrainPatchKey farPatch)
     {
-        if (queuedFarTerrainTileContentCoords.Add(farTileCoord))
-            pendingFarTerrainTileContentWork.Enqueue(farTileCoord);
+        if (queuedFarTerrainTileContentCoords.Add(farPatch))
+            pendingFarTerrainTileContentWork.Enqueue(farPatch);
     }
 
-    private bool FarTerrainTileNeedsContentWork(ChunkCoord farTileCoord)
+    private bool FarTerrainTileNeedsContentWork(FarTerrainPatchKey farPatch)
     {
-        if (!activeFarTilesLastUpdate.Contains(farTileCoord))
+        if (!activeFarTilesLastUpdate.Contains(farPatch))
             return false;
 
-        if (!farTerrainTileRecords.TryGetValue(farTileCoord, out FarTerrainTileRecord record))
+        if (!farTerrainTileRecords.TryGetValue(farPatch, out FarTerrainTileRecord record))
             return true;
 
         if (!record.HasTerrain)
             return !record.IsRequestInFlight;
 
-        if (!loadedFarTerrainTiles.TryGetValue(farTileCoord, out FarTerrainTileRuntime runtime))
+        if (!loadedFarTerrainTiles.TryGetValue(farPatch, out FarTerrainTileRuntime runtime))
             return true;
 
         return record.TryGetTerrainMesh(out Mesh terrainMesh) && !runtime.IsShowingMesh(terrainMesh);
@@ -1287,9 +1323,9 @@ public class ChunkManager
         return GeometryUtility.TestPlanesAABB(frustumPlanes, bounds);
     }
 
-    private bool IsFarTerrainTileInFrustum(ChunkCoord farTileCoord)
+    private bool IsFarTerrainTileInFrustum(FarTerrainPatchKey farPatch)
     {
-        Bounds bounds = GetFarTerrainTileWorldBounds(farTileCoord);
+        Bounds bounds = GetFarTerrainTileWorldBounds(farPatch);
         return GeometryUtility.TestPlanesAABB(frustumPlanes, bounds);
     }
 
@@ -1317,12 +1353,12 @@ public class ChunkManager
         return new Bounds(center, size);
     }
 
-    private Bounds GetFarTerrainTileWorldBounds(ChunkCoord farTileCoord)
+    private Bounds GetFarTerrainTileWorldBounds(FarTerrainPatchKey farPatch)
     {
-        float tileWorldSize = chunkSize * farTerrainMacroTileSize * worldScale;
+        float tileWorldSize = chunkSize * farPatch.SizeInChunks * worldScale;
 
-        float centerX = farTileCoord.x * tileWorldSize + tileWorldSize * 0.5f;
-        float centerZ = farTileCoord.z * tileWorldSize + tileWorldSize * 0.5f;
+        float centerX = farPatch.Origin.x * tileWorldSize + tileWorldSize * 0.5f;
+        float centerZ = farPatch.Origin.z * tileWorldSize + tileWorldSize * 0.5f;
 
         float boundsHeight = Mathf.Max(200f, meshHeightMultiplier * 2f + 100f);
 
@@ -1401,12 +1437,12 @@ public class ChunkManager
         RemoveFrustumVisibleCoord(coord);
     }
 
-    private FarTerrainTileRecord GetOrCreateFarTerrainTileRecord(ChunkCoord tileCoord)
+    private FarTerrainTileRecord GetOrCreateFarTerrainTileRecord(FarTerrainPatchKey farPatch)
     {
-        if (!farTerrainTileRecords.TryGetValue(tileCoord, out FarTerrainTileRecord record))
+        if (!farTerrainTileRecords.TryGetValue(farPatch, out FarTerrainTileRecord record))
         {
-            record = new FarTerrainTileRecord(tileCoord);
-            farTerrainTileRecords.Add(tileCoord, record);
+            record = new FarTerrainTileRecord(farPatch);
+            farTerrainTileRecords.Add(farPatch, record);
         }
 
         return record;
@@ -1414,16 +1450,16 @@ public class ChunkManager
 
     private FarTerrainTileRuntime GetOrCreateFarTerrainTileRuntime(FarTerrainTileRecord record)
     {
-        ChunkCoord tileCoord = record.TileCoord;
+        FarTerrainPatchKey patch = record.PatchKey;
 
-        if (!loadedFarTerrainTiles.TryGetValue(tileCoord, out FarTerrainTileRuntime runtime))
+        if (!loadedFarTerrainTiles.TryGetValue(patch, out FarTerrainTileRuntime runtime))
         {
             if (farTerrainTileRuntimePool.Count > 0)
             {
                 runtime = farTerrainTileRuntimePool.Pop();
                 runtime.Reinitialize(
                     record,
-                    chunkSize * farTerrainMacroTileSize,
+                    chunkSize * patch.SizeInChunks,
                     worldScale,
                     chunkParent,
                     terrainReceiveShadows);
@@ -1432,7 +1468,7 @@ public class ChunkManager
             {
                 runtime = new FarTerrainTileRuntime(
                     record,
-                    chunkSize * farTerrainMacroTileSize,
+                    chunkSize * patch.SizeInChunks,
                     worldScale,
                     chunkParent,
                     terrainMaterial,
@@ -1440,7 +1476,7 @@ public class ChunkManager
                     waterMaterial);
             }
 
-            loadedFarTerrainTiles.Add(tileCoord, runtime);
+            loadedFarTerrainTiles.Add(patch, runtime);
         }
 
         return runtime;
@@ -1486,47 +1522,64 @@ public class ChunkManager
         return ring >= farTerrainStartRing;
     }
 
-    private bool ShouldUseMacroFarTerrain(
+    private bool TryGetFarTerrainPatch(
         ChunkCoord viewerCoord,
         ChunkCoord targetCoord,
-        out ChunkCoord farTileCoord)
+        out FarTerrainPatchKey patch)
     {
-        farTileCoord = default;
-
+        patch = default;
         if (!ShouldUseFarTerrain(viewerCoord, targetCoord))
             return false;
 
-        if (farTerrainMacroTileSize <= 1)
+        // Try the largest valid leaf first. A leaf may only begin once its whole
+        // footprint is outside the preceding LOD band; otherwise descend to a
+        // smaller leaf. This leaves a narrow normal-chunk strip at the seam when
+        // a world-aligned leaf would cross it.
+        int desiredSize = GetDesiredFarPatchSize(GetChunkRingDistance(viewerCoord, targetCoord));
+        for (int size = desiredSize; size >= farTerrainMacroTileSize; size >>= 1)
         {
-            farTileCoord = targetCoord;
-            return true;
+            ChunkCoord origin = new ChunkCoord(FloorDiv(targetCoord.x, size),
+                FloorDiv(targetCoord.z, size));
+            int minRing = GetPatchMinimumRingDistance(viewerCoord, origin, size);
+            if (minRing >= GetFarPatchStartRing(size))
+            {
+                patch = new FarTerrainPatchKey(origin, size);
+                return true;
+            }
         }
 
-        farTileCoord = GetFarTerrainTileCoord(targetCoord);
-        return IsFarTerrainTileFullyFar(viewerCoord, farTileCoord);
+        return false;
     }
 
-    private ChunkCoord GetFarTerrainTileCoord(ChunkCoord chunkCoord)
+    private int GetDesiredFarPatchSize(int ring)
     {
-        return new ChunkCoord(
-            FloorDiv(chunkCoord.x, farTerrainMacroTileSize),
-            FloorDiv(chunkCoord.z, farTerrainMacroTileSize));
+        int size = farTerrainMacroTileSize;
+        while (size < FarTerrainMaxPatchSizeInChunks && ring >= GetFarPatchStartRing(size << 1))
+            size <<= 1;
+        return size;
     }
 
-    private bool IsFarTerrainTileFullyFar(ChunkCoord viewerCoord, ChunkCoord farTileCoord)
+    private int GetFarPatchStartRing(int size)
     {
-        int originX = farTileCoord.x * farTerrainMacroTileSize;
-        int originZ = farTileCoord.z * farTerrainMacroTileSize;
-        int maxX = originX + farTerrainMacroTileSize - 1;
-        int maxZ = originZ + farTerrainMacroTileSize - 1;
+        int start = farTerrainStartRing;
+        int current = farTerrainMacroTileSize;
+        while (current < size)
+        {
+            start += current * 2;
+            current <<= 1;
+        }
+        return start;
+    }
 
-        int closestX = Mathf.Clamp(viewerCoord.x, originX, maxX);
-        int closestZ = Mathf.Clamp(viewerCoord.z, originZ, maxZ);
-        int minRing = Mathf.Max(
-            Mathf.Abs(closestX - viewerCoord.x),
-            Mathf.Abs(closestZ - viewerCoord.z));
-
-        return minRing >= farTerrainStartRing;
+    private static int GetPatchMinimumRingDistance(ChunkCoord viewer, ChunkCoord origin, int size)
+    {
+        int minX = origin.x * size;
+        int minZ = origin.z * size;
+        int maxX = minX + size - 1;
+        int maxZ = minZ + size - 1;
+        int closestX = Mathf.Clamp(viewer.x, minX, maxX);
+        int closestZ = Mathf.Clamp(viewer.z, minZ, maxZ);
+        return Mathf.Max(Mathf.Abs(closestX - viewer.x), Mathf.Abs(closestZ - viewer.z));
     }
 
     private static int FloorDiv(int value, int divisor)
@@ -1598,9 +1651,9 @@ public class ChunkManager
             return;
 
         int requestVersion = record.BeginRequest();
-        int tileChunkSize = chunkSize * farTerrainMacroTileSize;
-        int tileHeightGridResolution = ScaleFarTerrainResolutionForMacroTile(farTerrainHeightGridResolution);
-        int tileControlMapResolution = ScaleFarTerrainResolutionForMacroTile(farTerrainControlMapResolution);
+        int tileChunkSize = chunkSize * record.SizeInChunks;
+        int tileHeightGridResolution = GetFarPatchHeightGridResolution(record.SizeInChunks);
+        int tileControlMapResolution = GetFarPatchControlMapResolution();
 
         bool submitted = terrainRequestManager.RequestFarTerrainData(
             record.TileCoord,
@@ -1614,6 +1667,7 @@ public class ChunkManager
             tileControlMapResolution,
             farTerrainSkirtDepth,
             true,
+            record.SizeInChunks,
             octaves,
             persistence,
             lacunarity);
@@ -1622,12 +1676,19 @@ public class ChunkManager
             record.CancelRequest(requestVersion);
     }
 
-    private int ScaleFarTerrainResolutionForMacroTile(int baseResolution)
+    private int GetFarPatchHeightGridResolution(int patchSizeInChunks)
     {
-        if (farTerrainMacroTileSize <= 1)
-            return baseResolution;
+        // 4/8/16 leaves use a shared 33x33 grid. The 32-chunk horizon
+        // leaf gets 65x65 to cap far spacing at 64 terrain units.
+        return patchSizeInChunks >= FarTerrainMaxPatchSizeInChunks ? 65 : 33;
+    }
 
-        return Mathf.Max(2, (baseResolution - 1) * farTerrainMacroTileSize + 1);
+    private int GetFarPatchControlMapResolution()
+    {
+        // Preserve the former 4x4 macro-tile control-map density at every
+        // quadtree level. Geometry coarsens with distance; material masks remain
+        // stable enough to avoid broad, obvious biome transitions.
+        return Mathf.Clamp((farTerrainControlMapResolution - 1) * farTerrainMacroTileSize + 1, 2, 128);
     }
 
     private void EnsureTerrainDataRequested(ChunkRecord record)
@@ -1988,7 +2049,8 @@ public class ChunkManager
                     }
                     else if (farTerrainResult.IsMacroTile)
                     {
-                        QueueFarTerrainTileContentWork(farTerrainResult.ChunkCoord);
+                        QueueFarTerrainTileContentWork(new FarTerrainPatchKey(
+                            farTerrainResult.ChunkCoord, farTerrainResult.PatchSizeInChunks));
                     }
                     else
                     {
@@ -2027,13 +2089,14 @@ public class ChunkManager
     {
         if (result.IsMacroTile)
         {
-            if (!farTerrainTileRecords.TryGetValue(result.ChunkCoord, out FarTerrainTileRecord tileRecord))
+            FarTerrainPatchKey patch = new FarTerrainPatchKey(result.ChunkCoord, result.PatchSizeInChunks);
+            if (!farTerrainTileRecords.TryGetValue(patch, out FarTerrainTileRecord tileRecord))
                 return false;
 
             if (!tileRecord.IsRequestCurrent(result.RequestVersion))
                 return false;
 
-            if (!IsFarTerrainTileWanted(viewerCoord, result.ChunkCoord))
+            if (!IsFarTerrainTileWanted(viewerCoord, patch))
             {
                 tileRecord.CancelRequest(result.RequestVersion);
                 return false;
@@ -2065,7 +2128,7 @@ public class ChunkManager
         Mesh waterMesh)
     {
         if (result.IsMacroTile &&
-            farTerrainTileRecords.TryGetValue(result.ChunkCoord, out FarTerrainTileRecord tileRecord))
+            farTerrainTileRecords.TryGetValue(new FarTerrainPatchKey(result.ChunkCoord, result.PatchSizeInChunks), out FarTerrainTileRecord tileRecord))
         {
             return tileRecord.TryCompleteRequest(
                 result.RequestVersion,
@@ -2121,18 +2184,15 @@ public class ChunkManager
         return dx * dx + dz * dz <= viewDistance * viewDistance;
     }
 
-    private bool IsFarTerrainTileWanted(ChunkCoord viewerCoord, ChunkCoord farTileCoord)
+    private bool IsFarTerrainTileWanted(ChunkCoord viewerCoord, FarTerrainPatchKey patch)
     {
-        if (!enableFarTerrain || farTerrainMacroTileSize <= 1)
+        if (!enableFarTerrain || !activeFarTilesLastUpdate.Contains(patch))
             return false;
 
-        if (!IsFarTerrainTileFullyFar(viewerCoord, farTileCoord))
-            return false;
-
-        int originX = farTileCoord.x * farTerrainMacroTileSize;
-        int originZ = farTileCoord.z * farTerrainMacroTileSize;
-        int maxX = originX + farTerrainMacroTileSize - 1;
-        int maxZ = originZ + farTerrainMacroTileSize - 1;
+        int originX = patch.Origin.x * patch.SizeInChunks;
+        int originZ = patch.Origin.z * patch.SizeInChunks;
+        int maxX = originX + patch.SizeInChunks - 1;
+        int maxZ = originZ + patch.SizeInChunks - 1;
         int sqrViewRadius = viewDistance * viewDistance;
 
         for (int x = originX; x <= maxX; x++)
@@ -2211,12 +2271,12 @@ public class ChunkManager
         });
     }
 
-    private int GetFarTerrainTileDistanceSqr(ChunkCoord viewerCoord, ChunkCoord farTileCoord)
+    private int GetFarTerrainTileDistanceSqr(ChunkCoord viewerCoord, FarTerrainPatchKey patch)
     {
-        int originX = farTileCoord.x * farTerrainMacroTileSize;
-        int originZ = farTileCoord.z * farTerrainMacroTileSize;
-        int centerX = originX + farTerrainMacroTileSize / 2;
-        int centerZ = originZ + farTerrainMacroTileSize / 2;
+        int originX = patch.Origin.x * patch.SizeInChunks;
+        int originZ = patch.Origin.z * patch.SizeInChunks;
+        int centerX = originX + patch.SizeInChunks / 2;
+        int centerZ = originZ + patch.SizeInChunks / 2;
         int dx = centerX - viewerCoord.x;
         int dz = centerZ - viewerCoord.z;
         return dx * dx + dz * dz;

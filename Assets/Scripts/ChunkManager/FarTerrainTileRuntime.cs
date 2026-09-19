@@ -65,7 +65,7 @@ public class FarTerrainTileRuntime
             0f,
             (tileCoord.z * tileWorldChunkSize + tileWorldChunkSize * 0.5f) * worldScale);
 
-        root.name = $"FarTile_{tileCoord.x}_{tileCoord.z}";
+        root.name = $"FarPatch_{record.SizeInChunks}_{tileCoord.x}_{tileCoord.z}";
         root.transform.SetParent(parent, false);
         root.transform.position = worldPosition;
         root.transform.localRotation = Quaternion.identity;

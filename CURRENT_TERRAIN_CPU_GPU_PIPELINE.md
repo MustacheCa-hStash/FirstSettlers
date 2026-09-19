@@ -13,11 +13,12 @@ replacement.
 - **Near mesh LOD:** the requested mesh LOD is selected by Chebyshev chunk ring:
   `0` at rings 0-1, `1` at 2-3, `2` at 4-5, `3` at 6-7, and `4` at 8+.
   Its mesh grid step is `1 << lod`.
-- **Far terrain:** beginning at ring 9, fully-far groups become a fixed `4 x 4`
-  macro tile. The macro tile has no collider or detailed chunk foliage runtime.
-  A tile is currently generated with a `33 x 33` height grid (the configured
-  base `9 x 9` grid scaled over four chunks) and a `61 x 61` control-map grid
-  (base `16 x 16`, also scaled over four chunks).
+- **Far terrain:** beginning beyond ring 8, world-aligned quadtree leaves replace
+  fully-far chunks. Leaves are `4 x 4`, `8 x 8`, `16 x 16`, or `32 x 32`
+  chunks. A boundary strip remains normal chunks where a larger leaf would cross
+  a LOD band. Far leaves have no collider or detailed chunk foliage runtime.
+  Leaves through `16 x 16` use a `33 x 33` height grid; `32 x 32` leaves use
+  `65 x 65`. Each leaf uses a `61 x 61` control-map grid.
 - **Render objects:** every normal chunk and every far macro tile owns a
   `GameObject`, `MeshFilter`, and `MeshRenderer`. Far tiles have an individually
   generated mesh and a cloned material with tile-specific control-map textures.
@@ -39,7 +40,7 @@ The major terrain stages occur in this order:
    The manager converts the viewer position to a chunk coordinate. If it changed
    since the last update, it rebuilds the circular active set, sorts it by
    proximity and viewing direction, and decides whether each location is a
-   normal chunk or a fully-far macro tile. It retains outgoing meshes until a
+   normal chunk or a fully-far quadtree leaf. It retains outgoing meshes until a
    replacement mesh is attached, avoiding an empty handoff gap.
 
 3. **[Main CPU] Create/reuse a bounded number of runtime objects.**
@@ -62,7 +63,7 @@ The major terrain stages occur in this order:
    LODs remain cached in the chunk record.
 
 6. **[Main CPU] Request or attach far content.**
-   For a fully-far macro tile, the manager requests its far-terrain data or
+   For a fully-far quadtree leaf, the manager requests its far-terrain data or
    attaches its completed mesh/control maps. Far work is deliberately deferred
    while normal terrain, normal LOD mesh, or collider work is active or waiting,
    so player-proximate content wins scheduling priority.
@@ -107,7 +108,7 @@ their border geometry.
 Collider mesh data is generated separately, only for chunks inside the collider
 radius. Far macro tiles do not request colliders.
 
-### Far macro-tile request
+### Far quadtree-leaf request
 
 `FarTerrainGenerator.Generate()` runs on a worker thread. It:
 
@@ -167,9 +168,9 @@ work.**
 
 ## Important performance implications
 
-- The current macro-tile system reduces renderer and request count versus one
-  far renderer per 128-unit chunk, but it preserves approximately the same
-  terrain sample spacing across the far field.
+- The quadtree reduces far renderer/request count and deliberately relaxes mesh
+  spacing by level. It uses 16-unit spacing at the first far leaf, then 32 or
+  64-unit spacing farther from the player.
 - CPU work is bounded by worker-count and main-thread apply budgets. Far work
   intentionally yields to near terrain/collider work.
 - GPU cost is driven by visible tile draw calls, terrain triangles, pixel

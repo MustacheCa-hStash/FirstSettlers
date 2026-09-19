@@ -20,6 +20,7 @@ public static class FarTerrainGenerator
         float skirtDepth,
         float waterLevel,
         bool isMacroTile = false,
+        int patchSizeInChunks = 1,
         float mountainHorizontalScale = 1f,
         float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma,
         int climateOctaves = 3,
@@ -28,7 +29,10 @@ public static class FarTerrainGenerator
     {
         long totalStart = TerrainGenerationProfiler.GetTimestamp();
         erosion = erosion.Sanitized();
-        int minimumResolution = Mathf.CeilToInt(chunkSize / (float)erosion.maxMeshSpacing) + 1;
+        // Near terrain and collision retain the erosion spacing guarantee. Far
+        // quadtree leaves intentionally relax it by level to reduce horizon
+        // geometry; their requested grid is the LOD policy.
+        int minimumResolution = isMacroTile ? 2 : Mathf.CeilToInt(chunkSize / (float)erosion.maxMeshSpacing) + 1;
         int safeHeightGridResolution = Mathf.Clamp(Mathf.Max(heightGridResolution, minimumResolution), 2, chunkSize + 1);
         int safeControlMapResolution = Mathf.Clamp(controlMapResolution, 2, 128);
 
@@ -81,7 +85,7 @@ public static class FarTerrainGenerator
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FarTerrainTotal, totalStart);
 
         WaterMeshData waterMeshData = BuildWaterMesh(heightGrid, chunkSize, worldScale, meshHeightMultiplier, waterLevel);
-        return new FarTerrainRequestResult(chunkCoord, requestVersion, isMacroTile, meshData, controlMaps, waterMeshData, heightGrid);
+        return new FarTerrainRequestResult(chunkCoord, requestVersion, isMacroTile, patchSizeInChunks, meshData, controlMaps, waterMeshData, heightGrid);
     }
 
     // Cover cells with any submerged corner, then merge adjacent water patches.

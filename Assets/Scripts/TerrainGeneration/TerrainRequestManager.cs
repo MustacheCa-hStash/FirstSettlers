@@ -321,6 +321,7 @@ public class TerrainRequestManager
         int controlMapResolution,
         float skirtDepth,
         bool isMacroTile = false,
+        int patchSizeInChunks = 1,
         int climateOctaves = 3,
         float climatePersistence = 0.5f,
         float climateLacunarity = 2f)
@@ -348,6 +349,7 @@ public class TerrainRequestManager
                     skirtDepth,
                     waterSettings.WaterLevel,
                     isMacroTile,
+                    patchSizeInChunks,
                     mountainHorizontalScale,
                     mountainSnowRenderCoverageGamma,
                     climateOctaves,

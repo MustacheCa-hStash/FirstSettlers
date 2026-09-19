@@ -4,22 +4,24 @@ public class FarTerrainTileRecord
 {
     public float[,] FarTreeHeightGrid { get; private set; }
     public Mesh WaterMesh { get; private set; }
-    private readonly ChunkCoord tileCoord;
+    private readonly FarTerrainPatchKey patchKey;
     private Mesh terrainMesh;
     private Texture2D[] controlMapData;
     private bool requestInFlight;
     private int requestVersion;
     private bool ready;
 
-    public ChunkCoord TileCoord => tileCoord;
+    public FarTerrainPatchKey PatchKey => patchKey;
+    public ChunkCoord TileCoord => patchKey.Origin;
+    public int SizeInChunks => patchKey.SizeInChunks;
     public bool IsRequestInFlight => requestInFlight;
     public int RequestVersion => requestVersion;
     public Texture2D[] ControlMapData => controlMapData;
     public bool HasTerrain => ready && terrainMesh != null && controlMapData != null;
 
-    public FarTerrainTileRecord(ChunkCoord tileCoord)
+    public FarTerrainTileRecord(FarTerrainPatchKey patchKey)
     {
-        this.tileCoord = tileCoord;
+        this.patchKey = patchKey;
     }
 
     public int BeginRequest()

@@ -9,7 +9,9 @@ public class WorldManager : MonoBehaviour
     [SerializeField] int viewDistance = 4;
     [SerializeField] int colliderDistance = 3;
     [SerializeField] bool enableFarTerrain = true;
+    [Tooltip("Normal chunks are retained through this ring. World-aligned far quadtree leaves begin beyond it; 8 aligns cleanly with the 4/8/16/32 patch hierarchy.")]
     [SerializeField] int farTerrainStartRing = 8;
+    [Tooltip("Smallest far quadtree leaf size in chunks. Keep this at 4 for the 4/8/16/32 hierarchy.")]
     [SerializeField] int farTerrainMacroTileSize = 4;
     [SerializeField] int farTerrainHeightGridResolution = 9;
     [SerializeField] int farTerrainControlMapResolution = 16;
