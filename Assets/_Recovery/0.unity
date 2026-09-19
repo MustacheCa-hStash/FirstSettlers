@@ -886,7 +886,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 12
+  worldSeed: 11
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -994,7 +994,7 @@ MonoBehaviour:
       - {r: 0.9, g: 0.72, b: 1, a: 1}
   cloverSettings:
     enableClover: 1
-    cloverClumpPrefab: {fileID: 2522059427205176057, guid: 34276995c6e0cb44b90eb27277ebdff7, type: 3}
+    cloverClumpPrefab: {fileID: 6012400216872284338, guid: b4500037e8f6de74b833a9b04cb8e6b9, type: 3}
     cloverClumpPrefabs: []
     activeRingRadius: 1
     preGenerationRingPadding: 1
@@ -1047,13 +1047,13 @@ MonoBehaviour:
     spruceTreePrefab: {fileID: 0}
     whitePineTreePrefab: {fileID: 0}
     oakTreePrefab: {fileID: 0}
-    treeLOD0GameObjectPrefab: {fileID: 5609516383970858846, guid: b08037aec9376d747ace320cf038e6e7, type: 3}
+    treeLOD0GameObjectPrefab: {fileID: 3324767832348975412, guid: aefb0453f29071a499ef5cd781156d6c, type: 3}
     grasslandMapleTreePrefab: {fileID: 0}
     grasslandBirchAspenTreePrefab: {fileID: 0}
     grasslandWhitePineTreePrefab: {fileID: 0}
     grasslandOakTreePrefab: {fileID: 0}
     grasslandWillowTreePrefab: {fileID: 0}
-    grasslandTreeFallbackPrefab: {fileID: 5609516383970858846, guid: b08037aec9376d747ace320cf038e6e7, type: 3}
+    grasslandTreeFallbackPrefab: {fileID: 3324767832348975412, guid: aefb0453f29071a499ef5cd781156d6c, type: 3}
     blueberryBushPrefab: {fileID: 2095120421312505866, guid: 90b14277c549b58408d186345b97dfbe, type: 3}
     raspberryBushPrefab: {fileID: 0}
     strawberryBushPrefab: {fileID: 6447866110754163726, guid: 083081802f30fd149b46c7105b9698ba, type: 3}
