@@ -886,7 +886,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 124
+  worldSeed: 140
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -956,6 +956,18 @@ MonoBehaviour:
   flowerSettings:
     enableFlowers: 1
     flowerPrefab: {fileID: 7417632742218973167, guid: 012753618076f5a44bc43bfe79e09f48, type: 3}
+    tallFlowerPrefab: {fileID: 113416359944203664, guid: ace563dd08ee4f744bd35ba0580b03e4, type: 3}
+    tallFlowerUniformScale: 1.355
+    tallFlowerPatchCellSize: 42
+    tallFlowerPatchSpawnChance: 0.316
+    tallFlowerPatchNoiseScale: 0.026
+    tallFlowerPatchNoiseThreshold: 0.52
+    minTallFlowersPerPatch: 16
+    maxTallFlowersPerPatch: 26
+    tallFlowerPatchRadiusRange: {x: 7, y: 10}
+    tallFlowerSeedOffset: 48000
+    tallFlowerDarkVariant: {r: 0.88, g: 0.84, b: 0.98, a: 1}
+    tallFlowerLightVariant: {r: 1, g: 0.9, b: 0.96, a: 1}
     activeRingRadius: 3
     patchCellSize: 24
     maxPatchCentersPerCell: 1

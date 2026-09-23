@@ -6,6 +6,26 @@ public class FlowerSettings
     public bool enableFlowers = true;
     public GameObject flowerPrefab;
 
+    [Header("Grassland Tall Flower")]
+    [Tooltip("Optional second flower mesh/material for the grassland mini-patches.")]
+    public GameObject tallFlowerPrefab;
+    [Range(0.5f, 2.5f), Tooltip("Uniform scale multiplier for every tall flower, applied on top of the existing flower scale range.")]
+    public float tallFlowerUniformScale = 1f;
+
+    [Header("Tall Flower Mini-Patches")]
+    [Min(1f)] public float tallFlowerPatchCellSize = 54f;
+    [Range(0f, 1f)] public float tallFlowerPatchSpawnChance = 0.18f;
+    public float tallFlowerPatchNoiseScale = 0.026f;
+    [Range(0f, 1f)] public float tallFlowerPatchNoiseThreshold = 0.52f;
+    [Min(1)] public int minTallFlowersPerPatch = 10;
+    [Min(1)] public int maxTallFlowersPerPatch = 18;
+    public Vector2 tallFlowerPatchRadiusRange = new Vector2(4.5f, 7f);
+    public int tallFlowerSeedOffset = 48000;
+
+    [Tooltip("Subtle per-instance tint variation. The mesh red vertex channel, or red mask texture when vertex colors are absent, controls the petal shade.")]
+    public Color tallFlowerDarkVariant = new Color(0.88f, 0.84f, 0.98f, 1f);
+    public Color tallFlowerLightVariant = new Color(1.0f, 0.90f, 0.96f, 1f);
+
     [Header("Render Range")]
     [Tooltip("Circular radius in whole chunks around the player chunk; diagonal chunks outside the radius are excluded.")]
     public int activeRingRadius = 2;

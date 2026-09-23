@@ -61,6 +61,8 @@ public class FoliageManager
 
     private Mesh flowerMesh;
     private Material flowerMaterial;
+    private Mesh tallFlowerMesh;
+    private Material tallFlowerMaterial;
     private int flowerPetalColorPropertyId;
 
     private CloverRenderData[] cloverRenderData;
@@ -2291,6 +2293,7 @@ public class FoliageManager
         if (instanceCount == 0)
         {
             foliageRuntime.CacheFlowerBatches(Array.Empty<Matrix4x4>(), Array.Empty<Vector4>());
+            foliageRuntime.CacheFlowerBatches(Array.Empty<Matrix4x4>(), Array.Empty<Vector4>(), true);
             TerrainGenerationProfiler.Record(
                 TerrainGenerationProfileStage.FoliageFlowerBatchBuild,
                 stageStart);
@@ -2346,14 +2349,26 @@ public class FoliageManager
             worldMatrices.Clear();
             var petalColors = groundDataScratch;
             petalColors.Clear();
+            var tallWorldMatrices = new List<Matrix4x4>();
+            var tallPetalColors = new List<Vector4>();
 
             for (int i = 0; i < instanceCount; i++)
             {
-                worldMatrices.Add(ToMatrix4x4(nativeMatrices[i]));
-                petalColors.Add(ToVector4(nativePetalColors[i]));
+                FlowerInstanceData instance = data.flowerInstances[i];
+                if (instance.isTallFlower)
+                {
+                    tallWorldMatrices.Add(ToMatrix4x4(nativeMatrices[i]));
+                    tallPetalColors.Add(ToVector4(nativePetalColors[i]));
+                }
+                else
+                {
+                    worldMatrices.Add(ToMatrix4x4(nativeMatrices[i]));
+                    petalColors.Add(ToVector4(nativePetalColors[i]));
+                }
             }
 
             foliageRuntime.CacheFlowerBatches(worldMatrices, petalColors);
+            foliageRuntime.CacheFlowerBatches(tallWorldMatrices, tallPetalColors, true);
             TerrainGenerationProfiler.Record(
                 TerrainGenerationProfileStage.FoliageFlowerBatchBuild,
                 stageStart);
@@ -3240,7 +3255,8 @@ public class FoliageManager
 
     private bool HasFlowerRenderAssets()
     {
-        return flowerMesh != null && flowerMaterial != null;
+        return (flowerMesh != null && flowerMaterial != null) ||
+               (tallFlowerMesh != null && tallFlowerMaterial != null);
     }
 
     private bool HasCloverRenderAssets()
@@ -3481,6 +3497,8 @@ public class FoliageManager
 
         chunkRuntime.FoliageRuntime.flowerMesh = flowerMesh;
         chunkRuntime.FoliageRuntime.flowerMaterial = flowerMaterial;
+        chunkRuntime.FoliageRuntime.tallFlowerMesh = tallFlowerMesh;
+        chunkRuntime.FoliageRuntime.tallFlowerMaterial = tallFlowerMaterial;
         chunkRuntime.FoliageRuntime.flowerPetalColorPropertyId = flowerPetalColorPropertyId;
 
         chunkRuntime.FoliageRuntime.cloverRenderData = cloverRenderData;
@@ -3651,32 +3669,46 @@ public class FoliageManager
 
         flowerPetalColorPropertyId = Shader.PropertyToID(petalColorPropertyName);
 
-        if (flowerSettings.flowerPrefab == null)
+        if (flowerSettings.flowerPrefab == null && flowerSettings.tallFlowerPrefab == null)
         {
-            Debug.LogWarning("Flower prefab is missing. Flowers will not render until one is assigned.");
+            Debug.LogWarning("Flower prefabs are missing. Flowers will not render until one is assigned.");
             return;
         }
 
-        MeshFilter meshFilter = flowerSettings.flowerPrefab.GetComponentInChildren<MeshFilter>();
-        MeshRenderer meshRenderer = flowerSettings.flowerPrefab.GetComponentInChildren<MeshRenderer>();
+        if (flowerSettings.flowerPrefab != null)
+        {
+            MeshFilter meshFilter = flowerSettings.flowerPrefab.GetComponentInChildren<MeshFilter>();
+            MeshRenderer meshRenderer = flowerSettings.flowerPrefab.GetComponentInChildren<MeshRenderer>();
+            if (meshFilter == null || meshFilter.sharedMesh == null)
+                Debug.LogError("Flower prefab missing MeshFilter or mesh.");
+            else
+                flowerMesh = meshFilter.sharedMesh;
 
-        if (meshFilter == null || meshFilter.sharedMesh == null)
-        {
-            Debug.LogError("Flower prefab missing MeshFilter or mesh.");
-        }
-        else
-        {
-            flowerMesh = meshFilter.sharedMesh;
+            if (meshRenderer != null && meshRenderer.sharedMaterial != null)
+            {
+                flowerMaterial = meshRenderer.sharedMaterial;
+                flowerMaterial.enableInstancing = true;
+            }
+            else
+                Debug.LogError("Flower prefab missing MeshRenderer or material.");
         }
 
-        if (meshRenderer == null || meshRenderer.sharedMaterial == null)
+        if (flowerSettings.tallFlowerPrefab != null)
         {
-            Debug.LogError("Flower prefab missing MeshRenderer or material.");
-        }
-        else
-        {
-            flowerMaterial = meshRenderer.sharedMaterial;
-            flowerMaterial.enableInstancing = true;
+            MeshFilter meshFilter = flowerSettings.tallFlowerPrefab.GetComponentInChildren<MeshFilter>();
+            MeshRenderer meshRenderer = flowerSettings.tallFlowerPrefab.GetComponentInChildren<MeshRenderer>();
+            if (meshFilter == null || meshFilter.sharedMesh == null)
+                Debug.LogError("Tall flower prefab missing MeshFilter or mesh.");
+            else
+                tallFlowerMesh = meshFilter.sharedMesh;
+
+            if (meshRenderer != null && meshRenderer.sharedMaterial != null)
+            {
+                tallFlowerMaterial = meshRenderer.sharedMaterial;
+                tallFlowerMaterial.enableInstancing = true;
+            }
+            else
+                Debug.LogError("Tall flower prefab missing MeshRenderer or material.");
         }
     }
 
