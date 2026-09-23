@@ -12,6 +12,21 @@ public class FlowerSettings
     [Range(0.5f, 2.5f), Tooltip("Uniform scale multiplier for every tall flower, applied on top of the existing flower scale range.")]
     public float tallFlowerUniformScale = 1f;
 
+    [Header("Grassland Daisy Weed Patches")]
+    [Tooltip("Optional daisy-weed model. When assigned, it spawns in independent grassland patches.")]
+    public GameObject daisyWeedPrefab;
+    [Min(1f)] public float daisyWeedPatchCellSize = 36f;
+    [Range(0f, 1f)] public float daisyWeedPatchSpawnChance = 0.28f;
+    public float daisyWeedPatchNoiseScale = 0.026f;
+    [Range(0f, 1f)] public float daisyWeedPatchNoiseThreshold = 0.54f;
+    [Min(1)] public int minDaisyWeedsPerPatch = 8;
+    [Min(1)] public int maxDaisyWeedsPerPatch = 16;
+    public Vector2 daisyWeedPatchRadiusRange = new Vector2(3.5f, 7f);
+    public int daisyWeedSeedOffset = 56000;
+    [Range(0.5f, 2.5f)] public float daisyWeedUniformScale = 1f;
+    [Range(0f, 90f)] public float daisyWeedMaxSlope = 40f;
+    public float daisyWeedTreeExclusionRadius = 1f;
+
     [Header("Tall Flower Mini-Patches")]
     [Min(1f)] public float tallFlowerPatchCellSize = 54f;
     [Range(0f, 1f)] public float tallFlowerPatchSpawnChance = 0.18f;

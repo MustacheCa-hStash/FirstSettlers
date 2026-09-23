@@ -888,6 +888,17 @@ public static class FoliageGenerator
                 meshHeightMultiplier);
         }
 
+        if (flowerSettings.daisyWeedPrefab != null)
+        {
+            GenerateDaisyWeedPatches(
+                record,
+                flowerSettings,
+                worldSeed,
+                chunkSize,
+                worldScale,
+                meshHeightMultiplier);
+        }
+
         foliageData.flowersGenerated = true;
     }
 
@@ -1029,6 +1040,115 @@ public static class FoliageGenerator
                         Quaternion.Euler(0f, yaw, 0f),
                         Vector3.one * scale,
                         petalTint,
+                        true));
+                }
+            }
+        }
+    }
+
+    private static void GenerateDaisyWeedPatches(
+        ChunkRecord record,
+        FlowerSettings settings,
+        int worldSeed,
+        int chunkSize,
+        float worldScale,
+        float meshHeightMultiplier)
+    {
+        if (record.HeightMap == null || record.SurfaceTypeMap == null || record.BiomeMap == null)
+            return;
+
+        float cellSize = Mathf.Max(1f, settings.daisyWeedPatchCellSize);
+        float minRadius = Mathf.Max(0f, Mathf.Min(settings.daisyWeedPatchRadiusRange.x, settings.daisyWeedPatchRadiusRange.y));
+        float maxRadius = Mathf.Max(0f, Mathf.Max(settings.daisyWeedPatchRadiusRange.x, settings.daisyWeedPatchRadiusRange.y));
+        int minWeeds = Mathf.Max(1, settings.minDaisyWeedsPerPatch);
+        int maxWeeds = Mathf.Max(minWeeds, settings.maxDaisyWeedsPerPatch);
+        float chunkMinX = record.ChunkCoord.x * chunkSize;
+        float chunkMinZ = record.ChunkCoord.z * chunkSize;
+        float chunkMaxX = chunkMinX + chunkSize;
+        float chunkMaxZ = chunkMinZ + chunkSize;
+        float padding = maxRadius + cellSize;
+        int minCellX = Mathf.FloorToInt((chunkMinX - padding) / cellSize);
+        int maxCellX = Mathf.FloorToInt((chunkMaxX + padding) / cellSize);
+        int minCellZ = Mathf.FloorToInt((chunkMinZ - padding) / cellSize);
+        int maxCellZ = Mathf.FloorToInt((chunkMaxZ + padding) / cellSize);
+        float exclusionRadiusSqr = settings.daisyWeedTreeExclusionRadius * settings.daisyWeedTreeExclusionRadius;
+        float scaleMin = Mathf.Min(settings.uniformScaleRange.x, settings.uniformScaleRange.y) * settings.daisyWeedUniformScale;
+        float scaleMax = Mathf.Max(settings.uniformScaleRange.x, settings.uniformScaleRange.y) * settings.daisyWeedUniformScale;
+        float topLeftX = chunkSize / -2f;
+        float bottomLeftZ = chunkSize / -2f;
+
+        for (int cellZ = minCellZ; cellZ <= maxCellZ; cellZ++)
+        {
+            for (int cellX = minCellX; cellX <= maxCellX; cellX++)
+            {
+                int patchHash = Hash(worldSeed, settings.daisyWeedSeedOffset, cellX, cellZ, 1567);
+                float centerX = (cellX + Hash01(patchHash + 31)) * cellSize;
+                float centerZ = (cellZ + Hash01(patchHash + 67)) * cellSize;
+                float noiseScale = Mathf.Max(0.0001f, settings.daisyWeedPatchNoiseScale);
+                float patchNoise = Mathf.PerlinNoise(
+                    centerX * noiseScale + settings.daisyWeedSeedOffset * 0.001f,
+                    centerZ * noiseScale - settings.daisyWeedSeedOffset * 0.0017f);
+                float threshold = Mathf.Clamp01(settings.daisyWeedPatchNoiseThreshold);
+                if (patchNoise < threshold)
+                    continue;
+
+                float noiseStrength = threshold >= 0.999f ? 1f : Mathf.InverseLerp(threshold, 1f, patchNoise);
+                float spawnChance = Mathf.Clamp01(settings.daisyWeedPatchSpawnChance) * Mathf.Lerp(0.55f, 1f, noiseStrength);
+                if (Hash01(patchHash + 105) > spawnChance)
+                    continue;
+
+                float radius = Mathf.Lerp(minRadius, maxRadius, Hash01(patchHash + 139));
+                if (centerX + radius < chunkMinX || centerX - radius >= chunkMaxX ||
+                    centerZ + radius < chunkMinZ || centerZ - radius >= chunkMaxZ)
+                    continue;
+
+                int count = GetDeterministicCount(minWeeds, maxWeeds, patchHash + 173);
+                for (int weedIndex = 0; weedIndex < count; weedIndex++)
+                {
+                    int instanceHash = Hash(worldSeed, settings.daisyWeedSeedOffset, cellX, cellZ, weedIndex, 1693);
+                    float angle = Hash01(instanceHash + 19) * Mathf.PI * 2f;
+                    float distance = Mathf.Sqrt(Hash01(instanceHash + 41)) * radius;
+                    float sampleX = centerX + Mathf.Cos(angle) * distance;
+                    float sampleZ = centerZ + Mathf.Sin(angle) * distance;
+                    if (sampleX < chunkMinX || sampleX >= chunkMaxX || sampleZ < chunkMinZ || sampleZ >= chunkMaxZ)
+                        continue;
+
+                    float localSampleX = sampleX - chunkMinX;
+                    float localSampleZ = sampleZ - chunkMinZ;
+                    int mapX = Mathf.Clamp(Mathf.RoundToInt(localSampleX), 0, chunkSize) + 1;
+                    int mapZ = Mathf.Clamp(Mathf.RoundToInt(localSampleZ), 0, chunkSize) + 1;
+                    if (record.SurfaceTypeMap[mapX, mapZ] != SurfaceType.Grass ||
+                        record.BiomeMap[mapX, mapZ] != BiomeType.Grassland ||
+                        (record.SlopeMap != null && record.SlopeMap[mapX, mapZ] > settings.daisyWeedMaxSlope))
+                        continue;
+
+                    float localX = (topLeftX + localSampleX) * worldScale;
+                    float localZ = (bottomLeftZ + localSampleZ) * worldScale;
+                    bool nearTree = false;
+                    List<TreeInstanceData> trees = record.FoliageData.treeCubeInstances;
+                    for (int treeIndex = 0; trees != null && treeIndex < trees.Count; treeIndex++)
+                    {
+                        Vector3 delta = trees[treeIndex].localPosition - new Vector3(localX, 0f, localZ);
+                        if (delta.x * delta.x + delta.z * delta.z < exclusionRadiusSqr)
+                        {
+                            nearTree = true;
+                            break;
+                        }
+                    }
+                    if (nearTree)
+                        continue;
+
+                    float height = SampleHeightBilinear(record.HeightMap, localSampleX, localSampleZ, chunkSize);
+                    float yaw = settings.randomizeYaw ? Hash01(instanceHash + 83) * 360f : 0f;
+                    float scale = Mathf.Lerp(scaleMin, scaleMax, Hash01(instanceHash + 127));
+                    Color tint = Color.Lerp(settings.tallFlowerDarkVariant, settings.tallFlowerLightVariant, Hash01(instanceHash + 419));
+                    tint.a = 1f;
+                    record.FoliageData.flowerInstances.Add(new FlowerInstanceData(
+                        new Vector3(localX, height * meshHeightMultiplier * worldScale, localZ),
+                        Quaternion.Euler(0f, yaw, 0f),
+                        Vector3.one * scale,
+                        (Color32)tint,
+                        false,
                         true));
                 }
             }

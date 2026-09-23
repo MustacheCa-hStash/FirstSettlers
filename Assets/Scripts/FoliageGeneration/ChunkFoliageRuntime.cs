@@ -104,6 +104,8 @@ public class ChunkFoliageRuntime
     public Material flowerMaterial;
     public Mesh tallFlowerMesh;
     public Material tallFlowerMaterial;
+    public Mesh daisyWeedMesh;
+    public Material daisyWeedMaterial;
     public int flowerPetalColorPropertyId;
 
     public CloverRenderData[] cloverRenderData;
@@ -389,7 +391,9 @@ public class ChunkFoliageRuntime
 
     public bool HasValidFlowerRenderData()
     {
-        return ((flowerMesh != null && flowerMaterial != null) || (tallFlowerMesh != null && tallFlowerMaterial != null)) && hasBuiltFlowerRenderData;
+        return ((flowerMesh != null && flowerMaterial != null) ||
+                (tallFlowerMesh != null && tallFlowerMaterial != null) ||
+                (daisyWeedMesh != null && daisyWeedMaterial != null)) && hasBuiltFlowerRenderData;
     }
 
     public bool HasValidCloverRenderData()
@@ -588,9 +592,9 @@ public class ChunkFoliageRuntime
         return true;
     }
 
-    public void CacheFlowerBatches(List<Matrix4x4> worldMatrices, List<Vector4> petalColors, bool isTallFlower = false)
+    public void CacheFlowerBatches(List<Matrix4x4> worldMatrices, List<Vector4> petalColors, bool isTallFlower = false, bool isDaisyWeed = false)
     {
-        if (!isTallFlower)
+        if (!isTallFlower && !isDaisyWeed)
             flowerRenderBatches.Clear();
 
         if (worldMatrices == null || petalColors == null)
@@ -622,16 +626,16 @@ public class ChunkFoliageRuntime
                 petalColorBatch[i] = petalColors[startIndex + i];
             }
 
-            flowerRenderBatches.Add(new FlowerRenderBatch(matrixBatch, petalColorBatch, isTallFlower));
+            flowerRenderBatches.Add(new FlowerRenderBatch(matrixBatch, petalColorBatch, isTallFlower, isDaisyWeed));
             startIndex += batchCount;
         }
 
         hasBuiltFlowerRenderData = true;
     }
 
-    public void CacheFlowerBatches(Matrix4x4[] worldMatrices, Vector4[] petalColors, bool isTallFlower = false)
+    public void CacheFlowerBatches(Matrix4x4[] worldMatrices, Vector4[] petalColors, bool isTallFlower = false, bool isDaisyWeed = false)
     {
-        if (!isTallFlower)
+        if (!isTallFlower && !isDaisyWeed)
             flowerRenderBatches.Clear();
 
         if (worldMatrices == null || petalColors == null)
@@ -660,7 +664,7 @@ public class ChunkFoliageRuntime
             System.Array.Copy(worldMatrices, startIndex, matrixBatch, 0, batchCount);
             System.Array.Copy(petalColors, startIndex, petalColorBatch, 0, batchCount);
 
-            flowerRenderBatches.Add(new FlowerRenderBatch(matrixBatch, petalColorBatch, isTallFlower));
+            flowerRenderBatches.Add(new FlowerRenderBatch(matrixBatch, petalColorBatch, isTallFlower, isDaisyWeed));
             startIndex += batchCount;
         }
 
@@ -880,7 +884,8 @@ public class ChunkFoliageRuntime
             if (flowerRenderBatches[i].matrices == null)
                 continue;
 
-            Mesh mesh = flowerRenderBatches[i].isTallFlower ? tallFlowerMesh : flowerMesh;
+            FlowerRenderBatch batch = flowerRenderBatches[i];
+            Mesh mesh = batch.isDaisyWeed ? daisyWeedMesh : batch.isTallFlower ? tallFlowerMesh : flowerMesh;
             if (mesh != null)
                 stats.AddMeshInstances(mesh, flowerRenderBatches[i].matrices.Length);
         }
@@ -1504,8 +1509,8 @@ public class ChunkFoliageRuntime
             flowerPropertyBlock.Clear();
             flowerPropertyBlock.SetVectorArray(flowerPetalColorPropertyId, batch.petalColors);
 
-            Mesh mesh = batch.isTallFlower ? tallFlowerMesh : flowerMesh;
-            Material material = batch.isTallFlower ? tallFlowerMaterial : flowerMaterial;
+            Mesh mesh = batch.isDaisyWeed ? daisyWeedMesh : batch.isTallFlower ? tallFlowerMesh : flowerMesh;
+            Material material = batch.isDaisyWeed ? daisyWeedMaterial : batch.isTallFlower ? tallFlowerMaterial : flowerMaterial;
             if (mesh == null || material == null)
                 continue;
 
@@ -1516,7 +1521,7 @@ public class ChunkFoliageRuntime
                 batch.matrices,
                 batch.matrices.Length,
                 flowerPropertyBlock,
-                batch.isTallFlower ? ShadowCastingMode.On : ShadowCastingMode.Off,
+                batch.isTallFlower || batch.isDaisyWeed ? ShadowCastingMode.On : ShadowCastingMode.Off,
                 true
             );
         }

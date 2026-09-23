@@ -457,8 +457,11 @@ public static class FarTerrainGenerator
             Vector2.zero,
             color);
 
-        meshData.AddTriangle(topAIndex, bottomAIndex, bottomBIndex);
-        meshData.AddTriangle(topAIndex, bottomBIndex, topBIndex);
+        // Boundary segments are ordered so the patch interior is on their left.
+        // Face the skirt outward: the viewer normally sees a far patch from
+        // outside its footprint, and the terrain material culls back faces.
+        meshData.AddTriangle(topAIndex, bottomBIndex, bottomAIndex);
+        meshData.AddTriangle(topAIndex, topBIndex, bottomBIndex);
     }
 
     private static ControlMapPixelData BuildControlMaps(

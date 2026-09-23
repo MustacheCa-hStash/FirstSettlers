@@ -886,7 +886,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 140
+  worldSeed: 145
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -958,6 +958,18 @@ MonoBehaviour:
     flowerPrefab: {fileID: 7417632742218973167, guid: 012753618076f5a44bc43bfe79e09f48, type: 3}
     tallFlowerPrefab: {fileID: 113416359944203664, guid: ace563dd08ee4f744bd35ba0580b03e4, type: 3}
     tallFlowerUniformScale: 1.355
+    daisyWeedPrefab: {fileID: 8896480132052262351, guid: ff0e8ff02b583064abb831387de61597, type: 3}
+    daisyWeedPatchCellSize: 36
+    daisyWeedPatchSpawnChance: 0.28
+    daisyWeedPatchNoiseScale: 0.026
+    daisyWeedPatchNoiseThreshold: 0.54
+    minDaisyWeedsPerPatch: 8
+    maxDaisyWeedsPerPatch: 16
+    daisyWeedPatchRadiusRange: {x: 3.5, y: 7}
+    daisyWeedSeedOffset: 56000
+    daisyWeedUniformScale: 1.283
+    daisyWeedMaxSlope: 40
+    daisyWeedTreeExclusionRadius: 1
     tallFlowerPatchCellSize: 42
     tallFlowerPatchSpawnChance: 0.316
     tallFlowerPatchNoiseScale: 0.026

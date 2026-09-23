@@ -63,6 +63,8 @@ public class FoliageManager
     private Material flowerMaterial;
     private Mesh tallFlowerMesh;
     private Material tallFlowerMaterial;
+    private Mesh daisyWeedMesh;
+    private Material daisyWeedMaterial;
     private int flowerPetalColorPropertyId;
 
     private CloverRenderData[] cloverRenderData;
@@ -2351,11 +2353,18 @@ public class FoliageManager
             petalColors.Clear();
             var tallWorldMatrices = new List<Matrix4x4>();
             var tallPetalColors = new List<Vector4>();
+            var daisyWeedWorldMatrices = new List<Matrix4x4>();
+            var daisyWeedPetalColors = new List<Vector4>();
 
             for (int i = 0; i < instanceCount; i++)
             {
                 FlowerInstanceData instance = data.flowerInstances[i];
-                if (instance.isTallFlower)
+                if (instance.isDaisyWeed)
+                {
+                    daisyWeedWorldMatrices.Add(ToMatrix4x4(nativeMatrices[i]));
+                    daisyWeedPetalColors.Add(ToVector4(nativePetalColors[i]));
+                }
+                else if (instance.isTallFlower)
                 {
                     tallWorldMatrices.Add(ToMatrix4x4(nativeMatrices[i]));
                     tallPetalColors.Add(ToVector4(nativePetalColors[i]));
@@ -2369,6 +2378,7 @@ public class FoliageManager
 
             foliageRuntime.CacheFlowerBatches(worldMatrices, petalColors);
             foliageRuntime.CacheFlowerBatches(tallWorldMatrices, tallPetalColors, true);
+            foliageRuntime.CacheFlowerBatches(daisyWeedWorldMatrices, daisyWeedPetalColors, false, true);
             TerrainGenerationProfiler.Record(
                 TerrainGenerationProfileStage.FoliageFlowerBatchBuild,
                 stageStart);
@@ -3256,7 +3266,8 @@ public class FoliageManager
     private bool HasFlowerRenderAssets()
     {
         return (flowerMesh != null && flowerMaterial != null) ||
-               (tallFlowerMesh != null && tallFlowerMaterial != null);
+               (tallFlowerMesh != null && tallFlowerMaterial != null) ||
+               (daisyWeedMesh != null && daisyWeedMaterial != null);
     }
 
     private bool HasCloverRenderAssets()
@@ -3499,6 +3510,8 @@ public class FoliageManager
         chunkRuntime.FoliageRuntime.flowerMaterial = flowerMaterial;
         chunkRuntime.FoliageRuntime.tallFlowerMesh = tallFlowerMesh;
         chunkRuntime.FoliageRuntime.tallFlowerMaterial = tallFlowerMaterial;
+        chunkRuntime.FoliageRuntime.daisyWeedMesh = daisyWeedMesh;
+        chunkRuntime.FoliageRuntime.daisyWeedMaterial = daisyWeedMaterial;
         chunkRuntime.FoliageRuntime.flowerPetalColorPropertyId = flowerPetalColorPropertyId;
 
         chunkRuntime.FoliageRuntime.cloverRenderData = cloverRenderData;
@@ -3669,7 +3682,7 @@ public class FoliageManager
 
         flowerPetalColorPropertyId = Shader.PropertyToID(petalColorPropertyName);
 
-        if (flowerSettings.flowerPrefab == null && flowerSettings.tallFlowerPrefab == null)
+        if (flowerSettings.flowerPrefab == null && flowerSettings.tallFlowerPrefab == null && flowerSettings.daisyWeedPrefab == null)
         {
             Debug.LogWarning("Flower prefabs are missing. Flowers will not render until one is assigned.");
             return;
@@ -3735,6 +3748,24 @@ public class FoliageManager
                 if (cloverSettings.cloverClumpPrefabs[i] != null)
                     prefabs.Add(cloverSettings.cloverClumpPrefabs[i]);
             }
+        }
+
+        if (flowerSettings.daisyWeedPrefab != null)
+        {
+            MeshFilter meshFilter = flowerSettings.daisyWeedPrefab.GetComponentInChildren<MeshFilter>();
+            MeshRenderer meshRenderer = flowerSettings.daisyWeedPrefab.GetComponentInChildren<MeshRenderer>();
+            if (meshFilter == null || meshFilter.sharedMesh == null)
+                Debug.LogError("Daisy weed prefab missing MeshFilter or mesh.");
+            else
+                daisyWeedMesh = meshFilter.sharedMesh;
+
+            if (meshRenderer != null && meshRenderer.sharedMaterial != null)
+            {
+                daisyWeedMaterial = meshRenderer.sharedMaterial;
+                daisyWeedMaterial.enableInstancing = true;
+            }
+            else
+                Debug.LogError("Daisy weed prefab missing MeshRenderer or material.");
         }
 
         if (prefabs.Count == 0 && cloverSettings.cloverClumpPrefab != null)
