@@ -39,8 +39,16 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _BareDirtAO:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _BareDirtAlbedo:
         m_Texture: {fileID: 2800000, guid: 39deb6f07acbd164d84b8040ea766fcf, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BareDirtHeight:
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BareDirtNormal:
@@ -91,12 +99,44 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _LeafLitterAO:
+        m_Texture: {fileID: 2800000, guid: 690b30dcd36e8884ca1ca4e25c91f90b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _LeafLitterAlbedo:
-        m_Texture: {fileID: 2800000, guid: 63708bf29953f814d903f28a8ee66d34, type: 3}
+        m_Texture: {fileID: 2800000, guid: 3f4df6f9e5dc2624e8b674e09b1d0af2, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _LeafLitterHeight:
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _LeafLitterNormal:
-        m_Texture: {fileID: 2800000, guid: 937d7e378b351114ca93bd2e970a3fb8, type: 3}
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MixedForestFloorAlbedo:
+        m_Texture: {fileID: 2800000, guid: 9e04409f4e4e97046a67446a22a916ff, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MixedForestFloorNormal:
+        m_Texture: {fileID: 2800000, guid: 956389ab31910da40b1709ba0644df3a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MixedForestFloorHeight:
+        m_Texture: {fileID: 2800000, guid: c3b61a29f51d15d4f8362c23bd291fdb, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DenseMossAlbedo:
+        m_Texture: {fileID: 2800000, guid: 8ff2b4a64ef8d7c44a824c900c0ed5cd, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DenseMossAO:
+        m_Texture: {fileID: 2800000, guid: 933ad2cb9f23e31468df9c7277ea82fe, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DenseMossHeight:
+        m_Texture: {fileID: 2800000, guid: ef5cb4734a7ac3044847d96768b4fd99, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
@@ -107,12 +147,20 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _MossAO:
+        m_Texture: {fileID: 2800000, guid: 63f31a89bb929b04d8bc27d030cdd6b7, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _MossAlbedo:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: db13269a26fba294a883e863a75381d2, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MossHeight:
+        m_Texture: {fileID: 2800000, guid: 4c025833663361c43a16dca826e2d5ba, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MossNormal:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: e513d752c23d94e49b039c1bcf0ab391, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
@@ -169,6 +217,8 @@ Material:
     - _AlphaClip: 0
     - _AlphaToMask: 0
     - _AmbientStrength: 0.26
+    - _BareDirtAOStrength: 0
+    - _BareDirtHeightStrength: 0
     - _BareDirtNormalStrength: 0.35
     - _BareDirtTiling: 0.35
     - _Blend: 0
@@ -199,9 +249,16 @@ Material:
     - _GrassTilingFarDistance: 300
     - _GrassTilingNear: 0.5
     - _GrassTilingNearDistance: 100
+    - _LeafLitterAOStrength: 0.327
+    - _LeafLitterHeightStrength: 0
+    - _MixedForestFloorHeightStrength: 0.015
+    - _DenseMossAOStrength: 0.5
+    - _DenseMossHeightStrength: 0.012
     - _LeafLitterNormalStrength: 0.45
     - _LeafLitterTiling: 0.35
     - _Metallic: 0
+    - _MossAOStrength: 0.5
+    - _MossHeightStrength: 0.012
     - _MossNormalStrength: 0.25
     - _MossTiling: 0.32
     - _NoiseScale: 0.023
@@ -251,12 +308,14 @@ Material:
     - _GroundDarkGrassColor: {r: 0.1, g: 0.28, b: 0.09, a: 1}
     - _GroundLightGrassColor: {r: 0.25, g: 0.52, b: 0.19, a: 1}
     - _GroundMidGrassColor: {r: 0.16, g: 0.4, b: 0.13, a: 1}
-    - _LeafLitterColor: {r: 0.6603774, g: 0.42252752, b: 0.25127557, a: 1}
+    - _LeafLitterColor: {r: 1, g: 1, b: 1, a: 1}
+    - _MixedForestFloorColor: {r: 1, g: 1, b: 1, a: 1}
+    - _DenseMossColor: {r: 1, g: 1, b: 1, a: 1}
     - _LightColor: {r: 0.43999997, g: 0.78, b: 0.29999998, a: 1}
     - _LightGrassColor: {r: 0.44, g: 0.78, b: 0.3, a: 1}
     - _MidColor: {r: 0.28999996, g: 0.62, b: 0.23999995, a: 1}
     - _MidGrassColor: {r: 0.29, g: 0.62, b: 0.24, a: 1}
-    - _MossColor: {r: 0.08, g: 0.28, b: 0.1, a: 1}
+    - _MossColor: {r: 0.65, g: 0.85, b: 0.65, a: 1}
     - _MudColor: {r: 0.41999996, g: 0.31999996, b: 0.21999997, a: 1}
     - _RiverbedColor: {r: 0.34999996, g: 0.29999998, b: 0.23999995, a: 1}
     - _RockColor: {r: 0.45, g: 0.45, b: 0.45, a: 1}

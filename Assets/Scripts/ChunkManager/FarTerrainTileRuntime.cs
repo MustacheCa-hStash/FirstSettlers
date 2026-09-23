@@ -35,6 +35,7 @@ public class FarTerrainTileRuntime
         meshFilter = root.AddComponent<MeshFilter>();
         meshRenderer = root.AddComponent<MeshRenderer>();
         runtimeMaterial = new Material(terrainMaterial);
+        ForestFloorMaterialOptions.DisableMissingMaps(runtimeMaterial);
         meshRenderer.material = runtimeMaterial;
         meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
 

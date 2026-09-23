@@ -274,6 +274,28 @@ public static class GroundCoverMapGenerator
             int x,
             int z)
         {
+            GroundCoverType cover = ClassifyForestCoverBase(moisture, slope, riverMask, index, x, z);
+            float region = Sample01(seed + 8320, x, z, 0.012f);
+            float dampShade = dampShades[index];
+
+            if (cover == GroundCoverType.LeafLitter && dampShade > 0.49f &&
+                organicFloorIntents[index] < 0.70f && region > 0.52f)
+                return GroundCoverType.MixedForestFloor;
+
+            if (cover == GroundCoverType.Moss && dampShade > 0.68f && region > 0.57f)
+                return GroundCoverType.DenseMoss;
+
+            return cover;
+        }
+
+        private GroundCoverType ClassifyForestCoverBase(
+            float moisture,
+            float slope,
+            float riverMask,
+            int index,
+            int x,
+            int z)
+        {
             float patchNoise = Sample01(seed + 8300, x, z, 0.055f);
             float broadPatchNoise = Sample01(seed + 8301, x, z, 0.023f);
             float canopyDensity = canopyDensities[index];
@@ -305,6 +327,9 @@ public static class GroundCoverMapGenerator
                 return GroundCoverType.DarkGrass;
             }
 
+            if (dampShade > 0.62f && broadPatchNoise > 0.57f && patchNoise < 0.58f)
+                return GroundCoverType.Moss;
+
             if (organicFloorIntent > 0.58f && patchNoise > 0.24f)
             {
                 if (dampShade > 0.68f && patchNoise < 0.34f)
@@ -324,20 +349,21 @@ public static class GroundCoverMapGenerator
                 if (dampShade > 0.66f && patchNoise < 0.24f)
                     return GroundCoverType.Moss;
 
-                return organicFloorIntent > 0.48f && broadPatchNoise > 0.68f
-                    ? GroundCoverType.LeafLitter
-                    : GroundCoverType.DarkGrass;
+                return patchNoise > 0.82f && organicFloorIntent < 0.48f
+                    ? GroundCoverType.DarkGrass
+                    : GroundCoverType.LeafLitter;
             }
 
             if (canopyDensity > 0.28f)
             {
-                if (organicFloorIntent > 0.52f && (broadPatchNoise > 0.72f || patchNoise > 0.86f))
-                    return GroundCoverType.LeafLitter;
-
-                return GroundCoverType.DarkGrass;
+                return patchNoise > 0.76f && organicFloorIntent < 0.52f
+                    ? GroundCoverType.DarkGrass
+                    : GroundCoverType.LeafLitter;
             }
 
-            return GroundCoverType.DarkGrass;
+            return patchNoise > 0.68f && broadPatchNoise > 0.5f
+                ? GroundCoverType.DarkGrass
+                : GroundCoverType.LeafLitter;
         }
 
         private float Sample01(int noiseSeed, int x, int z, float scale)

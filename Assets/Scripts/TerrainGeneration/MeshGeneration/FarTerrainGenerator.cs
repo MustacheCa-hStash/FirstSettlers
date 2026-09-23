@@ -954,6 +954,8 @@ public static class FarTerrainGenerator
             else
             {
                 controlMap2[pixelIndex] = GroundCoverTypeToControlColor(groundCoverType);
+                if (groundCoverType == GroundCoverType.MixedForestFloor || groundCoverType == GroundCoverType.DenseMoss)
+                    snowMap1.a = 255;
             }
             float2 snow = MountainSnow.Evaluate(new float2(worldX, worldZ), seed, center.Height,
                 center.MountainMask, center.RiverMask, waterLevel, temperature, moisture,
@@ -1042,19 +1044,28 @@ public static class FarTerrainGenerator
             int z)
         {
             float patchNoise = Sample01(seed + 8300, x, z, 0.055f);
+            float broadPatchNoise = Sample01(seed + 8301, x, z, 0.023f);
+            float region = Sample01(seed + 8320, x, z, 0.012f);
             bool nearRiver = riverMask > 0.64f;
             bool exposedOrDry = slope > TerrainSlopePolicy.GroundCoverExposedDegrees || moisture < 0.32f;
 
             if (nearRiver)
-                return patchNoise > 0.55f ? GroundCoverType.Moss : GroundCoverType.BareDirt;
+                return patchNoise > 0.55f
+                    ? (moisture > 0.68f && region > 0.57f ? GroundCoverType.DenseMoss : GroundCoverType.Moss)
+                    : GroundCoverType.BareDirt;
 
             if (exposedOrDry && patchNoise > 0.42f)
                 return GroundCoverType.BareDirt;
 
-            if (moisture > 0.70f && patchNoise < 0.25f)
-                return GroundCoverType.Moss;
+            if (moisture > 0.66f && broadPatchNoise > 0.57f && patchNoise < 0.58f)
+                return moisture > 0.76f && region > 0.57f ? GroundCoverType.DenseMoss : GroundCoverType.Moss;
 
-            return patchNoise > 0.58f ? GroundCoverType.LeafLitter : GroundCoverType.DarkGrass;
+            if (patchNoise > 0.78f)
+                return GroundCoverType.DarkGrass;
+
+            return moisture > 0.52f && region > 0.52f
+                ? GroundCoverType.MixedForestFloor
+                : GroundCoverType.LeafLitter;
         }
 
         private float Sample01(int noiseSeed, int x, int z, float scale)
@@ -1076,12 +1087,14 @@ public static class FarTerrainGenerator
                 case GroundCoverType.DarkGrass:
                     return new Color32(value, 0, 0, 0);
                 case GroundCoverType.LeafLitter:
+                case GroundCoverType.MixedForestFloor:
                 case GroundCoverType.NeedleLitter:
                     return new Color32(0, value, 0, 0);
                 case GroundCoverType.BareDirt:
                 case GroundCoverType.Gravel:
                     return new Color32(0, 0, value, 0);
                 case GroundCoverType.Moss:
+                case GroundCoverType.DenseMoss:
                 case GroundCoverType.Lichen:
                     return new Color32(0, 0, 0, value);
                 default:

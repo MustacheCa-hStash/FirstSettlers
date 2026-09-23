@@ -54,6 +54,7 @@ public class ChunkRuntime
         terrainMeshRenderer = root.AddComponent<MeshRenderer>();
 
         runtimeTerrainMaterial = new Material(terrainMaterial);
+        ForestFloorMaterialOptions.DisableMissingMaps(runtimeTerrainMaterial);
         terrainMeshRenderer.material = runtimeTerrainMaterial;
         terrainMeshRenderer.shadowCastingMode = ShadowCastingMode.Off;
 
@@ -367,4 +368,27 @@ public class ChunkRuntime
             runtimeTerrainMaterial.SetTexture("_ControlMap2", null);
     }
 
+}
+
+internal static class ForestFloorMaterialOptions
+{
+    public static void DisableMissingMaps(Material material)
+    {
+        DisableIfMissing(material, "_LeafLitterAO", "_LeafLitterAOStrength");
+        DisableIfMissing(material, "_LeafLitterHeight", "_LeafLitterHeightStrength");
+        DisableIfMissing(material, "_BareDirtAO", "_BareDirtAOStrength");
+        DisableIfMissing(material, "_BareDirtHeight", "_BareDirtHeightStrength");
+        DisableIfMissing(material, "_MossAO", "_MossAOStrength");
+        DisableIfMissing(material, "_MossHeight", "_MossHeightStrength");
+        DisableIfMissing(material, "_MixedForestFloorHeight", "_MixedForestFloorHeightStrength");
+        DisableIfMissing(material, "_DenseMossAO", "_DenseMossAOStrength");
+        DisableIfMissing(material, "_DenseMossHeight", "_DenseMossHeightStrength");
+    }
+
+    private static void DisableIfMissing(Material material, string textureProperty, string strengthProperty)
+    {
+        if (material.HasProperty(textureProperty) && material.HasProperty(strengthProperty) &&
+            material.GetTexture(textureProperty) == null)
+            material.SetFloat(strengthProperty, 0f);
+    }
 }

@@ -39,6 +39,12 @@ public static class TerrainControlMapBuilder
                 else
                 {
                     controlMap.Maps[2][pixelIndex] = GroundCoverTypeToIndex(groundCoverType);
+                    if (groundCoverType == GroundCoverType.MixedForestFloor || groundCoverType == GroundCoverType.DenseMoss)
+                    {
+                        Color32 variant = controlMap.Maps[1][pixelIndex];
+                        variant.a = 255;
+                        controlMap.Maps[1][pixelIndex] = variant;
+                    }
                 }
             }
         }
@@ -129,6 +135,7 @@ public static class TerrainControlMapBuilder
                 return new Color32(value, 0, 0, 0);
 
             case GroundCoverType.LeafLitter:
+            case GroundCoverType.MixedForestFloor:
             case GroundCoverType.NeedleLitter:
                 return new Color32(0, value, 0, 0);
 
@@ -137,6 +144,7 @@ public static class TerrainControlMapBuilder
                 return new Color32(0, 0, value, 0);
 
             case GroundCoverType.Moss:
+            case GroundCoverType.DenseMoss:
             case GroundCoverType.Lichen:
                 return new Color32(0, 0, 0, value);
 

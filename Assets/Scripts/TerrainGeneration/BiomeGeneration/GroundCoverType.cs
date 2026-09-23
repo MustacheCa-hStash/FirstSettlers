@@ -9,5 +9,7 @@ public enum GroundCoverType
     NeedleLitter,
     DryGrass,
     Gravel,
-    SnowDusting
+    SnowDusting,
+    MixedForestFloor,
+    DenseMoss
 }

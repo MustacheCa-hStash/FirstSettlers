@@ -1,0 +1,6 @@
+{
+  "framesPerAxis": 8,
+  "tileResolution": 256,
+  "paddingPixels": 2,
+  "encoding": "RG octahedral local bent normal; B sky visibility; A ambient occlusion"
+}

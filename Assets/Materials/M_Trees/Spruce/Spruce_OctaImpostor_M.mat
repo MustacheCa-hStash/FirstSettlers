@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Spruce_OctaImpostor_M
+  m_Shader: {fileID: 4800000, guid: 7e979b3f63914f1d87dc4051460164da, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _AlbedoCoverage:
+        m_Texture: {fileID: 2800000, guid: d826a698c842e4e45a23364a067d313b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _AmbientAtlas:
+        m_Texture: {fileID: 2800000, guid: 8133ff1b15619c841851ee4331139802, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DepthAtlas:
+        m_Texture: {fileID: 2800000, guid: c9d2e441b9fa77d4aaa2930740a0a38b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MaterialIdAtlas:
+        m_Texture: {fileID: 2800000, guid: 8c7588f7a231b874cb3542bdb0defe4b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SurfaceAtlas:
+        m_Texture: {fileID: 2800000, guid: 4beadf05ba6b27b46a67317063290e52, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AOStrength: 0.65
+    - _AmbientFloor: 0.5
+    - _AmbientTileResolution: 128
+    - _AtlasPadding: 2
+    - _AtlasTileResolution: 504
+    - _CaptureRadius: 4.2999973
+    - _Cutoff: 0.008
+    - _DebugFrameX: 0
+    - _DebugFrameY: 0
+    - _DebugView: 0
+    - _DepthParallax: 0.45
+    - _FoliageBrightness: 1.25
+    - _FramesPerAxis: 8
+    - _LeafLightWrap: 0.55
+    - _SeasonStrength: 1
+    - _SkyStrength: 1
+    - _TransmissionStrength: 0.6
+    - _WindSpeed: 1.2
+    - _WindStrength: 0.035
+    m_Colors:
+    - _CaptureCenterLS: {r: 0.0910787, g: 3.0420964, b: -0.07994366, a: 0}
+    - _LeafSeasonTint: {r: 0.82, g: 1.35, b: 0.55, a: 1}
+    - _TreeLeafTint: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

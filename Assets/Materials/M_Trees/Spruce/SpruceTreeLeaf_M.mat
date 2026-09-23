@@ -27,7 +27,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: 9dcbae084920136429b5f4bb1eff2b6b, type: 3}
+        m_Texture: {fileID: 2800000, guid: 2321bb6f992d6564f88f66f92173afc6, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
@@ -88,7 +88,9 @@ Material:
     - _AlphaClip: 1
     - _AlphaCutoutShadows: 1
     - _AlphaToMask: 1
-    - _AmbientStrength: 0.3
+    - _AmbientStrength: 0.429
+    - _BacklightPower: 3.5
+    - _BacklightStrength: 0.16
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BlendOp: 0
@@ -96,27 +98,33 @@ Material:
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _ColorVariationStrength: 0.273
+    - _ColorHeightMax: 8
+    - _ColorHeightMin: 0
+    - _ColorVariationStrength: 0.38
     - _Cull: 0
-    - _Cutoff: 0.077
+    - _Cutoff: 0.008
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
     - _FauxShadeStrength: 0.36
+    - _FineVariationStrength: 1
     - _ForceBillboardFacing: 0
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
+    - _HeightColorVariation: 0.246
     - _InteriorShadeStrength: 0.2
     - _LeafMaskSoftness: 0.08
     - _LeafMaskThreshold: 0
     - _LeafTintStrength: 0.85
     - _LightWrap: 0.45
     - _LowerShadeStrength: 0.22
+    - _MacroVariationScale: 0.738
+    - _MacroVariationStrength: 0.181
     - _Metallic: 0
-    - _NeedleContrast: 0.251
+    - _NeedleContrast: 0.514
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueOffset: 0
@@ -132,16 +140,17 @@ Material:
     - _TipStrength: 0.449
     - _UseVertexColor: 0
     - _WindFlutterSpeed: 5.5
-    - _WindFlutterStrength: 0.035
+    - _WindFlutterStrength: 0
     - _WindGustScale: 0.22
     - _WindHeightMax: 8
     - _WindHeightMin: 0
     - _WindSpeed: 1.35
-    - _WindStrength: 0.08
+    - _WindStrength: 0
     - _WorkflowMode: 1
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     m_Colors:
+    - _BacklightColor: {r: 0.45, g: 0.72, b: 0.38, a: 1}
     - _BaseColor: {r: 0.8666667, g: 0.9098039, b: 0.8627451, a: 1}
     - _BaseNeedleColor: {r: 0.18431368, g: 0.35294116, b: 0.21176466, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}

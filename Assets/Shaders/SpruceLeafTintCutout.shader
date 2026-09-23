@@ -8,6 +8,12 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
         _DeepNeedleColor("Deep Shadow Green", Color) = (0.055, 0.16, 0.09, 1.0)
         _TipColor("Fresh Tip Color", Color) = (0.30, 0.45, 0.22, 1.0)
         _ColorVariationStrength("Color Variation Strength", Range(0, 1)) = 0.42
+        _MacroVariationScale("Macro Color Variation Scale", Range(0.02, 1)) = 0.16
+        _MacroVariationStrength("Macro Color Variation Strength", Range(0, 1)) = 0.22
+        _FineVariationStrength("Fine Color Variation Strength", Range(0, 1)) = 0.08
+        _HeightColorVariation("Canopy Height Color Variation", Range(0, 1)) = 0.12
+        _ColorHeightMin("Color Height Min", Float) = 0
+        _ColorHeightMax("Color Height Max", Float) = 8
         _NeedleContrast("Needle Contrast", Range(0, 1)) = 0.22
         _TipStrength("Tip Color Strength", Range(0, 1)) = 0.10
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.35
@@ -16,6 +22,9 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
         _LightWrap("Leaf Light Wrap", Range(0, 1)) = 0.45
         _Smoothness("Smoothness", Range(0, 1)) = 0.08
         _SpecularStrength("Specular Strength", Range(0, 1)) = 0.03
+        _BacklightColor("Needle Backlight Color", Color) = (0.45, 0.72, 0.38, 1.0)
+        _BacklightStrength("Needle Backlight Strength", Range(0, 1)) = 0.14
+        _BacklightPower("Needle Backlight Focus", Range(1, 8)) = 3.5
         [Toggle] _UseVertexColor("Use Vertex Color", Float) = 0
         _WindDirection("Wind Direction", Vector) = (1, 0, 0.35, 0)
         _WindStrength("Wind Canopy Sway Strength", Range(0, 1)) = 0.08
@@ -71,6 +80,12 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 half4 _DeepNeedleColor;
                 half4 _TipColor;
                 half _ColorVariationStrength;
+                half _MacroVariationScale;
+                half _MacroVariationStrength;
+                half _FineVariationStrength;
+                half _HeightColorVariation;
+                half _ColorHeightMin;
+                half _ColorHeightMax;
                 half _NeedleContrast;
                 half _TipStrength;
                 half _Cutoff;
@@ -78,6 +93,9 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 half _LightWrap;
                 half _Smoothness;
                 half _SpecularStrength;
+                half4 _BacklightColor;
+                half _BacklightStrength;
+                half _BacklightPower;
                 half _UseVertexColor;
                 float4 _WindDirection;
                 half _WindStrength;
@@ -105,6 +123,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 float3 normalWS : TEXCOORD1;
                 float2 uv : TEXCOORD2;
                 float4 shadowCoord : TEXCOORD3;
+                float3 positionOS : TEXCOORD4;
                 half4 color : COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -165,26 +184,28 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 OUT.normalWS = normalInputs.normalWS;
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.shadowCoord = TransformWorldToShadowCoord(positionWS);
+                OUT.positionOS = IN.positionOS.xyz;
                 OUT.color = IN.color;
 
                 return OUT;
             }
 
-            half3 EvaluateSpruceNeedleColor(float2 uv, float3 positionWS)
+            half3 EvaluateSpruceNeedleColor(float2 uv, float3 positionWS, float3 positionOS)
             {
-                half branchNoise = ValueNoise(positionWS.xz * 0.18h + uv * 7.5h);
-                half fineNoise = ValueNoise(positionWS.xz * 0.72h + uv.yx * 23.0h);
-                branchNoise = lerp(branchNoise, fineNoise, 0.18h);
+                half macroNoise = ValueNoise(positionWS.xz * _MacroVariationScale + uv * 1.7h);
+                half fineNoise = ValueNoise(positionWS.xz * (_MacroVariationScale * 5.3h) + uv.yx * 8.0h);
+                half branchNoise = lerp(macroNoise, fineNoise, _FineVariationStrength);
+                half height01 = saturate((positionOS.y - _ColorHeightMin) / max(_ColorHeightMax - _ColorHeightMin, 0.0001h));
 
-                half coolMix = smoothstep(0.18h, 0.78h, branchNoise) * _ColorVariationStrength;
-                half deepMix = smoothstep(0.68h, 0.98h, 1.0h - fineNoise + branchNoise * 0.24h) * _ColorVariationStrength * 0.82h;
-                half tipMix = smoothstep(0.62h, 0.96h, uv.y + fineNoise * 0.18h) * _TipStrength;
+                half coolMix = smoothstep(0.18h, 0.78h, branchNoise) * _ColorVariationStrength * _MacroVariationStrength;
+                half deepMix = smoothstep(0.60h, 0.96h, 1.0h - branchNoise) * _ColorVariationStrength * 0.58h;
+                half tipMix = smoothstep(0.58h, 0.94h, height01 + (fineNoise - 0.5h) * 0.16h) * _TipStrength * (0.35h + _HeightColorVariation * 0.65h);
 
                 half3 needleColor = lerp(_LeafColor.rgb, _CoolNeedleColor.rgb, coolMix);
                 needleColor = lerp(needleColor, _DeepNeedleColor.rgb, deepMix);
                 needleColor = lerp(needleColor, _TipColor.rgb, tipMix);
 
-                half contrastNoise = branchNoise * 0.62h + fineNoise * 0.38h;
+                half contrastNoise = macroNoise * 0.70h + fineNoise * 0.30h;
                 half colorContrast = saturate(_NeedleContrast * 1.35h);
                 needleColor *= lerp(1.0h - colorContrast, 1.0h + colorContrast, contrastNoise);
                 return needleColor;
@@ -197,16 +218,16 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 half textureContrast = lerp(1.0h - _NeedleContrast * 0.72h, 1.0h + _NeedleContrast * 0.42h, textureDetail);
 
                 half edgeMask = 1.0h - smoothstep(_Cutoff, saturate(_Cutoff + 0.24h), atlas.a);
-                half edgeDarken = lerp(1.0h, 0.54h, edgeMask * saturate(_NeedleContrast * 1.55h));
+                half edgeDarken = lerp(1.0h, 0.86h, edgeMask * saturate(_NeedleContrast));
 
                 return leafColor * textureContrast * edgeDarken;
             }
 
-            InputData InitializeSpruceLeafInputData(Varyings IN)
+            InputData InitializeSpruceLeafInputData(Varyings IN, half faceSign)
             {
                 InputData inputData = (InputData)0;
                 inputData.positionWS = IN.positionWS;
-                inputData.normalWS = NormalizeNormalPerPixel(IN.normalWS);
+                inputData.normalWS = NormalizeNormalPerPixel(IN.normalWS * faceSign);
                 inputData.viewDirectionWS = GetWorldSpaceNormalizeViewDir(IN.positionWS);
                 inputData.shadowCoord = IN.shadowCoord;
                 inputData.bakedGI = max(SampleSH(inputData.normalWS), _AmbientStrength.xxx);
@@ -228,7 +249,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 return surfaceData;
             }
 
-            half4 frag(Varyings IN) : SV_Target
+            half4 frag(Varyings IN, FRONT_FACE_TYPE facing : FRONT_FACE_SEMANTIC) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
                 ApplyDistantTreeFade(IN.positionCS.xy);
@@ -240,16 +261,21 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                     LODFadeCrossFade(IN.positionCS);
                 #endif
 
-                half3 leafColor = EvaluateSpruceNeedleColor(IN.uv, IN.positionWS);
+                half3 leafColor = EvaluateSpruceNeedleColor(IN.uv, IN.positionWS, IN.positionOS);
                 leafColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
                 leafColor = ApplySpruceNeedleDefinition(atlas, leafColor);
 
-                InputData inputData = InitializeSpruceLeafInputData(IN);
+                half faceSign = IS_FRONT_VFACE(facing, 1.0h, -1.0h);
+                InputData inputData = InitializeSpruceLeafInputData(IN, faceSign);
                 half3 litNormal = normalize(lerp(inputData.normalWS, half3(0.0h, 1.0h, 0.0h), _LightWrap * 0.22h));
                 inputData.normalWS = litNormal;
 
                 SurfaceData surfaceData = InitializeSpruceLeafSurfaceData(atlas.rgb * leafColor, atlas.a);
                 half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
+                Light mainLight = GetMainLight(inputData.shadowCoord);
+                half backlight = pow(saturate(dot(-inputData.normalWS, mainLight.direction)), _BacklightPower);
+                backlight *= _BacklightStrength * mainLight.shadowAttenuation * mainLight.distanceAttenuation;
+                color.rgb += surfaceData.albedo * _BacklightColor.rgb * mainLight.color * backlight;
                 return half4(saturate(color.rgb), atlas.a);
             }
             ENDHLSL

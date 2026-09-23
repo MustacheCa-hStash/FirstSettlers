@@ -886,7 +886,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 13
+  worldSeed: 124
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -1047,13 +1047,13 @@ MonoBehaviour:
     spruceTreePrefab: {fileID: 0}
     whitePineTreePrefab: {fileID: 0}
     oakTreePrefab: {fileID: 0}
-    treeLOD0GameObjectPrefab: {fileID: 964624617599883380, guid: 08844d92feaf6624389d904acc8cb34b, type: 3}
+    treeLOD0GameObjectPrefab: {fileID: 8923281884864634577, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
     grasslandMapleTreePrefab: {fileID: 0}
     grasslandBirchAspenTreePrefab: {fileID: 0}
     grasslandWhitePineTreePrefab: {fileID: 0}
     grasslandOakTreePrefab: {fileID: 0}
     grasslandWillowTreePrefab: {fileID: 0}
-    grasslandTreeFallbackPrefab: {fileID: 964624617599883380, guid: 08844d92feaf6624389d904acc8cb34b, type: 3}
+    grasslandTreeFallbackPrefab: {fileID: 8923281884864634577, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
     blueberryBushPrefab: {fileID: 2095120421312505866, guid: 90b14277c549b58408d186345b97dfbe, type: 3}
     raspberryBushPrefab: {fileID: 0}
     strawberryBushPrefab: {fileID: 6447866110754163726, guid: 083081802f30fd149b46c7105b9698ba, type: 3}
@@ -1092,13 +1092,13 @@ MonoBehaviour:
     spruceTreeBillboardPrefab: {fileID: 0}
     whitePineTreeBillboardPrefab: {fileID: 0}
     oakTreeBillboardPrefab: {fileID: 0}
-    treeBillboardPrefab: {fileID: 6739425203414602236, guid: b5e156ee0a0918642b84e78907cbb6bb, type: 3}
+    treeBillboardPrefab: {fileID: 3135895389733779445, guid: faeeaaccb2fb5794a94e5782faafcd7c, type: 3}
     grasslandMapleTreeBillboardPrefab: {fileID: 0}
     grasslandBirchAspenTreeBillboardPrefab: {fileID: 0}
     grasslandWhitePineTreeBillboardPrefab: {fileID: 0}
     grasslandOakTreeBillboardPrefab: {fileID: 0}
     grasslandWillowTreeBillboardPrefab: {fileID: 0}
-    grasslandTreeBillboardFallbackPrefab: {fileID: 6739425203414602236, guid: b5e156ee0a0918642b84e78907cbb6bb, type: 3}
+    grasslandTreeBillboardFallbackPrefab: {fileID: 3135895389733779445, guid: faeeaaccb2fb5794a94e5782faafcd7c, type: 3}
     treeCellSize: 12
     treeSpawnChance: 0.03
     treeMinDistance: 9
@@ -1106,11 +1106,11 @@ MonoBehaviour:
     grassExclusionRadius: 0.5
     bushGrassExclusionRadius: 0.45
     seedOffset: 12000
-    gameObjectTreeChunkRingRadius: 4
+    gameObjectTreeChunkRingRadius: 3
     billboardTreeChunkStartRingRadius: 18
     billboardTreeChunkRingRadius: 18
     enableDistantTrees: 1
-    distantTreeDistanceChunks: 20
+    distantTreeDistanceChunks: 15
     distantTreeFadeWidthChunks: 2
     distantTreeThinningStartChunks: 5
     distantTreeDensity: 0.16
