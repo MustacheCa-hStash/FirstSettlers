@@ -1,11 +1,9 @@
-public class TerrainDataRequestResult
+public class TerrainDataRequestResult : System.IDisposable
 {
     public ChunkCoord ChunkCoord { get; }
     public int RequestVersion { get; }
     public float[,] HeightMap { get; }
-    public float[,] GradientXMap { get; }
-    public float[,] GradientZMap { get; }
-    // Smoothed terrain inclination in degrees; gradients remain unscaled derivatives.
+    // Smoothed terrain inclination in degrees, calculated from the wide stencil.
     public float[,] SlopeMap { get; }
     public float[,] MoistureMap { get; }
     public float[,] TemperatureMap { get; }
@@ -16,17 +14,17 @@ public class TerrainDataRequestResult
     public WorldFeaturePlan WorldFeaturePlan { get; }
     public float[,] RiverMaskMap { get; }
     public ControlMapPixelData ControlMapsRawData { get; }
+    public ChunkRecord.NativeTerrainData NativeData { get; private set; }
 
-    public TerrainDataRequestResult(ChunkCoord chunkCoord, int requestVersion, float[,] heightMap, float[,] gradientXMap,
-        float[,] gradientZMap, float[,] slopeMap, float[,] moistureMap, float[,] temperatureMap, BiomeType[,] biomeMap, 
+    public TerrainDataRequestResult(ChunkCoord chunkCoord, int requestVersion, float[,] heightMap,
+        float[,] slopeMap, float[,] moistureMap, float[,] temperatureMap, BiomeType[,] biomeMap,
         SurfaceType[,] surfaceTypeMap, WaterState[,] waterStateMap, GroundCoverType[,] groundCoverMap,
-        WorldFeaturePlan worldFeaturePlan, float[,] riverMaskMap, ControlMapPixelData controlMapsRawData)
+        WorldFeaturePlan worldFeaturePlan, float[,] riverMaskMap, ControlMapPixelData controlMapsRawData,
+        ChunkRecord.NativeTerrainData nativeData = null)
     {
         ChunkCoord = chunkCoord;
         RequestVersion = requestVersion;
         HeightMap = heightMap;
-        GradientXMap = gradientXMap;
-        GradientZMap = gradientZMap;
         SlopeMap = slopeMap;
         MoistureMap = moistureMap;
         TemperatureMap = temperatureMap;
@@ -37,5 +35,14 @@ public class TerrainDataRequestResult
         WorldFeaturePlan = worldFeaturePlan;
         RiverMaskMap = riverMaskMap;
         ControlMapsRawData = controlMapsRawData;
+        NativeData = nativeData;
+    }
+
+    public void TransferNativeOwnership() => NativeData = null;
+
+    public void Dispose()
+    {
+        NativeData?.Dispose();
+        NativeData = null;
     }
 }

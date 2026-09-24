@@ -4,7 +4,7 @@ using Unity.Collections;
 using Unity.Profiling;
 using UnityEngine;
 
-public class TerrainRequestManager
+public class TerrainRequestManager : System.IDisposable
 {
     private static readonly ProfilerMarker TerrainDataWorkerMarker = new ProfilerMarker("FS.Streaming.Worker.TerrainDataRequest");
     private static readonly ProfilerMarker FarTerrainWorkerMarker = new ProfilerMarker("FS.Streaming.Worker.FarTerrainRequest");
@@ -17,6 +17,7 @@ public class TerrainRequestManager
     private readonly Queue<ColliderRequestResult> completedColliderResults = new();
 
     private readonly object terrainDataResultsLock = new object();
+    private bool disposed;
     private readonly object farTerrainResultsLock = new object();
     private readonly object meshResultsLock = new object();
     private readonly object colliderResultsLock = new();
@@ -114,37 +115,41 @@ public class TerrainRequestManager
 
         ThreadPool.QueueUserWorkItem(_ =>
         {
+            NativeArray<float> generatedHeights = default;
+            NativeArray<float> generatedSlopes = default;
+            NativeArray<float> generatedRiverMasks = default;
+            NativeArray<float> generatedMoistures = default;
+            NativeArray<float> generatedTemperatures = default;
             try
             {
                 using var terrainDataWorkerScope = TerrainDataWorkerMarker.Auto();
                 long totalStart = TerrainGenerationProfiler.GetTimestamp();
                 long stageStart = TerrainGenerationProfiler.GetTimestamp();
-                HeightFieldResult heightField = HeightMapGenerator.GenerateTerrainHeightField(
+                HeightFieldResult heightField = HeightMapGenerator.GenerateTerrainHeightFieldForRequest(
                     chunkSize,
                     seed,
                     sampleScale,
                     chunkCoord,
                     waterSettings.WaterLevel,
                     mountainHorizontalScale,
-                    meshHeightMultiplier, erosion
+                    meshHeightMultiplier, erosion,
+                    out generatedHeights, out generatedSlopes, out generatedRiverMasks
                 );
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainHeightField, stageStart);
 
                 float[,] finalHeightMap = heightField.HeightMap;
-                float[,] gradientXMap = heightField.GradientXMap;
-                float[,] gradientZMap = heightField.GradientZMap;
                 float[,] slopeMap = heightField.SlopeMap;
                 float[,] mountainMaskMap = heightField.MountainMaskMap;
                 float[,] riverMaskMap = heightField.RiverMaskMap;
 
                 stageStart = TerrainGenerationProfiler.GetTimestamp();
-                float[,] moistureMap = ClimateGenerator.GenerateTerrainMoistureMap(chunkSize, seed, sampleScale,
-                    octaves, persistence, lacunarity, chunkCoord);
+                float[,] moistureMap = ClimateGenerator.GenerateTerrainMoistureMapForRequest(chunkSize, seed, sampleScale,
+                    octaves, persistence, lacunarity, chunkCoord, out generatedMoistures);
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainClimateMoisture, stageStart);
 
                 stageStart = TerrainGenerationProfiler.GetTimestamp();
-                float[,] temperatureMap = ClimateGenerator.GenerateTerrainTemperatureMap(chunkSize, seed,
-                    sampleScale, octaves, persistence, lacunarity, chunkCoord);
+                float[,] temperatureMap = ClimateGenerator.GenerateTerrainTemperatureMapForRequest(chunkSize, seed,
+                    sampleScale, octaves, persistence, lacunarity, chunkCoord, out generatedTemperatures);
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainClimateTemperature, stageStart);
 
                 NativeArray<float> nativeHeights = default;
@@ -162,17 +167,20 @@ public class TerrainRequestManager
                 NativeArray<float> nativeDampShades = default;
                 NativeArray<float> nativeOrganicFloorIntents = default;
                 NativeArray<GroundCoverType> nativeGroundCovers = default;
+                ChunkRecord.NativeTerrainData retainedNativeData = null;
 
                 try
                 {
                     int unusedMapWidth;
                     int unusedMapHeight;
-                    nativeHeights = TerrainMapNativeUtility.CopyFloatMapToNative(finalHeightMap, Allocator.TempJob, out int mapWidth, out int mapHeight);
-                    nativeMoistures = TerrainMapNativeUtility.CopyFloatMapToNative(moistureMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
-                    nativeTemperatures = TerrainMapNativeUtility.CopyFloatMapToNative(temperatureMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
-                    nativeSlopes = TerrainMapNativeUtility.CopyFloatMapToNative(slopeMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+                    int mapWidth = finalHeightMap.GetLength(0);
+                    int mapHeight = finalHeightMap.GetLength(1);
+                    nativeHeights = generatedHeights; generatedHeights = default;
+                    nativeMoistures = generatedMoistures; generatedMoistures = default;
+                    nativeTemperatures = generatedTemperatures; generatedTemperatures = default;
+                    nativeSlopes = generatedSlopes; generatedSlopes = default;
                     nativeMountainMasks = TerrainMapNativeUtility.CopyFloatMapToNative(mountainMaskMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
-                    nativeRiverMasks = TerrainMapNativeUtility.CopyFloatMapToNative(riverMaskMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+                    nativeRiverMasks = generatedRiverMasks; generatedRiverMasks = default;
 
                     stageStart = TerrainGenerationProfiler.GetTimestamp();
                     BiomeType[,] biomeMap = BiomeMapGenerator.GenerateBiomeMap(
@@ -185,7 +193,7 @@ public class TerrainRequestManager
                         mapWidth,
                         mapHeight,
                         waterSettings.WaterLevel,
-                        Allocator.TempJob,
+                        Allocator.Persistent,
                         out nativeBiomes);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainBiomeMap, stageStart);
 
@@ -198,7 +206,7 @@ public class TerrainRequestManager
                         mapWidth,
                         mapHeight,
                         waterSettings.WaterLevel,
-                        Allocator.TempJob,
+                        Allocator.Persistent,
                         out nativeSurfaces);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainSurfaceMap, stageStart);
 
@@ -209,7 +217,7 @@ public class TerrainRequestManager
                         mapWidth,
                         mapHeight,
                         waterSettings.WaterLevel,
-                        Allocator.TempJob,
+                        Allocator.Persistent,
                         out nativeWaterStates);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainWaterStateMap, stageStart);
 
@@ -250,7 +258,7 @@ public class TerrainRequestManager
                         chunkSize,
                         seed,
                         chunkCoord,
-                        Allocator.TempJob,
+                        Allocator.Persistent,
                         out nativeGroundCovers);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainGroundCoverMap, stageStart);
 
@@ -264,18 +272,34 @@ public class TerrainRequestManager
                         mountainSnowRenderCoverageGamma);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainControlMapBuild, stageStart);
 
+                    retainedNativeData = new ChunkRecord.NativeTerrainData(
+                        finalHeightMap, slopeMap, biomeMap, surfaceTypeMap, waterStateMap, groundCoverMap, riverMaskMap,
+                        nativeHeights, nativeSlopes, nativeBiomes, nativeSurfaces, nativeWaterStates,
+                        nativeGroundCovers, nativeRiverMasks);
+                    nativeHeights = default;
+                    nativeSlopes = default;
+                    nativeBiomes = default;
+                    nativeSurfaces = default;
+                    nativeWaterStates = default;
+                    nativeGroundCovers = default;
+                    nativeRiverMasks = default;
+
                     TerrainDataRequestResult result = new TerrainDataRequestResult(chunkCoord, requestVersion,
-                        finalHeightMap, gradientXMap, gradientZMap, slopeMap, moistureMap, temperatureMap, biomeMap,
-                        surfaceTypeMap, waterStateMap, groundCoverMap, worldFeaturePlan, riverMaskMap, controlMapRawData);
+                        finalHeightMap, slopeMap, moistureMap, temperatureMap, biomeMap,
+                        surfaceTypeMap, waterStateMap, groundCoverMap, worldFeaturePlan, riverMaskMap,
+                        controlMapRawData, retainedNativeData);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainDataTotal, totalStart);
 
                     lock (terrainDataResultsLock)
                     {
-                        completedTerrainDataResults.Enqueue(result);
+                        if (disposed) result.Dispose();
+                        else completedTerrainDataResults.Enqueue(result);
                     }
+                    retainedNativeData = null;
                 }
                 finally
                 {
+                    retainedNativeData?.Dispose();
                     if (nativeHeights.IsCreated) nativeHeights.Dispose();
                     if (nativeMoistures.IsCreated) nativeMoistures.Dispose();
                     if (nativeTemperatures.IsCreated) nativeTemperatures.Dispose();
@@ -302,6 +326,11 @@ public class TerrainRequestManager
             }
             finally
             {
+                if (generatedHeights.IsCreated) generatedHeights.Dispose();
+                if (generatedSlopes.IsCreated) generatedSlopes.Dispose();
+                if (generatedRiverMasks.IsCreated) generatedRiverMasks.Dispose();
+                if (generatedMoistures.IsCreated) generatedMoistures.Dispose();
+                if (generatedTemperatures.IsCreated) generatedTemperatures.Dispose();
                 Interlocked.Decrement(ref activeTerrainDataJobs);
             }
         });
@@ -386,6 +415,10 @@ public class TerrainRequestManager
         if (Interlocked.CompareExchange(ref activeMeshJobs, 0, 0) >= maxActiveMeshJobs)
             return false;
 
+        ChunkRecord.NativeTerrainData.Lease nativeLease = nativeData.AcquireLease();
+        if (nativeLease == null)
+            return false;
+
         Interlocked.Increment(ref activeMeshJobs);
 
         LODMeshRequestWorkItem workItem = new LODMeshRequestWorkItem(
@@ -393,13 +426,14 @@ public class TerrainRequestManager
             chunkCoord,
             lod,
             requestVersion,
-            nativeData,
+            nativeLease,
             meshHeightMultiplier,
             stepIncrement,
             worldScale);
 
         if (!ThreadPool.UnsafeQueueUserWorkItem(ProcessLODMeshRequest, workItem))
         {
+            nativeLease.Dispose();
             Interlocked.Decrement(ref activeMeshJobs);
             return false;
         }
@@ -453,6 +487,7 @@ public class TerrainRequestManager
         }
         finally
         {
+            workItem.NativeLease.Dispose();
             Interlocked.Decrement(ref activeMeshJobs);
         }
     }
@@ -463,7 +498,8 @@ public class TerrainRequestManager
         public readonly ChunkCoord ChunkCoord;
         public readonly int LOD;
         public readonly int RequestVersion;
-        public readonly ChunkRecord.NativeTerrainData NativeData;
+        public readonly ChunkRecord.NativeTerrainData.Lease NativeLease;
+        public ChunkRecord.NativeTerrainData NativeData => NativeLease.Data;
         public readonly float MeshHeightMultiplier;
         public readonly int StepIncrement;
         public readonly float WorldScale;
@@ -473,7 +509,7 @@ public class TerrainRequestManager
             ChunkCoord chunkCoord,
             int lod,
             int requestVersion,
-            ChunkRecord.NativeTerrainData nativeData,
+            ChunkRecord.NativeTerrainData.Lease nativeLease,
             float meshHeightMultiplier,
             int stepIncrement,
             float worldScale)
@@ -482,7 +518,7 @@ public class TerrainRequestManager
             ChunkCoord = chunkCoord;
             LOD = lod;
             RequestVersion = requestVersion;
-            NativeData = nativeData;
+            NativeLease = nativeLease;
             MeshHeightMultiplier = meshHeightMultiplier;
             StepIncrement = stepIncrement;
             WorldScale = worldScale;
@@ -567,6 +603,17 @@ public class TerrainRequestManager
 
         result = null;
         return false;
+    }
+
+    public void Dispose()
+    {
+        lock (terrainDataResultsLock)
+        {
+            if (disposed) return;
+            disposed = true;
+            while (completedTerrainDataResults.Count > 0)
+                completedTerrainDataResults.Dequeue().Dispose();
+        }
     }
 
     public bool TryDequeueFarTerrainResult(out FarTerrainRequestResult result)

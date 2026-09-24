@@ -33,6 +33,21 @@ public static class CattailGenerationValidation
         }
         Check(foundBank && foundWater, "Expected cattails on both the wet bank and shallow bed.");
 
+        var waterOnly = new CattailSettings
+        {
+            landwardDistance = 0f, minWaterwardDistance = 1.25f, waterwardDistance = 3f,
+            candidateSpacing = 0.6f, spawnChance = 1f, colonyThreshold = 0f
+        };
+        ChunkRecord offshore = CreateShoreRecord();
+        Drain(CattailGenerator.GenerateIncrementally(offshore, waterOnly, 9123, 16, 1f, 10f, 0.24f));
+        Check(offshore.FoliageData.cattailInstances.Count > 0, "Expected an offshore cattail stand.");
+        foreach (CattailInstanceData cattail in offshore.FoliageData.cattailInstances)
+        {
+            Check(cattail.localPosition.y <= 2.4f, "Water-only setting placed a cattail on land.");
+            Check(cattail.localPosition.x + 8f >= 8.5f,
+                "Minimum waterward distance did not clear the shoreline.");
+        }
+
         ChunkRecord second = CreateShoreRecord();
         Drain(CattailGenerator.GenerateIncrementally(second, settings, 9123, 16, 1f, 10f, 0.24f));
         List<CattailInstanceData> a = first.FoliageData.cattailInstances;
@@ -55,7 +70,7 @@ public static class CattailGenerationValidation
         }
         Check(!cancelled.FoliageData.cattailsGenerated && cancelled.FoliageData.cattailInstances.Count == 0,
             "Cancelled generation published stale cattails.");
-        Debug.Log("CATTAIL PASS: bank and bed rooting, slope exclusion, deterministic placement, cancellation.");
+        Debug.Log("CATTAIL PASS: bank and bed rooting, offshore minimum, slope exclusion, deterministic placement, cancellation.");
     }
 
     private static ChunkRecord CreateShoreRecord(float slope = 0f)

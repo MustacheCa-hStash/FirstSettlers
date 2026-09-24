@@ -1042,10 +1042,11 @@ MonoBehaviour:
     seedOffset: 71000
   cattailSettings:
     enableCattails: 1
-    cattailPrefab: {fileID: 0}
+    cattailPrefab: {fileID: 2926862642933225150, guid: 58fc18ff9f860734eb05fd05e30f7ad9, type: 3}
     activeRingRadius: 2
+    minWaterwardDistance: 1.25
     waterwardDistance: 3.5
-    landwardDistance: 1.8
+    landwardDistance: 0
     maxWaterDepth: 0.8
     maxBankHeight: 0.65
     maxSlope: 28

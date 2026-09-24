@@ -79,18 +79,31 @@ public static class ClimateGenerator
     public static float[,] GenerateTerrainMoistureMap(int chunkSize, int seed, float sampleScale, int octaves, float persistence,
         float lacunarity, ChunkCoord chunkCoord)
     {
-        return GenerateTerrainClimateMap(chunkSize, seed + 1000, sampleScale * 10f, octaves, persistence, lacunarity, chunkCoord);
+        return GenerateTerrainClimateMap(chunkSize, seed + 1000, sampleScale * 10f, octaves, persistence, lacunarity, chunkCoord,
+            false, out _);
     }
+
+    public static float[,] GenerateTerrainMoistureMapForRequest(int chunkSize, int seed, float sampleScale,
+        int octaves, float persistence, float lacunarity, ChunkCoord chunkCoord, out NativeArray<float> nativeMap) =>
+        GenerateTerrainClimateMap(chunkSize, seed + 1000, sampleScale * 10f, octaves, persistence, lacunarity,
+            chunkCoord, true, out nativeMap);
 
     public static float[,] GenerateTerrainTemperatureMap(int chunkSize, int seed, float sampleScale, int octaves, float persistence,
         float lacunarity, ChunkCoord chunkCoord)
     {
-        return GenerateTerrainClimateMap(chunkSize, seed + 2000, sampleScale * 12f, octaves, persistence, lacunarity, chunkCoord);
+        return GenerateTerrainClimateMap(chunkSize, seed + 2000, sampleScale * 12f, octaves, persistence, lacunarity, chunkCoord,
+            false, out _);
     }
 
+    public static float[,] GenerateTerrainTemperatureMapForRequest(int chunkSize, int seed, float sampleScale,
+        int octaves, float persistence, float lacunarity, ChunkCoord chunkCoord, out NativeArray<float> nativeMap) =>
+        GenerateTerrainClimateMap(chunkSize, seed + 2000, sampleScale * 12f, octaves, persistence, lacunarity,
+            chunkCoord, true, out nativeMap);
+
     private static float[,] GenerateTerrainClimateMap(int chunkSize, int seed, float sampleScale, int octaves, float persistence,
-        float lacunarity, ChunkCoord chunkCoord)
+        float lacunarity, ChunkCoord chunkCoord, bool retainNativeMap, out NativeArray<float> nativeMap)
     {
+        nativeMap = default;
         float noiseSampleScale = sampleScale;
         int noiseOctaves = GetClimateOctaveCount(octaves);
         float noisePersistence = persistence;
@@ -113,7 +126,8 @@ public static class ClimateGenerator
         try
         {
             octaveOffsets = CreateOctaveOffsets(seed, noiseOctaves, Allocator.TempJob);
-            samples = new NativeArray<float>(size * size, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            samples = new NativeArray<float>(size * size,
+                retainNativeMap ? Allocator.Persistent : Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 
             ClimateMapJob job = new ClimateMapJob
             {
@@ -134,6 +148,11 @@ public static class ClimateGenerator
             handle.Complete();
 
             CopyNativeToMap(samples, terrainNoiseMap);
+            if (retainNativeMap)
+            {
+                nativeMap = samples;
+                samples = default;
+            }
         }
         finally
         {

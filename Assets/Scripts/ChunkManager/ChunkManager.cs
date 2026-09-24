@@ -291,6 +291,7 @@ public class ChunkManager
             runtimePoolParent = null;
         }
         terrainRequestManager?.WaitForActiveRequestsToFinish();
+        terrainRequestManager?.Dispose();
         foreach (var record in chunkRecords.Values)
             record.Dispose();
     }
@@ -1905,36 +1906,42 @@ public class ChunkManager
                        terrainDataApplyBudgetMsPerFrame) &&
                    terrainRequestManager.TryDequeueTerrainDataResult(out TerrainDataRequestResult terrainResult))
             {
-                if (!chunkRecords.TryGetValue(terrainResult.ChunkCoord, out ChunkRecord record))
-                    continue;
-
-                using (ApplyTerrainDataResultMarker.Auto())
+                using (terrainResult)
                 {
-                    processedAnyRequest = true;
-                    terrainDataResultsApplied++;
-                    long stageStart = TerrainGenerationProfiler.GetTimestamp();
-                    Texture2D[] controlMaps = CreateControlMapTextures(terrainResult.ControlMapsRawData);
-                    TerrainGenerationProfiler.Record(
-                        TerrainGenerationProfileStage.MainTerrainControlMapTextureCreate,
-                        stageStart);
+                    if (!chunkRecords.TryGetValue(terrainResult.ChunkCoord, out ChunkRecord record))
+                        continue;
 
-                    bool completed = record.TryCompleteTerrainDataRequest(
-                        terrainResult.RequestVersion,
-                        terrainResult.HeightMap,
-                        terrainResult.SlopeMap,
-                        terrainResult.MoistureMap,
-                        terrainResult.TemperatureMap,
-                        terrainResult.BiomeMap,
-                        terrainResult.SurfaceTypeMap,
-                        terrainResult.WaterStateMap,
-                        terrainResult.GroundCoverMap,
-                        terrainResult.WorldFeaturePlan,
-                        terrainResult.RiverMaskMap,
-                        controlMaps
-                    );
+                    using (ApplyTerrainDataResultMarker.Auto())
+                    {
+                        processedAnyRequest = true;
+                        terrainDataResultsApplied++;
+                        long stageStart = TerrainGenerationProfiler.GetTimestamp();
+                        Texture2D[] controlMaps = CreateControlMapTextures(terrainResult.ControlMapsRawData);
+                        TerrainGenerationProfiler.Record(
+                            TerrainGenerationProfileStage.MainTerrainControlMapTextureCreate,
+                            stageStart);
 
-                    if (completed)
-                        QueueVisibleChunkContentWork(record.ChunkCoord);
+                        bool completed = record.TryCompleteTerrainDataRequest(
+                            terrainResult.RequestVersion,
+                            terrainResult.HeightMap,
+                            terrainResult.SlopeMap,
+                            terrainResult.MoistureMap,
+                            terrainResult.TemperatureMap,
+                            terrainResult.BiomeMap,
+                            terrainResult.SurfaceTypeMap,
+                            terrainResult.WaterStateMap,
+                            terrainResult.GroundCoverMap,
+                            terrainResult.WorldFeaturePlan,
+                            terrainResult.RiverMaskMap,
+                            controlMaps,
+                            terrainResult.NativeData);
+
+                        if (completed)
+                        {
+                            terrainResult.TransferNativeOwnership();
+                            QueueVisibleChunkContentWork(record.ChunkCoord);
+                        }
+                    }
                 }
             }
         }

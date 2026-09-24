@@ -11,6 +11,8 @@ public class CattailSettings
     [Min(0)] public int activeRingRadius = 2;
 
     [Header("Shore Habitat (world units)")]
+    [Min(0f), Tooltip("Minimum distance into the water from dry shore. Set above zero to leave a clear water edge.")]
+    public float minWaterwardDistance = 0f;
     [Min(0f), Tooltip("How far a rooted clump can extend into shallow water from dry shore.")]
     public float waterwardDistance = 3.5f;
     [Min(0f), Tooltip("How far a clump can extend onto damp ground from the water edge.")]

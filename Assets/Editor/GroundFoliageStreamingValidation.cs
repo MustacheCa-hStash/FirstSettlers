@@ -88,8 +88,29 @@ public static class GroundFoliageStreamingValidation
             r => r.FoliageData.cloverInstances, r => r.FoliageData.cloverGenerated, r => r.FoliageData.ClearClover());
         Validate(r => FoliageGenerator.GenerateDandelionsIncrementally(r, dandelions, 1234, 16, 1, 10),
             r => r.FoliageData.dandelionInstances, r => r.FoliageData.dandelionsGenerated, r => r.FoliageData.ClearDandelions());
+        ValidateRejectedPatches(flowers, clover, dandelions);
         ValidateGrassDependency(clover);
         Debug.Log("GROUND FOLIAGE PASS: deferred jobs, sliced deterministic output, clear/map invalidation, cancellation and retry.");
+    }
+
+    private static void ValidateRejectedPatches(FlowerSettings flowers, CloverSettings clover, DandelionSettings dandelions)
+    {
+        // Patch jobs skip entire output slices. They must publish no uninitialized or stale instances.
+        var record = Record();
+        try
+        {
+            FoliageGenerator.GenerateFlowersForChunk(record, flowers, 1234, 16, 1, 10);
+            FoliageGenerator.GenerateCloverForChunk(record, clover, 2, 1234, 16, 1, 10);
+            FoliageGenerator.GenerateDandelionsForChunk(record, dandelions, 1234, 16, 1, 10);
+            FoliageGenerator.GenerateFlowersForChunk(record, new FlowerSettings { patchNoiseThreshold = 1, patchSpawnChance = 0 }, 1234, 16, 1, 10);
+            FoliageGenerator.GenerateCloverForChunk(record, new CloverSettings { patchNoiseThreshold = 1, patchSpawnChance = 0 }, 2, 1234, 16, 1, 10);
+            FoliageGenerator.GenerateDandelionsForChunk(record, new DandelionSettings { patchNoiseThreshold = 1, patchSpawnChance = 0 }, 1234, 16, 1, 10);
+            var data = record.FoliageData;
+            Check(data.flowersGenerated && data.flowerInstances.Count == 0, "Rejected flower patches published instances.");
+            Check(data.cloverGenerated && data.cloverInstances.Count == 0, "Rejected clover patches published instances.");
+            Check(data.dandelionsGenerated && data.dandelionInstances.Count == 0, "Rejected dandelion patches published instances.");
+        }
+        finally { record.Dispose(); }
     }
 
     private static void ValidateGrassDependency(CloverSettings clover)
@@ -103,7 +124,7 @@ public static class GroundFoliageStreamingValidation
         var mesh = new Mesh();
         var material = new Material(Shader.Find("Hidden/InternalErrorShader"));
         var foliage = new FoliageManager(null, new GrassSettings { groundFoliageGenerationBudgetMsPerFrame = 0.05f },
-            null, null, null, clover, null, new TreeSettings(), 1234, 16, 1, 10,
+            new FlowerSettings { enableFlowers = false }, null, null, clover, null, new TreeSettings(), 1234, 16, 1, 10,
             new TerrainWaterSettings(2.4f, 10f, 1f));
         try
         {

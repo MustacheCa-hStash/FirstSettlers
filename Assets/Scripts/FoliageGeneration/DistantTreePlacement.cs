@@ -45,13 +45,6 @@ public static class DistantTreePlacement
         try
         {
             var context = HeightMapGenerator.CreateSamplingContext(seed, waterLevel, mountainScale, erosion);
-            float2 minimum = new float2(coord.x * chunkSize - 1, coord.z * chunkSize - 1);
-            using var anchors = new NativeArray<MountainExpansionAnchor>(
-                HeightMapGenerator.GetMountainAnchors(minimum, minimum + chunkSize + 2, sampleScale, context), Allocator.Persistent);
-            using var land = Offsets(context.BaseLandOffsets);
-            using var mask = Offsets(context.MountainMaskOffsets);
-            using var terrain = Offsets(context.MountainTerrainOffsets);
-            using var rugged = Offsets(context.MountainRuggedOffsets);
             int climateOctaves = ClimateGenerator.GetClimateOctaveCount(octaves);
             float climateMax = ClimateGenerator.GetMaxPossibleNoise(climateOctaves, persistence);
             using var moistureOffsets = ClimateGenerator.CreateOctaveOffsets(seed + 1000, climateOctaves, Allocator.Persistent);
@@ -63,8 +56,8 @@ public static class DistantTreePlacement
                 if (!heights.TryGetValue(key, out var value))
                 {
                     value = HeightMapGenerator.SampleTerrainHeightNative(coord.x * chunkSize + x - 1,
-                        coord.z * chunkSize + z - 1, sampleScale, land, mask, terrain, rugged,
-                        context.RiverSeed, waterLevel, mountainScale, anchors, context.Erosion);
+                        coord.z * chunkSize + z - 1, sampleScale,
+                        context.RiverSeed, waterLevel, mountainScale, context.Erosion);
                     heights.Add(key, value);
                 }
                 return value;
@@ -115,10 +108,4 @@ public static class DistantTreePlacement
         }
     }
 
-    private static NativeArray<float2> Offsets(Vector2[] values)
-    {
-        var result = new NativeArray<float2>(values.Length, Allocator.Persistent);
-        for (int i = 0; i < values.Length; i++) result[i] = new float2(values[i].x, values[i].y);
-        return result;
-    }
 }

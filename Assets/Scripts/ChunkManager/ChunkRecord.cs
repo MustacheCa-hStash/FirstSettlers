@@ -6,6 +6,43 @@ public class ChunkRecord : System.IDisposable
 {
     public sealed class NativeTerrainData : System.IDisposable
     {
+        private readonly object lifetimeLock = new object();
+        private int readerCount;
+        private bool ownerReleased;
+        private readonly float[,] sourceHeightMap;
+        private readonly float[,] sourceSlopeMap;
+        private readonly BiomeType[,] sourceBiomeMap;
+        private readonly SurfaceType[,] sourceSurfaceMap;
+        private readonly GroundCoverType[,] sourceGroundCoverMap;
+
+        public sealed class Lease : System.IDisposable
+        {
+            private NativeTerrainData owner;
+            internal Lease(NativeTerrainData owner) { this.owner = owner; }
+            public NativeTerrainData Data => owner;
+            public void Dispose()
+            {
+                NativeTerrainData previous = System.Threading.Interlocked.Exchange(ref owner, null);
+                previous?.ReleaseReader();
+            }
+        }
+
+        public Lease AcquireLease()
+        {
+            lock (lifetimeLock)
+            {
+                if (ownerReleased) return null;
+                readerCount++;
+                return new Lease(this);
+            }
+        }
+
+        public bool Matches(float[,] height, float[,] slope, BiomeType[,] biome,
+            SurfaceType[,] surface, GroundCoverType[,] ground) =>
+            ReferenceEquals(sourceHeightMap, height) && ReferenceEquals(sourceSlopeMap, slope) &&
+            ReferenceEquals(sourceBiomeMap, biome) && ReferenceEquals(sourceSurfaceMap, surface) &&
+            ReferenceEquals(sourceGroundCoverMap, ground);
+
         public NativeArray<float> HeightMap { get; private set; }
         public NativeArray<float> SlopeMap { get; private set; }
         public NativeArray<BiomeType> BiomeMap { get; private set; }
@@ -45,6 +82,11 @@ public class ChunkRecord : System.IDisposable
             GroundCoverType[,] groundCoverMap,
             float[,] riverMaskMap)
         {
+            sourceHeightMap = heightMap;
+            sourceSlopeMap = slopeMap;
+            sourceBiomeMap = biomeMap;
+            sourceSurfaceMap = surfaceTypeMap;
+            sourceGroundCoverMap = groundCoverMap;
             HeightMap = CopyFloatMap(heightMap, out int heightWidth, out int heightHeight);
             HeightMapWidth = heightWidth;
             HeightMapHeight = heightHeight;
@@ -72,6 +114,33 @@ public class ChunkRecord : System.IDisposable
             RiverMaskMap = CopyFloatMap(riverMaskMap, out int riverWidth, out int riverHeight);
             RiverMaskMapWidth = riverWidth;
             RiverMaskMapHeight = riverHeight;
+        }
+
+        // Takes ownership of persistent job outputs after terrain generation completes.
+        public NativeTerrainData(
+            float[,] heightMap, float[,] slopeMap, BiomeType[,] biomeMap,
+            SurfaceType[,] surfaceTypeMap, WaterState[,] waterStateMap,
+            GroundCoverType[,] groundCoverMap, float[,] riverMaskMap,
+            NativeArray<float> heights, NativeArray<float> slopes,
+            NativeArray<BiomeType> biomes, NativeArray<SurfaceType> surfaces,
+            NativeArray<WaterState> waters, NativeArray<GroundCoverType> covers,
+            NativeArray<float> rivers)
+        {
+            sourceHeightMap = heightMap;
+            sourceSlopeMap = slopeMap;
+            sourceBiomeMap = biomeMap;
+            sourceSurfaceMap = surfaceTypeMap;
+            sourceGroundCoverMap = groundCoverMap;
+            HeightMap = heights; SlopeMap = slopes; BiomeMap = biomes;
+            SurfaceTypeMap = surfaces; WaterStateMap = waters;
+            GroundCoverMap = covers; RiverMaskMap = rivers;
+            HeightMapWidth = heightMap?.GetLength(0) ?? 0; HeightMapHeight = heightMap?.GetLength(1) ?? 0;
+            SlopeMapWidth = slopeMap?.GetLength(0) ?? 0; SlopeMapHeight = slopeMap?.GetLength(1) ?? 0;
+            BiomeMapWidth = biomeMap?.GetLength(0) ?? 0; BiomeMapHeight = biomeMap?.GetLength(1) ?? 0;
+            SurfaceTypeMapWidth = surfaceTypeMap?.GetLength(0) ?? 0; SurfaceTypeMapHeight = surfaceTypeMap?.GetLength(1) ?? 0;
+            WaterStateMapWidth = waterStateMap?.GetLength(0) ?? 0; WaterStateMapHeight = waterStateMap?.GetLength(1) ?? 0;
+            GroundCoverMapWidth = groundCoverMap?.GetLength(0) ?? 0; GroundCoverMapHeight = groundCoverMap?.GetLength(1) ?? 0;
+            RiverMaskMapWidth = riverMaskMap?.GetLength(0) ?? 0; RiverMaskMapHeight = riverMaskMap?.GetLength(1) ?? 0;
         }
 
         private static NativeArray<float> CopyFloatMap(float[,] source, out int width, out int height)
@@ -117,6 +186,27 @@ public class ChunkRecord : System.IDisposable
         }
 
         public void Dispose()
+        {
+            lock (lifetimeLock)
+            {
+                if (ownerReleased) return;
+                ownerReleased = true;
+                if (readerCount != 0) return;
+                DisposeArrays();
+            }
+        }
+
+        private void ReleaseReader()
+        {
+            lock (lifetimeLock)
+            {
+                readerCount--;
+                if (ownerReleased && readerCount == 0)
+                    DisposeArrays();
+            }
+        }
+
+        private void DisposeArrays()
         {
             if (HeightMap.IsCreated) HeightMap.Dispose();
             if (SlopeMap.IsCreated) SlopeMap.Dispose();
@@ -330,7 +420,8 @@ public class ChunkRecord : System.IDisposable
         float[,] returnedMoistureMap, float[,] returnedTemperatureMap, BiomeType[,] returnedBiomeMap, 
         SurfaceType[,] returnedSurfaceTypeMap, WaterState[,] returnedWaterStateMap,
         GroundCoverType[,] returnedGroundCoverMap, WorldFeaturePlan returnedWorldFeaturePlan, float[,] returnedRiverMaskMap,
-        Texture2D[] returnedControlMapData)
+        Texture2D[] returnedControlMapData,
+        NativeTerrainData retainedNativeData = null)
     {
         if (!terrainDataRequestInFlight) 
             return false;
@@ -349,14 +440,8 @@ public class ChunkRecord : System.IDisposable
         riverMaskMap = returnedRiverMaskMap;
         controlMapData = returnedControlMapData;
         nativeTerrainData?.Dispose();
-        nativeTerrainData = new NativeTerrainData(
-            heightMap,
-            slopeMap,
-            biomeMap,
-            surfaceTypeMap,
-            waterStateMap,
-            groundCoverMap,
-            riverMaskMap);
+        nativeTerrainData = retainedNativeData ?? new NativeTerrainData(
+            heightMap, slopeMap, biomeMap, surfaceTypeMap, waterStateMap, groundCoverMap, riverMaskMap);
 
         terrainDataRequestInFlight = false;
         return true;

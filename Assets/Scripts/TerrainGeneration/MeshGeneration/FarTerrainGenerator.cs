@@ -120,24 +120,12 @@ public static class FarTerrainGenerator
         NativeArray<float> heights = default;
         NativeArray<float> mountainMasks = default;
         NativeArray<float> riverMasks = default;
-        NativeArray<float2> baseLandOffsets = default;
-        NativeArray<float2> mountainMaskOffsets = default;
-        NativeArray<float2> mountainTerrainOffsets = default;
-        NativeArray<float2> mountainRuggedOffsets = default;
-        NativeArray<MountainExpansionAnchor> mountainAnchors = default;
 
         try
         {
-            float2 minimum = new float2(chunkCoord.x * chunkSize, chunkCoord.z * chunkSize);
-            mountainAnchors = new NativeArray<MountainExpansionAnchor>(
-                HeightMapGenerator.GetMountainAnchors(minimum, minimum + chunkSize, sampleScale, samplingContext), Allocator.TempJob);
             heights = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             mountainMasks = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             riverMasks = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-            baseLandOffsets = CreateNativeOffsets(samplingContext.BaseLandOffsets);
-            mountainMaskOffsets = CreateNativeOffsets(samplingContext.MountainMaskOffsets);
-            mountainTerrainOffsets = CreateNativeOffsets(samplingContext.MountainTerrainOffsets);
-            mountainRuggedOffsets = CreateNativeOffsets(samplingContext.MountainRuggedOffsets);
 
             FarHeightGridSampleJob job = new FarHeightGridSampleJob
             {
@@ -150,11 +138,6 @@ public static class FarTerrainGenerator
                 waterLevel = samplingContext.WaterLevel,
                 mountainHorizontalScale = samplingContext.MountainHorizontalScale,
                 erosion = samplingContext.Erosion,
-                mountainAnchors = mountainAnchors,
-                baseLandOffsets = baseLandOffsets,
-                mountainMaskOffsets = mountainMaskOffsets,
-                mountainTerrainOffsets = mountainTerrainOffsets,
-                mountainRuggedOffsets = mountainRuggedOffsets,
                 heights = heights,
                 mountainMasks = mountainMasks,
                 riverMasks = riverMasks
@@ -169,21 +152,12 @@ public static class FarTerrainGenerator
         }
         finally
         {
-            if (mountainAnchors.IsCreated) mountainAnchors.Dispose();
             if (heights.IsCreated)
                 heights.Dispose();
             if (mountainMasks.IsCreated)
                 mountainMasks.Dispose();
             if (riverMasks.IsCreated)
                 riverMasks.Dispose();
-            if (baseLandOffsets.IsCreated)
-                baseLandOffsets.Dispose();
-            if (mountainMaskOffsets.IsCreated)
-                mountainMaskOffsets.Dispose();
-            if (mountainTerrainOffsets.IsCreated)
-                mountainTerrainOffsets.Dispose();
-            if (mountainRuggedOffsets.IsCreated)
-                mountainRuggedOffsets.Dispose();
         }
 
         return heightGrid;
@@ -483,11 +457,6 @@ public static class FarTerrainGenerator
         int safeClimateOctaves = ClimateGenerator.GetClimateOctaveCount(climateOctaves);
         float climateMaxPossibleNoise = ClimateGenerator.GetMaxPossibleNoise(safeClimateOctaves, climatePersistence);
 
-        NativeArray<float2> baseLandOffsets = default;
-        NativeArray<float2> mountainMaskOffsets = default;
-        NativeArray<float2> mountainTerrainOffsets = default;
-        NativeArray<float2> mountainRuggedOffsets = default;
-        NativeArray<MountainExpansionAnchor> mountainAnchors = default;
         NativeArray<float2> moistureOffsets = default;
         NativeArray<float2> temperatureOffsets = default;
         NativeArray<Color32> controlMap0 = default;
@@ -496,13 +465,6 @@ public static class FarTerrainGenerator
 
         try
         {
-            float2 minimum = new float2(chunkCoord.x * chunkSize - 4f, chunkCoord.z * chunkSize - 4f);
-            mountainAnchors = new NativeArray<MountainExpansionAnchor>(
-                HeightMapGenerator.GetMountainAnchors(minimum, minimum + chunkSize + 8f, sampleScale, samplingContext), Allocator.TempJob);
-            baseLandOffsets = CreateNativeOffsets(samplingContext.BaseLandOffsets);
-            mountainMaskOffsets = CreateNativeOffsets(samplingContext.MountainMaskOffsets);
-            mountainTerrainOffsets = CreateNativeOffsets(samplingContext.MountainTerrainOffsets);
-            mountainRuggedOffsets = CreateNativeOffsets(samplingContext.MountainRuggedOffsets);
             moistureOffsets = ClimateGenerator.CreateOctaveOffsets(seed + 1000, safeClimateOctaves, Allocator.TempJob);
             temperatureOffsets = ClimateGenerator.CreateOctaveOffsets(seed + 2000, safeClimateOctaves, Allocator.TempJob);
             controlMap0 = new NativeArray<Color32>(pixelCount, Allocator.TempJob, NativeArrayOptions.ClearMemory);
@@ -526,11 +488,6 @@ public static class FarTerrainGenerator
                 climateLacunarity = climateLacunarity,
                 climateMaxPossibleNoise = climateMaxPossibleNoise,
                 mountainSnowRenderCoverageGamma = MountainSnow.SanitizeRenderCoverageGamma(mountainSnowRenderCoverageGamma),
-                mountainAnchors = mountainAnchors,
-                baseLandOffsets = baseLandOffsets,
-                mountainMaskOffsets = mountainMaskOffsets,
-                mountainTerrainOffsets = mountainTerrainOffsets,
-                mountainRuggedOffsets = mountainRuggedOffsets,
                 moistureOffsets = moistureOffsets,
                 temperatureOffsets = temperatureOffsets,
                 controlMap0 = controlMap0,
@@ -547,16 +504,6 @@ public static class FarTerrainGenerator
         }
         finally
         {
-            if (mountainAnchors.IsCreated)
-                mountainAnchors.Dispose();
-            if (baseLandOffsets.IsCreated)
-                baseLandOffsets.Dispose();
-            if (mountainMaskOffsets.IsCreated)
-                mountainMaskOffsets.Dispose();
-            if (mountainTerrainOffsets.IsCreated)
-                mountainTerrainOffsets.Dispose();
-            if (mountainRuggedOffsets.IsCreated)
-                mountainRuggedOffsets.Dispose();
             if (moistureOffsets.IsCreated)
                 moistureOffsets.Dispose();
             if (temperatureOffsets.IsCreated)
@@ -646,17 +593,6 @@ public static class FarTerrainGenerator
         }
     }
 
-    private static NativeArray<float2> CreateNativeOffsets(Vector2[] source)
-    {
-        NativeArray<float2> result =
-            new NativeArray<float2>(source.Length, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-
-        for (int i = 0; i < source.Length; i++)
-            result[i] = new float2(source[i].x, source[i].y);
-
-        return result;
-    }
-
     [BurstCompile]
     private struct FarHeightGridSampleJob : IJobParallelFor
     {
@@ -667,14 +603,8 @@ public static class FarTerrainGenerator
         public float sampleScale;
         public float mountainHorizontalScale;
         public WorldErosionSettings erosion;
-        [ReadOnly] public NativeArray<MountainExpansionAnchor> mountainAnchors;
         public int riverSeed;
         public float waterLevel;
-
-        [ReadOnly] public NativeArray<float2> baseLandOffsets;
-        [ReadOnly] public NativeArray<float2> mountainMaskOffsets;
-        [ReadOnly] public NativeArray<float2> mountainTerrainOffsets;
-        [ReadOnly] public NativeArray<float2> mountainRuggedOffsets;
 
         [WriteOnly] public NativeArray<float> heights;
         [WriteOnly] public NativeArray<float> mountainMasks;
@@ -696,11 +626,7 @@ public static class FarTerrainGenerator
                 worldX,
                 worldZ,
                 sampleScale,
-                baseLandOffsets,
-                mountainMaskOffsets,
-                mountainTerrainOffsets,
-                mountainRuggedOffsets,
-                riverSeed, waterLevel, mountainHorizontalScale, mountainAnchors, erosion);
+                riverSeed, waterLevel, mountainHorizontalScale, erosion);
 
             heights[index] = sample.Height;
             mountainMasks[index] = sample.MountainMask;
@@ -887,11 +813,6 @@ public static class FarTerrainGenerator
         public float climateMaxPossibleNoise;
         public float mountainSnowRenderCoverageGamma;
 
-        [ReadOnly] public NativeArray<MountainExpansionAnchor> mountainAnchors;
-        [ReadOnly] public NativeArray<float2> baseLandOffsets;
-        [ReadOnly] public NativeArray<float2> mountainMaskOffsets;
-        [ReadOnly] public NativeArray<float2> mountainTerrainOffsets;
-        [ReadOnly] public NativeArray<float2> mountainRuggedOffsets;
         [ReadOnly] public NativeArray<float2> moistureOffsets;
         [ReadOnly] public NativeArray<float2> temperatureOffsets;
 
@@ -974,14 +895,10 @@ public static class FarTerrainGenerator
                 worldX,
                 worldZ,
                 sampleScale,
-                baseLandOffsets,
-                mountainMaskOffsets,
-                mountainTerrainOffsets,
-                mountainRuggedOffsets,
                 riverSeed,
                 waterLevel,
                 mountainHorizontalScale,
-                mountainAnchors, erosion);
+                erosion);
         }
 
         private float SampleSlope(float worldX, float worldZ, out float2 gradient, out float neighborMean)

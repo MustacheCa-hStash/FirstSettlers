@@ -85,6 +85,7 @@ public static class CattailGenerator
         float minScale = Mathf.Max(0.01f, Mathf.Min(settings.uniformScaleRange.x, settings.uniformScaleRange.y));
         float maxScale = Mathf.Max(minScale, Mathf.Max(settings.uniformScaleRange.x, settings.uniformScaleRange.y));
         float waterBand = Mathf.Max(0f, settings.waterwardDistance);
+        float minWaterDistance = Mathf.Clamp(settings.minWaterwardDistance, 0f, waterBand);
         float landBand = Mathf.Max(0f, settings.landwardDistance);
         float maxDepth = Mathf.Max(0f, settings.maxWaterDepth);
         float maxBankHeight = Mathf.Max(0f, settings.maxBankHeight);
@@ -113,7 +114,7 @@ public static class CattailGenerator
                 bool underwater = height <= waterLevel;
                 float distance = (underwater ? toDry : toWater)[mapX * depth + mapZ] * worldScale;
                 float band = underwater ? waterBand : landBand;
-                if (band <= 0f || distance > band)
+                if (band <= 0f || distance > band || (underwater && distance < minWaterDistance))
                     continue;
 
                 float heightDelta = Mathf.Abs(height - waterLevel) * heightMultiplier * worldScale;

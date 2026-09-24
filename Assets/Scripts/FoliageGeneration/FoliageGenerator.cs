@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
@@ -8,6 +9,14 @@ using Unity.Profiling;
 
 public static class FoliageGenerator
 {
+    private static ChunkRecord.NativeTerrainData.Lease TryAcquireTerrainMaps(ChunkRecord record)
+    {
+        ChunkRecord.NativeTerrainData data = record.NativeData;
+        return data != null && data.HasGrassMaps && data.SlopeMap.IsCreated && data.GroundCoverMap.IsCreated &&
+            data.Matches(record.HeightMap, record.SlopeMap, record.BiomeMap,
+            record.SurfaceTypeMap, record.GroundCoverMap) ? data.AcquireLease() : null;
+    }
+
     public static void GenerateGrassForChunk(
         ChunkRecord record,
         GrassSettings grassSettings,
@@ -106,6 +115,10 @@ public static class FoliageGenerator
             return false;
         }
 
+        ChunkRecord.NativeTerrainData.Lease nativeLease = nativeData.AcquireLease();
+        if (nativeLease == null)
+            return false;
+
         int cellsPerAxis = Mathf.Max(1, grassSettings.cellsPerAxis);
         float cellSize = (float)chunkSize / cellsPerAxis;
         float subChunkSize = (float)chunkSize / subChunksPerChunk;
@@ -124,6 +137,13 @@ public static class FoliageGenerator
 
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;
+        float localMinX = (topLeftX + subChunkMinX) * worldScale;
+        float localMaxX = (topLeftX + subChunkMaxX) * worldScale;
+        float localMinZ = (bottomLeftZ + subChunkMinZ) * worldScale;
+        float localMaxZ = (bottomLeftZ + subChunkMaxZ) * worldScale;
+        float4 subChunkBounds = new float4(
+            Mathf.Min(localMinX, localMaxX), Mathf.Min(localMinZ, localMaxZ),
+            Mathf.Max(localMinX, localMaxX), Mathf.Max(localMinZ, localMaxZ));
 
         float treeExclusionRadiusSqr = treeSettings != null
             ? treeSettings.grassExclusionRadius * treeSettings.grassExclusionRadius
@@ -140,18 +160,26 @@ public static class FoliageGenerator
         int candidateCount = cellCountX * cellCountZ;
 
         const Allocator asyncAllocator = Allocator.Persistent;
-        NativeArray<float2> treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, asyncAllocator);
-        NativeArray<float2> bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, asyncAllocator);
-        NativeArray<float2> rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, asyncAllocator);
-        NativeArray<float4> cloverInfluences = CreateCloverInfluences(
-            applyCloverInfluence ? foliageData.cloverInstances : null,
-            cloverSettings,
-            asyncAllocator);
-        NativeArray<GrassSubChunkDiscoveryResult> results =
-            new NativeArray<GrassSubChunkDiscoveryResult>(candidateCount, asyncAllocator, NativeArrayOptions.UninitializedMemory);
+        NativeArray<float2> treeExclusionPositions = default;
+        NativeArray<float2> bushExclusionPositions = default;
+        NativeArray<float2> rockExclusionPositions = default;
+        NativeArray<float4> cloverInfluences = default;
+        NativeArray<GrassSubChunkDiscoveryResult> results = default;
+        JobHandle handle = default;
 
         try
         {
+            treeExclusionPositions = CreateTreeExclusionPositions(
+                foliageData.treeCubeInstances, asyncAllocator, subChunkBounds, Mathf.Sqrt(treeExclusionRadiusSqr));
+            bushExclusionPositions = CreateBushExclusionPositions(
+                foliageData.bushInstances, asyncAllocator, subChunkBounds, Mathf.Sqrt(bushExclusionRadiusSqr));
+            rockExclusionPositions = CreateRockExclusionPositions(
+                foliageData.rockInstances, asyncAllocator, subChunkBounds, Mathf.Sqrt(rockExclusionRadiusSqr));
+            cloverInfluences = CreateCloverInfluencesForBounds(
+                applyCloverInfluence ? foliageData.cloverInstances : null,
+                cloverSettings, asyncAllocator, subChunkBounds);
+            results = new NativeArray<GrassSubChunkDiscoveryResult>(
+                candidateCount, asyncAllocator, NativeArrayOptions.UninitializedMemory);
             GrassSubChunkDiscoveryJob job = new GrassSubChunkDiscoveryJob
             {
                 heightMap = nativeData.HeightMap,
@@ -203,13 +231,14 @@ public static class FoliageGenerator
                 maxScale = grassSettings.uniformScaleRange.y
             };
 
-            JobHandle handle = job.Schedule(candidateCount, 32);
+            handle = job.Schedule(candidateCount, 32);
             scheduledJob = new GrassSubChunkGenerationJob(
                 record,
                 localSubChunkX,
                 localSubChunkZ,
                 applyCloverInfluence,
                 handle,
+                nativeLease,
                 treeExclusionPositions,
                 bushExclusionPositions,
                 rockExclusionPositions,
@@ -219,6 +248,8 @@ public static class FoliageGenerator
         }
         catch
         {
+            handle.Complete();
+            nativeLease.Dispose();
             if (treeExclusionPositions.IsCreated)
                 treeExclusionPositions.Dispose();
             if (bushExclusionPositions.IsCreated)
@@ -245,6 +276,7 @@ public static class FoliageGenerator
         private readonly int localSubChunkZ;
         private readonly bool applyCloverInfluence;
         private JobHandle handle;
+        private ChunkRecord.NativeTerrainData.Lease nativeLease;
         private NativeArray<float2> treeExclusionPositions;
         private NativeArray<float2> bushExclusionPositions;
         private NativeArray<float2> rockExclusionPositions;
@@ -260,6 +292,7 @@ public static class FoliageGenerator
             int localSubChunkZ,
             bool applyCloverInfluence,
             JobHandle handle,
+            ChunkRecord.NativeTerrainData.Lease nativeLease,
             NativeArray<float2> treeExclusionPositions,
             NativeArray<float2> bushExclusionPositions,
             NativeArray<float2> rockExclusionPositions,
@@ -271,6 +304,7 @@ public static class FoliageGenerator
             this.localSubChunkZ = localSubChunkZ;
             this.applyCloverInfluence = applyCloverInfluence;
             this.handle = handle;
+            this.nativeLease = nativeLease;
             this.treeExclusionPositions = treeExclusionPositions;
             this.bushExclusionPositions = bushExclusionPositions;
             this.rockExclusionPositions = rockExclusionPositions;
@@ -373,6 +407,8 @@ public static class FoliageGenerator
                 cloverInfluences.Dispose();
             if (results.IsCreated)
                 results.Dispose();
+            nativeLease?.Dispose();
+            nativeLease = null;
 
             disposed = true;
             }
@@ -450,13 +486,28 @@ public static class FoliageGenerator
         NativeArray<float4> cloverInfluences = default;
         NativeArray<GrassSubChunkDiscoveryResult> results = default;
         JobHandle handle = default;
+        ChunkRecord.NativeTerrainData.Lease nativeLease = null;
 
         try
         {
-            heightMap = FlattenFloatMap(record.HeightMap, Allocator.Persistent, out int heightMapWidth, out int heightMapHeight);
-            surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.Persistent, out int surfaceMapWidth, out int surfaceMapHeight);
-            biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.Persistent, out int biomeMapWidth, out int biomeMapHeight);
-            groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.Persistent, out int groundCoverMapWidth, out int groundCoverMapHeight);
+            int heightMapWidth, heightMapHeight, surfaceMapWidth, surfaceMapHeight;
+            int biomeMapWidth, biomeMapHeight, groundCoverMapWidth, groundCoverMapHeight;
+            nativeLease = TryAcquireTerrainMaps(record);
+            if (nativeLease != null)
+            {
+                ChunkRecord.NativeTerrainData data = nativeLease.Data;
+                heightMap = data.HeightMap; heightMapWidth = data.HeightMapWidth; heightMapHeight = data.HeightMapHeight;
+                surfaceMap = data.SurfaceTypeMap; surfaceMapWidth = data.SurfaceTypeMapWidth; surfaceMapHeight = data.SurfaceTypeMapHeight;
+                biomeMap = data.BiomeMap; biomeMapWidth = data.BiomeMapWidth; biomeMapHeight = data.BiomeMapHeight;
+                groundCoverMap = data.GroundCoverMap; groundCoverMapWidth = data.GroundCoverMapWidth; groundCoverMapHeight = data.GroundCoverMapHeight;
+            }
+            else
+            {
+                heightMap = FlattenFloatMap(record.HeightMap, Allocator.Persistent, out heightMapWidth, out heightMapHeight);
+                surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.Persistent, out surfaceMapWidth, out surfaceMapHeight);
+                biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.Persistent, out biomeMapWidth, out biomeMapHeight);
+                groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.Persistent, out groundCoverMapWidth, out groundCoverMapHeight);
+            }
             treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.Persistent);
             bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, Allocator.Persistent);
             rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, Allocator.Persistent);
@@ -511,21 +562,21 @@ public static class FoliageGenerator
 
             handle = job.Schedule(candidateCount, 64);
             handle = new BillboardResultSortJob { results = results }.Schedule(handle);
-            return new BillboardGrassGenerationJob(record, handle, heightMap, surfaceMap,
+            return new BillboardGrassGenerationJob(record, handle, nativeLease, heightMap, surfaceMap,
                 biomeMap, groundCoverMap, treeExclusionPositions, bushExclusionPositions,
                 rockExclusionPositions, cloverInfluences, results);
         }
         catch
         {
             handle.Complete();
-            if (heightMap.IsCreated)
-                heightMap.Dispose();
-            if (surfaceMap.IsCreated)
-                surfaceMap.Dispose();
-            if (biomeMap.IsCreated)
-                biomeMap.Dispose();
-            if (groundCoverMap.IsCreated)
-                groundCoverMap.Dispose();
+            if (nativeLease != null) nativeLease.Dispose();
+            else
+            {
+                if (heightMap.IsCreated) heightMap.Dispose();
+                if (surfaceMap.IsCreated) surfaceMap.Dispose();
+                if (biomeMap.IsCreated) biomeMap.Dispose();
+                if (groundCoverMap.IsCreated) groundCoverMap.Dispose();
+            }
             if (treeExclusionPositions.IsCreated)
                 treeExclusionPositions.Dispose();
             if (bushExclusionPositions.IsCreated)
@@ -564,6 +615,7 @@ public static class FoliageGenerator
     {
         private readonly ChunkRecord record;
         private JobHandle handle;
+        private ChunkRecord.NativeTerrainData.Lease nativeLease;
         private NativeArray<float> heightMap;
         private NativeArray<SurfaceType> surfaceMap;
         private NativeArray<BiomeType> biomeMap;
@@ -585,6 +637,7 @@ public static class FoliageGenerator
         internal BillboardGrassGenerationJob(
             ChunkRecord record,
             JobHandle handle,
+            ChunkRecord.NativeTerrainData.Lease nativeLease,
             NativeArray<float> heightMap,
             NativeArray<SurfaceType> surfaceMap,
             NativeArray<BiomeType> biomeMap,
@@ -599,6 +652,7 @@ public static class FoliageGenerator
             target = record.FoliageData;
             revision = target.billboardRevision;
             this.handle = handle;
+            this.nativeLease = nativeLease;
             this.heightMap = heightMap;
             this.surfaceMap = surfaceMap;
             this.biomeMap = biomeMap;
@@ -652,14 +706,15 @@ public static class FoliageGenerator
 
         private void DisposeArrays()
         {
-            if (heightMap.IsCreated)
-                heightMap.Dispose();
-            if (surfaceMap.IsCreated)
-                surfaceMap.Dispose();
-            if (biomeMap.IsCreated)
-                biomeMap.Dispose();
-            if (groundCoverMap.IsCreated)
-                groundCoverMap.Dispose();
+            if (nativeLease != null) nativeLease.Dispose();
+            else
+            {
+                if (heightMap.IsCreated) heightMap.Dispose();
+                if (surfaceMap.IsCreated) surfaceMap.Dispose();
+                if (biomeMap.IsCreated) biomeMap.Dispose();
+                if (groundCoverMap.IsCreated) groundCoverMap.Dispose();
+            }
+            nativeLease = null;
             if (treeExclusionPositions.IsCreated)
                 treeExclusionPositions.Dispose();
             if (bushExclusionPositions.IsCreated)
@@ -761,16 +816,31 @@ public static class FoliageGenerator
         NativeArray<float2> treeExclusionPositions = default;
         NativeArray<FlowerDiscoveryResult> results = default;
         JobHandle handle = default;
+        ChunkRecord.NativeTerrainData.Lease nativeLease = null;
         try
         {
-            heightMap = FlattenFloatMap(record.HeightMap, Allocator.Persistent, out int heightMapWidth, out int heightMapHeight);
-            surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.Persistent, out int surfaceMapWidth, out int surfaceMapHeight);
-            biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.Persistent, out int biomeMapWidth, out int biomeMapHeight);
-            slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.Persistent, out int slopeMapWidth, out int slopeMapHeight);
+            int heightMapWidth, heightMapHeight, surfaceMapWidth, surfaceMapHeight;
+            int biomeMapWidth, biomeMapHeight, slopeMapWidth, slopeMapHeight;
+            nativeLease = TryAcquireTerrainMaps(record);
+            if (nativeLease != null)
+            {
+                ChunkRecord.NativeTerrainData data = nativeLease.Data;
+                heightMap = data.HeightMap; heightMapWidth = data.HeightMapWidth; heightMapHeight = data.HeightMapHeight;
+                surfaceMap = data.SurfaceTypeMap; surfaceMapWidth = data.SurfaceTypeMapWidth; surfaceMapHeight = data.SurfaceTypeMapHeight;
+                biomeMap = data.BiomeMap; biomeMapWidth = data.BiomeMapWidth; biomeMapHeight = data.BiomeMapHeight;
+                slopeMap = data.SlopeMap; slopeMapWidth = data.SlopeMapWidth; slopeMapHeight = data.SlopeMapHeight;
+            }
+            else
+            {
+                heightMap = FlattenFloatMap(record.HeightMap, Allocator.Persistent, out heightMapWidth, out heightMapHeight);
+                surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.Persistent, out surfaceMapWidth, out surfaceMapHeight);
+                biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.Persistent, out biomeMapWidth, out biomeMapHeight);
+                slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.Persistent, out slopeMapWidth, out slopeMapHeight);
+            }
             allowedBiomeMask = CreateAllowedBiomeMask(flowerSettings, Allocator.Persistent);
             treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.Persistent);
             results =
-                new NativeArray<FlowerDiscoveryResult>(flowerCandidateCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+                new NativeArray<FlowerDiscoveryResult>(flowerCandidateCount, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
             FlowerDiscoveryJob job = new FlowerDiscoveryJob
             {
@@ -820,7 +890,7 @@ public static class FoliageGenerator
                 maxScale = flowerSettings.uniformScaleRange.y
             };
 
-            handle = job.Schedule(flowerCandidateCount, 64);
+            handle = job.Schedule(patchCandidateCount, Mathf.Max(1, 64 / maxFlowersPerPatch));
             JobHandle.ScheduleBatchedJobs();
             yield return false;
             while (!handle.IsCompleted) yield return false;
@@ -861,14 +931,14 @@ public static class FoliageGenerator
         {
             // Disposal is the only cancellation/shutdown path allowed to wait.
             handle.Complete();
-            if (heightMap.IsCreated)
-                heightMap.Dispose();
-            if (surfaceMap.IsCreated)
-                surfaceMap.Dispose();
-            if (biomeMap.IsCreated)
-                biomeMap.Dispose();
-            if (slopeMap.IsCreated)
-                slopeMap.Dispose();
+            if (nativeLease != null) nativeLease.Dispose();
+            else
+            {
+                if (heightMap.IsCreated) heightMap.Dispose();
+                if (surfaceMap.IsCreated) surfaceMap.Dispose();
+                if (biomeMap.IsCreated) biomeMap.Dispose();
+                if (slopeMap.IsCreated) slopeMap.Dispose();
+            }
             if (allowedBiomeMask.IsCreated)
                 allowedBiomeMask.Dispose();
             if (treeExclusionPositions.IsCreated)
@@ -1312,18 +1382,35 @@ public static class FoliageGenerator
         NativeArray<float2> rockExclusionPositions = default;
         NativeArray<CloverDiscoveryResult> results = default;
         JobHandle handle = default;
+        ChunkRecord.NativeTerrainData.Lease nativeLease = null;
         try
         {
-            heightMap = FlattenFloatMap(record.HeightMap, Allocator.Persistent, out int heightMapWidth, out int heightMapHeight);
-            surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.Persistent, out int surfaceMapWidth, out int surfaceMapHeight);
-            biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.Persistent, out int biomeMapWidth, out int biomeMapHeight);
-            groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.Persistent, out int groundCoverMapWidth, out int groundCoverMapHeight);
-            slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.Persistent, out int slopeMapWidth, out int slopeMapHeight);
+            int heightMapWidth, heightMapHeight, surfaceMapWidth, surfaceMapHeight;
+            int biomeMapWidth, biomeMapHeight, groundCoverMapWidth, groundCoverMapHeight;
+            int slopeMapWidth, slopeMapHeight;
+            nativeLease = TryAcquireTerrainMaps(record);
+            if (nativeLease != null)
+            {
+                ChunkRecord.NativeTerrainData data = nativeLease.Data;
+                heightMap = data.HeightMap; heightMapWidth = data.HeightMapWidth; heightMapHeight = data.HeightMapHeight;
+                surfaceMap = data.SurfaceTypeMap; surfaceMapWidth = data.SurfaceTypeMapWidth; surfaceMapHeight = data.SurfaceTypeMapHeight;
+                biomeMap = data.BiomeMap; biomeMapWidth = data.BiomeMapWidth; biomeMapHeight = data.BiomeMapHeight;
+                groundCoverMap = data.GroundCoverMap; groundCoverMapWidth = data.GroundCoverMapWidth; groundCoverMapHeight = data.GroundCoverMapHeight;
+                slopeMap = data.SlopeMap; slopeMapWidth = data.SlopeMapWidth; slopeMapHeight = data.SlopeMapHeight;
+            }
+            else
+            {
+                heightMap = FlattenFloatMap(record.HeightMap, Allocator.Persistent, out heightMapWidth, out heightMapHeight);
+                surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.Persistent, out surfaceMapWidth, out surfaceMapHeight);
+                biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.Persistent, out biomeMapWidth, out biomeMapHeight);
+                groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.Persistent, out groundCoverMapWidth, out groundCoverMapHeight);
+                slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.Persistent, out slopeMapWidth, out slopeMapHeight);
+            }
             treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.Persistent);
             bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, Allocator.Persistent);
             rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, Allocator.Persistent);
             results =
-                new NativeArray<CloverDiscoveryResult>(clumpCandidateCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+                new NativeArray<CloverDiscoveryResult>(clumpCandidateCount, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
             CloverDiscoveryJob job = new CloverDiscoveryJob
             {
@@ -1382,7 +1469,7 @@ public static class FoliageGenerator
                 grassInfluenceRadius = Mathf.Max(0.01f, cloverSettings.grassInfluenceRadius)
             };
 
-            handle = job.Schedule(clumpCandidateCount, 64);
+            handle = job.Schedule(patchCandidateCount, Mathf.Max(1, 64 / maxClumpsPerPatch));
             JobHandle.ScheduleBatchedJobs();
             yield return false;
             while (!handle.IsCompleted) yield return false;
@@ -1424,16 +1511,15 @@ public static class FoliageGenerator
         {
             // Disposal is the only cancellation/shutdown path allowed to wait.
             handle.Complete();
-            if (heightMap.IsCreated)
-                heightMap.Dispose();
-            if (surfaceMap.IsCreated)
-                surfaceMap.Dispose();
-            if (biomeMap.IsCreated)
-                biomeMap.Dispose();
-            if (groundCoverMap.IsCreated)
-                groundCoverMap.Dispose();
-            if (slopeMap.IsCreated)
-                slopeMap.Dispose();
+            if (nativeLease != null) nativeLease.Dispose();
+            else
+            {
+                if (heightMap.IsCreated) heightMap.Dispose();
+                if (surfaceMap.IsCreated) surfaceMap.Dispose();
+                if (biomeMap.IsCreated) biomeMap.Dispose();
+                if (groundCoverMap.IsCreated) groundCoverMap.Dispose();
+                if (slopeMap.IsCreated) slopeMap.Dispose();
+            }
             if (treeExclusionPositions.IsCreated)
                 treeExclusionPositions.Dispose();
             if (bushExclusionPositions.IsCreated)
@@ -1540,18 +1626,35 @@ public static class FoliageGenerator
         NativeArray<float2> rockExclusionPositions = default;
         NativeArray<CloverDiscoveryResult> results = default;
         JobHandle handle = default;
+        ChunkRecord.NativeTerrainData.Lease nativeLease = null;
         try
         {
-            heightMap = FlattenFloatMap(record.HeightMap, Allocator.Persistent, out int heightMapWidth, out int heightMapHeight);
-            surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.Persistent, out int surfaceMapWidth, out int surfaceMapHeight);
-            biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.Persistent, out int biomeMapWidth, out int biomeMapHeight);
-            groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.Persistent, out int groundCoverMapWidth, out int groundCoverMapHeight);
-            slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.Persistent, out int slopeMapWidth, out int slopeMapHeight);
+            int heightMapWidth, heightMapHeight, surfaceMapWidth, surfaceMapHeight;
+            int biomeMapWidth, biomeMapHeight, groundCoverMapWidth, groundCoverMapHeight;
+            int slopeMapWidth, slopeMapHeight;
+            nativeLease = TryAcquireTerrainMaps(record);
+            if (nativeLease != null)
+            {
+                ChunkRecord.NativeTerrainData data = nativeLease.Data;
+                heightMap = data.HeightMap; heightMapWidth = data.HeightMapWidth; heightMapHeight = data.HeightMapHeight;
+                surfaceMap = data.SurfaceTypeMap; surfaceMapWidth = data.SurfaceTypeMapWidth; surfaceMapHeight = data.SurfaceTypeMapHeight;
+                biomeMap = data.BiomeMap; biomeMapWidth = data.BiomeMapWidth; biomeMapHeight = data.BiomeMapHeight;
+                groundCoverMap = data.GroundCoverMap; groundCoverMapWidth = data.GroundCoverMapWidth; groundCoverMapHeight = data.GroundCoverMapHeight;
+                slopeMap = data.SlopeMap; slopeMapWidth = data.SlopeMapWidth; slopeMapHeight = data.SlopeMapHeight;
+            }
+            else
+            {
+                heightMap = FlattenFloatMap(record.HeightMap, Allocator.Persistent, out heightMapWidth, out heightMapHeight);
+                surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.Persistent, out surfaceMapWidth, out surfaceMapHeight);
+                biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.Persistent, out biomeMapWidth, out biomeMapHeight);
+                groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.Persistent, out groundCoverMapWidth, out groundCoverMapHeight);
+                slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.Persistent, out slopeMapWidth, out slopeMapHeight);
+            }
             treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.Persistent);
             bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, Allocator.Persistent);
             rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, Allocator.Persistent);
             results =
-                new NativeArray<CloverDiscoveryResult>(dandelionCandidateCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+                new NativeArray<CloverDiscoveryResult>(dandelionCandidateCount, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
             CloverDiscoveryJob job = new CloverDiscoveryJob
             {
@@ -1610,7 +1713,7 @@ public static class FoliageGenerator
                 grassInfluenceRadius = 0.01f
             };
 
-            handle = job.Schedule(dandelionCandidateCount, 64);
+            handle = job.Schedule(patchCandidateCount, Mathf.Max(1, 64 / maxDandelionsPerPatch));
             JobHandle.ScheduleBatchedJobs();
             yield return false;
             while (!handle.IsCompleted) yield return false;
@@ -1650,16 +1753,15 @@ public static class FoliageGenerator
         {
             // Disposal is the only cancellation/shutdown path allowed to wait.
             handle.Complete();
-            if (heightMap.IsCreated)
-                heightMap.Dispose();
-            if (surfaceMap.IsCreated)
-                surfaceMap.Dispose();
-            if (biomeMap.IsCreated)
-                biomeMap.Dispose();
-            if (groundCoverMap.IsCreated)
-                groundCoverMap.Dispose();
-            if (slopeMap.IsCreated)
-                slopeMap.Dispose();
+            if (nativeLease != null) nativeLease.Dispose();
+            else
+            {
+                if (heightMap.IsCreated) heightMap.Dispose();
+                if (surfaceMap.IsCreated) surfaceMap.Dispose();
+                if (biomeMap.IsCreated) biomeMap.Dispose();
+                if (groundCoverMap.IsCreated) groundCoverMap.Dispose();
+                if (slopeMap.IsCreated) slopeMap.Dispose();
+            }
             if (treeExclusionPositions.IsCreated)
                 treeExclusionPositions.Dispose();
             if (bushExclusionPositions.IsCreated)
@@ -2201,6 +2303,52 @@ public static class FoliageGenerator
         return result;
     }
 
+    private static readonly System.Func<TreeInstanceData, Vector3> TreePosition = instance => instance.localPosition;
+    private static readonly System.Func<BerryBushInstanceData, Vector3> BushPosition = instance => instance.localPosition;
+    private static readonly System.Func<RockInstanceData, Vector3> RockPosition = instance => instance.localPosition;
+
+    private static NativeArray<float2> CreateTreeExclusionPositions(
+        List<TreeInstanceData> instances, Allocator allocator, float4 bounds, float radius) =>
+        CreateFilteredExclusionPositions(instances, TreePosition, allocator, bounds, radius);
+
+    private static NativeArray<float2> CreateBushExclusionPositions(
+        List<BerryBushInstanceData> instances, Allocator allocator, float4 bounds, float radius) =>
+        CreateFilteredExclusionPositions(instances, BushPosition, allocator, bounds, radius);
+
+    private static NativeArray<float2> CreateRockExclusionPositions(
+        List<RockInstanceData> instances, Allocator allocator, float4 bounds, float radius) =>
+        CreateFilteredExclusionPositions(instances, RockPosition, allocator, bounds, radius);
+
+    private static NativeArray<float2> CreateFilteredExclusionPositions<T>(
+        List<T> instances, System.Func<T, Vector3> positionOf, Allocator allocator, float4 bounds, float radius)
+    {
+        if (instances == null || radius <= 0f)
+            return new NativeArray<float2>(0, allocator);
+
+        int count = 0;
+        for (int i = 0; i < instances.Count; i++)
+            if (CanReachBounds(positionOf(instances[i]), bounds, radius))
+                count++;
+
+        NativeArray<float2> result = new NativeArray<float2>(count, allocator, NativeArrayOptions.UninitializedMemory);
+        int next = 0;
+        for (int i = 0; i < instances.Count; i++)
+        {
+            Vector3 position = positionOf(instances[i]);
+            if (CanReachBounds(position, bounds, radius))
+                result[next++] = new float2(position.x, position.z);
+        }
+        return result;
+    }
+
+    private static bool CanReachBounds(Vector3 position, float4 bounds, float radius)
+    {
+        // Slight padding keeps boundary cases conservative after world-to-local float conversion.
+        float reach = radius + 0.0001f;
+        return position.x >= bounds.x - reach && position.x <= bounds.z + reach &&
+               position.z >= bounds.y - reach && position.z <= bounds.w + reach;
+    }
+
     private static NativeArray<float2> CreateBushExclusionPositions(List<BerryBushInstanceData> instances, Allocator allocator)
     {
         int count = instances != null ? instances.Count : 0;
@@ -2246,6 +2394,36 @@ public static class FoliageGenerator
             result[i] = new float4(instance.localPosition.x, instance.localPosition.z, radius, coreRadius);
         }
 
+        return result;
+    }
+
+    private static NativeArray<float4> CreateCloverInfluencesForBounds(
+        List<CloverInstanceData> instances, CloverSettings cloverSettings, Allocator allocator, float4 bounds)
+    {
+        if (instances == null)
+            return new NativeArray<float4>(0, allocator);
+
+        float fadePadding = cloverSettings != null ? Mathf.Max(0f, cloverSettings.grassFadePadding) : 0f;
+        int count = 0;
+        for (int i = 0; i < instances.Count; i++)
+        {
+            CloverInstanceData instance = instances[i];
+            float radius = Mathf.Max(0.01f, instance.grassInfluenceRadius + fadePadding);
+            if (CanReachBounds(instance.localPosition, bounds, radius))
+                count++;
+        }
+
+        NativeArray<float4> result = new NativeArray<float4>(count, allocator, NativeArrayOptions.UninitializedMemory);
+        int next = 0;
+        for (int i = 0; i < instances.Count; i++)
+        {
+            CloverInstanceData instance = instances[i];
+            float radius = Mathf.Max(0.01f, instance.grassInfluenceRadius + fadePadding);
+            if (!CanReachBounds(instance.localPosition, bounds, radius))
+                continue;
+            float coreRadius = Mathf.Max(0.01f, instance.grassInfluenceRadius);
+            result[next++] = new float4(instance.localPosition.x, instance.localPosition.z, radius, coreRadius);
+        }
         return result;
     }
 
@@ -2502,12 +2680,16 @@ public static class FoliageGenerator
             {
                 float4 clover = cloverInfluences[i];
                 float2 delta = localXZ - clover.xy;
-                float dist = math.length(delta);
                 float radius = math.max(clover.z, 0.01f);
                 float coreRadius = math.min(math.max(clover.w, 0.01f), radius);
+                float distanceSqr = math.lengthsq(delta);
+                if (distanceSqr > radius * radius + 0.000001f * math.max(1f, radius * radius))
+                    continue;
+                float dist = math.sqrt(distanceSqr);
+                if (dist <= coreRadius)
+                    return 1f;
                 float fade = math.saturate((radius - dist) / math.max(radius - coreRadius, 0.01f));
-                float core = dist <= coreRadius ? 1f : 0f;
-                influence = math.max(influence, math.max(core, fade));
+                influence = math.max(influence, fade);
             }
 
             return influence;
@@ -2583,7 +2765,8 @@ public static class FoliageGenerator
         [ReadOnly] public NativeArray<byte> allowedBiomeMask;
         [ReadOnly] public NativeArray<float2> treeExclusionPositions;
         public float treeExclusionRadiusSqr;
-        [WriteOnly] public NativeArray<FlowerDiscoveryResult> results;
+        // Execute(p) writes only [p * maxFlowersPerPatch, (p + 1) * maxFlowersPerPatch).
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<FlowerDiscoveryResult> results;
         public int worldSeed;
         public int seedOffset;
         public int chunkSize;
@@ -2612,11 +2795,8 @@ public static class FoliageGenerator
         public float minScale;
         public float maxScale;
 
-        public void Execute(int index)
+        public void Execute(int patchLinear)
         {
-            int flowersPerPatch = maxFlowersPerPatch;
-            int patchLinear = index / flowersPerPatch;
-            int flowerIndex = index - patchLinear * flowersPerPatch;
             int patchIndex = patchLinear % maxPatchCentersPerCell;
             int cellLinear = patchLinear / maxPatchCentersPerCell;
             int globalCellX = globalCellMinX + cellLinear % globalCellCountX;
@@ -2634,7 +2814,6 @@ public static class FoliageGenerator
 
             if (patchNoise01 < patchNoiseThreshold)
             {
-                results[index] = default;
                 return;
             }
 
@@ -2645,7 +2824,6 @@ public static class FoliageGenerator
 
             if (Hash01(patchHash + 103) > spawnChance)
             {
-                results[index] = default;
                 return;
             }
 
@@ -2658,17 +2836,19 @@ public static class FoliageGenerator
                 centerGlobalSampleZ + patchRadius < chunkSampleMinZ ||
                 centerGlobalSampleZ - patchRadius > chunkSampleMaxZ)
             {
-                results[index] = default;
                 return;
             }
 
             int flowersInPatch = GetDeterministicCount(minFlowersPerPatch, maxFlowersPerPatch, patchHash + 173);
-            if (flowerIndex >= flowersInPatch)
-            {
-                results[index] = default;
-                return;
-            }
+            // Each patch owns a disjoint fixed slice. Rejected/unused slots are zero-initialized.
+            for (int flowerIndex = 0; flowerIndex < flowersInPatch; flowerIndex++)
+                ExecuteChild(patchLinear * maxFlowersPerPatch + flowerIndex, flowerIndex,
+                    globalCellX, globalCellZ, patchIndex, centerGlobalSampleX, centerGlobalSampleZ, patchRadius);
+        }
 
+        private void ExecuteChild(int index, int flowerIndex, int globalCellX, int globalCellZ,
+            int patchIndex, float centerGlobalSampleX, float centerGlobalSampleZ, float patchRadius)
+        {
             int flowerHash = Hash7(worldSeed, seedOffset, globalCellX, globalCellZ, patchIndex, flowerIndex, 557);
             float angle = Hash01(flowerHash + 19) * math.PI * 2f;
             float radius = math.sqrt(Hash01(flowerHash + 41)) * patchRadius;
@@ -2887,7 +3067,8 @@ public static class FoliageGenerator
         public float treeExclusionRadiusSqr;
         public float bushExclusionRadiusSqr;
         public float rockExclusionRadiusSqr;
-        [WriteOnly] public NativeArray<CloverDiscoveryResult> results;
+        // Execute(p) writes only [p * maxClumpsPerPatch, (p + 1) * maxClumpsPerPatch).
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<CloverDiscoveryResult> results;
         public int worldSeed;
         public int seedOffset;
         public int chunkSize;
@@ -2918,11 +3099,8 @@ public static class FoliageGenerator
         public int prefabCount;
         public float grassInfluenceRadius;
 
-        public void Execute(int index)
+        public void Execute(int patchLinear)
         {
-            int clumpsPerPatch = maxClumpsPerPatch;
-            int patchLinear = index / clumpsPerPatch;
-            int clumpIndex = index - patchLinear * clumpsPerPatch;
             int patchIndex = patchLinear % maxPatchCentersPerCell;
             int cellLinear = patchLinear / maxPatchCentersPerCell;
             int globalCellX = globalCellMinX + cellLinear % globalCellCountX;
@@ -2946,7 +3124,6 @@ public static class FoliageGenerator
 
             if (patchSuitability < patchNoiseThreshold)
             {
-                results[index] = default;
                 return;
             }
 
@@ -2957,7 +3134,6 @@ public static class FoliageGenerator
 
             if (Hash01(patchHash + 103) > spawnChance)
             {
-                results[index] = default;
                 return;
             }
 
@@ -2970,27 +3146,31 @@ public static class FoliageGenerator
                 centerGlobalSampleZ + patchRadius < chunkSampleMinZ ||
                 centerGlobalSampleZ - patchRadius > chunkSampleMaxZ)
             {
-                results[index] = default;
                 return;
             }
 
             int clumpsInPatch = GetDeterministicCount(minClumpsPerPatch, maxClumpsPerPatch, patchHash + 173);
-            if (clumpIndex >= clumpsInPatch)
-            {
-                results[index] = default;
-                return;
-            }
-
-            int clumpHash = Hash7(worldSeed, seedOffset, globalCellX, globalCellZ, patchIndex, clumpIndex, 977);
-            float angle = Hash01(clumpHash + 19) * math.PI * 2f;
-            float radius = math.sqrt(Hash01(clumpHash + 41)) * patchRadius;
             float stretch = math.lerp(0.72f, 1.28f, Hash01(patchHash + 197));
             float crossStretch = math.lerp(0.78f, 1.12f, Hash01(patchHash + 211));
             float patchAngle = Hash01(patchHash + 223) * math.PI * 2f;
-            float x = math.cos(angle) * radius * stretch;
-            float z = math.sin(angle) * radius * crossStretch;
             float sinPatch = math.sin(patchAngle);
             float cosPatch = math.cos(patchAngle);
+            // Each patch owns a disjoint fixed slice. Rejected/unused slots are zero-initialized.
+            for (int clumpIndex = 0; clumpIndex < clumpsInPatch; clumpIndex++)
+                ExecuteChild(patchLinear * maxClumpsPerPatch + clumpIndex, clumpIndex,
+                    globalCellX, globalCellZ, patchIndex, centerGlobalSampleX, centerGlobalSampleZ,
+                    patchRadius, stretch, crossStretch, sinPatch, cosPatch);
+        }
+
+        private void ExecuteChild(int index, int clumpIndex, int globalCellX, int globalCellZ,
+            int patchIndex, float centerGlobalSampleX, float centerGlobalSampleZ, float patchRadius,
+            float stretch, float crossStretch, float sinPatch, float cosPatch)
+        {
+            int clumpHash = Hash7(worldSeed, seedOffset, globalCellX, globalCellZ, patchIndex, clumpIndex, 977);
+            float angle = Hash01(clumpHash + 19) * math.PI * 2f;
+            float radius = math.sqrt(Hash01(clumpHash + 41)) * patchRadius;
+            float x = math.cos(angle) * radius * stretch;
+            float z = math.sin(angle) * radius * crossStretch;
             float globalSampleX = centerGlobalSampleX + x * cosPatch - z * sinPatch;
             float globalSampleZ = centerGlobalSampleZ + x * sinPatch + z * cosPatch;
 
@@ -3410,12 +3590,16 @@ public static class FoliageGenerator
             {
                 float4 clover = cloverInfluences[i];
                 float2 delta = localXZ - clover.xy;
-                float dist = math.length(delta);
                 float radius = math.max(clover.z, 0.01f);
                 float coreRadius = math.min(math.max(clover.w, 0.01f), radius);
+                float distanceSqr = math.lengthsq(delta);
+                if (distanceSqr > radius * radius + 0.000001f * math.max(1f, radius * radius))
+                    continue;
+                float dist = math.sqrt(distanceSqr);
+                if (dist <= coreRadius)
+                    return 1f;
                 float fade = math.saturate((radius - dist) / math.max(radius - coreRadius, 0.01f));
-                float core = dist <= coreRadius ? 1f : 0f;
-                influence = math.max(influence, math.max(core, fade));
+                influence = math.max(influence, fade);
             }
 
             return influence;

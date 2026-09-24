@@ -62,13 +62,7 @@ public static class MountainSnow
         var terrain = terrainStorage;
         var climate = climateStorage;
         using var output = new NativeArray<float2>(width * depth, Allocator.TempJob);
-        using var baseOffsets = Offsets(context.BaseLandOffsets);
-        using var maskOffsets = Offsets(context.MountainMaskOffsets);
-        using var mountainOffsets = Offsets(context.MountainTerrainOffsets);
-        using var detailOffsets = Offsets(context.MountainRuggedOffsets);
         float2 origin = new float2(coord.x * chunkSize, coord.z * chunkSize);
-        using var anchors = new NativeArray<MountainExpansionAnchor>(HeightMapGenerator.GetMountainAnchors(
-            origin - SampleRadius, origin + chunkSize + SampleRadius, sampleScale, context), Allocator.TempJob);
         for (int x = 0; x < width; x++)
             for (int z = 0; z < depth; z++)
             {
@@ -81,19 +75,11 @@ public static class MountainSnow
             width = width, depth = depth, origin = origin, seed = seed, sampleScale = sampleScale,
             waterLevel = water.WaterLevel, heightMultiplier = water.HeightMultiplier,
             mountainScale = context.MountainHorizontalScale, riverSeed = context.RiverSeed, erosion = context.Erosion,
-            terrain = terrain, climate = climate, output = output, baseOffsets = baseOffsets,
-            maskOffsets = maskOffsets, mountainOffsets = mountainOffsets, detailOffsets = detailOffsets, anchors = anchors
+            terrain = terrain, climate = climate, output = output
         }.Schedule(output.Length, 64).Complete();
         for (int x = 1; x < width - 1; x++)
             for (int z = 1; z < depth - 1; z++)
                 result[x, z] = output[x * depth + z];
-        return result;
-    }
-
-    private static NativeArray<float2> Offsets(Vector2[] source)
-    {
-        var result = new NativeArray<float2>(source.Length, Allocator.TempJob);
-        for (int i = 0; i < source.Length; i++) result[i] = new float2(source[i].x, source[i].y);
         return result;
     }
 
@@ -105,8 +91,7 @@ public static class MountainSnow
         public float sampleScale, waterLevel, heightMultiplier, mountainScale;
         public WorldErosionSettings erosion;
         [ReadOnly] public NativeArray<float4> terrain;
-        [ReadOnly] public NativeArray<float2> climate, baseOffsets, maskOffsets, mountainOffsets, detailOffsets;
-        [ReadOnly] public NativeArray<MountainExpansionAnchor> anchors;
+        [ReadOnly] public NativeArray<float2> climate;
         [WriteOnly] public NativeArray<float2> output;
 
         public void Execute(int index)
@@ -127,8 +112,7 @@ public static class MountainSnow
             if (x >= 0 && z >= 0 && x < width && z < depth) return terrain[x * depth + z].x;
             // Sample beyond the halo instead of clamping, so chunk borders have identical retention.
             return HeightMapGenerator.SampleTerrainHeightNative(origin.x + x - 1, origin.y + z - 1,
-                sampleScale, baseOffsets, maskOffsets, mountainOffsets, detailOffsets, riverSeed,
-                waterLevel, mountainScale, anchors, erosion).Height;
+                sampleScale, riverSeed, waterLevel, mountainScale, erosion).Height;
         }
     }
 

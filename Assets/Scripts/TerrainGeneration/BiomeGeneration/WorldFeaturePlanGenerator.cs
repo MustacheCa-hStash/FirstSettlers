@@ -1520,10 +1520,12 @@ public static class WorldFeaturePlanGenerator
         float radiusSqr = radius * radius;
         int width = fields.OrganicFloorIntentMap.GetLength(0);
         int height = fields.OrganicFloorIntentMap.GetLength(1);
+        GetInfluenceBounds(sampleX, sampleZ, radius, chunkSize, width, height,
+            out int minX, out int maxX, out int minZ, out int maxZ);
 
-        for (int x = 0; x < width; x++)
+        for (int x = minX; x <= maxX; x++)
         {
-            for (int z = 0; z < height; z++)
+            for (int z = minZ; z <= maxZ; z++)
             {
                 float mapSampleX = Mathf.Clamp(x - 1, 0, chunkSize);
                 float mapSampleZ = Mathf.Clamp(z - 1, 0, chunkSize);
@@ -1561,10 +1563,12 @@ public static class WorldFeaturePlanGenerator
         float radiusSqr = radius * radius;
         int width = targetMap.GetLength(0);
         int height = targetMap.GetLength(1);
+        GetInfluenceBounds(sampleX, sampleZ, radius, chunkSize, width, height,
+            out int minX, out int maxX, out int minZ, out int maxZ);
 
-        for (int x = 0; x < width; x++)
+        for (int x = minX; x <= maxX; x++)
         {
-            for (int z = 0; z < height; z++)
+            for (int z = minZ; z <= maxZ; z++)
             {
                 float mapSampleX = Mathf.Clamp(x - 1, 0, chunkSize);
                 float mapSampleZ = Mathf.Clamp(z - 1, 0, chunkSize);
@@ -1580,6 +1584,23 @@ public static class WorldFeaturePlanGenerator
                 targetMap[x, z] = Mathf.Max(targetMap[x, z], Mathf.Clamp01(falloff * strength));
             }
         }
+    }
+
+    private static void GetInfluenceBounds(
+        float sampleX, float sampleZ, float radius, int chunkSize, int width, int height,
+        out int minX, out int maxX, out int minZ, out int maxZ)
+    {
+        // Map indices 0 and 1 both represent sample 0; indices chunkSize + 1 and
+        // chunkSize + 2 both represent sample chunkSize. Include both halo copies
+        // when an influence reaches a chunk edge.
+        float lowerX = sampleX - radius;
+        float upperX = sampleX + radius;
+        float lowerZ = sampleZ - radius;
+        float upperZ = sampleZ + radius;
+        minX = lowerX <= 0f ? 0 : Mathf.Clamp(Mathf.FloorToInt(lowerX) + 1, 0, width - 1);
+        maxX = upperX >= chunkSize ? width - 1 : Mathf.Clamp(Mathf.CeilToInt(upperX) + 1, 0, width - 1);
+        minZ = lowerZ <= 0f ? 0 : Mathf.Clamp(Mathf.FloorToInt(lowerZ) + 1, 0, height - 1);
+        maxZ = upperZ >= chunkSize ? height - 1 : Mathf.Clamp(Mathf.CeilToInt(upperZ) + 1, 0, height - 1);
     }
 
     private static float Sample01(float worldX, float worldZ, float scale, int seed)

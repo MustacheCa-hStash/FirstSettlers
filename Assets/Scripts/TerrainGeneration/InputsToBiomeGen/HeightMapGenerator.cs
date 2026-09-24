@@ -20,10 +20,6 @@ public readonly struct TerrainHeightSample
 
 public readonly struct TerrainHeightSamplingContext
 {
-    public readonly Vector2[] BaseLandOffsets;
-    public readonly Vector2[] MountainMaskOffsets;
-    public readonly Vector2[] MountainTerrainOffsets;
-    public readonly Vector2[] MountainRuggedOffsets;
     public readonly int RiverSeed;
     public readonly float WaterLevel;
     public readonly float MountainHorizontalScale;
@@ -34,10 +30,6 @@ public readonly struct TerrainHeightSamplingContext
         WaterLevel = waterLevel;
         Erosion = erosion.Sanitized();
         MountainHorizontalScale = HeightMapGenerator.SanitizeMountainHorizontalScale(mountainHorizontalScale);
-        BaseLandOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 20000, 2);
-        MountainMaskOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 30000, 3);
-        MountainTerrainOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 40000, 4);
-        MountainRuggedOffsets = TerrainNoiseUtility.GenerateOctaveOffsets(seed + 50000, 3);
         RiverSeed = seed + 60000;
     }
 }
@@ -66,13 +58,8 @@ public static partial class HeightMapGenerator
             worldX,
             worldZ,
             sampleScale,
-            context.BaseLandOffsets,
-            context.MountainMaskOffsets,
-            context.MountainTerrainOffsets,
-            context.MountainRuggedOffsets,
             context.RiverSeed,
-            context.WaterLevel, context.MountainHorizontalScale,
-            GetMountainAnchors(new float2(worldX, worldZ), new float2(worldX, worldZ), sampleScale, context), context.Erosion);
+            context.WaterLevel, context.MountainHorizontalScale, context.Erosion);
         return new TerrainHeightSample(sample.Height, sample.MountainMask, sample.RiverMask);
     }
 
@@ -80,24 +67,16 @@ public static partial class HeightMapGenerator
         float worldX,
         float worldZ,
         float sampleScale,
-        NativeArray<float2> baseLandOffsets,
-        NativeArray<float2> mountainMaskOffsets,
-        NativeArray<float2> mountainTerrainOffsets,
-        NativeArray<float2> mountainRuggedOffsets,
         int riverSeed,
         float waterLevel,
         float mountainHorizontalScale = 1f,
-        NativeArray<MountainExpansionAnchor> mountainAnchors = default, WorldErosionSettings erosion = default)
+        WorldErosionSettings erosion = default)
     {
         TerrainHeightSampleData sample = SampleTerrainHeight(
             worldX,
             worldZ,
             sampleScale,
-            baseLandOffsets,
-            mountainMaskOffsets,
-            mountainTerrainOffsets,
-            mountainRuggedOffsets,
-            riverSeed, waterLevel, SanitizeMountainHorizontalScale(mountainHorizontalScale), mountainAnchors, erosion);
+            riverSeed, waterLevel, SanitizeMountainHorizontalScale(mountainHorizontalScale), erosion);
         return new TerrainHeightSample(sample.Height, sample.MountainMask, sample.RiverMask);
     }
 
@@ -110,6 +89,32 @@ public static partial class HeightMapGenerator
         float mountainHorizontalScale = 1f,
         float meshHeightMultiplier = 200f, WorldErosionSettings erosion = default)
     {
+        return GenerateTerrainHeightFieldCore(chunkSize, seed, sampleScale, chunkCoord, waterLevel,
+            mountainHorizontalScale, meshHeightMultiplier, erosion, false,
+            out _, out _, out _);
+    }
+
+    public static HeightFieldResult GenerateTerrainHeightFieldForRequest(
+        int chunkSize, int seed, float sampleScale, ChunkCoord chunkCoord, float waterLevel,
+        float mountainHorizontalScale, float meshHeightMultiplier, WorldErosionSettings erosion,
+        out NativeArray<float> nativeHeights, out NativeArray<float> nativeSlopes,
+        out NativeArray<float> nativeRiverMasks)
+    {
+        return GenerateTerrainHeightFieldCore(chunkSize, seed, sampleScale, chunkCoord, waterLevel,
+            mountainHorizontalScale, meshHeightMultiplier, erosion, true,
+            out nativeHeights, out nativeSlopes, out nativeRiverMasks);
+    }
+
+    private static HeightFieldResult GenerateTerrainHeightFieldCore(
+        int chunkSize, int seed, float sampleScale, ChunkCoord chunkCoord, float waterLevel,
+        float mountainHorizontalScale, float meshHeightMultiplier, WorldErosionSettings erosion,
+        bool retainNativeMaps, out NativeArray<float> nativeHeights,
+        out NativeArray<float> nativeSlopes, out NativeArray<float> nativeRiverMasks)
+    {
+        nativeHeights = default;
+        nativeSlopes = default;
+        nativeRiverMasks = default;
+        bool success = false;
         // Keep the public one-sample halo, but generate four extra samples on each side
         // so the four-unit gameplay slope stencil is identical across chunk boundaries.
         int mapSize = chunkSize + 3;
@@ -119,8 +124,6 @@ public static partial class HeightMapGenerator
         float[,] finalHeightMap = new float[mapSize, mapSize];
         float[,] mountainMaskMap = new float[mapSize, mapSize];
         float[,] riverMaskMap = new float[mapSize, mapSize];
-        float[,] gradientXMap = new float[mapSize, mapSize];
-        float[,] gradientZMap = new float[mapSize, mapSize];
         float[,] slopeMap = new float[mapSize, mapSize];
 
         if (sampleScale <= 0f)
@@ -132,30 +135,14 @@ public static partial class HeightMapGenerator
         NativeArray<float> finalHeights = default;
         NativeArray<float> mountainMasks = default;
         NativeArray<float> riverMasks = default;
-        NativeArray<float> gradientX = default;
-        NativeArray<float> gradientZ = default;
         NativeArray<float> slopes = default;
-        NativeArray<float2> baseLandOffsets = default;
-        NativeArray<float2> mountainMaskOffsets = default;
-        NativeArray<float2> mountainTerrainOffsets = default;
-        NativeArray<float2> mountainRuggedOffsets = default;
-        NativeArray<MountainExpansionAnchor> mountainAnchors = default;
 
         try
         {
-            float2 minimum = new float2(chunkCoord.x * chunkSize - HeightFieldSampleBorder, chunkCoord.z * chunkSize - HeightFieldSampleBorder);
-            mountainAnchors = new NativeArray<MountainExpansionAnchor>(
-                GetMountainAnchors(minimum, minimum + chunkSize + HeightFieldSampleBorder * 2, sampleScale, samplingContext), Allocator.TempJob);
             finalHeights = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             mountainMasks = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             riverMasks = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-            gradientX = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-            gradientZ = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
             slopes = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-            baseLandOffsets = CreateNativeOffsets(samplingContext.BaseLandOffsets);
-            mountainMaskOffsets = CreateNativeOffsets(samplingContext.MountainMaskOffsets);
-            mountainTerrainOffsets = CreateNativeOffsets(samplingContext.MountainTerrainOffsets);
-            mountainRuggedOffsets = CreateNativeOffsets(samplingContext.MountainRuggedOffsets);
 
             HeightFieldSampleJob sampleJob = new HeightFieldSampleJob
             {
@@ -169,11 +156,6 @@ public static partial class HeightMapGenerator
                 waterLevel = waterLevel,
                 mountainHorizontalScale = samplingContext.MountainHorizontalScale,
                 erosion = samplingContext.Erosion,
-                mountainAnchors = mountainAnchors,
-                baseLandOffsets = baseLandOffsets,
-                mountainMaskOffsets = mountainMaskOffsets,
-                mountainTerrainOffsets = mountainTerrainOffsets,
-                mountainRuggedOffsets = mountainRuggedOffsets,
                 finalHeights = finalHeights,
                 mountainMasks = mountainMasks,
                 riverMasks = riverMasks
@@ -181,53 +163,54 @@ public static partial class HeightMapGenerator
 
             JobHandle sampleHandle = sampleJob.Schedule(sampleCount, 64);
 
-            HeightGradientJob gradientJob = new HeightGradientJob
+            HeightSlopeJob slopeJob = new HeightSlopeJob
             {
                 heightMultiplier = meshHeightMultiplier,
                 width = width,
                 height = height,
                 finalHeights = finalHeights,
-                gradientX = gradientX,
-                gradientZ = gradientZ,
                 slopes = slopes
             };
 
-            JobHandle gradientHandle = gradientJob.Schedule(sampleCount, 64, sampleHandle);
-            gradientHandle.Complete();
+            JobHandle slopeHandle = slopeJob.Schedule(sampleCount, 64, sampleHandle);
+            slopeHandle.Complete();
 
-            CopyHeightFieldInteriorToMap(finalHeights, finalHeightMap);
+            if (retainNativeMaps)
+            {
+                int interiorCount = mapSize * mapSize;
+                nativeHeights = new NativeArray<float>(interiorCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+                nativeSlopes = new NativeArray<float>(interiorCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+                nativeRiverMasks = new NativeArray<float>(interiorCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            }
+
+            CopyHeightFieldInteriorToMap(finalHeights, finalHeightMap, nativeHeights);
             CopyHeightFieldInteriorToMap(mountainMasks, mountainMaskMap);
-            CopyHeightFieldInteriorToMap(riverMasks, riverMaskMap);
-            CopyHeightFieldInteriorToMap(gradientX, gradientXMap);
-            CopyHeightFieldInteriorToMap(gradientZ, gradientZMap);
-            CopyHeightFieldInteriorToMap(slopes, slopeMap);
+            CopyHeightFieldInteriorToMap(riverMasks, riverMaskMap, nativeRiverMasks);
+            CopyHeightFieldInteriorToMap(slopes, slopeMap, nativeSlopes);
+            success = true;
         }
         finally
         {
-            if (mountainAnchors.IsCreated) mountainAnchors.Dispose();
+            if (!success)
+            {
+                if (nativeHeights.IsCreated) nativeHeights.Dispose();
+                if (nativeSlopes.IsCreated) nativeSlopes.Dispose();
+                if (nativeRiverMasks.IsCreated) nativeRiverMasks.Dispose();
+                nativeHeights = default;
+                nativeSlopes = default;
+                nativeRiverMasks = default;
+            }
             if (finalHeights.IsCreated)
                 finalHeights.Dispose();
             if (mountainMasks.IsCreated)
                 mountainMasks.Dispose();
             if (riverMasks.IsCreated)
                 riverMasks.Dispose();
-            if (gradientX.IsCreated)
-                gradientX.Dispose();
-            if (gradientZ.IsCreated)
-                gradientZ.Dispose();
             if (slopes.IsCreated)
                 slopes.Dispose();
-            if (baseLandOffsets.IsCreated)
-                baseLandOffsets.Dispose();
-            if (mountainMaskOffsets.IsCreated)
-                mountainMaskOffsets.Dispose();
-            if (mountainTerrainOffsets.IsCreated)
-                mountainTerrainOffsets.Dispose();
-            if (mountainRuggedOffsets.IsCreated)
-                mountainRuggedOffsets.Dispose();
         }
 
-        return new HeightFieldResult(finalHeightMap, gradientXMap, gradientZMap, slopeMap, mountainMaskMap, riverMaskMap);
+        return new HeightFieldResult(finalHeightMap, slopeMap, mountainMaskMap, riverMaskMap);
     }
 
     public static float[,] ApplyBiomeHeightModifiers(float[,] rawHeightMap, BiomeType[,] biomeMap)
@@ -235,20 +218,8 @@ public static partial class HeightMapGenerator
         return rawHeightMap;
     }
 
-    private static NativeArray<float2> CreateNativeOffsets(Vector2[] offsets)
-    {
-        NativeArray<float2> nativeOffsets =
-            new NativeArray<float2>(offsets.Length, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-
-        for (int i = 0; i < offsets.Length; i++)
-        {
-            nativeOffsets[i] = new float2(offsets[i].x, offsets[i].y);
-        }
-
-        return nativeOffsets;
-    }
-
-    private static void CopyHeightFieldInteriorToMap(NativeArray<float> source, float[,] target)
+    private static void CopyHeightFieldInteriorToMap(
+        NativeArray<float> source, float[,] target, NativeArray<float> retained = default)
     {
         int width = target.GetLength(0);
         int height = target.GetLength(1);
@@ -259,7 +230,10 @@ public static partial class HeightMapGenerator
 
             for (int z = 0; z < height; z++)
             {
-                target[x, z] = source[rowOffset + z + GameplaySlopeRadius];
+                float value = source[rowOffset + z + GameplaySlopeRadius];
+                target[x, z] = value;
+                if (retained.IsCreated)
+                    retained[x * height + z] = value;
             }
         }
     }
@@ -273,30 +247,10 @@ public static partial class HeightMapGenerator
         float worldX,
         float worldZ,
         float sampleScale,
-        Vector2[] baseLandOffsets,
-        Vector2[] mountainMaskOffsets,
-        Vector2[] mountainTerrainOffsets,
-        Vector2[] mountainRuggedOffsets,
         int riverSeed,
         float waterLevel,
         float mountainHorizontalScale = 1f,
-        MountainExpansionAnchor[] mountainAnchors = null, WorldErosionSettings erosion = default)
-    {
-        return SampleWorldHeight(new float2(worldX, worldZ), sampleScale, riverSeed, waterLevel, mountainHorizontalScale, erosion.Sanitized());
-    }
-
-    private static TerrainHeightSampleData SampleTerrainHeight(
-        float worldX,
-        float worldZ,
-        float sampleScale,
-        NativeArray<float2> baseLandOffsets,
-        NativeArray<float2> mountainMaskOffsets,
-        NativeArray<float2> mountainTerrainOffsets,
-        NativeArray<float2> mountainRuggedOffsets,
-        int riverSeed,
-        float waterLevel,
-        float mountainHorizontalScale = 1f,
-        NativeArray<MountainExpansionAnchor> mountainAnchors = default, WorldErosionSettings erosion = default)
+        WorldErosionSettings erosion = default)
     {
         return SampleWorldHeight(new float2(worldX, worldZ), sampleScale, riverSeed, waterLevel, mountainHorizontalScale, erosion.Sanitized());
     }
@@ -703,13 +657,6 @@ public static partial class HeightMapGenerator
         public float waterLevel;
         public float mountainHorizontalScale;
         public WorldErosionSettings erosion;
-        [ReadOnly] public NativeArray<MountainExpansionAnchor> mountainAnchors;
-
-        [ReadOnly] public NativeArray<float2> baseLandOffsets;
-        [ReadOnly] public NativeArray<float2> mountainMaskOffsets;
-        [ReadOnly] public NativeArray<float2> mountainTerrainOffsets;
-        [ReadOnly] public NativeArray<float2> mountainRuggedOffsets;
-
         [WriteOnly] public NativeArray<float> finalHeights;
         [WriteOnly] public NativeArray<float> mountainMasks;
         [WriteOnly] public NativeArray<float> riverMasks;
@@ -728,11 +675,7 @@ public static partial class HeightMapGenerator
                 worldX,
                 worldZ,
                 sampleScale,
-                baseLandOffsets,
-                mountainMaskOffsets,
-                mountainTerrainOffsets,
-                mountainRuggedOffsets,
-                riverSeed, waterLevel, mountainHorizontalScale, mountainAnchors, erosion);
+                riverSeed, waterLevel, mountainHorizontalScale, erosion);
 
             finalHeights[index] = sample.Height;
             mountainMasks[index] = sample.MountainMask;
@@ -741,15 +684,13 @@ public static partial class HeightMapGenerator
     }
 
     [BurstCompile]
-    private struct HeightGradientJob : IJobParallelFor
+    private struct HeightSlopeJob : IJobParallelFor
     {
         public float heightMultiplier;
         public int width;
         public int height;
 
         [ReadOnly] public NativeArray<float> finalHeights;
-        [WriteOnly] public NativeArray<float> gradientX;
-        [WriteOnly] public NativeArray<float> gradientZ;
         [WriteOnly] public NativeArray<float> slopes;
 
         public void Execute(int index)
@@ -758,36 +699,6 @@ public static partial class HeightMapGenerator
 
             int x = index / height;
             int z = index - x * height;
-
-            int leftIndex = math.max(x - 1, 0) * height + z;
-            int rightIndex = math.min(x + 1, width - 1) * height + z;
-            int downIndex = x * height + math.max(z - 1, 0);
-            int upIndex = x * height + math.min(z + 1, height - 1);
-
-            float center = finalHeights[index];
-            float left = finalHeights[leftIndex];
-            float right = finalHeights[rightIndex];
-            float down = finalHeights[downIndex];
-            float up = finalHeights[upIndex];
-
-            float dx;
-            if (x == 0)
-                dx = right - center;
-            else if (x == width - 1)
-                dx = center - left;
-            else
-                dx = (right - left) * 0.5f;
-
-            float dz;
-            if (z == 0)
-                dz = up - center;
-            else if (z == height - 1)
-                dz = center - down;
-            else
-                dz = (up - down) * 0.5f;
-
-            gradientX[index] = dx;
-            gradientZ[index] = dz;
 
             int x0 = math.max(x - slopeRadius, 0);
             int x1 = math.min(x + slopeRadius, width - 1);
