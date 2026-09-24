@@ -27,7 +27,7 @@ public class FlowerSettings
     [Range(0f, 90f)] public float daisyWeedMaxSlope = 40f;
     public float daisyWeedTreeExclusionRadius = 1f;
 
-    [Header("Tall Flower Mini-Patches")]
+    [Header("Lupine Small Patches")]
     [Min(1f)] public float tallFlowerPatchCellSize = 54f;
     [Range(0f, 1f)] public float tallFlowerPatchSpawnChance = 0.18f;
     public float tallFlowerPatchNoiseScale = 0.026f;
@@ -35,7 +35,24 @@ public class FlowerSettings
     [Min(1)] public int minTallFlowersPerPatch = 10;
     [Min(1)] public int maxTallFlowersPerPatch = 18;
     public Vector2 tallFlowerPatchRadiusRange = new Vector2(4.5f, 7f);
+    [Range(0f, 0.5f), Tooltip("Breaks up the circular outline of each lupine patch.")]
+    public float tallFlowerEdgeIrregularity = 0.25f;
+    [Range(0f, 1f), Tooltip("Chance to leave grassy gaps within a lupine patch.")]
+    public float tallFlowerGapStrength = 0.35f;
+    [Range(0f, 1f), Tooltip("Chance for a patch to grow a few small groups beyond its main drift.")]
+    public float tallFlowerSatelliteChance = 0.55f;
     public int tallFlowerSeedOffset = 48000;
+
+    [Header("Lupine Meadows")]
+    [Min(1f), Tooltip("Spacing between candidates for rare, large Lupine drifts.")]
+    public float tallFlowerMeadowCellSize = 80f;
+    [Range(0f, 1f)] public float tallFlowerMeadowSpawnChance = 0.25f;
+    public float tallFlowerMeadowNoiseScale = 0.018f;
+    [Range(0f, 1f)] public float tallFlowerMeadowNoiseThreshold = 0.52f;
+    [Min(1)] public int minTallFlowersPerMeadow = 150;
+    [Min(1)] public int maxTallFlowersPerMeadow = 250;
+    public Vector2 tallFlowerMeadowRadiusRange = new Vector2(18f, 28f);
+    public int tallFlowerMeadowSeedOffset = 64000;
 
     [Tooltip("Subtle per-instance tint variation. The mesh red vertex channel, or red mask texture when vertex colors are absent, controls the petal shade.")]
     public Color tallFlowerDarkVariant = new Color(0.88f, 0.84f, 0.98f, 1f);

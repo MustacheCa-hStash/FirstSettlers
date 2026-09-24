@@ -146,6 +146,7 @@ public class ChunkManager
         Transform foliageParent,
         GrassSettings grassSettings,
         FlowerSettings flowerSettings,
+        LilyPadSettings lilyPadSettings,
         CloverSettings cloverSettings,
         DandelionSettings dandelionSettings,
         TreeSettings treeSettings,
@@ -253,13 +254,15 @@ public class ChunkManager
             foliageParent,
             grassSettings,
             flowerSettings,
+            lilyPadSettings,
             cloverSettings,
             dandelionSettings,
             treeSettings,
             seed,
             chunkSize,
             worldScale,
-            meshHeightMultiplier);
+            meshHeightMultiplier,
+            waterSettings);
         if (treeSettings != null && treeSettings.enableDistantTrees)
             distantTrees = new DistantTreeManager(treeSettings, seed, chunkSize, sampleScale, octaves, persistence,
                 lacunarity, worldScale, meshHeightMultiplier, waterSettings.WaterLevel, mountainHorizontalScale,
@@ -346,6 +349,7 @@ public class ChunkManager
         int treeGameObjectCount = 0;
         int gpuGrassInstanceCount = 0;
         int gpuFlowerInstanceCount = 0;
+        int gpuLilyPadInstanceCount = 0;
         int gpuCloverInstanceCount = 0;
         int gpuDandelionInstanceCount = 0;
         int gpuTreeInstanceCount = 0;
@@ -375,6 +379,7 @@ public class ChunkManager
             treeGameObjectCount = runtime.FoliageRuntime.TreeGameObjectCount;
             gpuGrassInstanceCount = runtime.FoliageRuntime.GpuGrassInstanceCount;
             gpuFlowerInstanceCount = runtime.FoliageRuntime.GpuFlowerInstanceCount;
+            gpuLilyPadInstanceCount = runtime.FoliageRuntime.GpuLilyPadInstanceCount;
             gpuCloverInstanceCount = runtime.FoliageRuntime.GpuCloverInstanceCount;
             gpuDandelionInstanceCount = runtime.FoliageRuntime.GpuDandelionInstanceCount;
             gpuTreeInstanceCount = runtime.FoliageRuntime.GpuTreeInstanceCount;
@@ -400,6 +405,7 @@ public class ChunkManager
             treeGameObjectCount,
             gpuGrassInstanceCount,
             gpuFlowerInstanceCount,
+            gpuLilyPadInstanceCount,
             gpuCloverInstanceCount,
             gpuDandelionInstanceCount,
             gpuTreeInstanceCount);

@@ -103,7 +103,8 @@ public static class GroundFoliageStreamingValidation
         var mesh = new Mesh();
         var material = new Material(Shader.Find("Hidden/InternalErrorShader"));
         var foliage = new FoliageManager(null, new GrassSettings { groundFoliageGenerationBudgetMsPerFrame = 0.05f },
-            null, clover, null, new TreeSettings(), 1234, 16, 1, 10);
+            null, null, clover, null, new TreeSettings(), 1234, 16, 1, 10,
+            new TerrainWaterSettings(2.4f, 10f, 1f));
         try
         {
             typeof(FoliageManager).GetField("cloverRenderData", flags).SetValue(foliage,

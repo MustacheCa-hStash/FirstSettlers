@@ -13,6 +13,7 @@ public struct WorldRenderStatsDebugInfo
     public RenderGeometryStats Grass;
     public RenderGeometryStats BillboardGrass;
     public RenderGeometryStats Flowers;
+    public RenderGeometryStats LilyPads;
     public RenderGeometryStats Clover;
     public RenderGeometryStats Dandelions;
     public RenderGeometryStats TreeBillboards;
@@ -26,6 +27,7 @@ public struct WorldRenderStatsDebugInfo
         Grass.vertices +
         BillboardGrass.vertices +
         Flowers.vertices +
+        LilyPads.vertices +
         Clover.vertices +
         Dandelions.vertices +
         TreeBillboards.vertices +
@@ -39,6 +41,7 @@ public struct WorldRenderStatsDebugInfo
         Grass.triangles +
         BillboardGrass.triangles +
         Flowers.triangles +
+        LilyPads.triangles +
         Clover.triangles +
         Dandelions.triangles +
         TreeBillboards.triangles +

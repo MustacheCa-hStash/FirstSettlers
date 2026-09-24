@@ -20,6 +20,9 @@ public class ChunkFoliageData
     public bool flowersGenerated;
     public List<FlowerInstanceData> flowerInstances = new List<FlowerInstanceData>();
 
+    public bool lilyPadsGenerated;
+    public List<LilyPadInstanceData> lilyPadInstances = new List<LilyPadInstanceData>();
+
     public bool cloverGenerated;
     public List<CloverInstanceData> cloverInstances = new List<CloverInstanceData>();
 
@@ -158,6 +161,15 @@ public class ChunkFoliageData
         flowerInstances.Clear();
     }
 
+    public int LilyPadsRevision { get; private set; }
+
+    public void ClearLilyPads()
+    {
+        LilyPadsRevision++;
+        lilyPadsGenerated = false;
+        lilyPadInstances.Clear();
+    }
+
     public int CloverRevision { get; private set; }
 
     public void ClearClover()
@@ -199,6 +211,7 @@ public class ChunkFoliageData
         ClearNearGrass();
         ClearBillboards();
         ClearFlowers();
+        ClearLilyPads();
         ClearClover();
         ClearDandelions();
         ClearTreeCubes();

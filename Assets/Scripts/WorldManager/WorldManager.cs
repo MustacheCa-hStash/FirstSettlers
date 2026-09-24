@@ -23,6 +23,8 @@ public class WorldManager : MonoBehaviour
     [SerializeField] Transform foliageParent;
     [SerializeField] GrassSettings grassSettings;
     [SerializeField] FlowerSettings flowerSettings = new FlowerSettings();
+    [Header("Lily Pads")]
+    [SerializeField] LilyPadSettings lilyPadSettings = new LilyPadSettings();
     [SerializeField] CloverSettings cloverSettings = new CloverSettings();
     [SerializeField] DandelionSettings dandelionSettings = new DandelionSettings();
     [SerializeField] TreeSettings treeSettings;
@@ -87,7 +89,7 @@ public class WorldManager : MonoBehaviour
         chunkManager = new ChunkManager(viewDistance, colliderDistance, enableFarTerrain, farTerrainStartRing,
             farTerrainMacroTileSize, farTerrainHeightGridResolution, farTerrainControlMapResolution, farTerrainSkirtDepth,
             chunkSize, worldSeed, viewer, viewerCamera,
-            chunkParent, foliageParent, grassSettings, flowerSettings, cloverSettings, dandelionSettings, treeSettings, sampleScale, worldScale, octaves, persistence,
+            chunkParent, foliageParent, grassSettings, flowerSettings, lilyPadSettings, cloverSettings, dandelionSettings, treeSettings, sampleScale, worldScale, octaves, persistence,
             lacunarity, meshHeightMultiplier, terrainMaterial, waterMaterial,
             terrainReceiveShadows, new TerrainWaterSettings(globalWaterY, meshHeightMultiplier, worldScale),
             maxActiveTerrainDataJobs, maxActiveFarTerrainJobs, maxActiveMeshJobs,

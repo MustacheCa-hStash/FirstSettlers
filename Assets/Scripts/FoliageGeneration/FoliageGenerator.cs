@@ -885,7 +885,16 @@ public static class FoliageGenerator
                 worldSeed,
                 chunkSize,
                 worldScale,
-                meshHeightMultiplier);
+                meshHeightMultiplier,
+                false);
+            GenerateTallFlowerPatches(
+                record,
+                flowerSettings,
+                worldSeed,
+                chunkSize,
+                worldScale,
+                meshHeightMultiplier,
+                true);
         }
 
         if (flowerSettings.daisyWeedPrefab != null)
@@ -908,21 +917,30 @@ public static class FoliageGenerator
         int worldSeed,
         int chunkSize,
         float worldScale,
-        float meshHeightMultiplier)
+        float meshHeightMultiplier,
+        bool isMeadow)
     {
         if (record.HeightMap == null || record.SurfaceTypeMap == null || record.BiomeMap == null)
             return;
 
-        float cellSize = Mathf.Max(1f, settings.tallFlowerPatchCellSize);
-        float minRadius = Mathf.Max(0f, Mathf.Min(settings.tallFlowerPatchRadiusRange.x, settings.tallFlowerPatchRadiusRange.y));
-        float maxRadius = Mathf.Max(0f, Mathf.Max(settings.tallFlowerPatchRadiusRange.x, settings.tallFlowerPatchRadiusRange.y));
-        int minFlowers = Mathf.Max(1, settings.minTallFlowersPerPatch);
-        int maxFlowers = Mathf.Max(minFlowers, settings.maxTallFlowersPerPatch);
+        float cellSize = Mathf.Max(1f, isMeadow ? settings.tallFlowerMeadowCellSize : settings.tallFlowerPatchCellSize);
+        Vector2 radiusRange = isMeadow ? settings.tallFlowerMeadowRadiusRange : settings.tallFlowerPatchRadiusRange;
+        float minRadius = Mathf.Max(0f, Mathf.Min(radiusRange.x, radiusRange.y));
+        float maxRadius = Mathf.Max(0f, Mathf.Max(radiusRange.x, radiusRange.y));
+        float edgeIrregularity = Mathf.Clamp(settings.tallFlowerEdgeIrregularity, 0f, 0.5f);
+        int minFlowers = Mathf.Max(1, isMeadow ? settings.minTallFlowersPerMeadow : settings.minTallFlowersPerPatch);
+        int maxFlowers = Mathf.Max(minFlowers, isMeadow ? settings.maxTallFlowersPerMeadow : settings.maxTallFlowersPerPatch);
+        int seedOffset = isMeadow ? settings.tallFlowerMeadowSeedOffset : settings.tallFlowerSeedOffset;
+        float noiseScale = Mathf.Max(0.0001f, isMeadow ? settings.tallFlowerMeadowNoiseScale : settings.tallFlowerPatchNoiseScale);
+        float noiseThreshold = Mathf.Clamp01(isMeadow ? settings.tallFlowerMeadowNoiseThreshold : settings.tallFlowerPatchNoiseThreshold);
+        float baseSpawnChance = Mathf.Clamp01(isMeadow ? settings.tallFlowerMeadowSpawnChance : settings.tallFlowerPatchSpawnChance);
         float chunkMinX = record.ChunkCoord.x * chunkSize;
         float chunkMinZ = record.ChunkCoord.z * chunkSize;
         float chunkMaxX = chunkMinX + chunkSize;
         float chunkMaxZ = chunkMinZ + chunkSize;
-        float padding = maxRadius + cellSize;
+        // Satellite groups can cross chunk boundaries even when the main patch does not.
+        float reach = maxRadius * (settings.tallFlowerSatelliteChance > 0f ? 2.25f : 1f + edgeIrregularity);
+        float padding = reach + cellSize;
         int minCellX = Mathf.FloorToInt((chunkMinX - padding) / cellSize);
         int maxCellX = Mathf.FloorToInt((chunkMaxX + padding) / cellSize);
         int minCellZ = Mathf.FloorToInt((chunkMinZ - padding) / cellSize);
@@ -937,40 +955,69 @@ public static class FoliageGenerator
         {
             for (int cellX = minCellX; cellX <= maxCellX; cellX++)
             {
-                int patchHash = Hash(worldSeed, settings.tallFlowerSeedOffset, cellX, cellZ, 863);
+                int patchHash = Hash(worldSeed, seedOffset, cellX, cellZ, 863);
                 float centerX = (cellX + Hash01(patchHash + 31)) * cellSize;
                 float centerZ = (cellZ + Hash01(patchHash + 67)) * cellSize;
-                float noiseScale = Mathf.Max(0.0001f, settings.tallFlowerPatchNoiseScale);
                 float patchNoise = Mathf.PerlinNoise(
-                    centerX * noiseScale + settings.tallFlowerSeedOffset * 0.001f,
-                    centerZ * noiseScale - settings.tallFlowerSeedOffset * 0.0017f);
-                float noiseThreshold = Mathf.Clamp01(settings.tallFlowerPatchNoiseThreshold);
+                    centerX * noiseScale + seedOffset * 0.001f,
+                    centerZ * noiseScale - seedOffset * 0.0017f);
                 if (patchNoise < noiseThreshold)
                     continue;
 
                 float noiseStrength = noiseThreshold >= 0.999f
                     ? 1f
                     : Mathf.InverseLerp(noiseThreshold, 1f, patchNoise);
-                float spawnChance = Mathf.Clamp01(settings.tallFlowerPatchSpawnChance) * Mathf.Lerp(0.55f, 1f, noiseStrength);
+                float spawnChance = baseSpawnChance * Mathf.Lerp(0.55f, 1f, noiseStrength);
                 if (Hash01(patchHash + 105) > spawnChance)
                     continue;
 
                 float radius = Mathf.Lerp(minRadius, maxRadius, Hash01(patchHash + 139));
-                if (centerX + radius < chunkMinX || centerX - radius >= chunkMaxX ||
-                    centerZ + radius < chunkMinZ || centerZ - radius >= chunkMaxZ)
+                float patchReach = radius * (settings.tallFlowerSatelliteChance > 0f ? 2.25f : 1f + edgeIrregularity);
+                if (centerX + patchReach < chunkMinX || centerX - patchReach >= chunkMaxX ||
+                    centerZ + patchReach < chunkMinZ || centerZ - patchReach >= chunkMaxZ)
                 {
                     continue;
                 }
 
                 int count = GetDeterministicCount(minFlowers, maxFlowers, patchHash + 173);
+                int satelliteCount = Hash01(patchHash + 211) < Mathf.Clamp01(settings.tallFlowerSatelliteChance)
+                    ? (Hash01(patchHash + 227) < 0.5f ? 2 : 4)
+                    : 0;
                 bool clearedOtherFlowerPatch = false;
-                for (int flowerIndex = 0; flowerIndex < count; flowerIndex++)
+                for (int flowerIndex = 0; flowerIndex < count + satelliteCount; flowerIndex++)
                 {
-                    int flowerHash = Hash(worldSeed, settings.tallFlowerSeedOffset, cellX, cellZ, flowerIndex, 977);
-                    float angle = Hash01(flowerHash + 19) * Mathf.PI * 2f;
-                    float distance = Mathf.Sqrt(Hash01(flowerHash + 41)) * radius;
-                    float sampleX = centerX + Mathf.Cos(angle) * distance;
-                    float sampleZ = centerZ + Mathf.Sin(angle) * distance;
+                    int flowerHash = Hash(worldSeed, seedOffset, cellX, cellZ, flowerIndex, 977);
+                    bool isSatellite = flowerIndex >= count;
+                    float sampleX;
+                    float sampleZ;
+                    if (isSatellite)
+                    {
+                        int groupHash = Hash(patchHash, (flowerIndex - count) / 2, 149);
+                        float groupAngle = Hash01(groupHash + 19) * Mathf.PI * 2f;
+                        float groupDistance = radius * Mathf.Lerp(1.4f, 2.05f, Hash01(groupHash + 41));
+                        float scatterAngle = Hash01(flowerHash + 53) * Mathf.PI * 2f;
+                        float scatterDistance = radius * 0.12f * Mathf.Sqrt(Hash01(flowerHash + 71));
+                        sampleX = centerX + Mathf.Cos(groupAngle) * groupDistance + Mathf.Cos(scatterAngle) * scatterDistance;
+                        sampleZ = centerZ + Mathf.Sin(groupAngle) * groupDistance + Mathf.Sin(scatterAngle) * scatterDistance;
+                    }
+                    else
+                    {
+                        float angle = Hash01(flowerHash + 19) * Mathf.PI * 2f;
+                        float edgeRadius = GetTallFlowerEdgeRadius(radius, angle, patchHash, edgeIrregularity);
+                        float radialFraction = Mathf.Sqrt(Hash01(flowerHash + 41));
+                        float distance = radialFraction * edgeRadius;
+                        // Density fades toward the uneven edge, while smooth noise leaves grass visible inside.
+                        float edgeDropChance = Mathf.Clamp01((radialFraction - 0.65f) / 0.35f) * 0.52f;
+                        if (Hash01(flowerHash + 677) < edgeDropChance)
+                            continue;
+                        sampleX = centerX + Mathf.Cos(angle) * distance;
+                        sampleZ = centerZ + Mathf.Sin(angle) * distance;
+                        float gapNoise = Mathf.PerlinNoise(
+                            sampleX * 0.18f + seedOffset * 0.004f,
+                            sampleZ * 0.18f - seedOffset * 0.006f);
+                        if (gapNoise < 0.47f && Hash01(flowerHash + 613) < Mathf.Clamp01(settings.tallFlowerGapStrength))
+                            continue;
+                    }
                     if (sampleX < chunkMinX || sampleX >= chunkMaxX || sampleZ < chunkMinZ || sampleZ >= chunkMaxZ)
                         continue;
 
@@ -1002,12 +1049,10 @@ public static class FoliageGenerator
                     if (nearTree)
                         continue;
 
-                    if (!clearedOtherFlowerPatch)
+                    if (!isSatellite && !clearedOtherFlowerPatch)
                     {
                         float centerLocalX = (topLeftX + centerX - chunkMinX) * worldScale;
                         float centerLocalZ = (bottomLeftZ + centerZ - chunkMinZ) * worldScale;
-                        float clearRadius = (radius + 0.65f) * worldScale;
-                        float clearRadiusSqr = clearRadius * clearRadius;
                         for (int existingIndex = record.FoliageData.flowerInstances.Count - 1; existingIndex >= 0; existingIndex--)
                         {
                             FlowerInstanceData existing = record.FoliageData.flowerInstances[existingIndex];
@@ -1016,7 +1061,13 @@ public static class FoliageGenerator
 
                             float dx = existing.localPosition.x - centerLocalX;
                             float dz = existing.localPosition.z - centerLocalZ;
-                            if (dx * dx + dz * dz < clearRadiusSqr)
+                            float angle = Mathf.Atan2(dz, dx);
+                            float edgeRadius = GetTallFlowerEdgeRadius(radius, angle, patchHash, edgeIrregularity) * worldScale;
+                            float radialFraction = Mathf.Sqrt(dx * dx + dz * dz) / Mathf.Max(edgeRadius, 0.0001f);
+                            float clearChance = Mathf.Clamp01((1.05f - radialFraction) / 0.35f);
+                            int clearHash = Hash(patchHash, Mathf.RoundToInt(existing.localPosition.x * 10f),
+                                Mathf.RoundToInt(existing.localPosition.z * 10f));
+                            if (Hash01(clearHash) < clearChance)
                                 record.FoliageData.flowerInstances.RemoveAt(existingIndex);
                         }
 
@@ -1044,6 +1095,17 @@ public static class FoliageGenerator
                 }
             }
         }
+    }
+
+    private static float GetTallFlowerEdgeRadius(float radius, float angle, int patchHash, float irregularity)
+    {
+        float phaseA = Hash01(patchHash + 281) * Mathf.PI * 2f;
+        float phaseB = Hash01(patchHash + 307) * Mathf.PI * 2f;
+        float phaseC = Hash01(patchHash + 331) * Mathf.PI * 2f;
+        float shape = 0.50f * Mathf.Sin(angle * 2f + phaseA) +
+                      0.32f * Mathf.Sin(angle * 3f + phaseB) +
+                      0.18f * Mathf.Sin(angle * 5f + phaseC);
+        return radius * (1f + irregularity * shape);
     }
 
     private static void GenerateDaisyWeedPatches(

@@ -108,6 +108,9 @@ public class ChunkFoliageRuntime
     public Material daisyWeedMaterial;
     public int flowerPetalColorPropertyId;
 
+    public Mesh lilyPadMesh;
+    public Material lilyPadMaterial;
+
     public CloverRenderData[] cloverRenderData;
     public bool receiveCloverShadows;
     public int cloverInstanceDataPropertyId;
@@ -165,6 +168,7 @@ public class ChunkFoliageRuntime
     private GrassIndirectRenderer grassIndirectRenderer;
     private int grassRevision, billboardRevision;
     private readonly List<FlowerRenderBatch> flowerRenderBatches = new List<FlowerRenderBatch>();
+    private readonly List<Matrix4x4[]> lilyPadRenderBatches = new List<Matrix4x4[]>();
     private readonly MaterialPropertyBlock flowerPropertyBlock = new MaterialPropertyBlock();
     private readonly List<CloverRenderBatch> cloverRenderBatches = new List<CloverRenderBatch>();
     private readonly MaterialPropertyBlock cloverPropertyBlock = new MaterialPropertyBlock();
@@ -202,6 +206,7 @@ public class ChunkFoliageRuntime
     private bool hasBuiltGrassRenderData;
     private bool hasBuiltBillboardRenderData;
     private bool hasBuiltFlowerRenderData;
+    private bool hasBuiltLilyPadRenderData;
     private bool hasBuiltCloverRenderData;
     private bool hasBuiltDandelionRenderData;
     private int lastBillboardGrassDrawFrame = -1;
@@ -212,6 +217,16 @@ public class ChunkFoliageRuntime
         CountGrassInstances(grassRenderBatches) +
         CountGrassInstances(billboardRenderBatches);
     public int GpuFlowerInstanceCount => CountFlowerInstances();
+    public int GpuLilyPadInstanceCount
+    {
+        get
+        {
+            int count = 0;
+            for (int i = 0; i < lilyPadRenderBatches.Count; i++)
+                count += lilyPadRenderBatches[i].Length;
+            return count;
+        }
+    }
     public int GpuCloverInstanceCount => CountCloverInstances();
     public int GpuDandelionInstanceCount => CountGrassInstances(dandelionRenderBatches);
     public int GpuTreeInstanceCount =>
@@ -321,11 +336,13 @@ public class ChunkFoliageRuntime
         grassRenderBatches.Clear();
         billboardRenderBatches.Clear();
         flowerRenderBatches.Clear();
+        lilyPadRenderBatches.Clear();
         cloverRenderBatches.Clear();
         dandelionRenderBatches.Clear();
         hasBuiltGrassRenderData = false;
         hasBuiltBillboardRenderData = false;
         hasBuiltFlowerRenderData = false;
+        hasBuiltLilyPadRenderData = false;
         hasBuiltCloverRenderData = false;
         hasBuiltDandelionRenderData = false;
         mapleTreeBillboardMatrixBatches.Clear();
@@ -396,6 +413,11 @@ public class ChunkFoliageRuntime
                 (daisyWeedMesh != null && daisyWeedMaterial != null)) && hasBuiltFlowerRenderData;
     }
 
+    public bool HasValidLilyPadRenderData()
+    {
+        return lilyPadMesh != null && lilyPadMaterial != null && hasBuiltLilyPadRenderData;
+    }
+
     public bool HasValidCloverRenderData()
     {
         return HasAnyValidCloverRenderAsset() && hasBuiltCloverRenderData;
@@ -450,6 +472,15 @@ public class ChunkFoliageRuntime
     public void AccumulateFlowerRenderStats(ref WorldRenderStatsDebugInfo stats)
     {
         AccumulateFlowerStats(ref stats.Flowers);
+    }
+
+    public void AccumulateLilyPadRenderStats(ref WorldRenderStatsDebugInfo stats)
+    {
+        if (lilyPadMesh == null)
+            return;
+
+        for (int i = 0; i < lilyPadRenderBatches.Count; i++)
+            stats.LilyPads.AddMeshInstances(lilyPadMesh, lilyPadRenderBatches[i].Length);
     }
 
     public void AccumulateCloverRenderStats(ref WorldRenderStatsDebugInfo stats)
@@ -1315,6 +1346,26 @@ public class ChunkFoliageRuntime
         hasBuiltFlowerRenderData = false;
     }
 
+    public void CacheLilyPadBatches(List<Matrix4x4> matrices)
+    {
+        lilyPadRenderBatches.Clear();
+        const int maxBatchSize = 1023;
+        for (int start = 0; start < matrices.Count; start += maxBatchSize)
+        {
+            int count = Mathf.Min(maxBatchSize, matrices.Count - start);
+            Matrix4x4[] batch = new Matrix4x4[count];
+            matrices.CopyTo(start, batch, 0, count);
+            lilyPadRenderBatches.Add(batch);
+        }
+        hasBuiltLilyPadRenderData = true;
+    }
+
+    public void ClearLilyPadBatches()
+    {
+        lilyPadRenderBatches.Clear();
+        hasBuiltLilyPadRenderData = false;
+    }
+
     private static void ConfigureSpawnedRendererCulling(GameObject rootObject)
     {
         if (rootObject == null)
@@ -1529,6 +1580,19 @@ public class ChunkFoliageRuntime
         TerrainGenerationProfiler.Record(
             TerrainGenerationProfileStage.FoliageFlowerDraw,
             stageStart);
+    }
+
+    public void DrawLilyPads()
+    {
+        if (!isVisible || !HasValidLilyPadRenderData())
+            return;
+
+        for (int i = 0; i < lilyPadRenderBatches.Count; i++)
+        {
+            Matrix4x4[] batch = lilyPadRenderBatches[i];
+            Graphics.DrawMeshInstanced(lilyPadMesh, 0, lilyPadMaterial, batch, batch.Length,
+                null, ShadowCastingMode.Off, false);
+        }
     }
 
     public void DrawClover()

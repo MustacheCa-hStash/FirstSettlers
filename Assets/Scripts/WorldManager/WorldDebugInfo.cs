@@ -21,6 +21,7 @@ public readonly struct WorldDebugInfo
     public readonly int TreeGameObjectCount;
     public readonly int GpuGrassInstanceCount;
     public readonly int GpuFlowerInstanceCount;
+    public readonly int GpuLilyPadInstanceCount;
     public readonly int GpuCloverInstanceCount;
     public readonly int GpuDandelionInstanceCount;
     public readonly int GpuTreeInstanceCount;
@@ -45,6 +46,7 @@ public readonly struct WorldDebugInfo
         int treeGameObjectCount,
         int gpuGrassInstanceCount,
         int gpuFlowerInstanceCount,
+        int gpuLilyPadInstanceCount,
         int gpuCloverInstanceCount,
         int gpuDandelionInstanceCount,
         int gpuTreeInstanceCount)
@@ -68,6 +70,7 @@ public readonly struct WorldDebugInfo
         TreeGameObjectCount = treeGameObjectCount;
         GpuGrassInstanceCount = gpuGrassInstanceCount;
         GpuFlowerInstanceCount = gpuFlowerInstanceCount;
+        GpuLilyPadInstanceCount = gpuLilyPadInstanceCount;
         GpuCloverInstanceCount = gpuCloverInstanceCount;
         GpuDandelionInstanceCount = gpuDandelionInstanceCount;
         GpuTreeInstanceCount = gpuTreeInstanceCount;

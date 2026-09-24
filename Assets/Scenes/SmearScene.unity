@@ -971,13 +971,24 @@ MonoBehaviour:
     daisyWeedMaxSlope: 40
     daisyWeedTreeExclusionRadius: 1
     tallFlowerPatchCellSize: 42
-    tallFlowerPatchSpawnChance: 0.316
+    tallFlowerPatchSpawnChance: 0.18
     tallFlowerPatchNoiseScale: 0.026
     tallFlowerPatchNoiseThreshold: 0.52
     minTallFlowersPerPatch: 16
     maxTallFlowersPerPatch: 26
     tallFlowerPatchRadiusRange: {x: 7, y: 10}
+    tallFlowerEdgeIrregularity: 0.25
+    tallFlowerGapStrength: 0.35
+    tallFlowerSatelliteChance: 0.55
     tallFlowerSeedOffset: 48000
+    tallFlowerMeadowCellSize: 80
+    tallFlowerMeadowSpawnChance: 0.25
+    tallFlowerMeadowNoiseScale: 0.018
+    tallFlowerMeadowNoiseThreshold: 0.52
+    minTallFlowersPerMeadow: 150
+    maxTallFlowersPerMeadow: 250
+    tallFlowerMeadowRadiusRange: {x: 18, y: 28}
+    tallFlowerMeadowSeedOffset: 64000
     tallFlowerDarkVariant: {r: 0.88, g: 0.84, b: 0.98, a: 1}
     tallFlowerLightVariant: {r: 1, g: 0.9, b: 0.96, a: 1}
     activeRingRadius: 3
@@ -1016,6 +1027,19 @@ MonoBehaviour:
       petalColors:
       - {r: 0.72, g: 0.82, b: 1, a: 1}
       - {r: 0.9, g: 0.72, b: 1, a: 1}
+  lilyPadSettings:
+    enableLilyPads: 1
+    lilyPadPrefab: {fileID: 4307456276487692741, guid: f626f4b56a48d224ab68692c78b1aa7f, type: 3}
+    activeRingRadius: 2
+    waterSurfaceOffset: 0.04
+    minDistanceFromShore: 0.7
+    maxDistanceFromShore: 8
+    candidateSpacing: 1.8
+    spawnChance: 0.38
+    colonyNoiseScale: 0.055
+    colonyThreshold: 0.43
+    uniformScaleRange: {x: 0.5, y: 0.6}
+    seedOffset: 71000
   cloverSettings:
     enableClover: 1
     cloverClumpPrefab: {fileID: 2522059427205176057, guid: 34276995c6e0cb44b90eb27277ebdff7, type: 3}
