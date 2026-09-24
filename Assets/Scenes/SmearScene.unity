@@ -1040,6 +1040,22 @@ MonoBehaviour:
     colonyThreshold: 0.43
     uniformScaleRange: {x: 0.5, y: 0.6}
     seedOffset: 71000
+  cattailSettings:
+    enableCattails: 1
+    cattailPrefab: {fileID: 0}
+    activeRingRadius: 2
+    waterwardDistance: 3.5
+    landwardDistance: 1.8
+    maxWaterDepth: 0.8
+    maxBankHeight: 0.65
+    maxSlope: 28
+    rootHeightOffset: 0
+    candidateSpacing: 1.15
+    spawnChance: 0.58
+    colonyNoiseScale: 0.045
+    colonyThreshold: 0.46
+    seedOffset: 83000
+    uniformScaleRange: {x: 0.82, y: 1.18}
   cloverSettings:
     enableClover: 1
     cloverClumpPrefab: {fileID: 2522059427205176057, guid: 34276995c6e0cb44b90eb27277ebdff7, type: 3}

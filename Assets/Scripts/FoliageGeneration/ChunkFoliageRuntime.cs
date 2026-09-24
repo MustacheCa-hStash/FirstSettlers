@@ -110,6 +110,8 @@ public class ChunkFoliageRuntime
 
     public Mesh lilyPadMesh;
     public Material lilyPadMaterial;
+    public Mesh cattailMesh;
+    public Material cattailMaterial;
 
     public CloverRenderData[] cloverRenderData;
     public bool receiveCloverShadows;
@@ -169,6 +171,7 @@ public class ChunkFoliageRuntime
     private int grassRevision, billboardRevision;
     private readonly List<FlowerRenderBatch> flowerRenderBatches = new List<FlowerRenderBatch>();
     private readonly List<Matrix4x4[]> lilyPadRenderBatches = new List<Matrix4x4[]>();
+    private readonly List<Matrix4x4[]> cattailRenderBatches = new List<Matrix4x4[]>();
     private readonly MaterialPropertyBlock flowerPropertyBlock = new MaterialPropertyBlock();
     private readonly List<CloverRenderBatch> cloverRenderBatches = new List<CloverRenderBatch>();
     private readonly MaterialPropertyBlock cloverPropertyBlock = new MaterialPropertyBlock();
@@ -207,6 +210,7 @@ public class ChunkFoliageRuntime
     private bool hasBuiltBillboardRenderData;
     private bool hasBuiltFlowerRenderData;
     private bool hasBuiltLilyPadRenderData;
+    private bool hasBuiltCattailRenderData;
     private bool hasBuiltCloverRenderData;
     private bool hasBuiltDandelionRenderData;
     private int lastBillboardGrassDrawFrame = -1;
@@ -224,6 +228,16 @@ public class ChunkFoliageRuntime
             int count = 0;
             for (int i = 0; i < lilyPadRenderBatches.Count; i++)
                 count += lilyPadRenderBatches[i].Length;
+            return count;
+        }
+    }
+    public int GpuCattailInstanceCount
+    {
+        get
+        {
+            int count = 0;
+            for (int i = 0; i < cattailRenderBatches.Count; i++)
+                count += cattailRenderBatches[i].Length;
             return count;
         }
     }
@@ -337,12 +351,14 @@ public class ChunkFoliageRuntime
         billboardRenderBatches.Clear();
         flowerRenderBatches.Clear();
         lilyPadRenderBatches.Clear();
+        cattailRenderBatches.Clear();
         cloverRenderBatches.Clear();
         dandelionRenderBatches.Clear();
         hasBuiltGrassRenderData = false;
         hasBuiltBillboardRenderData = false;
         hasBuiltFlowerRenderData = false;
         hasBuiltLilyPadRenderData = false;
+        hasBuiltCattailRenderData = false;
         hasBuiltCloverRenderData = false;
         hasBuiltDandelionRenderData = false;
         mapleTreeBillboardMatrixBatches.Clear();
@@ -418,6 +434,11 @@ public class ChunkFoliageRuntime
         return lilyPadMesh != null && lilyPadMaterial != null && hasBuiltLilyPadRenderData;
     }
 
+    public bool HasValidCattailRenderData()
+    {
+        return cattailMesh != null && cattailMaterial != null && hasBuiltCattailRenderData;
+    }
+
     public bool HasValidCloverRenderData()
     {
         return HasAnyValidCloverRenderAsset() && hasBuiltCloverRenderData;
@@ -481,6 +502,15 @@ public class ChunkFoliageRuntime
 
         for (int i = 0; i < lilyPadRenderBatches.Count; i++)
             stats.LilyPads.AddMeshInstances(lilyPadMesh, lilyPadRenderBatches[i].Length);
+    }
+
+    public void AccumulateCattailRenderStats(ref WorldRenderStatsDebugInfo stats)
+    {
+        if (cattailMesh == null)
+            return;
+
+        for (int i = 0; i < cattailRenderBatches.Count; i++)
+            stats.Cattails.AddMeshInstances(cattailMesh, cattailRenderBatches[i].Length);
     }
 
     public void AccumulateCloverRenderStats(ref WorldRenderStatsDebugInfo stats)
@@ -1366,6 +1396,26 @@ public class ChunkFoliageRuntime
         hasBuiltLilyPadRenderData = false;
     }
 
+    public void CacheCattailBatches(List<Matrix4x4> matrices)
+    {
+        cattailRenderBatches.Clear();
+        const int maxBatchSize = 1023;
+        for (int start = 0; start < matrices.Count; start += maxBatchSize)
+        {
+            int count = Mathf.Min(maxBatchSize, matrices.Count - start);
+            Matrix4x4[] batch = new Matrix4x4[count];
+            matrices.CopyTo(start, batch, 0, count);
+            cattailRenderBatches.Add(batch);
+        }
+        hasBuiltCattailRenderData = true;
+    }
+
+    public void ClearCattailBatches()
+    {
+        cattailRenderBatches.Clear();
+        hasBuiltCattailRenderData = false;
+    }
+
     private static void ConfigureSpawnedRendererCulling(GameObject rootObject)
     {
         if (rootObject == null)
@@ -1591,6 +1641,19 @@ public class ChunkFoliageRuntime
         {
             Matrix4x4[] batch = lilyPadRenderBatches[i];
             Graphics.DrawMeshInstanced(lilyPadMesh, 0, lilyPadMaterial, batch, batch.Length,
+                null, ShadowCastingMode.Off, false);
+        }
+    }
+
+    public void DrawCattails()
+    {
+        if (!isVisible || !HasValidCattailRenderData())
+            return;
+
+        for (int i = 0; i < cattailRenderBatches.Count; i++)
+        {
+            Matrix4x4[] batch = cattailRenderBatches[i];
+            Graphics.DrawMeshInstanced(cattailMesh, 0, cattailMaterial, batch, batch.Length,
                 null, ShadowCastingMode.Off, false);
         }
     }

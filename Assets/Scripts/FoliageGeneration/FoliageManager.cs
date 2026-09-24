@@ -21,6 +21,7 @@ public class FoliageManager
     private static readonly ProfilerMarker HandleSubChunkRocksMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Rocks");
     private static readonly ProfilerMarker HandleSubChunkFlowersMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Flowers");
     private static readonly ProfilerMarker HandleSubChunkLilyPadsMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.LilyPads");
+    private static readonly ProfilerMarker HandleSubChunkCattailsMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Cattails");
     private static readonly ProfilerMarker HandleSubChunkCloverMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Clover");
     private static readonly ProfilerMarker HandleSubChunkDandelionsMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Dandelions");
     private static readonly ProfilerMarker HandleSubChunkGrassMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunk.Grass");
@@ -41,6 +42,7 @@ public class FoliageManager
     private readonly GrassSettings grassSettings;
     private readonly FlowerSettings flowerSettings;
     private readonly LilyPadSettings lilyPadSettings;
+    private readonly CattailSettings cattailSettings;
     private readonly CloverSettings cloverSettings;
     private readonly DandelionSettings dandelionSettings;
     private readonly TreeSettings treeSettings;
@@ -72,6 +74,9 @@ public class FoliageManager
     private Mesh lilyPadMesh;
     private Material lilyPadMaterial;
     private Matrix4x4 lilyPadMeshLocalMatrix = Matrix4x4.identity;
+    private Mesh cattailMesh;
+    private Material cattailMaterial;
+    private Matrix4x4 cattailMeshLocalMatrix = Matrix4x4.identity;
 
     private CloverRenderData[] cloverRenderData;
     private int cloverInstanceDataPropertyId;
@@ -131,13 +136,14 @@ public class FoliageManager
     private int lastObservedBillboardCellsPerAxis;
     private int lastObservedNearGrassPrecomputeChunkPadding;
 
-    public FoliageManager(Transform foliageParent, GrassSettings grassSettings, FlowerSettings flowerSettings, LilyPadSettings lilyPadSettings, CloverSettings cloverSettings, DandelionSettings dandelionSettings, TreeSettings treeSettings, int worldSeed,
+    public FoliageManager(Transform foliageParent, GrassSettings grassSettings, FlowerSettings flowerSettings, LilyPadSettings lilyPadSettings, CattailSettings cattailSettings, CloverSettings cloverSettings, DandelionSettings dandelionSettings, TreeSettings treeSettings, int worldSeed,
         int chunkSize, float worldScale, float meshHeightMultiplier, TerrainWaterSettings waterSettings)
     {
         this.foliageParent = foliageParent;
         this.grassSettings = grassSettings;
         this.flowerSettings = flowerSettings;
         this.lilyPadSettings = lilyPadSettings;
+        this.cattailSettings = cattailSettings;
         this.cloverSettings = cloverSettings;
         this.dandelionSettings = dandelionSettings;
         this.treeSettings = treeSettings;
@@ -151,6 +157,7 @@ public class FoliageManager
         ResolveGrassRenderAssets();
         ResolveFlowerRenderAssets();
         ResolveLilyPadRenderAssets();
+        ResolveCattailRenderAssets();
         ResolveCloverRenderAssets();
         ResolveDandelionRenderAssets();
         ResolveTreeRenderAssets();
@@ -358,11 +365,12 @@ public class FoliageManager
         bool useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
         bool useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
         bool useLilyPads = IsWithinLilyPadRenderRange(viewerCoord, coord);
+        bool useCattails = IsWithinCattailRenderRange(viewerCoord, coord);
         bool useClover = IsWithinCloverRenderRange(viewerCoord, coord);
         bool useDandelions = IsWithinDandelionRenderRange(viewerCoord, coord);
         bool useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
 
-        if (!(useNearGrass || useBillboardGrass || useFlowers || useLilyPads || useClover || useDandelions || useTrees))
+        if (!(useNearGrass || useBillboardGrass || useFlowers || useLilyPads || useCattails || useClover || useDandelions || useTrees))
             return;
 
         if (useClover && HasCloverRenderAssets())
@@ -373,6 +381,9 @@ public class FoliageManager
 
         if (useLilyPads && HasLilyPadRenderAssets())
             runtime.FoliageRuntime.DrawLilyPads();
+
+        if (useCattails && HasCattailRenderAssets())
+            runtime.FoliageRuntime.DrawCattails();
 
         if (useDandelions && HasDandelionRenderAssets())
             runtime.FoliageRuntime.DrawDandelions();
@@ -464,6 +475,7 @@ public class FoliageManager
         bool useBillboardGrass;
         bool useFlowers;
         bool useLilyPads;
+        bool useCattails;
         bool useClover;
         bool preGenerateClover;
         bool useDandelions;
@@ -479,13 +491,14 @@ public class FoliageManager
             useBillboardGrass = false;
             useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
             useLilyPads = IsWithinLilyPadRenderRange(viewerCoord, coord);
+            useCattails = IsWithinCattailRenderRange(viewerCoord, coord);
             useClover = IsWithinCloverRenderRange(viewerCoord, coord);
             preGenerateClover = IsWithinCloverGenerationRange(viewerCoord, coord);
             useDandelions = IsWithinDandelionRenderRange(viewerCoord, coord);
             useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
             useBushes = IsWithinBushRenderRange(viewerCoord, coord);
             useRocks = IsWithinRockRenderRange(viewerCoord, coord);
-            useFoliage = useNearGrass || preGenerateNearGrass || useBillboardGrass || useFlowers || useLilyPads || useClover || preGenerateClover || useDandelions || useTrees || useBushes || useRocks;
+            useFoliage = useNearGrass || preGenerateNearGrass || useBillboardGrass || useFlowers || useLilyPads || useCattails || useClover || preGenerateClover || useDandelions || useTrees || useBushes || useRocks;
         }
 
         if (!HasRequiredTerrainData(record))
@@ -609,6 +622,21 @@ public class FoliageManager
             }
         }
 
+        using (HandleSubChunkCattailsMarker.Auto())
+        {
+            if (useCattails && HasCattailRenderAssets())
+            {
+                if (record.FoliageData == null || !record.FoliageData.cattailsGenerated)
+                    EnqueueGroundFoliageGeneration(record, GroundFoliageGenerationType.Cattail);
+                else if (!runtime.FoliageRuntime.HasValidCattailRenderData())
+                    EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.Cattail);
+            }
+            else
+            {
+                runtime.FoliageRuntime.ClearCattailBatches();
+            }
+        }
+
         using (HandleSubChunkDandelionsMarker.Auto())
         {
             if (useDandelions && HasDandelionRenderAssets())
@@ -692,6 +720,7 @@ public class FoliageManager
             useBillboardGrass,
             useFlowers,
             useLilyPads,
+            useCattails,
             useClover,
             useDandelions,
             useTrees,
@@ -710,6 +739,7 @@ public class FoliageManager
         bool useBillboardGrass,
         bool useFlowers,
         bool useLilyPads,
+        bool useCattails,
         bool useClover,
         bool useDandelions,
         bool useTrees,
@@ -747,6 +777,9 @@ public class FoliageManager
         }
 
         if (useLilyPads && HasLilyPadRenderAssets() && !foliageRuntime.HasValidLilyPadRenderData())
+            return true;
+
+        if (useCattails && HasCattailRenderAssets() && !foliageRuntime.HasValidCattailRenderData())
             return true;
 
         if (useClover &&
@@ -835,13 +868,14 @@ public class FoliageManager
             bool useBillboardGrass = IsWithinBillboardGrass(viewerCoord, coord);
             bool useFlowers = IsWithinFlowerRenderRange(viewerCoord, coord);
             bool useLilyPads = IsWithinLilyPadRenderRange(viewerCoord, coord);
+            bool useCattails = IsWithinCattailRenderRange(viewerCoord, coord);
             bool useClover = IsWithinCloverRenderRange(viewerCoord, coord);
             bool preGenerateClover = IsWithinCloverGenerationRange(viewerCoord, coord);
             bool useDandelions = IsWithinDandelionRenderRange(viewerCoord, coord);
             bool useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
             bool useBushes = IsWithinBushRenderRange(viewerCoord, coord);
             bool useRocks = IsWithinRockRenderRange(viewerCoord, coord);
-            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useLilyPads || useClover || preGenerateClover || useDandelions || useTrees || useBushes || useRocks;
+            bool useFoliage = useNearGrass || useBillboardGrass || useFlowers || useLilyPads || useCattails || useClover || preGenerateClover || useDandelions || useTrees || useBushes || useRocks;
 
             if (!HasRequiredTerrainData(record) || !useFoliage)
                 continue;
@@ -860,6 +894,9 @@ public class FoliageManager
 
             if (useLilyPads && HasLilyPadRenderAssets())
                 runtime.FoliageRuntime.AccumulateLilyPadRenderStats(ref stats);
+
+            if (useCattails && HasCattailRenderAssets())
+                runtime.FoliageRuntime.AccumulateCattailRenderStats(ref stats);
 
             if (useClover && HasCloverRenderAssets())
                 runtime.FoliageRuntime.AccumulateCloverRenderStats(ref stats);
@@ -1658,10 +1695,12 @@ public class FoliageManager
                 var record = chunkManager.GetChunkRecord(work.Key.ChunkCoord);
                 if (record == null || !HasRequiredTerrainData(record) ||
                     !IsGroundFoliageGenerationStillWanted(record, viewerCoord, work.Key.GenerationType)) continue;
-                if (work.Key.GenerationType != GroundFoliageGenerationType.LilyPad)
+                if (work.Key.GenerationType != GroundFoliageGenerationType.LilyPad &&
+                    work.Key.GenerationType != GroundFoliageGenerationType.Cattail)
                     EnsureTreesGenerated(record);
                 if (work.Key.GenerationType != GroundFoliageGenerationType.Flower &&
-                    work.Key.GenerationType != GroundFoliageGenerationType.LilyPad)
+                    work.Key.GenerationType != GroundFoliageGenerationType.LilyPad &&
+                    work.Key.GenerationType != GroundFoliageGenerationType.Cattail)
                 {
                     EnsureBushesGenerated(record);
                     EnsureRocksGenerated(record);
@@ -1678,6 +1717,11 @@ public class FoliageManager
                         activeGroundGeneration = LilyPadGenerator.GenerateIncrementally(record,
                             lilyPadSettings, worldSeed, chunkSize, worldScale,
                             waterSettings.WaterLevel, waterSettings.SurfaceY);
+                        break;
+                    case GroundFoliageGenerationType.Cattail:
+                        activeGroundGeneration = CattailGenerator.GenerateIncrementally(record,
+                            cattailSettings, worldSeed, chunkSize, worldScale,
+                            meshHeightMultiplier, waterSettings.WaterLevel);
                         break;
                     case GroundFoliageGenerationType.Clover:
                         activeGroundGeneration = FoliageGenerator.GenerateCloverIncrementally(record,
@@ -1711,6 +1755,9 @@ public class FoliageManager
                             break;
                         case GroundFoliageGenerationType.LilyPad:
                             if (record.FoliageData.lilyPadsGenerated) EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.LilyPad);
+                            break;
+                        case GroundFoliageGenerationType.Cattail:
+                            if (record.FoliageData.cattailsGenerated) EnqueueFoliageBatchRebuild(record, FoliageBatchWorkType.Cattail);
                             break;
                         case GroundFoliageGenerationType.Clover:
                             if (record.FoliageData.cloverGenerated)
@@ -1840,6 +1887,10 @@ public class FoliageManager
                     break;
                 case FoliageBatchWorkType.LilyPad:
                     RebuildLilyPadBatches(runtime, record);
+                    rebuildCount++;
+                    break;
+                case FoliageBatchWorkType.Cattail:
+                    RebuildCattailBatches(runtime, record);
                     rebuildCount++;
                     break;
                 case FoliageBatchWorkType.Clover:
@@ -2170,6 +2221,9 @@ public class FoliageManager
             case FoliageBatchWorkType.LilyPad:
                 return IsWithinLilyPadRenderRange(viewerCoord, record.ChunkCoord) &&
                        HasLilyPadRenderAssets();
+            case FoliageBatchWorkType.Cattail:
+                return IsWithinCattailRenderRange(viewerCoord, record.ChunkCoord) &&
+                       HasCattailRenderAssets();
             case FoliageBatchWorkType.Clover:
                 return IsWithinCloverRenderRange(viewerCoord, record.ChunkCoord) &&
                        HasCloverRenderAssets();
@@ -2241,6 +2295,12 @@ public class FoliageManager
                        record.WaterStateMap != null &&
                        IsWithinLilyPadRenderRange(viewerCoord, record.ChunkCoord) &&
                        (record.FoliageData == null || !record.FoliageData.lilyPadsGenerated);
+            case GroundFoliageGenerationType.Cattail:
+                return IsCattailSystemEnabled() &&
+                       HasCattailRenderAssets() &&
+                       record.WaterStateMap != null && record.SurfaceTypeMap != null &&
+                       IsWithinCattailRenderRange(viewerCoord, record.ChunkCoord) &&
+                       (record.FoliageData == null || !record.FoliageData.cattailsGenerated);
             case GroundFoliageGenerationType.Clover:
                 return IsCloverSystemEnabled() &&
                        HasCloverRenderAssets() &&
@@ -2473,6 +2533,25 @@ public class FoliageManager
                 lilyPadMeshLocalMatrix);
         }
         runtime.FoliageRuntime.CacheLilyPadBatches(matrices);
+    }
+
+    private void RebuildCattailBatches(ChunkRuntime runtime, ChunkRecord record)
+    {
+        if (runtime.FoliageRuntime == null || record.FoliageData == null ||
+            record.FoliageData.cattailInstances == null)
+            return;
+
+        List<CattailInstanceData> instances = record.FoliageData.cattailInstances;
+        var matrices = new List<Matrix4x4>(instances.Count);
+        Matrix4x4 localToWorld = runtime.RootTransform.localToWorldMatrix;
+        for (int i = 0; i < instances.Count; i++)
+        {
+            CattailInstanceData cattail = instances[i];
+            matrices.Add(localToWorld * Matrix4x4.TRS(
+                cattail.localPosition, cattail.localRotation, Vector3.one * cattail.uniformScale) *
+                cattailMeshLocalMatrix);
+        }
+        runtime.FoliageRuntime.CacheCattailBatches(matrices);
     }
 
     private void RebuildCloverBatches(ChunkRuntime runtime, ChunkRecord record)
@@ -3280,6 +3359,12 @@ public class FoliageManager
                IsWithinChunkRadius(viewerCoord, targetCoord, lilyPadSettings.activeRingRadius);
     }
 
+    private bool IsWithinCattailRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
+    {
+        return IsCattailSystemEnabled() &&
+               IsWithinChunkRadius(viewerCoord, targetCoord, cattailSettings.activeRingRadius);
+    }
+
     private bool IsWithinCloverRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
         if (!IsCloverSystemEnabled())
@@ -3345,6 +3430,11 @@ public class FoliageManager
         return lilyPadSettings != null && lilyPadSettings.enableLilyPads;
     }
 
+    private bool IsCattailSystemEnabled()
+    {
+        return cattailSettings != null && cattailSettings.enableCattails;
+    }
+
     private bool IsCloverSystemEnabled()
     {
         return cloverSettings != null && cloverSettings.enableClover;
@@ -3365,6 +3455,11 @@ public class FoliageManager
     private bool HasLilyPadRenderAssets()
     {
         return lilyPadMesh != null && lilyPadMaterial != null;
+    }
+
+    private bool HasCattailRenderAssets()
+    {
+        return cattailMesh != null && cattailMaterial != null;
     }
 
     private bool HasCloverRenderAssets()
@@ -3489,6 +3584,7 @@ public class FoliageManager
     {
         Flower,
         LilyPad,
+        Cattail,
         Clover,
         Dandelion
     }
@@ -3537,6 +3633,7 @@ public class FoliageManager
         BillboardGrass,
         Flower,
         LilyPad,
+        Cattail,
         Clover,
         Dandelion
     }
@@ -3614,6 +3711,8 @@ public class FoliageManager
         chunkRuntime.FoliageRuntime.flowerPetalColorPropertyId = flowerPetalColorPropertyId;
         chunkRuntime.FoliageRuntime.lilyPadMesh = lilyPadMesh;
         chunkRuntime.FoliageRuntime.lilyPadMaterial = lilyPadMaterial;
+        chunkRuntime.FoliageRuntime.cattailMesh = cattailMesh;
+        chunkRuntime.FoliageRuntime.cattailMaterial = cattailMaterial;
 
         chunkRuntime.FoliageRuntime.cloverRenderData = cloverRenderData;
         chunkRuntime.FoliageRuntime.receiveCloverShadows = cloverSettings != null && cloverSettings.receiveCloverShadows;
@@ -3844,6 +3943,31 @@ public class FoliageManager
         lilyPadMeshLocalMatrix = lilyPadSettings.lilyPadPrefab.transform.worldToLocalMatrix *
             filter.transform.localToWorldMatrix;
         lilyPadMaterial.enableInstancing = true;
+    }
+
+    private void ResolveCattailRenderAssets()
+    {
+        if (cattailSettings == null || cattailSettings.cattailPrefab == null)
+            return;
+
+        MeshFilter filter = cattailSettings.cattailPrefab.GetComponentInChildren<MeshFilter>();
+        MeshRenderer renderer = filter != null ? filter.GetComponent<MeshRenderer>() : null;
+        if (filter == null || filter.sharedMesh == null || renderer == null || renderer.sharedMaterial == null)
+        {
+            Debug.LogError("Cattail prefab needs one child with a MeshFilter and MeshRenderer with a material.");
+            return;
+        }
+        if (filter.sharedMesh.subMeshCount != 1 || renderer.sharedMaterials.Length != 1)
+        {
+            Debug.LogError("Cattail clump needs one combined mesh and one material for instanced rendering.");
+            return;
+        }
+
+        cattailMesh = filter.sharedMesh;
+        cattailMaterial = renderer.sharedMaterial;
+        cattailMeshLocalMatrix = cattailSettings.cattailPrefab.transform.worldToLocalMatrix *
+            filter.transform.localToWorldMatrix;
+        cattailMaterial.enableInstancing = true;
     }
 
     private void ResolveCloverRenderAssets()

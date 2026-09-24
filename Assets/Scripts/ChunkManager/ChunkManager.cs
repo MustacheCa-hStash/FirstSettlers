@@ -147,6 +147,7 @@ public class ChunkManager
         GrassSettings grassSettings,
         FlowerSettings flowerSettings,
         LilyPadSettings lilyPadSettings,
+        CattailSettings cattailSettings,
         CloverSettings cloverSettings,
         DandelionSettings dandelionSettings,
         TreeSettings treeSettings,
@@ -255,6 +256,7 @@ public class ChunkManager
             grassSettings,
             flowerSettings,
             lilyPadSettings,
+            cattailSettings,
             cloverSettings,
             dandelionSettings,
             treeSettings,
@@ -350,6 +352,7 @@ public class ChunkManager
         int gpuGrassInstanceCount = 0;
         int gpuFlowerInstanceCount = 0;
         int gpuLilyPadInstanceCount = 0;
+        int gpuCattailInstanceCount = 0;
         int gpuCloverInstanceCount = 0;
         int gpuDandelionInstanceCount = 0;
         int gpuTreeInstanceCount = 0;
@@ -380,6 +383,7 @@ public class ChunkManager
             gpuGrassInstanceCount = runtime.FoliageRuntime.GpuGrassInstanceCount;
             gpuFlowerInstanceCount = runtime.FoliageRuntime.GpuFlowerInstanceCount;
             gpuLilyPadInstanceCount = runtime.FoliageRuntime.GpuLilyPadInstanceCount;
+            gpuCattailInstanceCount = runtime.FoliageRuntime.GpuCattailInstanceCount;
             gpuCloverInstanceCount = runtime.FoliageRuntime.GpuCloverInstanceCount;
             gpuDandelionInstanceCount = runtime.FoliageRuntime.GpuDandelionInstanceCount;
             gpuTreeInstanceCount = runtime.FoliageRuntime.GpuTreeInstanceCount;
@@ -406,6 +410,7 @@ public class ChunkManager
             gpuGrassInstanceCount,
             gpuFlowerInstanceCount,
             gpuLilyPadInstanceCount,
+            gpuCattailInstanceCount,
             gpuCloverInstanceCount,
             gpuDandelionInstanceCount,
             gpuTreeInstanceCount);

@@ -22,6 +22,7 @@ public readonly struct WorldDebugInfo
     public readonly int GpuGrassInstanceCount;
     public readonly int GpuFlowerInstanceCount;
     public readonly int GpuLilyPadInstanceCount;
+    public readonly int GpuCattailInstanceCount;
     public readonly int GpuCloverInstanceCount;
     public readonly int GpuDandelionInstanceCount;
     public readonly int GpuTreeInstanceCount;
@@ -47,6 +48,7 @@ public readonly struct WorldDebugInfo
         int gpuGrassInstanceCount,
         int gpuFlowerInstanceCount,
         int gpuLilyPadInstanceCount,
+        int gpuCattailInstanceCount,
         int gpuCloverInstanceCount,
         int gpuDandelionInstanceCount,
         int gpuTreeInstanceCount)
@@ -71,6 +73,7 @@ public readonly struct WorldDebugInfo
         GpuGrassInstanceCount = gpuGrassInstanceCount;
         GpuFlowerInstanceCount = gpuFlowerInstanceCount;
         GpuLilyPadInstanceCount = gpuLilyPadInstanceCount;
+        GpuCattailInstanceCount = gpuCattailInstanceCount;
         GpuCloverInstanceCount = gpuCloverInstanceCount;
         GpuDandelionInstanceCount = gpuDandelionInstanceCount;
         GpuTreeInstanceCount = gpuTreeInstanceCount;
