@@ -89,6 +89,10 @@ public class FlowerSettings
     [Range(0f, 90f), Tooltip("Maximum terrain slope in degrees.")]
     public float maxSlope = 40f;
     public float treeExclusionRadius = 1.0f;
+    [Min(0f)] public float bushExclusionRadius = 0.75f;
+    [Min(0f)] public float rockExclusionRadius = 0.75f;
+    [Range(0f, 1f)] public float tallFlowerClearanceScale = 0.8f;
+    [Range(0f, 1f)] public float daisyWeedClearanceScale = 0.7f;
 
     [Header("Petal Color")]
     public string flowerPetalColorPropertyName = "_FlowerPetalColor";

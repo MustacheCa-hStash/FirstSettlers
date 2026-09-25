@@ -4,12 +4,14 @@ public class WorldFeaturePlan
 {
     public readonly List<WorldFeaturePlacement> Placements = new List<WorldFeaturePlacement>();
     public float[,] CanopyDensityMap { get; }
+    public float[,] LocalMoistureAdjustmentMap { get; }
     public ForestStructureFields ForestStructure { get; }
     public GrasslandStructureFields GrasslandStructure { get; }
 
     public WorldFeaturePlan(int width, int height)
     {
         CanopyDensityMap = new float[width, height];
+        LocalMoistureAdjustmentMap = new float[width, height];
         ForestStructure = new ForestStructureFields(width, height);
         GrasslandStructure = new GrasslandStructureFields(width, height);
     }

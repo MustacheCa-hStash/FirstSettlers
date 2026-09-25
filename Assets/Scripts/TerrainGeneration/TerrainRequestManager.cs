@@ -162,8 +162,10 @@ public class TerrainRequestManager : System.IDisposable
                 NativeArray<SurfaceType> nativeSurfaces = default;
                 NativeArray<WaterState> nativeWaterStates = default;
                 NativeArray<float> nativeCanopyDensities = default;
+                NativeArray<float> nativeLocalMoistureAdjustments = default;
                 NativeArray<float> nativeClearings = default;
                 NativeArray<float> nativeRockInfluences = default;
+                NativeArray<float> nativeTreeLitterBalances = default;
                 NativeArray<float> nativeDampShades = default;
                 NativeArray<float> nativeOrganicFloorIntents = default;
                 NativeArray<GroundCoverType> nativeGroundCovers = default;
@@ -232,12 +234,16 @@ public class TerrainRequestManager : System.IDisposable
                         temperatureMap,
                         slopeMap,
                         riverMaskMap,
-                        worldFeatureGenerationSettings);
+                        worldFeatureGenerationSettings,
+                        finalHeightMap,
+                        waterSettings.WaterLevel);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainWorldFeaturePlan, stageStart);
 
                     nativeCanopyDensities = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.CanopyDensityMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+                    nativeLocalMoistureAdjustments = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.LocalMoistureAdjustmentMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
                     nativeClearings = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.ClearingMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
                     nativeRockInfluences = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.RockInfluenceMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+                    nativeTreeLitterBalances = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.TreeLitterBalanceMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
                     nativeDampShades = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.DampShadeMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
                     nativeOrganicFloorIntents = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.OrganicFloorIntentMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
 
@@ -246,11 +252,13 @@ public class TerrainRequestManager : System.IDisposable
                         nativeBiomes,
                         nativeSurfaces,
                         nativeMoistures,
+                        nativeLocalMoistureAdjustments,
                         nativeSlopes,
                         nativeRiverMasks,
                         nativeCanopyDensities,
                         nativeClearings,
                         nativeRockInfluences,
+                        nativeTreeLitterBalances,
                         nativeDampShades,
                         nativeOrganicFloorIntents,
                         mapWidth,
@@ -310,8 +318,10 @@ public class TerrainRequestManager : System.IDisposable
                     if (nativeSurfaces.IsCreated) nativeSurfaces.Dispose();
                     if (nativeWaterStates.IsCreated) nativeWaterStates.Dispose();
                     if (nativeCanopyDensities.IsCreated) nativeCanopyDensities.Dispose();
+                    if (nativeLocalMoistureAdjustments.IsCreated) nativeLocalMoistureAdjustments.Dispose();
                     if (nativeClearings.IsCreated) nativeClearings.Dispose();
                     if (nativeRockInfluences.IsCreated) nativeRockInfluences.Dispose();
+                    if (nativeTreeLitterBalances.IsCreated) nativeTreeLitterBalances.Dispose();
                     if (nativeDampShades.IsCreated) nativeDampShades.Dispose();
                     if (nativeOrganicFloorIntents.IsCreated) nativeOrganicFloorIntents.Dispose();
                     if (nativeGroundCovers.IsCreated) nativeGroundCovers.Dispose();

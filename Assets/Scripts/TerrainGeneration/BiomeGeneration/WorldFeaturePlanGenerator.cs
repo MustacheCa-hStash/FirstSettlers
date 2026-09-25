@@ -38,11 +38,17 @@ public static class WorldFeaturePlanGenerator
         float[,] temperatureMap,
         float[,] slopeMap,
         float[,] riverMaskMap,
-        WorldFeatureGenerationSettings settings)
+        WorldFeatureGenerationSettings settings,
+        float[,] heightMap = null,
+        float waterLevel = 0f)
     {
         int width = biomeMap.GetLength(0);
         int height = biomeMap.GetLength(1);
         WorldFeaturePlan plan = new WorldFeaturePlan(width, height);
+
+        if (heightMap != null)
+            BuildLocalMoistureAdjustmentMap(plan, heightMap, biomeMap, surfaceTypeMap,
+                slopeMap, riverMaskMap, waterLevel);
 
         BuildForestStructureFields(
             plan,
@@ -115,6 +121,9 @@ public static class WorldFeaturePlanGenerator
             riverMaskMap,
             settings);
 
+        BuildCanopyDensityMap(plan, chunkCoord, chunkSize, seed);
+        UpdateForestUnderstoryFromCanopy(plan, biomeMap, surfaceTypeMap, moistureMap, riverMaskMap);
+
         AddForestBerryBushes(
             plan,
             chunkCoord,
@@ -127,7 +136,6 @@ public static class WorldFeaturePlanGenerator
             slopeMap,
             riverMaskMap);
 
-        BuildCanopyDensityMap(plan, chunkCoord, chunkSize, seed);
         BuildOrganicFloorIntentMap(plan, chunkCoord, chunkSize, seed);
 
         return plan;
@@ -139,7 +147,8 @@ public static class WorldFeaturePlanGenerator
         ChunkCoord coord, int chunkSize, int seed, BiomeType[,] biomes, SurfaceType[,] surfaces,
         float[,] moisture, float[,] temperature, float[,] slopes, float[,] rivers,
         WorldFeatureGenerationSettings settings, System.Action<int, int> sample,
-        WorldFeaturePlan scratchPlan = null, bool[,] scratchPrepared = null)
+        WorldFeaturePlan scratchPlan = null, bool[,] scratchPrepared = null,
+        System.Func<int, int, float> sampleHeight = null, float waterLevel = 0f)
     {
         int size = chunkSize + 3;
         var plan = scratchPlan ?? new WorldFeaturePlan(size, size);
@@ -150,6 +159,12 @@ public static class WorldFeaturePlanGenerator
         {
             if (prepared[x, z]) return;
             sample(x, z);
+            if (sampleHeight != null && surfaces[x, z] == SurfaceType.Grass &&
+                (biomes[x, z] == BiomeType.Forest || biomes[x, z] == BiomeType.Grassland))
+                plan.LocalMoistureAdjustmentMap[x, z] = SampleLocalMoistureAdjustment(
+                    sampleHeight, x, z, size, slopes[x, z], rivers[x, z], waterLevel);
+            else
+                plan.LocalMoistureAdjustmentMap[x, z] = 0f;
             BuildForestStructureFields(plan, coord, chunkSize, seed, biomes, surfaces, moisture, slopes, rivers, x, z);
             BuildGrasslandStructureFields(plan, coord, chunkSize, seed, biomes, surfaces, moisture, slopes, rivers, x, z);
             prepared[x, z] = true;
@@ -186,6 +201,67 @@ public static class WorldFeaturePlanGenerator
         AddForestTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, PrepareTree);
         AddGrasslandTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, settings, PrepareGrasslandTree);
         return plan;
+    }
+
+    private static void BuildLocalMoistureAdjustmentMap(
+        WorldFeaturePlan plan, float[,] heights, BiomeType[,] biomes, SurfaceType[,] surfaces,
+        float[,] slopes, float[,] rivers, float waterLevel)
+    {
+        int width = heights.GetLength(0);
+        int height = heights.GetLength(1);
+        for (int x = 0; x < width; x++)
+        {
+            int westX = Mathf.Max(0, x - 4);
+            int eastX = Mathf.Min(width - 1, x + 4);
+            for (int z = 0; z < height; z++)
+            {
+                if (surfaces[x, z] != SurfaceType.Grass ||
+                    (biomes[x, z] != BiomeType.Forest && biomes[x, z] != BiomeType.Grassland))
+                    continue;
+
+                int southZ = Mathf.Max(0, z - 4);
+                int northZ = Mathf.Min(height - 1, z + 4);
+                plan.LocalMoistureAdjustmentMap[x, z] = ComputeLocalMoistureAdjustment(
+                    heights[x, z], heights[westX, z], heights[eastX, z],
+                    heights[x, southZ], heights[x, northZ], eastX - westX, northZ - southZ,
+                    slopes[x, z], rivers[x, z], waterLevel);
+            }
+        }
+    }
+
+    private static float SampleLocalMoistureAdjustment(
+        System.Func<int, int, float> sampleHeight, int x, int z, int size,
+        float slope, float river, float waterLevel)
+    {
+        int westX = Mathf.Max(0, x - 4);
+        int eastX = Mathf.Min(size - 1, x + 4);
+        int southZ = Mathf.Max(0, z - 4);
+        int northZ = Mathf.Min(size - 1, z + 4);
+        return ComputeLocalMoistureAdjustment(
+            sampleHeight(x, z), sampleHeight(westX, z), sampleHeight(eastX, z),
+            sampleHeight(x, southZ), sampleHeight(x, northZ), eastX - westX, northZ - southZ,
+            slope, river, waterLevel);
+    }
+
+    private static float ComputeLocalMoistureAdjustment(
+        float center, float west, float east, float south, float north,
+        int xSpan, int zSpan, float slope, float river, float waterLevel)
+    {
+        // Habitat-scale proxy only; climate moisture remains unchanged for biome classification.
+        float basin = Mathf.Clamp(((west + east + south + north) * 0.25f - center) * 28f, -1f, 1f);
+        float gradientX = (east - west) / Mathf.Max(1, xSpan);
+        float gradientZ = (north - south) / Mathf.Max(1, zSpan);
+        float gradientLength = Mathf.Sqrt(gradientX * gradientX + gradientZ * gradientZ);
+        // A slope falling toward +Z is north-facing; flat ground has no aspect bias.
+        float northAspect = gradientLength > 0.0001f ? -gradientZ / gradientLength : 0f;
+        float aspectWetness = northAspect * SmoothStep(8f, 30f, slope) * 0.025f;
+        float shoreWetness = center >= waterLevel
+            ? 1f - SmoothStep(0.008f, 0.045f, center - waterLevel)
+            : 0f;
+        float riverWetness = SmoothStep(0.38f, 0.75f, river);
+        float slopeExposure = SmoothStep(18f, 42f, slope);
+        return Mathf.Clamp(basin * 0.12f + shoreWetness * 0.08f +
+            riverWetness * 0.10f + aspectWetness - slopeExposure * 0.06f, -0.18f, 0.22f);
     }
 
     private static void BuildForestStructureFields(
@@ -231,7 +307,8 @@ public static class WorldFeaturePlanGenerator
                 rockiness = Mathf.Clamp01(rockiness + Mathf.InverseLerp(30f, 60f, slopeMap[x, z]) * 0.42f);
                 rockiness *= riverSuitability;
 
-                float dampShade = Mathf.Clamp01(moistureMap[x, z] * 0.5f + canopyIntent * 0.34f + riverMaskMap[x, z] * 0.16f);
+                float localMoisture = Mathf.Clamp01(moistureMap[x, z] + plan.LocalMoistureAdjustmentMap[x, z]);
+                float dampShade = Mathf.Clamp01(localMoisture * 0.5f + canopyIntent * 0.34f + riverMaskMap[x, z] * 0.16f);
                 float understory = Mathf.Clamp01((0.35f + dampShade * 0.55f + fineBreakup * 0.1f) * (1f - clearing * 0.6f));
                 understory *= 1f - rockiness * 0.35f;
 
@@ -361,7 +438,8 @@ public static class WorldFeaturePlanGenerator
                 float slopeSuitability = Mathf.InverseLerp(TerrainSlopePolicy.ForestMaxDegrees, TerrainSlopePolicy.ForestFadeStartDegrees, slopeMap[x, z]);
                 float riverMask = riverMaskMap[x, z];
                 float riparian = SmoothStep(0.50f, 0.82f, riverMask) * slopeSuitability;
-                float meadowMoisture = Mathf.Clamp01(moistureMap[x, z] * 0.72f + riparian * 0.28f);
+                float localMoisture = Mathf.Clamp01(moistureMap[x, z] + plan.LocalMoistureAdjustmentMap[x, z]);
+                float meadowMoisture = Mathf.Clamp01(localMoisture * 0.72f + riparian * 0.28f);
 
                 float groveIntent = Mathf.Clamp01((groveNoise - 0.62f) * 2.4f);
                 groveIntent = Mathf.Clamp01(groveIntent * Mathf.Lerp(0.72f, 1.18f, groveFine));
@@ -621,7 +699,7 @@ public static class WorldFeaturePlanGenerator
                 sampleX,
                 sampleZ,
                 fields.DampShadeMap[paddedX, paddedZ],
-                moistureMap[paddedX, paddedZ],
+                Mathf.Clamp01(moistureMap[paddedX, paddedZ] + plan.LocalMoistureAdjustmentMap[paddedX, paddedZ]),
                 temperatureMap[paddedX, paddedZ],
                 clearing,
                 cluster,
@@ -810,7 +888,7 @@ public static class WorldFeaturePlanGenerator
                 seed,
                 sampleX,
                 sampleZ,
-                moistureMap[paddedX, paddedZ],
+                Mathf.Clamp01(moistureMap[paddedX, paddedZ] + plan.LocalMoistureAdjustmentMap[paddedX, paddedZ]),
                 temperatureMap[paddedX, paddedZ],
                 riparian,
                 grove,
@@ -961,7 +1039,8 @@ public static class WorldFeaturePlanGenerator
                     fineBreakup * 0.14f +
                     understory * 0.34f +
                     clearing * 0.10f +
-                    moistureMap[centerPaddedX, centerPaddedZ] * 0.06f;
+                    Mathf.Clamp01(moistureMap[centerPaddedX, centerPaddedZ] +
+                        plan.LocalMoistureAdjustmentMap[centerPaddedX, centerPaddedZ]) * 0.06f;
 
                 patchIntent *= 1f - rockInfluence * 0.55f;
                 patchIntent = Mathf.Clamp01(patchIntent);
@@ -973,9 +1052,11 @@ public static class WorldFeaturePlanGenerator
                     centerGlobalSampleX,
                     centerGlobalSampleZ,
                     seed,
-                    moistureMap[centerPaddedX, centerPaddedZ],
+                    Mathf.Clamp01(moistureMap[centerPaddedX, centerPaddedZ] +
+                        plan.LocalMoistureAdjustmentMap[centerPaddedX, centerPaddedZ]),
                     temperatureMap[centerPaddedX, centerPaddedZ],
                     fields.DampShadeMap[centerPaddedX, centerPaddedZ],
+                    plan.CanopyDensityMap[centerPaddedX, centerPaddedZ],
                     clearing,
                     patchHash);
 
@@ -1048,6 +1129,7 @@ public static class WorldFeaturePlanGenerator
         float moisture,
         float temperature,
         float dampShade,
+        float canopyDensity,
         float clearing,
         int hash)
     {
@@ -1056,22 +1138,26 @@ public static class WorldFeaturePlanGenerator
 
         float blueberryWeight = 0.36f *
             Mathf.Lerp(0.88f, 1.34f, dampShade) *
+            Mathf.Lerp(0.90f, 1.28f, canopyDensity) *
             Mathf.Lerp(0.90f, 1.22f, coolness) *
             SpeciesPatch(worldX, worldZ, seed, 6410);
 
         float raspberryWeight = 0.28f *
             Mathf.Lerp(0.86f, 1.36f, clearing) *
+            Mathf.Lerp(1.20f, 0.72f, canopyDensity) *
             Mathf.Lerp(0.92f, 1.18f, moisture) *
             SpeciesPatch(worldX, worldZ, seed, 6411);
 
         float blackberryWeight = 0.22f *
             Mathf.Lerp(0.86f, 1.34f, clearing) *
+            Mathf.Lerp(1.16f, 0.78f, canopyDensity) *
             Mathf.Lerp(0.90f, 1.24f, temperature) *
             Mathf.Lerp(0.92f, 1.18f, dryness) *
             SpeciesPatch(worldX, worldZ, seed, 6412);
 
         float strawberryWeight = 0.14f *
             Mathf.Lerp(0.92f, 1.42f, clearing) *
+            Mathf.Lerp(1.32f, 0.54f, canopyDensity) *
             Mathf.Lerp(0.88f, 1.16f, dryness) *
             SpeciesPatch(worldX, worldZ, seed, 6413);
 
@@ -1391,7 +1477,9 @@ public static class WorldFeaturePlanGenerator
                 placement.sampleX,
                 placement.sampleZ,
                 placement.influenceRadius,
-                0.92f);
+                0.92f,
+                fields.TreeLitterBalanceMap,
+                GetTreeLitterSign(placement.variant));
         }
 
         for (int x = 0; x < width; x++)
@@ -1406,6 +1494,40 @@ public static class WorldFeaturePlanGenerator
                 density *= Mathf.Lerp(0.78f, 1.12f, breakup);
                 density *= 1f - fields.ClearingMap[x, z] * 0.42f;
                 plan.CanopyDensityMap[x, z] = Mathf.Clamp01(density);
+            }
+        }
+    }
+
+    private static void UpdateForestUnderstoryFromCanopy(
+        WorldFeaturePlan plan, BiomeType[,] biomeMap, SurfaceType[,] surfaceTypeMap,
+        float[,] moistureMap, float[,] riverMaskMap)
+    {
+        ForestStructureFields fields = plan.ForestStructure;
+        int width = biomeMap.GetLength(0);
+        int height = biomeMap.GetLength(1);
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int z = 0; z < height; z++)
+            {
+                if (biomeMap[x, z] != BiomeType.Forest || surfaceTypeMap[x, z] != SurfaceType.Grass)
+                    continue;
+
+                float canopy = plan.CanopyDensityMap[x, z];
+                float oldDampShade = fields.DampShadeMap[x, z];
+                float localMoisture = Mathf.Clamp01(moistureMap[x, z] + plan.LocalMoistureAdjustmentMap[x, z]);
+                float dampShade = Mathf.Clamp01(localMoisture * 0.5f +
+                    canopy * 0.34f + riverMaskMap[x, z] * 0.16f);
+                float clearing = fields.ClearingMap[x, z];
+                float rockiness = fields.RockinessMap[x, z];
+
+                // Keep the original fine-breakup component without sampling noise again.
+                float shadeDelta = (dampShade - oldDampShade) * 0.55f *
+                    (1f - clearing * 0.6f) * (1f - rockiness * 0.35f);
+                float canopySuppression = 1f - 0.5f * SmoothStep(0.35f, 0.9f, canopy);
+                fields.DampShadeMap[x, z] = dampShade;
+                fields.UnderstoryDensityMap[x, z] = Mathf.Clamp01(
+                    (fields.UnderstoryDensityMap[x, z] + shadeDelta) * canopySuppression);
             }
         }
     }
@@ -1507,6 +1629,29 @@ public static class WorldFeaturePlanGenerator
         }
     }
 
+    private static float GetTreeLitterSign(WorldFeatureVariant variant)
+    {
+        switch (variant)
+        {
+            case WorldFeatureVariant.SpruceTree:
+            case WorldFeatureVariant.WhitePineTree:
+            case WorldFeatureVariant.GrasslandWhitePineTree:
+                return 1f;
+            case WorldFeatureVariant.MapleTree:
+            case WorldFeatureVariant.SugarMapleTree:
+            case WorldFeatureVariant.BirchAspenTree:
+            case WorldFeatureVariant.BeechTree:
+            case WorldFeatureVariant.OakTree:
+            case WorldFeatureVariant.GrasslandMapleTree:
+            case WorldFeatureVariant.GrasslandBirchAspenTree:
+            case WorldFeatureVariant.GrasslandOakTree:
+            case WorldFeatureVariant.GrasslandWillowTree:
+                return -1f;
+            default:
+                return 0f;
+        }
+    }
+
     private static void AddOrganicFloorTreeInfluence(
         ForestStructureFields fields,
         ChunkCoord chunkCoord,
@@ -1558,7 +1703,9 @@ public static class WorldFeaturePlanGenerator
         float sampleX,
         float sampleZ,
         float radius,
-        float strength)
+        float strength,
+        float[,] litterBalanceMap = null,
+        float litterSign = 0f)
     {
         float radiusSqr = radius * radius;
         int width = targetMap.GetLength(0);
@@ -1582,6 +1729,8 @@ public static class WorldFeaturePlanGenerator
                 float falloff = 1f - Mathf.Sqrt(distSqr) / radius;
                 falloff = falloff * falloff * (3f - 2f * falloff);
                 targetMap[x, z] = Mathf.Max(targetMap[x, z], Mathf.Clamp01(falloff * strength));
+                if (litterBalanceMap != null)
+                    litterBalanceMap[x, z] += falloff * litterSign;
             }
         }
     }

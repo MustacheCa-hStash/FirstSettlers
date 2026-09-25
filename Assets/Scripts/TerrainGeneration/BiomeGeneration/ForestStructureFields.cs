@@ -5,6 +5,7 @@ public class ForestStructureFields
     public float[,] TreeClusterMap { get; }
     public float[,] RockinessMap { get; }
     public float[,] RockInfluenceMap { get; }
+    public float[,] TreeLitterBalanceMap { get; }
     public float[,] DampShadeMap { get; }
     public float[,] UnderstoryDensityMap { get; }
     public float[,] OrganicFloorIntentMap { get; }
@@ -16,6 +17,7 @@ public class ForestStructureFields
         TreeClusterMap = new float[width, height];
         RockinessMap = new float[width, height];
         RockInfluenceMap = new float[width, height];
+        TreeLitterBalanceMap = new float[width, height];
         DampShadeMap = new float[width, height];
         UnderstoryDensityMap = new float[width, height];
         OrganicFloorIntentMap = new float[width, height];

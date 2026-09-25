@@ -83,7 +83,8 @@ public static class DistantTreePlacement
                 sampled[x, z] = true;
             }
             var plan = WorldFeaturePlanGenerator.GenerateTreePlacements(coord, chunkSize, seed,
-                biomes, surfaces, moisture, temperature, slopes, rivers, settings, Sample, scratch.Plan, scratch.Prepared);
+                biomes, surfaces, moisture, temperature, slopes, rivers, settings, Sample, scratch.Plan, scratch.Prepared,
+                (x, z) => Height(x, z).Height, waterLevel);
             var trees = new List<TreeInstanceData>();
             foreach (var p in plan.Placements)
             {

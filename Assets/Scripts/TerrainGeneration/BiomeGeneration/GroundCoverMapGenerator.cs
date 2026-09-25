@@ -19,11 +19,13 @@ public static class GroundCoverMapGenerator
         NativeArray<BiomeType> biomes = default;
         NativeArray<SurfaceType> surfaces = default;
         NativeArray<float> moistures = default;
+        NativeArray<float> localMoistureAdjustments = default;
         NativeArray<float> slopes = default;
         NativeArray<float> riverMasks = default;
         NativeArray<float> canopyDensities = default;
         NativeArray<float> clearings = default;
         NativeArray<float> rockInfluences = default;
+        NativeArray<float> treeLitterBalances = default;
         NativeArray<float> dampShades = default;
         NativeArray<float> organicFloorIntents = default;
         NativeArray<GroundCoverType> groundCovers = default;
@@ -37,11 +39,13 @@ public static class GroundCoverMapGenerator
             biomes = CopyMapToNative(biomeMap, Allocator.TempJob, out width, out height);
             surfaces = CopyMapToNative(surfaceTypeMap, Allocator.TempJob, out _, out _);
             moistures = CopyFloatMapToNative(moistureMap, Allocator.TempJob, out _, out _);
+            localMoistureAdjustments = CopyFloatMapToNative(worldFeaturePlan.LocalMoistureAdjustmentMap, Allocator.TempJob, out _, out _);
             slopes = CopyFloatMapToNative(slopeMap, Allocator.TempJob, out _, out _);
             riverMasks = CopyFloatMapToNative(riverMaskMap, Allocator.TempJob, out _, out _);
             canopyDensities = CopyFloatMapToNative(worldFeaturePlan.CanopyDensityMap, Allocator.TempJob, out _, out _);
             clearings = CopyFloatMapToNative(worldFeaturePlan.ForestStructure.ClearingMap, Allocator.TempJob, out _, out _);
             rockInfluences = CopyFloatMapToNative(worldFeaturePlan.ForestStructure.RockInfluenceMap, Allocator.TempJob, out _, out _);
+            treeLitterBalances = CopyFloatMapToNative(worldFeaturePlan.ForestStructure.TreeLitterBalanceMap, Allocator.TempJob, out _, out _);
             dampShades = CopyFloatMapToNative(worldFeaturePlan.ForestStructure.DampShadeMap, Allocator.TempJob, out _, out _);
             organicFloorIntents =
                 CopyFloatMapToNative(worldFeaturePlan.ForestStructure.OrganicFloorIntentMap, Allocator.TempJob, out _, out _);
@@ -58,11 +62,13 @@ public static class GroundCoverMapGenerator
                 biomes = biomes,
                 surfaces = surfaces,
                 moistures = moistures,
+                localMoistureAdjustments = localMoistureAdjustments,
                 slopes = slopes,
                 riverMasks = riverMasks,
                 canopyDensities = canopyDensities,
                 clearings = clearings,
                 rockInfluences = rockInfluences,
+                treeLitterBalances = treeLitterBalances,
                 dampShades = dampShades,
                 organicFloorIntents = organicFloorIntents,
                 groundCovers = groundCovers
@@ -81,6 +87,8 @@ public static class GroundCoverMapGenerator
                 surfaces.Dispose();
             if (moistures.IsCreated)
                 moistures.Dispose();
+            if (localMoistureAdjustments.IsCreated)
+                localMoistureAdjustments.Dispose();
             if (slopes.IsCreated)
                 slopes.Dispose();
             if (riverMasks.IsCreated)
@@ -91,6 +99,8 @@ public static class GroundCoverMapGenerator
                 clearings.Dispose();
             if (rockInfluences.IsCreated)
                 rockInfluences.Dispose();
+            if (treeLitterBalances.IsCreated)
+                treeLitterBalances.Dispose();
             if (dampShades.IsCreated)
                 dampShades.Dispose();
             if (organicFloorIntents.IsCreated)
@@ -106,11 +116,13 @@ public static class GroundCoverMapGenerator
         NativeArray<BiomeType> biomes,
         NativeArray<SurfaceType> surfaces,
         NativeArray<float> moistures,
+        NativeArray<float> localMoistureAdjustments,
         NativeArray<float> slopes,
         NativeArray<float> riverMasks,
         NativeArray<float> canopyDensities,
         NativeArray<float> clearings,
         NativeArray<float> rockInfluences,
+        NativeArray<float> treeLitterBalances,
         NativeArray<float> dampShades,
         NativeArray<float> organicFloorIntents,
         int width,
@@ -134,11 +146,13 @@ public static class GroundCoverMapGenerator
             biomes = biomes,
             surfaces = surfaces,
             moistures = moistures,
+            localMoistureAdjustments = localMoistureAdjustments,
             slopes = slopes,
             riverMasks = riverMasks,
             canopyDensities = canopyDensities,
             clearings = clearings,
             rockInfluences = rockInfluences,
+            treeLitterBalances = treeLitterBalances,
             dampShades = dampShades,
             organicFloorIntents = organicFloorIntents,
             groundCovers = nativeGroundCovers
@@ -212,11 +226,13 @@ public static class GroundCoverMapGenerator
         [ReadOnly] public NativeArray<BiomeType> biomes;
         [ReadOnly] public NativeArray<SurfaceType> surfaces;
         [ReadOnly] public NativeArray<float> moistures;
+        [ReadOnly] public NativeArray<float> localMoistureAdjustments;
         [ReadOnly] public NativeArray<float> slopes;
         [ReadOnly] public NativeArray<float> riverMasks;
         [ReadOnly] public NativeArray<float> canopyDensities;
         [ReadOnly] public NativeArray<float> clearings;
         [ReadOnly] public NativeArray<float> rockInfluences;
+        [ReadOnly] public NativeArray<float> treeLitterBalances;
         [ReadOnly] public NativeArray<float> dampShades;
         [ReadOnly] public NativeArray<float> organicFloorIntents;
 
@@ -254,7 +270,8 @@ public static class GroundCoverMapGenerator
             switch (biome)
             {
                 case BiomeType.Forest:
-                    return ClassifyForestCover(moisture, slope, riverMask, index, x, z);
+                    return ClassifyForestCover(math.clamp(moisture + localMoistureAdjustments[index], 0f, 1f),
+                        slope, riverMask, index, x, z);
                 case BiomeType.Taiga:
                     return Sample01(seed + 8310, x, z, 0.04f) > 0.48f
                         ? GroundCoverType.NeedleLitter
@@ -280,10 +297,21 @@ public static class GroundCoverMapGenerator
 
             if (cover == GroundCoverType.LeafLitter && dampShade > 0.49f &&
                 organicFloorIntents[index] < 0.70f && region > 0.52f)
-                return GroundCoverType.MixedForestFloor;
+                cover = GroundCoverType.MixedForestFloor;
 
             if (cover == GroundCoverType.Moss && dampShade > 0.68f && region > 0.57f)
                 return GroundCoverType.DenseMoss;
+
+            if (cover == GroundCoverType.LeafLitter || cover == GroundCoverType.MixedForestFloor)
+            {
+                float litterBalance = treeLitterBalances[index];
+                if (litterBalance > 0.35f)
+                    return GroundCoverType.NeedleLitter;
+                if (litterBalance > 0.10f)
+                    return GroundCoverType.MixedForestFloor;
+                if (litterBalance < -0.35f)
+                    return GroundCoverType.LeafLitter;
+            }
 
             return cover;
         }

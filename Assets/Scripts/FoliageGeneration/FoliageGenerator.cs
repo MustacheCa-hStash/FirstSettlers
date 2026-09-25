@@ -763,6 +763,7 @@ public static class FoliageGenerator
         var originalBiome = record.BiomeMap;
         var originalGround = record.GroundCoverMap;
         var originalSlope = record.SlopeMap;
+        var originalPlan = record.WorldFeaturePlan;
 
         if (flowerSettings == null || !flowerSettings.enableFlowers)
             yield break;
@@ -800,8 +801,17 @@ public static class FoliageGenerator
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;
 
-        float treeExclusionRadiusSqr =
-            flowerSettings.treeExclusionRadius * flowerSettings.treeExclusionRadius;
+        PlantClearancePolicy flowerClearance = CreateFlowerClearancePolicy(
+            flowerSettings, worldScale, 1f, flowerSettings.treeExclusionRadius);
+        PlantClearancePolicy tallClearance = CreateFlowerClearancePolicy(
+            flowerSettings, worldScale, Mathf.Clamp01(flowerSettings.tallFlowerClearanceScale),
+            flowerSettings.treeExclusionRadius);
+        PlantClearancePolicy daisyClearance = CreateFlowerClearancePolicy(
+            flowerSettings, worldScale, Mathf.Clamp01(flowerSettings.daisyWeedClearanceScale),
+            flowerSettings.daisyWeedTreeExclusionRadius);
+        float largestMinimum = Mathf.Max(LargestClearanceMinimum(flowerClearance),
+            Mathf.Max(LargestClearanceMinimum(tallClearance), LargestClearanceMinimum(daisyClearance)));
+        using var plannedClearance = PlannedPlantClearanceIndex.Create(record, chunkSize, worldScale, largestMinimum);
 
         int globalCellCountX = globalCellMaxX - globalCellMinX + 1;
         int globalCellCountZ = globalCellMaxZ - globalCellMinZ + 1;
@@ -813,7 +823,6 @@ public static class FoliageGenerator
         NativeArray<BiomeType> biomeMap = default;
         NativeArray<float> slopeMap = default;
         NativeArray<byte> allowedBiomeMask = default;
-        NativeArray<float2> treeExclusionPositions = default;
         NativeArray<FlowerDiscoveryResult> results = default;
         JobHandle handle = default;
         ChunkRecord.NativeTerrainData.Lease nativeLease = null;
@@ -838,7 +847,6 @@ public static class FoliageGenerator
                 slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.Persistent, out slopeMapWidth, out slopeMapHeight);
             }
             allowedBiomeMask = CreateAllowedBiomeMask(flowerSettings, Allocator.Persistent);
-            treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.Persistent);
             results =
                 new NativeArray<FlowerDiscoveryResult>(flowerCandidateCount, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
@@ -858,8 +866,11 @@ public static class FoliageGenerator
                 slopeMapHeight = slopeMapHeight,
                 hasSlopeMap = record.SlopeMap != null,
                 allowedBiomeMask = allowedBiomeMask,
-                treeExclusionPositions = treeExclusionPositions,
-                treeExclusionRadiusSqr = treeExclusionRadiusSqr,
+                plannedBlockers = plannedClearance.blockers,
+                blockerCellOffsets = plannedClearance.cellOffsets,
+                blockerCellEntries = plannedClearance.cellEntries,
+                blockerCellsPerAxis = plannedClearance.cellsPerAxis,
+                clearancePolicy = flowerClearance,
                 results = results,
                 worldSeed = worldSeed,
                 seedOffset = flowerSettings.seedOffset,
@@ -898,7 +909,7 @@ public static class FoliageGenerator
             if (!ReferenceEquals(record.FoliageData, foliageData) || revision != foliageData.FlowersRevision ||
                 !ReferenceEquals(record.HeightMap, originalHeight) || !ReferenceEquals(record.SurfaceTypeMap, originalSurface) ||
                 !ReferenceEquals(record.BiomeMap, originalBiome) || !ReferenceEquals(record.GroundCoverMap, originalGround) ||
-                !ReferenceEquals(record.SlopeMap, originalSlope)) yield break;
+                !ReferenceEquals(record.SlopeMap, originalSlope) || !ReferenceEquals(record.WorldFeaturePlan, originalPlan)) yield break;
 
             for (int i = 0; i < results.Length; i++)
             {
@@ -908,7 +919,7 @@ public static class FoliageGenerator
                     if (!ReferenceEquals(record.FoliageData, foliageData) || revision != foliageData.FlowersRevision ||
                         !ReferenceEquals(record.HeightMap, originalHeight) || !ReferenceEquals(record.SurfaceTypeMap, originalSurface) ||
                         !ReferenceEquals(record.BiomeMap, originalBiome) || !ReferenceEquals(record.GroundCoverMap, originalGround) ||
-                        !ReferenceEquals(record.SlopeMap, originalSlope)) yield break;
+                        !ReferenceEquals(record.SlopeMap, originalSlope) || !ReferenceEquals(record.WorldFeaturePlan, originalPlan)) yield break;
                 }
 
                 FlowerDiscoveryResult result = results[i];
@@ -941,8 +952,6 @@ public static class FoliageGenerator
             }
             if (allowedBiomeMask.IsCreated)
                 allowedBiomeMask.Dispose();
-            if (treeExclusionPositions.IsCreated)
-                treeExclusionPositions.Dispose();
             if (results.IsCreated)
                 results.Dispose();
         }
@@ -956,7 +965,9 @@ public static class FoliageGenerator
                 chunkSize,
                 worldScale,
                 meshHeightMultiplier,
-                false);
+                false,
+                plannedClearance,
+                tallClearance);
             GenerateTallFlowerPatches(
                 record,
                 flowerSettings,
@@ -964,7 +975,9 @@ public static class FoliageGenerator
                 chunkSize,
                 worldScale,
                 meshHeightMultiplier,
-                true);
+                true,
+                plannedClearance,
+                tallClearance);
         }
 
         if (flowerSettings.daisyWeedPrefab != null)
@@ -975,7 +988,9 @@ public static class FoliageGenerator
                 worldSeed,
                 chunkSize,
                 worldScale,
-                meshHeightMultiplier);
+                meshHeightMultiplier,
+                plannedClearance,
+                daisyClearance);
         }
 
         foliageData.flowersGenerated = true;
@@ -988,7 +1003,9 @@ public static class FoliageGenerator
         int chunkSize,
         float worldScale,
         float meshHeightMultiplier,
-        bool isMeadow)
+        bool isMeadow,
+        PlannedPlantClearanceIndex plannedClearance,
+        PlantClearancePolicy clearancePolicy)
     {
         if (record.HeightMap == null || record.SurfaceTypeMap == null || record.BiomeMap == null)
             return;
@@ -1015,7 +1032,6 @@ public static class FoliageGenerator
         int maxCellX = Mathf.FloorToInt((chunkMaxX + padding) / cellSize);
         int minCellZ = Mathf.FloorToInt((chunkMinZ - padding) / cellSize);
         int maxCellZ = Mathf.FloorToInt((chunkMaxZ + padding) / cellSize);
-        float treeExclusionRadiusSqr = settings.treeExclusionRadius * settings.treeExclusionRadius;
         float scaleMin = Mathf.Min(settings.uniformScaleRange.x, settings.uniformScaleRange.y) * settings.tallFlowerUniformScale;
         float scaleMax = Mathf.Max(settings.uniformScaleRange.x, settings.uniformScaleRange.y) * settings.tallFlowerUniformScale;
         float topLeftX = chunkSize / -2f;
@@ -1102,22 +1118,11 @@ public static class FoliageGenerator
                         continue;
                     }
 
+                    if (plannedClearance.IsExcluded(localSampleX, localSampleZ, clearancePolicy))
+                        continue;
+
                     float localX = (topLeftX + localSampleX) * worldScale;
                     float localZ = (bottomLeftZ + localSampleZ) * worldScale;
-                    bool nearTree = false;
-                    List<TreeInstanceData> trees = record.FoliageData.treeCubeInstances;
-                    for (int treeIndex = 0; trees != null && treeIndex < trees.Count; treeIndex++)
-                    {
-                        Vector3 delta = trees[treeIndex].localPosition - new Vector3(localX, 0f, localZ);
-                        if (delta.x * delta.x + delta.z * delta.z < treeExclusionRadiusSqr)
-                        {
-                            nearTree = true;
-                            break;
-                        }
-                    }
-
-                    if (nearTree)
-                        continue;
 
                     if (!isSatellite && !clearedOtherFlowerPatch)
                     {
@@ -1184,7 +1189,9 @@ public static class FoliageGenerator
         int worldSeed,
         int chunkSize,
         float worldScale,
-        float meshHeightMultiplier)
+        float meshHeightMultiplier,
+        PlannedPlantClearanceIndex plannedClearance,
+        PlantClearancePolicy clearancePolicy)
     {
         if (record.HeightMap == null || record.SurfaceTypeMap == null || record.BiomeMap == null)
             return;
@@ -1203,7 +1210,6 @@ public static class FoliageGenerator
         int maxCellX = Mathf.FloorToInt((chunkMaxX + padding) / cellSize);
         int minCellZ = Mathf.FloorToInt((chunkMinZ - padding) / cellSize);
         int maxCellZ = Mathf.FloorToInt((chunkMaxZ + padding) / cellSize);
-        float exclusionRadiusSqr = settings.daisyWeedTreeExclusionRadius * settings.daisyWeedTreeExclusionRadius;
         float scaleMin = Mathf.Min(settings.uniformScaleRange.x, settings.uniformScaleRange.y) * settings.daisyWeedUniformScale;
         float scaleMax = Mathf.Max(settings.uniformScaleRange.x, settings.uniformScaleRange.y) * settings.daisyWeedUniformScale;
         float topLeftX = chunkSize / -2f;
@@ -1254,21 +1260,11 @@ public static class FoliageGenerator
                         (record.SlopeMap != null && record.SlopeMap[mapX, mapZ] > settings.daisyWeedMaxSlope))
                         continue;
 
+                    if (plannedClearance.IsExcluded(localSampleX, localSampleZ, clearancePolicy))
+                        continue;
+
                     float localX = (topLeftX + localSampleX) * worldScale;
                     float localZ = (bottomLeftZ + localSampleZ) * worldScale;
-                    bool nearTree = false;
-                    List<TreeInstanceData> trees = record.FoliageData.treeCubeInstances;
-                    for (int treeIndex = 0; trees != null && treeIndex < trees.Count; treeIndex++)
-                    {
-                        Vector3 delta = trees[treeIndex].localPosition - new Vector3(localX, 0f, localZ);
-                        if (delta.x * delta.x + delta.z * delta.z < exclusionRadiusSqr)
-                        {
-                            nearTree = true;
-                            break;
-                        }
-                    }
-                    if (nearTree)
-                        continue;
 
                     float height = SampleHeightBilinear(record.HeightMap, localSampleX, localSampleZ, chunkSize);
                     float yaw = settings.randomizeYaw ? Hash01(instanceHash + 83) * 360f : 0f;
@@ -1322,6 +1318,7 @@ public static class FoliageGenerator
         var originalBiome = record.BiomeMap;
         var originalGround = record.GroundCoverMap;
         var originalSlope = record.SlopeMap;
+        var originalPlan = record.WorldFeaturePlan;
 
         if (cloverSettings == null || !cloverSettings.enableClover || cloverPrefabCount <= 0)
         {
@@ -1371,15 +1368,17 @@ public static class FoliageGenerator
         int globalCellCountZ = globalCellMaxZ - globalCellMinZ + 1;
         int patchCandidateCount = globalCellCountX * globalCellCountZ * maxPatchCentersPerCell;
         int clumpCandidateCount = patchCandidateCount * maxClumpsPerPatch;
+        PlantClearancePolicy clearancePolicy = CreateLowPlantClearancePolicy(worldScale,
+            cloverSettings.treeExclusionRadius, cloverSettings.bushExclusionRadius,
+            cloverSettings.rockExclusionRadius);
+        using var plannedClearance = PlannedPlantClearanceIndex.Create(
+            record, chunkSize, worldScale, LargestClearanceMinimum(clearancePolicy));
 
         NativeArray<float> heightMap = default;
         NativeArray<SurfaceType> surfaceMap = default;
         NativeArray<BiomeType> biomeMap = default;
         NativeArray<GroundCoverType> groundCoverMap = default;
         NativeArray<float> slopeMap = default;
-        NativeArray<float2> treeExclusionPositions = default;
-        NativeArray<float2> bushExclusionPositions = default;
-        NativeArray<float2> rockExclusionPositions = default;
         NativeArray<CloverDiscoveryResult> results = default;
         JobHandle handle = default;
         ChunkRecord.NativeTerrainData.Lease nativeLease = null;
@@ -1406,9 +1405,6 @@ public static class FoliageGenerator
                 groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.Persistent, out groundCoverMapWidth, out groundCoverMapHeight);
                 slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.Persistent, out slopeMapWidth, out slopeMapHeight);
             }
-            treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.Persistent);
-            bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, Allocator.Persistent);
-            rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, Allocator.Persistent);
             results =
                 new NativeArray<CloverDiscoveryResult>(clumpCandidateCount, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
@@ -1431,12 +1427,11 @@ public static class FoliageGenerator
                 slopeMapWidth = slopeMapWidth,
                 slopeMapHeight = slopeMapHeight,
                 hasSlopeMap = record.SlopeMap != null,
-                treeExclusionPositions = treeExclusionPositions,
-                bushExclusionPositions = bushExclusionPositions,
-                rockExclusionPositions = rockExclusionPositions,
-                treeExclusionRadiusSqr = cloverSettings.treeExclusionRadius * cloverSettings.treeExclusionRadius,
-                bushExclusionRadiusSqr = cloverSettings.bushExclusionRadius * cloverSettings.bushExclusionRadius,
-                rockExclusionRadiusSqr = cloverSettings.rockExclusionRadius * cloverSettings.rockExclusionRadius,
+                plannedBlockers = plannedClearance.blockers,
+                blockerCellOffsets = plannedClearance.cellOffsets,
+                blockerCellEntries = plannedClearance.cellEntries,
+                blockerCellsPerAxis = plannedClearance.cellsPerAxis,
+                clearancePolicy = clearancePolicy,
                 results = results,
                 worldSeed = worldSeed,
                 seedOffset = cloverSettings.seedOffset,
@@ -1477,7 +1472,7 @@ public static class FoliageGenerator
             if (!ReferenceEquals(record.FoliageData, foliageData) || revision != foliageData.CloverRevision ||
                 !ReferenceEquals(record.HeightMap, originalHeight) || !ReferenceEquals(record.SurfaceTypeMap, originalSurface) ||
                 !ReferenceEquals(record.BiomeMap, originalBiome) || !ReferenceEquals(record.GroundCoverMap, originalGround) ||
-                !ReferenceEquals(record.SlopeMap, originalSlope)) yield break;
+                !ReferenceEquals(record.SlopeMap, originalSlope) || !ReferenceEquals(record.WorldFeaturePlan, originalPlan)) yield break;
 
             for (int i = 0; i < results.Length; i++)
             {
@@ -1487,7 +1482,7 @@ public static class FoliageGenerator
                     if (!ReferenceEquals(record.FoliageData, foliageData) || revision != foliageData.CloverRevision ||
                         !ReferenceEquals(record.HeightMap, originalHeight) || !ReferenceEquals(record.SurfaceTypeMap, originalSurface) ||
                         !ReferenceEquals(record.BiomeMap, originalBiome) || !ReferenceEquals(record.GroundCoverMap, originalGround) ||
-                        !ReferenceEquals(record.SlopeMap, originalSlope)) yield break;
+                        !ReferenceEquals(record.SlopeMap, originalSlope) || !ReferenceEquals(record.WorldFeaturePlan, originalPlan)) yield break;
                 }
 
                 CloverDiscoveryResult result = results[i];
@@ -1520,12 +1515,6 @@ public static class FoliageGenerator
                 if (groundCoverMap.IsCreated) groundCoverMap.Dispose();
                 if (slopeMap.IsCreated) slopeMap.Dispose();
             }
-            if (treeExclusionPositions.IsCreated)
-                treeExclusionPositions.Dispose();
-            if (bushExclusionPositions.IsCreated)
-                bushExclusionPositions.Dispose();
-            if (rockExclusionPositions.IsCreated)
-                rockExclusionPositions.Dispose();
             if (results.IsCreated)
                 results.Dispose();
         }
@@ -1566,6 +1555,7 @@ public static class FoliageGenerator
         var originalBiome = record.BiomeMap;
         var originalGround = record.GroundCoverMap;
         var originalSlope = record.SlopeMap;
+        var originalPlan = record.WorldFeaturePlan;
 
         if (dandelionSettings == null || !dandelionSettings.enableDandelions)
         {
@@ -1615,15 +1605,17 @@ public static class FoliageGenerator
         int globalCellCountZ = globalCellMaxZ - globalCellMinZ + 1;
         int patchCandidateCount = globalCellCountX * globalCellCountZ * maxPatchCentersPerCell;
         int dandelionCandidateCount = patchCandidateCount * maxDandelionsPerPatch;
+        PlantClearancePolicy clearancePolicy = CreateLowPlantClearancePolicy(worldScale,
+            dandelionSettings.treeExclusionRadius, dandelionSettings.bushExclusionRadius,
+            dandelionSettings.rockExclusionRadius);
+        using var plannedClearance = PlannedPlantClearanceIndex.Create(
+            record, chunkSize, worldScale, LargestClearanceMinimum(clearancePolicy));
 
         NativeArray<float> heightMap = default;
         NativeArray<SurfaceType> surfaceMap = default;
         NativeArray<BiomeType> biomeMap = default;
         NativeArray<GroundCoverType> groundCoverMap = default;
         NativeArray<float> slopeMap = default;
-        NativeArray<float2> treeExclusionPositions = default;
-        NativeArray<float2> bushExclusionPositions = default;
-        NativeArray<float2> rockExclusionPositions = default;
         NativeArray<CloverDiscoveryResult> results = default;
         JobHandle handle = default;
         ChunkRecord.NativeTerrainData.Lease nativeLease = null;
@@ -1650,9 +1642,6 @@ public static class FoliageGenerator
                 groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.Persistent, out groundCoverMapWidth, out groundCoverMapHeight);
                 slopeMap = FlattenFloatMap(record.SlopeMap, Allocator.Persistent, out slopeMapWidth, out slopeMapHeight);
             }
-            treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.Persistent);
-            bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, Allocator.Persistent);
-            rockExclusionPositions = CreateRockExclusionPositions(foliageData.rockInstances, Allocator.Persistent);
             results =
                 new NativeArray<CloverDiscoveryResult>(dandelionCandidateCount, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
@@ -1675,12 +1664,11 @@ public static class FoliageGenerator
                 slopeMapWidth = slopeMapWidth,
                 slopeMapHeight = slopeMapHeight,
                 hasSlopeMap = record.SlopeMap != null,
-                treeExclusionPositions = treeExclusionPositions,
-                bushExclusionPositions = bushExclusionPositions,
-                rockExclusionPositions = rockExclusionPositions,
-                treeExclusionRadiusSqr = dandelionSettings.treeExclusionRadius * dandelionSettings.treeExclusionRadius,
-                bushExclusionRadiusSqr = dandelionSettings.bushExclusionRadius * dandelionSettings.bushExclusionRadius,
-                rockExclusionRadiusSqr = dandelionSettings.rockExclusionRadius * dandelionSettings.rockExclusionRadius,
+                plannedBlockers = plannedClearance.blockers,
+                blockerCellOffsets = plannedClearance.cellOffsets,
+                blockerCellEntries = plannedClearance.cellEntries,
+                blockerCellsPerAxis = plannedClearance.cellsPerAxis,
+                clearancePolicy = clearancePolicy,
                 results = results,
                 worldSeed = worldSeed,
                 seedOffset = dandelionSettings.seedOffset,
@@ -1721,7 +1709,7 @@ public static class FoliageGenerator
             if (!ReferenceEquals(record.FoliageData, foliageData) || revision != foliageData.DandelionsRevision ||
                 !ReferenceEquals(record.HeightMap, originalHeight) || !ReferenceEquals(record.SurfaceTypeMap, originalSurface) ||
                 !ReferenceEquals(record.BiomeMap, originalBiome) || !ReferenceEquals(record.GroundCoverMap, originalGround) ||
-                !ReferenceEquals(record.SlopeMap, originalSlope)) yield break;
+                !ReferenceEquals(record.SlopeMap, originalSlope) || !ReferenceEquals(record.WorldFeaturePlan, originalPlan)) yield break;
 
             for (int i = 0; i < results.Length; i++)
             {
@@ -1731,7 +1719,7 @@ public static class FoliageGenerator
                     if (!ReferenceEquals(record.FoliageData, foliageData) || revision != foliageData.DandelionsRevision ||
                         !ReferenceEquals(record.HeightMap, originalHeight) || !ReferenceEquals(record.SurfaceTypeMap, originalSurface) ||
                         !ReferenceEquals(record.BiomeMap, originalBiome) || !ReferenceEquals(record.GroundCoverMap, originalGround) ||
-                        !ReferenceEquals(record.SlopeMap, originalSlope)) yield break;
+                        !ReferenceEquals(record.SlopeMap, originalSlope) || !ReferenceEquals(record.WorldFeaturePlan, originalPlan)) yield break;
                 }
 
                 CloverDiscoveryResult result = results[i];
@@ -1762,12 +1750,6 @@ public static class FoliageGenerator
                 if (groundCoverMap.IsCreated) groundCoverMap.Dispose();
                 if (slopeMap.IsCreated) slopeMap.Dispose();
             }
-            if (treeExclusionPositions.IsCreated)
-                treeExclusionPositions.Dispose();
-            if (bushExclusionPositions.IsCreated)
-                bushExclusionPositions.Dispose();
-            if (rockExclusionPositions.IsCreated)
-                rockExclusionPositions.Dispose();
             if (results.IsCreated)
                 results.Dispose();
         }
@@ -2289,6 +2271,178 @@ public static class FoliageGenerator
         return result;
     }
 
+    private struct PlannedPlantBlocker
+    {
+        public float2 position;
+        public float footprintRadius;
+        public WorldFeatureType type;
+    }
+
+    private struct PlantClearancePolicy
+    {
+        public float treeMinimum;
+        public float bushMinimum;
+        public float rockMinimum;
+        public float treeFootprintFraction;
+        public float bushFootprintFraction;
+        public float rockFootprintFraction;
+    }
+
+    private sealed class PlannedPlantClearanceIndex : System.IDisposable
+    {
+        public NativeArray<PlannedPlantBlocker> blockers;
+        public NativeArray<int> cellOffsets;
+        public NativeArray<int> cellEntries;
+        public int cellsPerAxis;
+        public const float CellSize = 8f;
+
+        public static PlannedPlantClearanceIndex Create(ChunkRecord record, int chunkSize, float worldScale,
+            float largestMinimum)
+        {
+            var candidates = new List<PlannedPlantBlocker>();
+            if (record.WorldFeaturePlan != null)
+            {
+                foreach (WorldFeaturePlacement placement in record.WorldFeaturePlan.Placements)
+                {
+                    if (placement.featureType != WorldFeatureType.Tree &&
+                        placement.featureType != WorldFeatureType.Bush &&
+                        placement.featureType != WorldFeatureType.Boulder)
+                        continue;
+                    candidates.Add(new PlannedPlantBlocker
+                    {
+                        position = new float2(placement.sampleX, placement.sampleZ),
+                        footprintRadius = Mathf.Max(0f, placement.exclusionRadius),
+                        type = placement.featureType
+                    });
+                }
+            }
+            else if (record.FoliageData != null)
+            {
+                // Fixtures without a feature plan can still exercise the older instance path.
+                float invScale = 1f / Mathf.Max(0.0001f, Mathf.Abs(worldScale));
+                void AddFallback(Vector3 position, WorldFeatureType type) => candidates.Add(new PlannedPlantBlocker
+                {
+                    position = new float2(position.x * invScale + chunkSize * 0.5f,
+                        position.z * invScale + chunkSize * 0.5f),
+                    type = type
+                });
+                foreach (TreeInstanceData tree in record.FoliageData.treeCubeInstances)
+                    AddFallback(tree.localPosition, WorldFeatureType.Tree);
+                foreach (BerryBushInstanceData bush in record.FoliageData.bushInstances)
+                    AddFallback(bush.localPosition, WorldFeatureType.Bush);
+                foreach (RockInstanceData rock in record.FoliageData.rockInstances)
+                    AddFallback(rock.localPosition, WorldFeatureType.Boulder);
+            }
+
+            int axis = Mathf.Max(1, Mathf.CeilToInt(chunkSize / CellSize));
+            var cells = new List<int>[axis * axis];
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                PlannedPlantBlocker blocker = candidates[i];
+                // Every policy uses a footprint fraction <= 1, so this is conservative.
+                float reach = Mathf.Max(blocker.footprintRadius, largestMinimum);
+                int minX = Mathf.Clamp(Mathf.FloorToInt((blocker.position.x - reach) / CellSize), 0, axis - 1);
+                int maxX = Mathf.Clamp(Mathf.FloorToInt((blocker.position.x + reach) / CellSize), 0, axis - 1);
+                int minZ = Mathf.Clamp(Mathf.FloorToInt((blocker.position.y - reach) / CellSize), 0, axis - 1);
+                int maxZ = Mathf.Clamp(Mathf.FloorToInt((blocker.position.y + reach) / CellSize), 0, axis - 1);
+                for (int z = minZ; z <= maxZ; z++)
+                    for (int x = minX; x <= maxX; x++)
+                        (cells[z * axis + x] ??= new List<int>()).Add(i);
+            }
+
+            var result = new PlannedPlantClearanceIndex { cellsPerAxis = axis };
+            try
+            {
+                result.blockers = new NativeArray<PlannedPlantBlocker>(candidates.Count, Allocator.Persistent);
+                result.cellOffsets = new NativeArray<int>(cells.Length + 1, Allocator.Persistent);
+                int totalEntries = 0;
+                for (int i = 0; i < cells.Length; i++)
+                {
+                    result.cellOffsets[i] = totalEntries;
+                    totalEntries += cells[i]?.Count ?? 0;
+                }
+                result.cellOffsets[cells.Length] = totalEntries;
+                result.cellEntries = new NativeArray<int>(totalEntries, Allocator.Persistent);
+                for (int i = 0; i < candidates.Count; i++) result.blockers[i] = candidates[i];
+                int entry = 0;
+                for (int i = 0; i < cells.Length; i++)
+                    if (cells[i] != null)
+                        foreach (int blockerIndex in cells[i]) result.cellEntries[entry++] = blockerIndex;
+                return result;
+            }
+            catch
+            {
+                result.Dispose();
+                throw;
+            }
+        }
+
+        public bool IsExcluded(float sampleX, float sampleZ, PlantClearancePolicy policy) =>
+            IsExcludedByPlannedFeature(new float2(sampleX, sampleZ), blockers, cellOffsets,
+                cellEntries, cellsPerAxis, policy);
+
+        public void Dispose()
+        {
+            if (blockers.IsCreated) blockers.Dispose();
+            if (cellOffsets.IsCreated) cellOffsets.Dispose();
+            if (cellEntries.IsCreated) cellEntries.Dispose();
+        }
+    }
+
+    private static bool IsExcludedByPlannedFeature(float2 sample, NativeArray<PlannedPlantBlocker> blockers,
+        NativeArray<int> offsets, NativeArray<int> entries, int cellsPerAxis, PlantClearancePolicy policy)
+    {
+        int cellX = math.clamp((int)math.floor(sample.x / PlannedPlantClearanceIndex.CellSize), 0, cellsPerAxis - 1);
+        int cellZ = math.clamp((int)math.floor(sample.y / PlannedPlantClearanceIndex.CellSize), 0, cellsPerAxis - 1);
+        int cell = cellZ * cellsPerAxis + cellX;
+        for (int i = offsets[cell]; i < offsets[cell + 1]; i++)
+        {
+            PlannedPlantBlocker blocker = blockers[entries[i]];
+            float radius = blocker.type == WorldFeatureType.Tree
+                ? math.max(policy.treeMinimum, blocker.footprintRadius * policy.treeFootprintFraction)
+                : blocker.type == WorldFeatureType.Bush
+                    ? math.max(policy.bushMinimum, blocker.footprintRadius * policy.bushFootprintFraction)
+                    : math.max(policy.rockMinimum, blocker.footprintRadius * policy.rockFootprintFraction);
+            float2 delta = sample - blocker.position;
+            if (math.lengthsq(delta) < radius * radius)
+                return true;
+        }
+        return false;
+    }
+
+    private static PlantClearancePolicy CreateFlowerClearancePolicy(FlowerSettings settings, float worldScale,
+        float footprintScale, float treeMinimum)
+    {
+        float sampleScale = 1f / Mathf.Max(0.0001f, Mathf.Abs(worldScale));
+        return new PlantClearancePolicy
+        {
+            treeMinimum = Mathf.Max(0f, treeMinimum) * sampleScale,
+            bushMinimum = Mathf.Max(0f, settings.bushExclusionRadius) * sampleScale * footprintScale,
+            rockMinimum = Mathf.Max(0f, settings.rockExclusionRadius) * sampleScale * footprintScale,
+            treeFootprintFraction = 0.5f * footprintScale,
+            bushFootprintFraction = 0.8f * footprintScale,
+            rockFootprintFraction = 0.7f * footprintScale
+        };
+    }
+
+    private static PlantClearancePolicy CreateLowPlantClearancePolicy(float worldScale,
+        float treeMinimum, float bushMinimum, float rockMinimum)
+    {
+        float sampleScale = 1f / Mathf.Max(0.0001f, Mathf.Abs(worldScale));
+        return new PlantClearancePolicy
+        {
+            treeMinimum = Mathf.Max(0f, treeMinimum) * sampleScale,
+            bushMinimum = Mathf.Max(0f, bushMinimum) * sampleScale,
+            rockMinimum = Mathf.Max(0f, rockMinimum) * sampleScale,
+            treeFootprintFraction = 0.45f,
+            bushFootprintFraction = 0.7f,
+            rockFootprintFraction = 0.65f
+        };
+    }
+
+    private static float LargestClearanceMinimum(PlantClearancePolicy policy) =>
+        Mathf.Max(policy.treeMinimum, Mathf.Max(policy.bushMinimum, policy.rockMinimum));
+
     private static NativeArray<float2> CreateTreeExclusionPositions(List<TreeInstanceData> instances, Allocator allocator)
     {
         int count = instances != null ? instances.Count : 0;
@@ -2763,8 +2917,11 @@ public static class FoliageGenerator
         public int slopeMapHeight;
         public bool hasSlopeMap;
         [ReadOnly] public NativeArray<byte> allowedBiomeMask;
-        [ReadOnly] public NativeArray<float2> treeExclusionPositions;
-        public float treeExclusionRadiusSqr;
+        [ReadOnly] public NativeArray<PlannedPlantBlocker> plannedBlockers;
+        [ReadOnly] public NativeArray<int> blockerCellOffsets;
+        [ReadOnly] public NativeArray<int> blockerCellEntries;
+        public int blockerCellsPerAxis;
+        public PlantClearancePolicy clearancePolicy;
         // Execute(p) writes only [p * maxFlowersPerPatch, (p + 1) * maxFlowersPerPatch).
         [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<FlowerDiscoveryResult> results;
         public int worldSeed;
@@ -2877,9 +3034,8 @@ public static class FoliageGenerator
 
             float localX = (topLeftX + localSampleX) * worldScale;
             float localZ = (bottomLeftZ + localSampleZ) * worldScale;
-            float2 localXZ = new float2(localX, localZ);
-
-            if (IsInsideExclusion(localXZ, treeExclusionPositions, treeExclusionRadiusSqr))
+            if (IsExcludedByPlannedFeature(new float2(localSampleX, localSampleZ), plannedBlockers,
+                blockerCellOffsets, blockerCellEntries, blockerCellsPerAxis, clearancePolicy))
             {
                 results[index] = default;
                 return;
@@ -2918,21 +3074,6 @@ public static class FoliageGenerator
                 return false;
 
             return true;
-        }
-
-        private bool IsInsideExclusion(float2 localXZ, NativeArray<float2> positions, float exclusionRadiusSqr)
-        {
-            if (exclusionRadiusSqr <= 0f)
-                return false;
-
-            for (int i = 0; i < positions.Length; i++)
-            {
-                float2 delta = localXZ - positions[i];
-                if (math.lengthsq(delta) < exclusionRadiusSqr)
-                    return true;
-            }
-
-            return false;
         }
 
         private float SampleHeightBilinear(float sampleX, float sampleZ)
@@ -3061,12 +3202,11 @@ public static class FoliageGenerator
         public int slopeMapWidth;
         public int slopeMapHeight;
         public bool hasSlopeMap;
-        [ReadOnly] public NativeArray<float2> treeExclusionPositions;
-        [ReadOnly] public NativeArray<float2> bushExclusionPositions;
-        [ReadOnly] public NativeArray<float2> rockExclusionPositions;
-        public float treeExclusionRadiusSqr;
-        public float bushExclusionRadiusSqr;
-        public float rockExclusionRadiusSqr;
+        [ReadOnly] public NativeArray<PlannedPlantBlocker> plannedBlockers;
+        [ReadOnly] public NativeArray<int> blockerCellOffsets;
+        [ReadOnly] public NativeArray<int> blockerCellEntries;
+        public int blockerCellsPerAxis;
+        public PlantClearancePolicy clearancePolicy;
         // Execute(p) writes only [p * maxClumpsPerPatch, (p + 1) * maxClumpsPerPatch).
         [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<CloverDiscoveryResult> results;
         public int worldSeed;
@@ -3196,11 +3336,8 @@ public static class FoliageGenerator
 
             float localX = (topLeftX + localSampleX) * worldScale;
             float localZ = (bottomLeftZ + localSampleZ) * worldScale;
-            float2 localXZ = new float2(localX, localZ);
-
-            if (IsInsideExclusion(localXZ, treeExclusionPositions, treeExclusionRadiusSqr) ||
-                IsInsideExclusion(localXZ, bushExclusionPositions, bushExclusionRadiusSqr) ||
-                IsInsideExclusion(localXZ, rockExclusionPositions, rockExclusionRadiusSqr))
+            if (IsExcludedByPlannedFeature(new float2(localSampleX, localSampleZ), plannedBlockers,
+                blockerCellOffsets, blockerCellEntries, blockerCellsPerAxis, clearancePolicy))
             {
                 results[index] = default;
                 return;
@@ -3253,21 +3390,6 @@ public static class FoliageGenerator
                 return false;
 
             return true;
-        }
-
-        private bool IsInsideExclusion(float2 localXZ, NativeArray<float2> positions, float exclusionRadiusSqr)
-        {
-            if (exclusionRadiusSqr <= 0f)
-                return false;
-
-            for (int i = 0; i < positions.Length; i++)
-            {
-                float2 delta = localXZ - positions[i];
-                if (math.lengthsq(delta) < exclusionRadiusSqr)
-                    return true;
-            }
-
-            return false;
         }
 
         private quaternion CreateSurfaceAlignedRotation(float yawDegrees, float3 surfaceNormal)
