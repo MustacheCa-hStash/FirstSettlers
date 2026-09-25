@@ -265,10 +265,15 @@ public static partial class HeightMapGenerator
         float carvedRiverMask = 0f;
         if (erosion.carveRivers)
         {
-            float scale = math.max(sampleScale, 0.0001f) * 10f;
-            float riverMask = SampleRiverMask(position.x / scale, position.y / scale, riverSeed, out float basin);
             float eligibility = (1f - math.smoothstep(0.012f, 0.03f, input.MountainContribution)) *
                 (1f - math.smoothstep(0.20f, 0.55f, input.MountainWeight));
+            float riverMask = 0f;
+            float basin = 0f;
+            if (eligibility != 0f)
+            {
+                float scale = math.max(sampleScale, 0.0001f) * 10f;
+                riverMask = SampleRiverMask(position.x / scale, position.y / scale, riverSeed, out basin);
+            }
             carvedRiverMask = riverMask * eligibility;
             height = CarveRiverBasin(height, basin * eligibility, carvedRiverMask, waterLevel,
                 erosion.riverValleyWidth, erosion.riverValleyFlattening);
@@ -320,6 +325,12 @@ public static partial class HeightMapGenerator
         float distSq7 = 0f;
         float distSq8 = 0f;
 
+        int nearestIndex0 = -1;
+        int nearestIndex1 = -1;
+        int nearestIndex2 = -1;
+        float nearestDistSq0 = float.MaxValue;
+        float nearestDistSq1 = float.MaxValue;
+        float nearestDistSq2 = float.MaxValue;
         int siteCount = 0;
 
         for (int dz = -1; dz <= 1; dz++)
@@ -337,6 +348,29 @@ public static partial class HeightMapGenerator
                 SetRiverSite(siteCount, site, distSq,
                     ref site0, ref site1, ref site2, ref site3, ref site4, ref site5, ref site6, ref site7, ref site8,
                     ref distSq0, ref distSq1, ref distSq2, ref distSq3, ref distSq4, ref distSq5, ref distSq6, ref distSq7, ref distSq8);
+
+                // Strict comparisons keep earlier site indices first when distances tie.
+                if (nearestIndex0 < 0 || distSq < nearestDistSq0)
+                {
+                    nearestIndex2 = nearestIndex1;
+                    nearestDistSq2 = nearestDistSq1;
+                    nearestIndex1 = nearestIndex0;
+                    nearestDistSq1 = nearestDistSq0;
+                    nearestIndex0 = siteCount;
+                    nearestDistSq0 = distSq;
+                }
+                else if (nearestIndex1 < 0 || distSq < nearestDistSq1)
+                {
+                    nearestIndex2 = nearestIndex1;
+                    nearestDistSq2 = nearestDistSq1;
+                    nearestIndex1 = siteCount;
+                    nearestDistSq1 = distSq;
+                }
+                else if (nearestIndex2 < 0 || distSq < nearestDistSq2)
+                {
+                    nearestIndex2 = siteCount;
+                    nearestDistSq2 = distSq;
+                }
 
                 siteCount++;
             }
@@ -359,31 +393,11 @@ public static partial class HeightMapGenerator
                     distSq0, distSq1, distSq2, distSq3, distSq4, distSq5, distSq6, distSq7, distSq8,
                     out float2 b, out float distSqB);
 
-                float siteDeltaX = b.x - a.x;
-                float siteDeltaZ = b.y - a.y;
-                float siteSeparation = math.sqrt(siteDeltaX * siteDeltaX + siteDeltaZ * siteDeltaZ);
-
-                if (siteSeparation < 0.0001f)
-                    continue;
-
                 float pairNearness = math.max(distSqA, distSqB);
-                float closestThirdGap = float.MaxValue;
-
-                for (int k = 0; k < siteCount; k++)
-                {
-                    if (k == i || k == j)
-                        continue;
-
-                    GetRiverSiteByIndex(k,
-                        site0, site1, site2, site3, site4, site5, site6, site7, site8,
-                        distSq0, distSq1, distSq2, distSq3, distSq4, distSq5, distSq6, distSq7, distSq8,
-                        out _, out float distSqK);
-
-                    float thirdGap = distSqK - pairNearness;
-
-                    if (thirdGap < closestThirdGap)
-                        closestThirdGap = thirdGap;
-                }
+                // Excluding two sites leaves at least one of the three nearest.
+                float closestThirdDistSq = nearestIndex0 != i && nearestIndex0 != j ? nearestDistSq0 :
+                    nearestIndex1 != i && nearestIndex1 != j ? nearestDistSq1 : nearestDistSq2;
+                float closestThirdGap = closestThirdDistSq - pairNearness;
 
                 float adjacencyGate = InverseLerp(-pairAdjacencyFadeWidth, 0f, closestThirdGap);
 
@@ -392,6 +406,13 @@ public static partial class HeightMapGenerator
                 adjacencyGate = Smooth01(adjacencyGate);
 
                 if (adjacencyGate <= 0f)
+                    continue;
+
+                float siteDeltaX = b.x - a.x;
+                float siteDeltaZ = b.y - a.y;
+                float siteSeparation = math.sqrt(siteDeltaX * siteDeltaX + siteDeltaZ * siteDeltaZ);
+
+                if (siteSeparation < 0.0001f)
                     continue;
 
                 float borderDistance = math.abs(distSqB - distSqA) / (2f * siteSeparation);
