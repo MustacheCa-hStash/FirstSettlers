@@ -52,6 +52,9 @@ public class WorldManager : MonoBehaviour
     [Header("Water")]
     [Tooltip("Shared world-space surface Y for rivers and lakes. Applied when the world starts; restart Play Mode after changing. Raising this also expands lakes and moves shorelines.")]
     [SerializeField] float globalWaterY = TerrainWaterSettings.DefaultWaterLevel * 10f;
+    [SerializeField, Range(0.25f, 1f)] float waterReflectionResolution = 0.5f;
+    [SerializeField, Range(1f, 60f)] float waterReflectionUpdatesPerSecond = 30f;
+    [SerializeField, Min(20f)] float waterReflectionDistance = 300f;
     [Header("Terrain Lighting")]
     [SerializeField] bool terrainReceiveShadows = true;
     [Header("Terrain Generation Profiling")]
@@ -82,6 +85,7 @@ public class WorldManager : MonoBehaviour
     [SerializeField] float colliderApplyBudgetMsPerFrame = 0.25f;
 
     private ChunkManager chunkManager;
+    private PlanarWaterReflection planarWaterReflection;
     public Transform Viewer => viewer;
 
     void Awake()
@@ -105,6 +109,16 @@ public class WorldManager : MonoBehaviour
             completedRequestApplyBudgetMsPerFrame,
             terrainDataApplyBudgetMsPerFrame, farTerrainApplyBudgetMsPerFrame,
             lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame, mountainWidth, mountainSnowBlendGamma, erosion.Sanitized());
+
+        if (waterMaterial != null && waterMaterial.shader != null &&
+            waterMaterial.shader.name == "FirstSettlers/Murky Planar Water")
+        {
+            planarWaterReflection = GetComponent<PlanarWaterReflection>();
+            if (planarWaterReflection == null)
+                planarWaterReflection = gameObject.AddComponent<PlanarWaterReflection>();
+            planarWaterReflection.Configure(viewerCamera, globalWaterY, waterReflectionResolution,
+                waterReflectionUpdatesPerSecond, waterReflectionDistance);
+        }
     }
 
     void OnValidate() { erosion = erosion.Sanitized(); }

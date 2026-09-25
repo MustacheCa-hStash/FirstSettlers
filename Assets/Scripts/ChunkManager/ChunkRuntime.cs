@@ -59,6 +59,7 @@ public class ChunkRuntime
         terrainMeshRenderer.shadowCastingMode = ShadowCastingMode.Off;
 
         waterRoot = new GameObject("Water");
+        waterRoot.layer = LayerMask.NameToLayer("Water");
         waterRoot.transform.SetParent(root.transform, false);
         waterRoot.transform.localPosition = Vector3.zero;
         waterRoot.transform.localRotation = Quaternion.identity;

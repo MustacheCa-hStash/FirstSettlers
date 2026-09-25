@@ -40,6 +40,7 @@ public class FarTerrainTileRuntime
         meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
 
         waterRoot = new GameObject("Water");
+        waterRoot.layer = LayerMask.NameToLayer("Water");
         waterRoot.transform.SetParent(root.transform, false);
         waterMeshFilter = waterRoot.AddComponent<MeshFilter>();
         waterMeshRenderer = waterRoot.AddComponent<MeshRenderer>();

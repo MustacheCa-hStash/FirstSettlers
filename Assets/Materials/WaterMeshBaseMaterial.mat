@@ -8,11 +8,10 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: WaterMeshBaseMaterial
-  m_Shader: {fileID: -6465566751694194690, guid: 5f5d1bba64275694d9f98e16e49f00f5, type: 3}
+  m_Shader: {fileID: 4800000, guid: 5eac58471efb4d36a984c9e006f708da, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords:
-  - _SURFACE_TYPE_TRANSPARENT
+  m_ValidKeywords: []
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -102,7 +101,7 @@ Material:
     - _DstBlend: 10
     - _DstBlendAlpha: 10
     - _EnvironmentReflections: 1
-    - _FoamAmount: 0
+    - _FoamAmount: 0.22
     - _FoamCutoff: 1.1
     - _FoamDistanceInner: 7.9
     - _FoamDistanceOuter: 8
@@ -122,7 +121,15 @@ Material:
     - _ReceiveShadows: 0
     - _RefractionScale: 1
     - _RefractionSpeed: 0.05
-    - _RefractionStrength: 2
+    - _RefractionStrength: 0.002
+    - _ReflectionDistortion: 0.012
+    - _ReflectionStrength: 0.38
+    - _ReflectionBlur: 3
+    - _ReflectionTint: 0.5
+    - _ShallowOpacity: 0.74
+    - _DeepOpacity: 0.97
+    - _VisibilityDepth: 1.4
+    - _WaveStrength: 0.14
     - _Smoothness: 0.9
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
@@ -137,10 +144,10 @@ Material:
     m_Colors:
     - _BaseColor: {r: 0.25151289, g: 0.51959383, b: 0.98742133, a: 0.7490196}
     - _Color: {r: 0.25151286, g: 0.5195938, b: 0.98742133, a: 0.7490196}
-    - _DeepWater: {r: 0.06878672, g: 0.59119487, b: 0.5324804, a: 0.5019608}
+    - _DeepWater: {r: 0.025, g: 0.12, b: 0.23, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _FoamColor: {r: 1, g: 1, b: 1, a: 1}
-    - _ShallowWater: {r: 0.34717765, g: 0.84276724, b: 0.78706694, a: 0.3764706}
+    - _FoamColor: {r: 0.55, g: 0.75, b: 0.8, a: 1}
+    - _ShallowWater: {r: 0.12, g: 0.34, b: 0.47, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
