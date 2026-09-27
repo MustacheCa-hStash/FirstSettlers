@@ -17,24 +17,27 @@ public sealed class PlanarWaterReflection : MonoBehaviour
     private Texture2D surfaceNormalTexture;
     private float waterY;
     private float resolutionScale;
-    private float updateInterval;
+    private float stationaryUpdateInterval;
+    private float movingUpdateInterval;
     private float maxDistance;
-    private float nextUpdateTime;
+    private float lastUpdateTime;
     private Vector3 lastRenderedPosition;
     private Quaternion lastRenderedRotation;
     private bool hasRendered;
     private bool requestChecked;
     private bool requestSupported;
 
-    public void Configure(Camera source, float surfaceY, float textureScale = 0.5f,
-        float updatesPerSecond = 30f, float reflectionDistance = 300f)
+    public void Configure(Camera source, float surfaceY, float textureScale = 0.35f,
+        float stationaryUpdatesPerSecond = 30f, float movingUpdatesPerSecond = 120f,
+        float reflectionDistance = 300f)
     {
         sourceCamera = source;
         waterY = surfaceY;
         resolutionScale = Mathf.Clamp(textureScale, 0.25f, 1f);
-        updateInterval = 1f / Mathf.Max(1f, updatesPerSecond);
+        stationaryUpdateInterval = 1f / Mathf.Max(1f, stationaryUpdatesPerSecond);
+        movingUpdateInterval = 1f / Mathf.Max(1f, movingUpdatesPerSecond);
         maxDistance = Mathf.Max(20f, reflectionDistance);
-        nextUpdateTime = 0f;
+        lastUpdateTime = float.NegativeInfinity;
         hasRendered = false;
         requestChecked = false;
 
@@ -91,20 +94,20 @@ public sealed class PlanarWaterReflection : MonoBehaviour
             return;
         }
 
-        // Keep a moving viewer's reflection synchronized. The 30 Hz limit is
-        // useful when stationary, but skipping camera turns makes reflections jump.
+        // Compare with the last rendered pose so small movements accumulate.
         bool cameraMoved = !hasRendered ||
             (sourceCamera.transform.position - lastRenderedPosition).sqrMagnitude > 0.0001f ||
             Quaternion.Angle(sourceCamera.transform.rotation, lastRenderedRotation) > 0.05f;
-        if (!cameraMoved && Time.unscaledTime < nextUpdateTime)
+        float updateInterval = cameraMoved ? movingUpdateInterval : stationaryUpdateInterval;
+        if (hasRendered && Time.unscaledTime - lastUpdateTime < updateInterval)
             return;
-        nextUpdateTime = Time.unscaledTime + updateInterval;
 
         EnsureTexture();
         if (reflectionTexture == null)
             return;
 
         RenderReflection();
+        lastUpdateTime = Time.unscaledTime;
         lastRenderedPosition = sourceCamera.transform.position;
         lastRenderedRotation = sourceCamera.transform.rotation;
         hasRendered = true;

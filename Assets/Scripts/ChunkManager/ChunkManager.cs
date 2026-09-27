@@ -1690,9 +1690,10 @@ public class ChunkManager
 
     private int GetFarPatchHeightGridResolution(int patchSizeInChunks)
     {
-        // 4/8/16 leaves use a shared 33x33 grid. The 32-chunk horizon
-        // leaf gets 65x65 to cap far spacing at 64 terrain units.
-        return patchSizeInChunks >= FarTerrainMaxPatchSizeInChunks ? 65 : 33;
+        // Give the nearest two far patch sizes more geometry where mountain
+        // ridges are still prominent. Keep the remaining grids unchanged.
+        return patchSizeInChunks <= farTerrainMacroTileSize * 2 ||
+               patchSizeInChunks >= FarTerrainMaxPatchSizeInChunks ? 65 : 33;
     }
 
     private int GetFarPatchControlMapResolution()
