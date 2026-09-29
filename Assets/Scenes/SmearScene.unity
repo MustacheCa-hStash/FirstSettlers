@@ -1031,6 +1031,27 @@ MonoBehaviour:
       petalColors:
       - {r: 0.72, g: 0.82, b: 1, a: 1}
       - {r: 0.9, g: 0.72, b: 1, a: 1}
+  butterflySettings:
+    enableButterflies: 1
+    butterflyPrefab: {fileID: 1155896988369609512, guid: f5257473fea74414aad98e80e8510acc, type: 3}
+    activeRingRadius: 2
+    spawnChance: 0.55
+    maxPerChunk: 2
+    maxActive: 24
+    maxHotspotsPerChunk: 16
+    hotspotCellSize: 5
+    territoryRadius: 7
+    flightSpeed: 1.6
+    turnDegreesPerSecond: 180
+    verticalSpeed: 2.5
+    preferredHeightMin: 1
+    preferredHeightMax: 2.2
+    terrainClearance: 0.45
+    shoreBuffer: 0.8
+    waterLookAhead: 2.5
+    modelScaleMin: 0.8
+    modelScaleMax: 1.2
+    modelYawOffset: 0
   lilyPadSettings:
     enableLilyPads: 1
     lilyPadPrefab: {fileID: 4307456276487692741, guid: f626f4b56a48d224ab68692c78b1aa7f, type: 3}
