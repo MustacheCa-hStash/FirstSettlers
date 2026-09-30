@@ -10,6 +10,9 @@ public sealed class ButterflyManager : IDisposable
     private static readonly ProfilerMarker ReconcileMarker = new("FS.Butterflies.Reconcile");
     private static readonly ProfilerMarker FlightMarker = new("FS.Butterflies.Flight");
     private static readonly ProfilerMarker DrawMarker = new("FS.Butterflies.Draw");
+    private static readonly int ButterflyInstanceDataId = Shader.PropertyToID("_ButterflyInstanceData");
+    private static readonly int WingHingeXId = Shader.PropertyToID("_WingHingeX");
+    private static readonly int FlapFrequencyId = Shader.PropertyToID("_FlapFrequency");
 
     private readonly ButterflySettings settings;
     private readonly FlowerSettings flowerSettings;
@@ -28,6 +31,8 @@ public sealed class ButterflyManager : IDisposable
     private readonly List<PendingTransfer> pendingTransfers = new();
     private readonly HashSet<uint> selectedIds = new();
     private readonly Matrix4x4[] drawMatrices = new Matrix4x4[1023];
+    private readonly Vector4[] drawInstanceData = new Vector4[1023];
+    private readonly MaterialPropertyBlock drawProperties = new();
 
     private int cachedRingRadius = -1;
     private int cachedSettingsSignature = int.MinValue;
@@ -40,6 +45,7 @@ public sealed class ButterflyManager : IDisposable
     private int renderLayer;
     private bool warnedInvalidPrefab;
     private bool warnedUnsupportedInstancing;
+    private float flapFrequency = 5.5f;
 
     private sealed class ActiveChunk
     {
@@ -57,7 +63,7 @@ public sealed class ButterflyManager : IDisposable
         public uint RepresentativeRank;
     }
 
-    private enum FlightState : byte { Flying, Hovering }
+    private enum FlightState : byte { Flying, Hovering, Landing, Resting }
 
     private struct LiveButterfly
     {
@@ -65,14 +71,20 @@ public sealed class ButterflyManager : IDisposable
         public uint RandomState;
         public Vector3 Home;
         public Vector3 Position;
-        public Vector3 Forward;
+        public Vector3 Facing;
+        public Vector3 TravelDirection;
         public Vector3 SafeDirection;
         public Vector3 Target;
         public float PreferredHeight;
+        public float GlideDistance;
         public float Scale;
+        public float TravelSpeed;
+        public float BankDegrees;
         public float Age;
+        public float WingPhase;
+        public float VerticalVelocity;
         public float DecisionTimer;
-        public float HoverTimer;
+        public float PauseTimer;
         public FlightState State;
     }
 
@@ -391,11 +403,14 @@ public sealed class ButterflyManager : IDisposable
                 RandomState = random,
                 Home = home,
                 Position = new Vector3(x, groundY + resident.PreferredHeight, z),
-                Forward = forward,
+                Facing = forward,
+                TravelDirection = forward,
                 SafeDirection = forward,
                 Target = home,
                 PreferredHeight = resident.PreferredHeight,
                 Scale = resident.Scale,
+                TravelSpeed = Mathf.Max(0.1f, settings.flightSpeed) * 0.6f,
+                WingPhase = ToUnitFloat(Mix(resident.Id ^ 0x85ebca6bu)) * Mathf.PI * 2f,
                 DecisionTimer = 0f
             };
             ChooseTarget(manager, ref butterfly);
@@ -406,21 +421,45 @@ public sealed class ButterflyManager : IDisposable
     private void Tick(ChunkManager manager, ref LiveButterfly butterfly, float dt)
     {
         butterfly.Age += dt;
+        float flapRate = butterfly.State == FlightState.Resting
+            ? Mathf.Clamp(settings.restingFlapRate, 0.05f, 1f) : 1f;
+        float speedVariation = Mathf.Lerp(0.88f, 1.12f,
+            ToUnitFloat(Mix(Mix(butterfly.Id ^ 0x85ebca6bu))));
+        butterfly.WingPhase = Mathf.Repeat(butterfly.WingPhase +
+            dt * flapFrequency * speedVariation * flapRate * Mathf.PI * 2f, Mathf.PI * 2f);
         if (!TrySampleDryGround(manager, butterfly.Position.x, butterfly.Position.z, out float groundY))
         {
             butterfly.Position = butterfly.Home + Vector3.up * butterfly.PreferredHeight;
+            butterfly.State = FlightState.Flying;
+            butterfly.TravelSpeed = 0f;
+            butterfly.BankDegrees = 0f;
+            butterfly.VerticalVelocity = 0f;
             butterfly.DecisionTimer = 0f;
+            return;
+        }
+
+        if (butterfly.State == FlightState.Resting)
+        {
+            butterfly.TravelSpeed = 0f;
+            butterfly.BankDegrees = Mathf.MoveTowards(butterfly.BankDegrees, 0f, 45f * dt);
+            butterfly.Position.y = RestingY(groundY);
+            butterfly.PauseTimer -= dt;
+            if (butterfly.PauseTimer <= 0f)
+                ChooseTarget(manager, ref butterfly);
             return;
         }
 
         if (butterfly.State == FlightState.Hovering)
         {
-            butterfly.HoverTimer -= dt;
-            float hoverY = Mathf.Max(groundY + Mathf.Max(0.2f, settings.terrainClearance),
-                waterSurfaceY + settings.terrainClearance);
+            butterfly.TravelSpeed = 0f;
+            butterfly.BankDegrees = Mathf.MoveTowards(butterfly.BankDegrees, 0f, 45f * dt);
+            butterfly.PauseTimer -= dt;
+            float hoverY = RestingY(groundY);
+            float previousY = butterfly.Position.y;
             butterfly.Position.y = Mathf.MoveTowards(butterfly.Position.y, hoverY,
                 Mathf.Max(0.1f, settings.verticalSpeed) * dt);
-            if (butterfly.HoverTimer <= 0f)
+            butterfly.VerticalVelocity = (butterfly.Position.y - previousY) / dt;
+            if (butterfly.PauseTimer <= 0f)
                 ChooseTarget(manager, ref butterfly);
             return;
         }
@@ -429,50 +468,118 @@ public sealed class ButterflyManager : IDisposable
         toTarget.y = 0f;
         if (toTarget.sqrMagnitude < 0.36f)
         {
-            butterfly.State = FlightState.Hovering;
-            butterfly.HoverTimer = Mathf.Lerp(0.5f, 1.8f, Next01(ref butterfly.RandomState));
-            return;
+            if (butterfly.State == FlightState.Landing)
+            {
+                if (butterfly.Position.y <= RestingY(groundY) + 0.08f)
+                {
+                    butterfly.Position.y = RestingY(groundY);
+                    butterfly.TravelSpeed = 0f;
+                    butterfly.State = FlightState.Resting;
+                    float minRest = Mathf.Max(0.1f, settings.restDurationMin);
+                    butterfly.PauseTimer = Mathf.Lerp(minRest,
+                        Mathf.Max(minRest, settings.restDurationMax), Next01(ref butterfly.RandomState));
+                    butterfly.VerticalVelocity = 0f;
+                    return;
+                }
+                // Keep tracing a small arc around the target until the descent is complete.
+            }
+            else
+            {
+                butterfly.TravelSpeed = 0f;
+                butterfly.State = FlightState.Hovering;
+                butterfly.PauseTimer = Mathf.Lerp(0.8f, 1.8f, Next01(ref butterfly.RandomState));
+                return;
+            }
         }
 
         butterfly.DecisionTimer -= dt;
-        Vector3 desired = toTarget.normalized;
+        Vector3 desired = toTarget.sqrMagnitude > 0.0025f
+            ? toTarget.normalized : butterfly.TravelDirection;
         if (butterfly.DecisionTimer <= 0f)
         {
+            float wanderPhase = butterfly.Age * Mathf.Clamp(settings.wanderFrequency, 0.02f, 1f) *
+                                Mathf.PI * 2f + ToUnitFloat(Mix(butterfly.Id ^ 0xc2b2ae35u)) *
+                                Mathf.PI * 2f;
+            float wanderAngle = Mathf.Sin(wanderPhase) * Mathf.Clamp(settings.wanderDegrees, 0f, 35f) *
+                                Mathf.Clamp01((toTarget.magnitude - 0.6f) / 2f);
+            desired = Quaternion.AngleAxis(wanderAngle, Vector3.up) * desired;
             butterfly.SafeDirection = FindDryDirection(manager, butterfly.Position, desired);
             butterfly.DecisionTimer = Mathf.Lerp(0.18f, 0.32f, Next01(ref butterfly.RandomState));
             if (butterfly.SafeDirection.sqrMagnitude < 0.5f)
                 ChooseTarget(manager, ref butterfly);
         }
         if (butterfly.SafeDirection.sqrMagnitude < 0.5f)
-            return;
-
-        float sway = Mathf.Sin(butterfly.Age * 2.3f + (butterfly.RandomState & 255u)) * 0.12f;
-        Vector3 steered = Quaternion.AngleAxis(sway * Mathf.Rad2Deg, Vector3.up) * butterfly.SafeDirection;
-        butterfly.Forward = Vector3.RotateTowards(butterfly.Forward, steered,
-            Mathf.Deg2Rad * Mathf.Max(0.1f, settings.turnDegreesPerSecond) * dt, 0f).normalized;
-        float speed = Mathf.Max(0.1f, settings.flightSpeed);
-        Vector3 next = butterfly.Position + butterfly.Forward * (speed * dt);
-        if (!CanEnterChunk(manager, WorldToChunk(next)) ||
-            !TrySampleDryGround(manager, next.x, next.z, out float nextGround))
         {
-            butterfly.DecisionTimer = 0f;
-            butterfly.SafeDirection = Vector3.zero;
+            butterfly.TravelSpeed = 0f;
             return;
         }
 
+        float turnRate = Mathf.Max(0.1f, settings.turnDegreesPerSecond);
+        Vector3 previousDirection = butterfly.TravelDirection;
+        butterfly.TravelDirection = Vector3.RotateTowards(previousDirection, butterfly.SafeDirection,
+            Mathf.Deg2Rad * turnRate * dt, 0f).normalized;
+        float turnFraction = Vector3.Cross(previousDirection, butterfly.TravelDirection).y /
+                             (Mathf.Deg2Rad * turnRate * dt);
+        float targetBank = -Mathf.Clamp(turnFraction, -1f, 1f) *
+                           Mathf.Clamp(settings.turnBankDegrees, 0f, 20f);
+        butterfly.BankDegrees = Mathf.Lerp(butterfly.BankDegrees, targetBank, Mathf.Clamp01(dt * 5f));
+        float speed = Mathf.Max(0.1f, settings.flightSpeed);
+        float arrival = Mathf.Clamp01((toTarget.magnitude - 0.45f) / 1.5f);
+        float desiredSpeed = speed * Mathf.Lerp(0.2f, 1f, arrival);
+        butterfly.TravelSpeed = Mathf.MoveTowards(butterfly.TravelSpeed, desiredSpeed,
+            Mathf.Max(0.1f, settings.flightAcceleration) * dt);
+        Vector3 next = butterfly.Position + butterfly.TravelDirection * (butterfly.TravelSpeed * dt);
+        if (!CanEnterChunk(manager, WorldToChunk(next)) ||
+            !TrySampleDryGround(manager, next.x, next.z, out float nextGround))
+        {
+            // Momentum can briefly point toward shore. Redirect along the already checked dry heading.
+            butterfly.DecisionTimer = 0f;
+            butterfly.TravelDirection = butterfly.SafeDirection;
+            butterfly.TravelSpeed = Mathf.Min(butterfly.TravelSpeed, speed * 0.6f);
+            butterfly.BankDegrees = 0f;
+            next = butterfly.Position + butterfly.TravelDirection * (butterfly.TravelSpeed * dt);
+            if (!CanEnterChunk(manager, WorldToChunk(next)) ||
+                !TrySampleDryGround(manager, next.x, next.z, out nextGround))
+            {
+                butterfly.TravelSpeed = 0f;
+                butterfly.SafeDirection = Vector3.zero;
+                return;
+            }
+        }
+
+        butterfly.Facing = Vector3.RotateTowards(butterfly.Facing, butterfly.TravelDirection,
+            Mathf.Deg2Rad * Mathf.Max(0.1f, settings.bodyTurnDegreesPerSecond) * dt, 0f).normalized;
+        butterfly.Facing = Vector3.RotateTowards(butterfly.TravelDirection, butterfly.Facing,
+            Mathf.Deg2Rad * Mathf.Clamp(settings.maxFacingLagDegrees, 0f, 60f), 0f).normalized;
         butterfly.Position.x = next.x;
         butterfly.Position.z = next.z;
-        float aheadX = next.x + butterfly.Forward.x * Mathf.Max(0.5f, settings.waterLookAhead);
-        float aheadZ = next.z + butterfly.Forward.z * Mathf.Max(0.5f, settings.waterLookAhead);
+        float aheadX = next.x + butterfly.TravelDirection.x * Mathf.Max(0.5f, settings.waterLookAhead);
+        float aheadZ = next.z + butterfly.TravelDirection.z * Mathf.Max(0.5f, settings.waterLookAhead);
         if (!TrySampleDryGround(manager, aheadX, aheadZ, out float aheadGround))
             aheadGround = nextGround;
-        float desiredY = Mathf.Max(nextGround, aheadGround) + butterfly.PreferredHeight +
-                         Mathf.Sin(butterfly.Age * 3.1f) * 0.15f;
+        float desiredY;
+        if (butterfly.State == FlightState.Landing)
+        {
+            float remaining = Vector2.Distance(new Vector2(next.x, next.z),
+                new Vector2(butterfly.Target.x, butterfly.Target.z));
+            float glide = Mathf.Clamp01((butterfly.GlideDistance - remaining) /
+                Mathf.Max(0.1f, butterfly.GlideDistance - 0.6f));
+            glide = glide * glide * (3f - 2f * glide);
+            desiredY = Mathf.Lerp(nextGround + butterfly.PreferredHeight,
+                RestingY(nextGround), glide);
+        }
+        else
+            desiredY = Mathf.Max(nextGround, aheadGround) + butterfly.PreferredHeight +
+                       Mathf.Sin(butterfly.Age * 3.1f) * 0.15f;
+        float previousFlightY = butterfly.Position.y;
         butterfly.Position.y = Mathf.MoveTowards(butterfly.Position.y, desiredY,
             Mathf.Max(0.1f, settings.verticalSpeed) * dt);
         float clearance = Mathf.Max(0.1f, settings.terrainClearance);
         butterfly.Position.y = Mathf.Max(butterfly.Position.y,
             Mathf.Max(nextGround + clearance, waterSurfaceY + clearance));
+        float verticalSpeed = (butterfly.Position.y - previousFlightY) / dt;
+        butterfly.VerticalVelocity = Mathf.Lerp(butterfly.VerticalVelocity, verticalSpeed,
+            Mathf.Clamp01(dt * 4f));
     }
 
     private void ChooseTarget(ChunkManager manager, ref LiveButterfly butterfly)
@@ -493,7 +600,7 @@ public sealed class ButterflyManager : IDisposable
             }
             else
             {
-                float heading = Mathf.Atan2(butterfly.Forward.z, butterfly.Forward.x);
+                float heading = Mathf.Atan2(butterfly.TravelDirection.z, butterfly.TravelDirection.x);
                 float angle = heading + (Next01(ref butterfly.RandomState) * 2f - 1f) * 1.9f;
                 float radius = Mathf.Lerp(1f, legRadius, Next01(ref butterfly.RandomState));
                 candidate = butterfly.Position + new Vector3(Mathf.Cos(angle) * radius, 0f,
@@ -504,7 +611,20 @@ public sealed class ButterflyManager : IDisposable
                 !TrySampleDryGround(manager, candidate.x, candidate.z, out float groundY) ||
                 !IsDryPath(manager, butterfly.Position, candidate))
                 continue;
-            butterfly.Target = new Vector3(candidate.x, groundY + butterfly.PreferredHeight, candidate.z);
+            float distance = fromCurrent.magnitude;
+            bool landing = distance >= 2f &&
+                           Next01(ref butterfly.RandomState) < Mathf.Clamp01(settings.landingChance);
+            butterfly.State = landing ? FlightState.Landing : FlightState.Flying;
+            float targetY = landing ? RestingY(groundY) : groundY + butterfly.PreferredHeight;
+            butterfly.Target = new Vector3(candidate.x, targetY, candidate.z);
+            if (landing)
+            {
+                float heightToLose = Mathf.Max(0f, butterfly.Position.y - targetY);
+                float requiredDistance = heightToLose * Mathf.Max(0.1f, settings.flightSpeed) /
+                                         Mathf.Max(0.1f, settings.verticalSpeed) + 0.7f;
+                butterfly.GlideDistance = Mathf.Min(distance,
+                    Mathf.Max(settings.landingApproachDistance, requiredDistance));
+            }
             butterfly.DecisionTimer = 0f;
             return;
         }
@@ -531,6 +651,12 @@ public sealed class ButterflyManager : IDisposable
             }
         }
         return best;
+    }
+
+    private float RestingY(float groundY)
+    {
+        float clearance = Mathf.Max(0.1f, settings.terrainClearance);
+        return Mathf.Max(groundY + Mathf.Max(0.2f, clearance), waterSurfaceY + clearance);
     }
 
     private bool IsDryPath(ChunkManager manager, Vector3 from, Vector3 to)
@@ -682,6 +808,12 @@ public sealed class ButterflyManager : IDisposable
         }
         renderMesh = filter.sharedMesh;
         renderMaterial = new Material(materials[0]) { enableInstancing = true };
+        flapFrequency = renderMaterial.HasProperty(FlapFrequencyId)
+            ? Mathf.Max(0f, renderMaterial.GetFloat(FlapFrequencyId)) : 5.5f;
+        // The FBX importer may bake its unit scale into either the mesh or its transforms.
+        // Derive the hinge from mesh-local bounds so the shader works in both cases.
+        if (renderMaterial.HasProperty(WingHingeXId))
+            renderMaterial.SetFloat(WingHingeXId, renderMesh.bounds.extents.x * 0.07f);
         meshLocalMatrix = Matrix4x4.Scale(prefab.transform.localScale) *
                           (prefab.transform.worldToLocalMatrix * filter.transform.localToWorldMatrix);
         renderLayer = renderers[0].gameObject.layer;
@@ -706,12 +838,30 @@ public sealed class ButterflyManager : IDisposable
                 for (int i = 0; i < count; i++)
                 {
                     LiveButterfly butterfly = chunk.Butterflies[start + i];
-                    Quaternion facing = Quaternion.LookRotation(butterfly.Forward, Vector3.up) * yawCorrection;
+                    float pitch = 0f;
+                    if (butterfly.State == FlightState.Flying || butterfly.State == FlightState.Landing)
+                    {
+                        float climb = Mathf.Clamp(butterfly.VerticalVelocity /
+                            Mathf.Max(0.1f, settings.verticalSpeed), -1f, 1f);
+                        pitch = settings.flightPitchDegrees + climb * settings.climbPitchDegrees;
+                    }
+                    else if (butterfly.State == FlightState.Hovering)
+                        pitch = settings.flightPitchDegrees * 0.5f;
+                    pitch = Mathf.Clamp(pitch, -45f, 45f);
+                    Quaternion facing = Quaternion.LookRotation(butterfly.Facing, Vector3.up) *
+                                        Quaternion.Euler(-pitch, 0f, butterfly.BankDegrees) * yawCorrection;
                     drawMatrices[i] = Matrix4x4.TRS(butterfly.Position, facing,
                         Vector3.one * butterfly.Scale) * meshLocalMatrix;
+                    uint colorSeed = Mix(butterfly.Id ^ 0x9e3779b9u);
+                    drawInstanceData[i] = new Vector4(colorSeed % 5u,
+                        butterfly.WingPhase,
+                        Mathf.Lerp(0.88f, 1.12f, ToUnitFloat(Mix(colorSeed))),
+                        butterfly.State == FlightState.Resting ? 1f : 0f);
                 }
+                drawProperties.Clear();
+                drawProperties.SetVectorArray(ButterflyInstanceDataId, drawInstanceData);
                 for (int submesh = 0; submesh < renderMesh.subMeshCount; submesh++)
-                    Graphics.DrawMeshInstanced(renderMesh, submesh, renderMaterial, drawMatrices, count, null,
+                    Graphics.DrawMeshInstanced(renderMesh, submesh, renderMaterial, drawMatrices, count, drawProperties,
                         ShadowCastingMode.Off, false, renderLayer, camera, LightProbeUsage.Off);
                 start += count;
             }

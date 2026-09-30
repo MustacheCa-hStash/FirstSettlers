@@ -1033,7 +1033,7 @@ MonoBehaviour:
       - {r: 0.9, g: 0.72, b: 1, a: 1}
   butterflySettings:
     enableButterflies: 1
-    butterflyPrefab: {fileID: 1155896988369609512, guid: f5257473fea74414aad98e80e8510acc, type: 3}
+    butterflyPrefab: {fileID: 4037390523142719375, guid: 93d62a5456bf4e64696d8bc94fb94e99, type: 3}
     activeRingRadius: 2
     spawnChance: 0.55
     maxPerChunk: 2
@@ -1041,17 +1041,30 @@ MonoBehaviour:
     maxHotspotsPerChunk: 16
     hotspotCellSize: 5
     territoryRadius: 7
-    flightSpeed: 1.6
-    turnDegreesPerSecond: 180
-    verticalSpeed: 2.5
+    flightSpeed: 1.2
+    turnDegreesPerSecond: 95
+    flightAcceleration: 2.4
+    bodyTurnDegreesPerSecond: 75
+    maxFacingLagDegrees: 35
+    turnBankDegrees: 8
+    verticalSpeed: 1
     preferredHeightMin: 1
     preferredHeightMax: 2.2
     terrainClearance: 0.45
     shoreBuffer: 0.8
     waterLookAhead: 2.5
-    modelScaleMin: 0.8
-    modelScaleMax: 1.2
+    modelScaleMin: 0.4
+    modelScaleMax: 0.5
     modelYawOffset: 0
+    flightPitchDegrees: 10
+    climbPitchDegrees: 8
+    wanderDegrees: 15
+    wanderFrequency: 0.22
+    landingChance: 0.7
+    landingApproachDistance: 3.5
+    restDurationMin: 2.5
+    restDurationMax: 4.5
+    restingFlapRate: 0.23
   lilyPadSettings:
     enableLilyPads: 1
     lilyPadPrefab: {fileID: 4307456276487692741, guid: f626f4b56a48d224ab68692c78b1aa7f, type: 3}
