@@ -25,6 +25,8 @@ public class WorldManager : MonoBehaviour
     [SerializeField] FlowerSettings flowerSettings = new FlowerSettings();
     [Header("Ambient Butterflies")]
     [SerializeField] ButterflySettings butterflySettings = new ButterflySettings();
+    [Header("Ambient Bees")]
+    [SerializeField] BeeSettings beeSettings = new BeeSettings();
     [Header("Lily Pads")]
     [SerializeField] LilyPadSettings lilyPadSettings = new LilyPadSettings();
     [Header("Cattails")]
@@ -95,6 +97,8 @@ public class WorldManager : MonoBehaviour
     {
         TerrainGenerationProfiler.SetEnabled(logTerrainGenerationProfile);
         butterflySettings ??= new ButterflySettings();
+        beeSettings ??= new BeeSettings();
+        beeSettings.prefab ??= butterflySettings.prefab;
 
         chunkManager = new ChunkManager(viewDistance, colliderDistance, enableFarTerrain, farTerrainStartRing,
             farTerrainMacroTileSize, farTerrainHeightGridResolution, farTerrainControlMapResolution, farTerrainSkirtDepth,
@@ -112,7 +116,7 @@ public class WorldManager : MonoBehaviour
             farTerrainTileContentBudgetMsPerFrame,
             completedRequestApplyBudgetMsPerFrame,
             terrainDataApplyBudgetMsPerFrame, farTerrainApplyBudgetMsPerFrame,
-            lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame, mountainWidth, mountainSnowBlendGamma, erosion.Sanitized(), butterflySettings);
+            lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame, mountainWidth, mountainSnowBlendGamma, erosion.Sanitized(), butterflySettings, beeSettings);
 
         if (waterMaterial != null && waterMaterial.shader != null &&
             waterMaterial.shader.name == "FirstSettlers/Murky Planar Water")

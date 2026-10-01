@@ -1032,11 +1032,11 @@ MonoBehaviour:
       - {r: 0.72, g: 0.82, b: 1, a: 1}
       - {r: 0.9, g: 0.72, b: 1, a: 1}
   butterflySettings:
-    enableButterflies: 1
-    butterflyPrefab: {fileID: 4037390523142719375, guid: 93d62a5456bf4e64696d8bc94fb94e99, type: 3}
+    enabled: 1
+    prefab: {fileID: 4037390523142719375, guid: 93d62a5456bf4e64696d8bc94fb94e99, type: 3}
     activeRingRadius: 2
     spawnChance: 0.55
-    maxPerChunk: 2
+    maxPerChunk: 1
     maxActive: 24
     maxHotspotsPerChunk: 16
     hotspotCellSize: 5
@@ -1065,6 +1065,45 @@ MonoBehaviour:
     restDurationMin: 2.5
     restDurationMax: 4.5
     restingFlapRate: 0.23
+  beeSettings:
+    enabled: 1
+    prefab: {fileID: 7509662409613333359, guid: 90665e7120d26fe4a968ea31effc3f27, type: 3}
+    activeRingRadius: 2
+    spawnChance: 0.23
+    maxPerChunk: 3
+    maxActive: 18
+    maxHotspotsPerChunk: 48
+    hotspotCellSize: 5
+    territoryRadius: 8
+    flightSpeed: 2.1
+    turnDegreesPerSecond: 150
+    flightAcceleration: 4
+    bodyTurnDegreesPerSecond: 125
+    maxFacingLagDegrees: 25
+    turnBankDegrees: 6
+    verticalSpeed: 2.2
+    preferredHeightMin: 0.8
+    preferredHeightMax: 1.5
+    terrainClearance: 0.35
+    shoreBuffer: 0.8
+    waterLookAhead: 2
+    modelScaleMin: 1
+    modelScaleMax: 1
+    modelYawOffset: 0
+    flightPitchDegrees: 6
+    climbPitchDegrees: 8
+    wanderDegrees: 20
+    wanderFrequency: 0.4
+    landingChance: 0.9
+    landingApproachDistance: 2.5
+    restDurationMin: 1.1
+    restDurationMax: 2.2
+    restingFlapRate: 0.35
+    threeBeeChance: 0.3
+    flowerTargetChance: 0.85
+    flowerVisitHeight: 0.8
+    wingbeatsPerSecond: 12
+    raisedWingAngle: 35
   lilyPadSettings:
     enableLilyPads: 1
     lilyPadPrefab: {fileID: 4307456276487692741, guid: f626f4b56a48d224ab68692c78b1aa7f, type: 3}

@@ -4,13 +4,14 @@ using UnityEngine;
 
 public static class ButterflyValidation
 {
-    [MenuItem("Tools/Terrain/Validate Ambient Butterflies")]
+    [MenuItem("Tools/Terrain/Validate Ambient Life")]
     public static void Run()
     {
         ValidateDailyResidents();
+        ValidateBeeGroups();
         ValidateChunkHandoff();
         ValidateGroundAndWater();
-        Debug.Log("Ambient butterfly validation passed: daily residents, chunk handoff, terrain height, and water exclusion.");
+        Debug.Log("Ambient life validation passed: butterfly residents, bee groups, chunk handoff, terrain height, and water exclusion.");
     }
 
     public static void RunBatch()
@@ -28,10 +29,10 @@ public static class ButterflyValidation
         data.Hotspots.Add(new ButterflyHotspot(new Vector3(1f, 4f, 5f), 9));
         ChunkCoord coord = new(7, -4);
 
-        ButterflyManager.GenerateDailyRoster(settings, 12345, coord, data, 12);
+        AmbientLifeManager.GenerateDailyRoster(settings, 12345, coord, data, 12);
         Require(data.Residents.Count > 0 && data.Residents.Count <= 3, "Daily population exceeded its cap or disappeared from guaranteed habitat.");
         ButterflyResident[] first = data.Residents.ToArray();
-        ButterflyManager.GenerateDailyRoster(settings, 12345, coord, data, 12);
+        AmbientLifeManager.GenerateDailyRoster(settings, 12345, coord, data, 12);
         Require(data.Residents.Count == first.Length, "Returning to a chunk changed the same-day count.");
         for (int i = 0; i < first.Length; i++)
         {
@@ -42,11 +43,11 @@ public static class ButterflyValidation
             Require(current.HomeHotspotIndex >= 0 && current.HomeHotspotIndex < data.Hotspots.Count,
                 "A resident selected an invalid hotspot.");
         }
-        ButterflyManager.GenerateDailyRoster(settings, 12345, coord, data, 13);
+        AmbientLifeManager.GenerateDailyRoster(settings, 12345, coord, data, 13);
         Require(data.RosterDay == 13 && data.Residents.Count > 0 && data.Residents[0].Id != first[0].Id,
             "A new day did not refresh the population.");
         data.Hotspots.Clear();
-        ButterflyManager.GenerateDailyRoster(settings, 12345, coord, data, 14);
+        AmbientLifeManager.GenerateDailyRoster(settings, 12345, coord, data, 14);
         Require(data.Residents.Count == 0, "A chunk without flowers kept residents.");
     }
 
@@ -93,6 +94,31 @@ public static class ButterflyValidation
         }
     }
 
+    private static void ValidateBeeGroups()
+    {
+        var settings = new BeeSettings { spawnChance = 1f, threeBeeChance = 0f };
+        var data = new ChunkButterflyData();
+        for (int i = 0; i < 3; i++)
+            data.Hotspots.Add(new ButterflyHotspot(new Vector3(i * 2f, 3f, 0f), 8));
+        ChunkCoord coord = new(7, -4);
+        AmbientLifeManager.GenerateDailyRoster(settings, 12345, coord, data, 12);
+        Require(data.Residents.Count == 2, "An occupied bee chunk did not start with two bees.");
+        uint firstId = data.Residents[0].Id;
+        AmbientLifeManager.GenerateDailyRoster(settings, 12345, coord, data, 12);
+        Require(data.Residents.Count == 2 && data.Residents[0].Id == firstId,
+            "Returning to a bee chunk changed its same-day residents.");
+        settings.threeBeeChance = 1f;
+        AmbientLifeManager.GenerateDailyRoster(settings, 12345, coord, data, 13);
+        Require(data.Residents.Count == 3, "An occupied three-bee chunk did not get three residents.");
+        settings.spawnChance = 0f;
+        AmbientLifeManager.GenerateDailyRoster(settings, 12345, coord, data, 14);
+        Require(data.Residents.Count == 0, "A zero bee group chance produced residents.");
+        settings.spawnChance = 1f;
+        data.Hotspots.Clear();
+        AmbientLifeManager.GenerateDailyRoster(settings, 12345, coord, data, 15);
+        Require(data.Residents.Count == 0, "A flowerless chunk produced bees.");
+    }
+
     private static void ValidateChunkHandoff()
     {
         var settings = new ButterflySettings { spawnChance = 1f, maxPerChunk = 2 };
@@ -102,24 +128,24 @@ public static class ButterflyValidation
         source.Hotspots.Add(new ButterflyHotspot(new Vector3(1f, 3f, 1f), 10));
         source.Hotspots.Add(new ButterflyHotspot(new Vector3(2f, 3f, 2f), 10));
         source.Hotspots.Add(new ButterflyHotspot(new Vector3(3f, 3f, 3f), 10));
-        ButterflyManager.GenerateDailyRoster(settings, 5, new ChunkCoord(0, 0), source, 4);
-        ButterflyManager.GenerateDailyRoster(settings, 5, new ChunkCoord(1, 0), destination, 4);
-        ButterflyManager.GenerateDailyRoster(settings, 5, new ChunkCoord(2, 0), third, 4);
+        AmbientLifeManager.GenerateDailyRoster(settings, 5, new ChunkCoord(0, 0), source, 4);
+        AmbientLifeManager.GenerateDailyRoster(settings, 5, new ChunkCoord(1, 0), destination, 4);
+        AmbientLifeManager.GenerateDailyRoster(settings, 5, new ChunkCoord(2, 0), third, 4);
         uint id = source.Residents[0].Id;
         Vector3 firstHome = new(12f, 4f, 2f);
-        Require(ButterflyManager.MoveResident(source, destination, id, firstHome),
+        Require(AmbientLifeManager.MoveResident(source, destination, id, firstHome),
             "A boundary crossing failed to transfer its resident.");
         Require(!source.Residents.Exists(r => r.Id == id) &&
                 destination.Residents.Exists(r => r.Id == id && r.HomeWorldPosition == firstHome),
             "A boundary crossing duplicated or lost its resident.");
-        ButterflyManager.GenerateDailyRoster(settings, 5, new ChunkCoord(0, 0), source, 4);
-        ButterflyManager.GenerateDailyRoster(settings, 5, new ChunkCoord(1, 0), destination, 4);
+        AmbientLifeManager.GenerateDailyRoster(settings, 5, new ChunkCoord(0, 0), source, 4);
+        AmbientLifeManager.GenerateDailyRoster(settings, 5, new ChunkCoord(1, 0), destination, 4);
         Require(!source.Residents.Exists(r => r.Id == id) && destination.Residents.Exists(r => r.Id == id),
             "A same-day habitat rebuild undid a boundary crossing.");
-        Require(ButterflyManager.MoveResident(destination, third, id, new Vector3(22f, 4f, 2f)) &&
+        Require(AmbientLifeManager.MoveResident(destination, third, id, new Vector3(22f, 4f, 2f)) &&
                 !destination.Residents.Exists(r => r.Id == id) && third.Residents.Exists(r => r.Id == id),
             "A migrant could not cross a second chunk boundary.");
-        ButterflyManager.GenerateDailyRoster(settings, 5, new ChunkCoord(2, 0), third, 5);
+        AmbientLifeManager.GenerateDailyRoster(settings, 5, new ChunkCoord(2, 0), third, 5);
         Require(!third.Residents.Exists(r => r.Id == id), "A previous day's migrant remained in the chunk.");
     }
 

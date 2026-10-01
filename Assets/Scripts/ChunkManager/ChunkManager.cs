@@ -126,7 +126,8 @@ public class ChunkManager
 
     private readonly TerrainRequestManager terrainRequestManager;
     private readonly FoliageManager foliageManager;
-    private readonly ButterflyManager butterflyManager;
+    private readonly AmbientLifeManager butterflyManager;
+    private readonly AmbientLifeManager beeManager;
     private readonly DistantTreeManager distantTrees;
     private readonly WorldFeatureGenerationSettings worldFeatureGenerationSettings;
 
@@ -184,7 +185,8 @@ public class ChunkManager
         float colliderApplyBudgetMsPerFrame,
         float mountainHorizontalScale = 1f,
         float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma, WorldErosionSettings erosion = default,
-        ButterflySettings butterflySettings = null)
+        ButterflySettings butterflySettings = null,
+        BeeSettings beeSettings = null)
     {
         this.viewDistance = viewDistance;
         this.colliderDistance = colliderDistance;
@@ -267,8 +269,11 @@ public class ChunkManager
             worldScale,
             meshHeightMultiplier,
             waterSettings);
-        butterflyManager = new ButterflyManager(butterflySettings, flowerSettings, seed, chunkSize, worldScale,
+        butterflyManager = new AmbientLifeManager(butterflySettings, flowerSettings, seed, chunkSize, worldScale,
             meshHeightMultiplier, waterSettings.SurfaceY);
+        if (beeSettings != null)
+            beeManager = new AmbientLifeManager(beeSettings, flowerSettings, seed, chunkSize, worldScale,
+                meshHeightMultiplier, waterSettings.SurfaceY);
         if (treeSettings != null && treeSettings.enableDistantTrees)
             distantTrees = new DistantTreeManager(treeSettings, seed, chunkSize, sampleScale, octaves, persistence,
                 lacunarity, worldScale, meshHeightMultiplier, waterSettings.WaterLevel, mountainHorizontalScale,
@@ -278,6 +283,7 @@ public class ChunkManager
     public void Dispose()
     {
         butterflyManager?.Dispose();
+        beeManager?.Dispose();
         distantTrees?.Dispose();
         foliageManager?.Dispose();
         foreach (var runtime in loadedChunks.Values)
@@ -613,6 +619,7 @@ public class ChunkManager
             distantTrees?.Update(this, viewer.position, viewerCamera, viewDistance);
         }
         butterflyManager?.Update(this, viewerCoord, viewerCamera, Time.deltaTime);
+        beeManager?.Update(this, viewerCoord, viewerCamera, Time.deltaTime);
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FoliageTotal, foliageStart);
 
         lastViewerGlobalSubChunk = viewerGlobalSubChunk;

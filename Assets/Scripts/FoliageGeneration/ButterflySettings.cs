@@ -1,22 +1,25 @@
 using UnityEngine;
 
 [System.Serializable]
-public sealed class ButterflySettings
+public class ButterflySettings
 {
-    public bool enableButterflies = true;
-    [Tooltip("One MeshFilter and one MeshRenderer using one material across all submeshes. This may be assigned later.")]
-    public GameObject butterflyPrefab;
+    [UnityEngine.Serialization.FormerlySerializedAs("enableButterflies")]
+    public bool enabled = true;
+    [UnityEngine.Serialization.FormerlySerializedAs("butterflyPrefab")]
+    [Tooltip("One MeshFilter and one MeshRenderer using one material across all submeshes.")]
+    public GameObject prefab;
 
     [Header("Population")]
     [Min(0)] public int activeRingRadius = 2;
+    [Tooltip("Butterflies: chance per resident slot. Bees: chance a flower-rich chunk hosts a group.")]
     [Range(0f, 1f)] public float spawnChance = 0.55f;
-    [Min(1)] public int maxPerChunk = 2;
+    [Min(1)] public int maxPerChunk = 1;
     [Min(1)] public int maxActive = 24;
     [Min(1)] public int maxHotspotsPerChunk = 16;
     [Min(0.5f)] public float hotspotCellSize = 5f;
 
     [Header("Flight (world units)")]
-    [Tooltip("Maximum length of one flight leg. Butterflies may cross chunks over several legs.")]
+    [Tooltip("Maximum length of one flight leg. Flyers may cross chunks over several legs.")]
     [Min(0.5f)] public float territoryRadius = 7f;
     [Min(0.1f)] public float flightSpeed = 1.6f;
     [Tooltip("How quickly the flight path bends toward a new direction.")]

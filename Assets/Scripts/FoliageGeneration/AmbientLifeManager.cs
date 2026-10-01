@@ -5,16 +5,26 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 // Chunk records own habitat and daily residents. Only the nearby residents have live flight state.
-public sealed class ButterflyManager : IDisposable
+public sealed class AmbientLifeManager : IDisposable
 {
     private static readonly ProfilerMarker ReconcileMarker = new("FS.Butterflies.Reconcile");
     private static readonly ProfilerMarker FlightMarker = new("FS.Butterflies.Flight");
     private static readonly ProfilerMarker DrawMarker = new("FS.Butterflies.Draw");
+    private static readonly ProfilerMarker BeeReconcileMarker = new("FS.Bees.Reconcile");
+    private static readonly ProfilerMarker BeeFlightMarker = new("FS.Bees.Flight");
+    private static readonly ProfilerMarker BeeDrawMarker = new("FS.Bees.Draw");
     private static readonly int ButterflyInstanceDataId = Shader.PropertyToID("_ButterflyInstanceData");
     private static readonly int WingHingeXId = Shader.PropertyToID("_WingHingeX");
     private static readonly int FlapFrequencyId = Shader.PropertyToID("_FlapFrequency");
+    private static readonly int FlapClosedAngleId = Shader.PropertyToID("_FlapClosedAngle");
+    private static readonly int OrangeId = Shader.PropertyToID("_Orange");
+    private static readonly int YellowId = Shader.PropertyToID("_Yellow");
+    private static readonly int PinkId = Shader.PropertyToID("_Pink");
+    private static readonly int PurpleId = Shader.PropertyToID("_Purple");
+    private static readonly int BlueId = Shader.PropertyToID("_Blue");
 
     private readonly ButterflySettings settings;
+    private readonly BeeSettings beeSettings;
     private readonly FlowerSettings flowerSettings;
     private readonly int worldSeed;
     private readonly int chunkSize;
@@ -46,6 +56,8 @@ public sealed class ButterflyManager : IDisposable
     private bool warnedInvalidPrefab;
     private bool warnedUnsupportedInstancing;
     private float flapFrequency = 5.5f;
+    private float cachedBeeFlapFrequency = float.NaN;
+    private float cachedBeeWingAngle = float.NaN;
 
     private sealed class ActiveChunk
     {
@@ -77,11 +89,15 @@ public sealed class ButterflyManager : IDisposable
         public Vector3 Target;
         public float PreferredHeight;
         public float GlideDistance;
+        public float HoverBaseY;
+        public float HoverStartAge;
         public float Scale;
         public float TravelSpeed;
         public float BankDegrees;
         public float Age;
         public float WingPhase;
+        public float RestBlend;
+        public float VisualPitchDegrees;
         public float VerticalVelocity;
         public float DecisionTimer;
         public float PauseTimer;
@@ -95,11 +111,12 @@ public sealed class ButterflyManager : IDisposable
         public LiveButterfly Butterfly;
     }
 
-    public ButterflyManager(ButterflySettings settings, FlowerSettings flowerSettings,
+    public AmbientLifeManager(ButterflySettings settings, FlowerSettings flowerSettings,
         int worldSeed, int chunkSize, float worldScale,
         float meshHeightMultiplier, float waterSurfaceY)
     {
         this.settings = settings;
+        beeSettings = settings as BeeSettings;
         this.flowerSettings = flowerSettings;
         this.worldSeed = worldSeed;
         this.chunkSize = chunkSize;
@@ -111,7 +128,7 @@ public sealed class ButterflyManager : IDisposable
 
     public void Update(ChunkManager manager, ChunkCoord viewerCoord, Camera camera, float deltaTime)
     {
-        if (settings == null || !settings.enableButterflies || flowerSettings == null ||
+        if (settings == null || !settings.enabled || flowerSettings == null ||
             !flowerSettings.enableFlowers)
         {
             activeChunks.Clear();
@@ -119,6 +136,7 @@ public sealed class ButterflyManager : IDisposable
         }
 
         ResolvePrefab();
+        UpdateBeeMaterial();
         GameTimeManager clock = GameTimeManager.Instance;
         GameTimeSnapshot time = clock != null ? clock.CurrentSnapshot : default;
         int day = clock != null ? time.Day : 0;
@@ -139,13 +157,13 @@ public sealed class ButterflyManager : IDisposable
             cachedSettingsSignature = signature;
         }
 
-        using (ReconcileMarker.Auto())
+        using ((beeSettings != null ? BeeReconcileMarker : ReconcileMarker).Auto())
             Reconcile(manager, viewerCoord, day, clock != null ? time.TotalGameMinutes : 0L);
 
         float step = Mathf.Clamp(deltaTime, 0f, 0.1f);
         if (step > 0f)
         {
-            using (FlightMarker.Auto())
+            using ((beeSettings != null ? BeeFlightMarker : FlightMarker).Auto())
             {
                 pendingTransfers.Clear();
                 foreach (KeyValuePair<ChunkCoord, ActiveChunk> entry in activeChunks)
@@ -155,6 +173,7 @@ public sealed class ButterflyManager : IDisposable
                     {
                         LiveButterfly butterfly = chunk.Butterflies[i];
                         Tick(manager, ref butterfly, step);
+                        AdvanceVisuals(ref butterfly, step);
                         chunk.Butterflies[i] = butterfly;
                         ChunkCoord positionChunk = WorldToChunk(butterfly.Position);
                         if (!positionChunk.Equals(entry.Key))
@@ -172,13 +191,13 @@ public sealed class ButterflyManager : IDisposable
         {
             if (SystemInfo.supportsInstancing)
             {
-                using (DrawMarker.Auto())
+                using ((beeSettings != null ? BeeDrawMarker : DrawMarker).Auto())
                     Draw(camera);
             }
             else if (!warnedUnsupportedInstancing)
             {
                 warnedUnsupportedInstancing = true;
-                Debug.LogWarning("Butterfly instancing is unavailable on this graphics device.");
+                Debug.LogWarning($"{(beeSettings != null ? "Bee" : "Butterfly")} instancing is unavailable on this graphics device.");
             }
         }
     }
@@ -247,11 +266,12 @@ public sealed class ButterflyManager : IDisposable
     private ChunkButterflyData EnsureChunkData(ChunkManager manager, ChunkRecord record, int day,
         ref int habitatBuildsRemaining)
     {
-        ChunkButterflyData data = record.ButterflyData;
+        ChunkButterflyData data = GetChunkData(record);
         if (data == null)
         {
             data = new ChunkButterflyData();
-            record.ButterflyData = data;
+            if (beeSettings != null) record.BeeData = data;
+            else record.ButterflyData = data;
         }
 
         ChunkFoliageData foliage = record.FoliageData;
@@ -342,12 +362,24 @@ public sealed class ButterflyManager : IDisposable
         data.RosterDay = day;
         float habitat = Mathf.Clamp01(data.Hotspots.Count / 3f);
         int maxResidents = Mathf.Max(1, settings.maxPerChunk);
-        for (int slot = 0; slot < maxResidents; slot++)
+        BeeSettings bees = settings as BeeSettings;
+        int speciesSeed = bees == null ? worldSeed : worldSeed ^ unchecked((int)0x6c8e9cf5u);
+        int slots = maxResidents;
+        if (bees != null)
         {
-            uint id = Hash(worldSeed, coord.x, coord.z, day, slot);
+            uint groupSeed = Hash(speciesSeed, coord.x, coord.z, day, -1);
+            float groupChance = Mathf.Clamp01(settings.spawnChance) * habitat;
+            slots = data.Hotspots.Count > 0 && ToUnitFloat(Mix(groupSeed ^ 0xa8476d35u)) < groupChance
+                ? Mathf.Min(maxResidents, ToUnitFloat(Mix(groupSeed ^ 0x632be59bu)) <
+                    Mathf.Clamp01(bees.threeBeeChance) ? 3 : 2)
+                : 0;
+        }
+        for (int slot = 0; slot < slots; slot++)
+        {
+            uint id = Hash(speciesSeed, coord.x, coord.z, day, slot);
             float chance = Mathf.Clamp01(settings.spawnChance) * habitat / (1f + slot * 1.5f);
             if (data.DepartedIds.Contains(id) || data.Hotspots.Count == 0 ||
-                ToUnitFloat(Mix(id ^ 0xa8476d35u)) >= chance)
+                (bees == null && ToUnitFloat(Mix(id ^ 0xa8476d35u)) >= chance))
                 continue;
             int homeIndex = (int)(Mix(id ^ 0x632be59bu) % (uint)data.Hotspots.Count);
             float height = Mathf.Lerp(Mathf.Min(settings.preferredHeightMin, settings.preferredHeightMax),
@@ -411,6 +443,7 @@ public sealed class ButterflyManager : IDisposable
                 Scale = resident.Scale,
                 TravelSpeed = Mathf.Max(0.1f, settings.flightSpeed) * 0.6f,
                 WingPhase = ToUnitFloat(Mix(resident.Id ^ 0x85ebca6bu)) * Mathf.PI * 2f,
+                VisualPitchDegrees = settings.flightPitchDegrees,
                 DecisionTimer = 0f
             };
             ChooseTarget(manager, ref butterfly);
@@ -421,12 +454,6 @@ public sealed class ButterflyManager : IDisposable
     private void Tick(ChunkManager manager, ref LiveButterfly butterfly, float dt)
     {
         butterfly.Age += dt;
-        float flapRate = butterfly.State == FlightState.Resting
-            ? Mathf.Clamp(settings.restingFlapRate, 0.05f, 1f) : 1f;
-        float speedVariation = Mathf.Lerp(0.88f, 1.12f,
-            ToUnitFloat(Mix(Mix(butterfly.Id ^ 0x85ebca6bu))));
-        butterfly.WingPhase = Mathf.Repeat(butterfly.WingPhase +
-            dt * flapFrequency * speedVariation * flapRate * Mathf.PI * 2f, Mathf.PI * 2f);
         if (!TrySampleDryGround(manager, butterfly.Position.x, butterfly.Position.z, out float groundY))
         {
             butterfly.Position = butterfly.Home + Vector3.up * butterfly.PreferredHeight;
@@ -454,7 +481,11 @@ public sealed class ButterflyManager : IDisposable
             butterfly.TravelSpeed = 0f;
             butterfly.BankDegrees = Mathf.MoveTowards(butterfly.BankDegrees, 0f, 45f * dt);
             butterfly.PauseTimer -= dt;
-            float hoverY = RestingY(groundY);
+            float hoverY = beeSettings != null
+                ? Mathf.Max(butterfly.HoverBaseY +
+                    Mathf.Sin((butterfly.Age - butterfly.HoverStartAge) * 2.1f) * 0.06f,
+                    Mathf.Max(groundY, waterSurfaceY) + Mathf.Max(0.1f, settings.terrainClearance))
+                : RestingY(groundY);
             float previousY = butterfly.Position.y;
             butterfly.Position.y = Mathf.MoveTowards(butterfly.Position.y, hoverY,
                 Mathf.Max(0.1f, settings.verticalSpeed) * dt);
@@ -470,7 +501,8 @@ public sealed class ButterflyManager : IDisposable
         {
             if (butterfly.State == FlightState.Landing)
             {
-                if (butterfly.Position.y <= RestingY(groundY) + 0.08f)
+                if (butterfly.Position.y <= RestingY(groundY) +
+                    (beeSettings != null ? 0.02f : 0.08f))
                 {
                     butterfly.Position.y = RestingY(groundY);
                     butterfly.TravelSpeed = 0f;
@@ -487,7 +519,11 @@ public sealed class ButterflyManager : IDisposable
             {
                 butterfly.TravelSpeed = 0f;
                 butterfly.State = FlightState.Hovering;
-                butterfly.PauseTimer = Mathf.Lerp(0.8f, 1.8f, Next01(ref butterfly.RandomState));
+                butterfly.HoverBaseY = butterfly.Position.y;
+                butterfly.HoverStartAge = butterfly.Age;
+                butterfly.PauseTimer = beeSettings != null
+                    ? Mathf.Lerp(0.4f, 0.9f, Next01(ref butterfly.RandomState))
+                    : Mathf.Lerp(0.8f, 1.8f, Next01(ref butterfly.RandomState));
                 return;
             }
         }
@@ -504,7 +540,9 @@ public sealed class ButterflyManager : IDisposable
                                 Mathf.Clamp01((toTarget.magnitude - 0.6f) / 2f);
             desired = Quaternion.AngleAxis(wanderAngle, Vector3.up) * desired;
             butterfly.SafeDirection = FindDryDirection(manager, butterfly.Position, desired);
-            butterfly.DecisionTimer = Mathf.Lerp(0.18f, 0.32f, Next01(ref butterfly.RandomState));
+            butterfly.DecisionTimer = beeSettings != null
+                ? Mathf.Lerp(0.28f, 0.45f, Next01(ref butterfly.RandomState))
+                : Mathf.Lerp(0.18f, 0.32f, Next01(ref butterfly.RandomState));
             if (butterfly.SafeDirection.sqrMagnitude < 0.5f)
                 ChooseTarget(manager, ref butterfly);
         }
@@ -524,8 +562,9 @@ public sealed class ButterflyManager : IDisposable
                            Mathf.Clamp(settings.turnBankDegrees, 0f, 20f);
         butterfly.BankDegrees = Mathf.Lerp(butterfly.BankDegrees, targetBank, Mathf.Clamp01(dt * 5f));
         float speed = Mathf.Max(0.1f, settings.flightSpeed);
+        // Bees should already be nearly stopped when they enter the 0.6 m visit radius.
         float arrival = Mathf.Clamp01((toTarget.magnitude - 0.45f) / 1.5f);
-        float desiredSpeed = speed * Mathf.Lerp(0.2f, 1f, arrival);
+        float desiredSpeed = speed * (beeSettings != null ? arrival : Mathf.Lerp(0.2f, 1f, arrival));
         butterfly.TravelSpeed = Mathf.MoveTowards(butterfly.TravelSpeed, desiredSpeed,
             Mathf.Max(0.1f, settings.flightAcceleration) * dt);
         Vector3 next = butterfly.Position + butterfly.TravelDirection * (butterfly.TravelSpeed * dt);
@@ -582,29 +621,68 @@ public sealed class ButterflyManager : IDisposable
             Mathf.Clamp01(dt * 4f));
     }
 
+    private void AdvanceVisuals(ref LiveButterfly butterfly, float dt)
+    {
+        float resting = butterfly.State == FlightState.Resting ? 1f : 0f;
+        if (beeSettings != null)
+            butterfly.RestBlend = Mathf.MoveTowards(butterfly.RestBlend, resting, 2.5f * dt);
+        else
+            butterfly.RestBlend = resting;
+
+        float flapRate = Mathf.Lerp(1f,
+            Mathf.Clamp(settings.restingFlapRate, 0.05f, 1f), butterfly.RestBlend);
+        float speedVariation = Mathf.Lerp(0.88f, 1.12f,
+            ToUnitFloat(Mix(Mix(butterfly.Id ^ 0x85ebca6bu))));
+        butterfly.WingPhase = Mathf.Repeat(butterfly.WingPhase +
+            dt * flapFrequency * speedVariation * flapRate * Mathf.PI * 2f, Mathf.PI * 2f);
+
+        if (beeSettings == null) return;
+        float targetPitch = 0f;
+        if (butterfly.State == FlightState.Flying || butterfly.State == FlightState.Landing)
+        {
+            float climb = Mathf.Clamp(butterfly.VerticalVelocity /
+                Mathf.Max(0.1f, settings.verticalSpeed), -1f, 1f);
+            targetPitch = settings.flightPitchDegrees + climb * settings.climbPitchDegrees;
+        }
+        else if (butterfly.State == FlightState.Hovering)
+            targetPitch = settings.flightPitchDegrees * 0.5f;
+        butterfly.VisualPitchDegrees = Mathf.MoveTowards(butterfly.VisualPitchDegrees,
+            Mathf.Clamp(targetPitch, -45f, 45f), 40f * dt);
+    }
+
     private void ChooseTarget(ChunkManager manager, ref LiveButterfly butterfly)
     {
         butterfly.State = FlightState.Flying;
         float legRadius = Mathf.Max(0.5f, settings.territoryRadius);
         for (int attempt = 0; attempt < 8; attempt++)
         {
-            Vector3 candidate;
-            ChunkCoord currentChunk = WorldToChunk(butterfly.Position);
-            ChunkCoord hotspotChunk = new(currentChunk.x + (int)(Next01(ref butterfly.RandomState) * 3f) - 1,
-                currentChunk.z + (int)(Next01(ref butterfly.RandomState) * 3f) - 1);
-            ChunkButterflyData hotspotData = manager.GetChunkRecord(hotspotChunk)?.ButterflyData;
-            if ((attempt & 1) == 0 && hotspotData != null && hotspotData.Hotspots.Count > 0)
+            Vector3 candidate = default;
+            bool flowerTarget = false;
+            bool beeFlowerRoute = beeSettings != null && attempt == 0 &&
+                Next01(ref butterfly.RandomState) < Mathf.Clamp01(beeSettings.flowerTargetChance) &&
+                TryChooseBeeFlowerTarget(manager, butterfly.Position, legRadius, out candidate,
+                    out flowerTarget);
+            if (!beeFlowerRoute)
             {
-                int index = (int)(Next01(ref butterfly.RandomState) * hotspotData.Hotspots.Count);
-                candidate = hotspotData.Hotspots[Mathf.Min(index, hotspotData.Hotspots.Count - 1)].WorldPosition;
-            }
-            else
-            {
-                float heading = Mathf.Atan2(butterfly.TravelDirection.z, butterfly.TravelDirection.x);
-                float angle = heading + (Next01(ref butterfly.RandomState) * 2f - 1f) * 1.9f;
-                float radius = Mathf.Lerp(1f, legRadius, Next01(ref butterfly.RandomState));
-                candidate = butterfly.Position + new Vector3(Mathf.Cos(angle) * radius, 0f,
-                    Mathf.Sin(angle) * radius);
+                ChunkCoord currentChunk = WorldToChunk(butterfly.Position);
+                ChunkCoord hotspotChunk = new(currentChunk.x + (int)(Next01(ref butterfly.RandomState) * 3f) - 1,
+                    currentChunk.z + (int)(Next01(ref butterfly.RandomState) * 3f) - 1);
+                ChunkButterflyData hotspotData = GetChunkData(manager.GetChunkRecord(hotspotChunk));
+                flowerTarget = beeSettings == null && (attempt & 1) == 0 &&
+                    hotspotData != null && hotspotData.Hotspots.Count > 0;
+                if (flowerTarget)
+                {
+                    int index = (int)(Next01(ref butterfly.RandomState) * hotspotData.Hotspots.Count);
+                    candidate = hotspotData.Hotspots[Mathf.Min(index, hotspotData.Hotspots.Count - 1)].WorldPosition;
+                }
+                else
+                {
+                    float heading = Mathf.Atan2(butterfly.TravelDirection.z, butterfly.TravelDirection.x);
+                    float angle = heading + (Next01(ref butterfly.RandomState) * 2f - 1f) * 1.9f;
+                    float radius = Mathf.Lerp(1f, legRadius, Next01(ref butterfly.RandomState));
+                    candidate = butterfly.Position + new Vector3(Mathf.Cos(angle) * radius, 0f,
+                        Mathf.Sin(angle) * radius);
+                }
             }
             Vector2 fromCurrent = new Vector2(candidate.x - butterfly.Position.x, candidate.z - butterfly.Position.z);
             if (fromCurrent.sqrMagnitude > legRadius * legRadius || fromCurrent.sqrMagnitude < 1f ||
@@ -612,7 +690,7 @@ public sealed class ButterflyManager : IDisposable
                 !IsDryPath(manager, butterfly.Position, candidate))
                 continue;
             float distance = fromCurrent.magnitude;
-            bool landing = distance >= 2f &&
+            bool landing = distance >= 2f && (beeSettings == null || flowerTarget) &&
                            Next01(ref butterfly.RandomState) < Mathf.Clamp01(settings.landingChance);
             butterfly.State = landing ? FlightState.Landing : FlightState.Flying;
             float targetY = landing ? RestingY(groundY) : groundY + butterfly.PreferredHeight;
@@ -630,6 +708,42 @@ public sealed class ButterflyManager : IDisposable
         }
         butterfly.Target = butterfly.Position;
         butterfly.DecisionTimer = 0f;
+    }
+
+    private bool TryChooseBeeFlowerTarget(ChunkManager manager, Vector3 position,
+        float legRadius, out Vector3 candidate, out bool reachesFlower)
+    {
+        candidate = default;
+        reachesFlower = false;
+        ChunkCoord center = WorldToChunk(position);
+        float bestDistanceSq = legRadius * legRadius * 9f;
+        bool found = false;
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                ChunkButterflyData data = GetChunkData(manager.GetChunkRecord(
+                    new ChunkCoord(center.x + dx, center.z + dz)));
+                if (data == null) continue;
+                for (int i = 0; i < data.Hotspots.Count; i++)
+                {
+                    Vector3 flower = data.Hotspots[i].WorldPosition;
+                    float distanceSq = (new Vector2(flower.x - position.x,
+                        flower.z - position.z)).sqrMagnitude;
+                    if (distanceSq < 1f || distanceSq >= bestDistanceSq) continue;
+                    bestDistanceSq = distanceSq;
+                    candidate = flower;
+                    found = true;
+                }
+            }
+        if (!found) return false;
+        reachesFlower = bestDistanceSq <= legRadius * legRadius;
+        if (!reachesFlower)
+        {
+            Vector3 delta = candidate - position;
+            delta.y = 0f;
+            candidate = position + delta.normalized * (legRadius * 0.9f);
+        }
+        return true;
     }
 
     private Vector3 FindDryDirection(ChunkManager manager, Vector3 position, Vector3 preferred)
@@ -656,8 +770,12 @@ public sealed class ButterflyManager : IDisposable
     private float RestingY(float groundY)
     {
         float clearance = Mathf.Max(0.1f, settings.terrainClearance);
-        return Mathf.Max(groundY + Mathf.Max(0.2f, clearance), waterSurfaceY + clearance);
+        float visitHeight = beeSettings != null ? beeSettings.flowerVisitHeight : 0.2f;
+        return Mathf.Max(groundY + Mathf.Max(visitHeight, clearance), waterSurfaceY + clearance);
     }
+
+    private ChunkButterflyData GetChunkData(ChunkRecord record) => record == null ? null :
+        beeSettings != null ? record.BeeData : record.ButterflyData;
 
     private bool IsDryPath(ChunkManager manager, Vector3 from, Vector3 to)
     {
@@ -774,7 +892,7 @@ public sealed class ButterflyManager : IDisposable
 
     private void ResolvePrefab()
     {
-        GameObject prefab = settings.butterflyPrefab;
+        GameObject prefab = settings.prefab;
         if (ReferenceEquals(prefab, resolvedPrefab))
             return;
         resolvedPrefab = prefab;
@@ -808,6 +926,16 @@ public sealed class ButterflyManager : IDisposable
         }
         renderMesh = filter.sharedMesh;
         renderMaterial = new Material(materials[0]) { enableInstancing = true };
+        if (beeSettings != null)
+        {
+            cachedBeeFlapFrequency = float.NaN;
+            cachedBeeWingAngle = float.NaN;
+            SetColorIfPresent(renderMaterial, OrangeId, new Color(1f, 0.72f, 0.28f));
+            SetColorIfPresent(renderMaterial, YellowId, new Color(1f, 0.85f, 0.35f));
+            SetColorIfPresent(renderMaterial, PinkId, new Color(0.96f, 0.73f, 0.35f));
+            SetColorIfPresent(renderMaterial, PurpleId, new Color(0.93f, 0.8f, 0.43f));
+            SetColorIfPresent(renderMaterial, BlueId, new Color(0.98f, 0.89f, 0.55f));
+        }
         flapFrequency = renderMaterial.HasProperty(FlapFrequencyId)
             ? Mathf.Max(0f, renderMaterial.GetFloat(FlapFrequencyId)) : 5.5f;
         // The FBX importer may bake its unit scale into either the mesh or its transforms.
@@ -819,11 +947,34 @@ public sealed class ButterflyManager : IDisposable
         renderLayer = renderers[0].gameObject.layer;
     }
 
+    private static void SetColorIfPresent(Material material, int propertyId, Color color)
+    {
+        if (material.HasProperty(propertyId)) material.SetColor(propertyId, color);
+    }
+
+    private void UpdateBeeMaterial()
+    {
+        if (beeSettings == null || renderMaterial == null) return;
+        if (cachedBeeFlapFrequency != beeSettings.wingbeatsPerSecond)
+        {
+            cachedBeeFlapFrequency = Mathf.Clamp(beeSettings.wingbeatsPerSecond, 0f, 20f);
+            flapFrequency = cachedBeeFlapFrequency;
+            if (renderMaterial.HasProperty(FlapFrequencyId))
+                renderMaterial.SetFloat(FlapFrequencyId, cachedBeeFlapFrequency);
+        }
+        if (cachedBeeWingAngle != beeSettings.raisedWingAngle)
+        {
+            cachedBeeWingAngle = Mathf.Clamp(beeSettings.raisedWingAngle, 0f, 85f);
+            if (renderMaterial.HasProperty(FlapClosedAngleId))
+                renderMaterial.SetFloat(FlapClosedAngleId, cachedBeeWingAngle);
+        }
+    }
+
     private void WarnInvalidPrefab()
     {
         if (warnedInvalidPrefab) return;
         warnedInvalidPrefab = true;
-        Debug.LogWarning("Butterfly prefab needs exactly one MeshRenderer and MeshFilter, with one material shared by all submeshes.");
+        Debug.LogWarning($"{(beeSettings != null ? "Bee" : "Butterfly")} prefab needs exactly one MeshRenderer and MeshFilter, with one material shared by all submeshes.");
     }
 
     private void Draw(Camera camera)
@@ -847,7 +998,7 @@ public sealed class ButterflyManager : IDisposable
                     }
                     else if (butterfly.State == FlightState.Hovering)
                         pitch = settings.flightPitchDegrees * 0.5f;
-                    pitch = Mathf.Clamp(pitch, -45f, 45f);
+                    pitch = beeSettings != null ? butterfly.VisualPitchDegrees : Mathf.Clamp(pitch, -45f, 45f);
                     Quaternion facing = Quaternion.LookRotation(butterfly.Facing, Vector3.up) *
                                         Quaternion.Euler(-pitch, 0f, butterfly.BankDegrees) * yawCorrection;
                     drawMatrices[i] = Matrix4x4.TRS(butterfly.Position, facing,
@@ -856,7 +1007,7 @@ public sealed class ButterflyManager : IDisposable
                     drawInstanceData[i] = new Vector4(colorSeed % 5u,
                         butterfly.WingPhase,
                         Mathf.Lerp(0.88f, 1.12f, ToUnitFloat(Mix(colorSeed))),
-                        butterfly.State == FlightState.Resting ? 1f : 0f);
+                        butterfly.RestBlend);
                 }
                 drawProperties.Clear();
                 drawProperties.SetVectorArray(ButterflyInstanceDataId, drawInstanceData);
@@ -882,6 +1033,8 @@ public sealed class ButterflyManager : IDisposable
             hash = hash * 31 + Mathf.RoundToInt(settings.preferredHeightMax * 1000f);
             hash = hash * 31 + Mathf.RoundToInt(settings.modelScaleMin * 1000f);
             hash = hash * 31 + Mathf.RoundToInt(settings.modelScaleMax * 1000f);
+            if (beeSettings != null)
+                hash = hash * 31 + Mathf.RoundToInt(beeSettings.threeBeeChance * 10000f);
             return hash;
         }
     }

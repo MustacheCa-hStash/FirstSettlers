@@ -236,6 +236,7 @@ public class ChunkRecord : System.IDisposable
     private NativeTerrainData nativeTerrainData;
     private ChunkFoliageData foliageData;
     private ChunkButterflyData butterflyData;
+    private ChunkButterflyData beeData;
     private Mesh farTerrainMesh;
     private Texture2D[] farTerrainControlMapData;
 
@@ -296,6 +297,10 @@ public class ChunkRecord : System.IDisposable
     public ChunkButterflyData ButterflyData {
         get => butterflyData;
         set => butterflyData = value;
+    }
+    public ChunkButterflyData BeeData {
+        get => beeData;
+        set => beeData = value;
     }
     public bool IsTerrainDataRequestInFlight => terrainDataRequestInFlight;
     public int TerrainDataRequestVersion => terrainDataRequestVersion;
