@@ -38,6 +38,7 @@ public static class GrassGroundAuthoring
         terrain.SetFloat("_GrassGroundGridScale", 0.65f);
         terrain.SetFloat("_GrassGroundDetailStrength", 0.65f);
         terrain.SetFloat("_GrassGroundDetailContrast", 1.6f);
+        terrain.SetColor("_GrassGroundTint", new Color(0.90f, 0.90f, 0.78f, 1f));
         terrain.SetFloat("_GrassNormalStrength", 0.25f);
         terrain.SetFloat("_GrassGroundDetailFadeStart", 180f);
         terrain.SetFloat("_GrassGroundDetailFadeEnd", 400f);

@@ -91,6 +91,7 @@ Shader "Custom/StylizedTerrainURP"
         _GrassGroundGridScale("Blade Ground Randomized Blend Scale", Float) = 0.65
         _GrassGroundDetailStrength("Blade Ground Tone Strength", Range(0, 1)) = 0.65
         _GrassGroundDetailContrast("Blade Ground Tone Contrast", Range(0.5, 3)) = 1.6
+        _GrassGroundTint("Blade Ground Average Tint", Color) = (0.90, 0.90, 0.78, 1)
         _GrassGroundDetailFadeStart("Blade Ground Detail Fade Start", Float) = 180
         _GrassGroundDetailFadeEnd("Blade Ground Detail Fade End", Float) = 400
         _GrassGroundNormalFadeStart("Blade Ground Normal Fade Start", Float) = 10
@@ -304,6 +305,7 @@ Shader "Custom/StylizedTerrainURP"
                 float _GrassGroundGridScale;
                 float _GrassGroundDetailStrength;
                 float _GrassGroundDetailContrast;
+                half4 _GrassGroundTint;
                 float _GrassGroundDetailFadeStart;
                 float _GrassGroundDetailFadeEnd;
                 float _GrassGroundNormalFadeStart;
@@ -619,6 +621,11 @@ Shader "Custom/StylizedTerrainURP"
 
                     half3 grassColor = grassTint * grassVariation;
                     grassColor = lerp(grassColor, darkGroundGrassTint * grassVariation, darkGrassCoverWeight);
+                    #if defined(_GRASS_BLADE_GROUND)
+                    // Keep the clutter-matching average tone at every distance,
+                    // including after the blade surface map has faded away.
+                    grassColor *= _GrassGroundTint.rgb;
+                    #endif
 
                     // One height sample offsets detail UVs for shallow forest-floor relief.
                     // A zero strength skips the sample, so unassigned maps cost nothing.

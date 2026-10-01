@@ -15,6 +15,20 @@ states, with room remaining for the render pipeline's shadow samplers.
 
 ## Checks passed
 
+The average-tint revision adds Blade Ground Average Tint, set to sRGB
+(0.90, 0.90, 0.78). It darkens grass terrain and reduces blue slightly to match
+the darker, warmer grass/clutter appearance. Sampling bands around the user's
+marked line gave median linear luminances of 0.3962 above and 0.3181 below
+(a ratio of 0.803). These are a visual reference, not a calibrated lighting
+measurement. The same close-up preview before/after this change measured mean
+linear luminances of 0.13080 and 0.10253 (a ratio of 0.784, about 22% darker).
+
+The tint multiplies grass color after palette selection, before other
+forest-floor layers. It applies uniformly at every camera distance, including
+beyond the texture cutoff, and adds no texture fetches or sampler states.
+All shader/range checks below were rerun, and close, distant and live-blade
+renders were reviewed. Contrast, tiling and distance fade settings were retained.
+
 The distance revision preserves the user's contrast of 3 and tone strength of
 0.76. Texture detail now stays fully active through 180 m and fades out by
 400 m, replacing the former 30-70 m fade. From 30 to 100 m, it crossfades between
