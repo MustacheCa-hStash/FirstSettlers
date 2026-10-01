@@ -56,7 +56,7 @@ public class WorldManager : MonoBehaviour
     [Header("Water")]
     [Tooltip("Shared world-space surface Y for rivers and lakes. Applied when the world starts; restart Play Mode after changing. Raising this also expands lakes and moves shorelines.")]
     [SerializeField] float globalWaterY = TerrainWaterSettings.DefaultWaterLevel * 10f;
-    [SerializeField, Range(0.25f, 1f)] float waterReflectionResolution = 0.35f;
+    [SerializeField, Range(0.25f, 1f)] float waterReflectionResolution = 0.7f;
     [SerializeField, Range(1f, 60f)] float waterReflectionUpdatesPerSecond = 30f;
     [SerializeField, Range(30f, 240f)] float waterReflectionMovingUpdatesPerSecond = 120f;
     [SerializeField, Min(20f)] float waterReflectionDistance = 300f;

@@ -96,13 +96,13 @@ Material:
     - _ClearCoatSmoothness: 0
     - _Cull: 2
     - _Cutoff: 0.5
-    - _DeepOpacity: 0.97
+    - _DeepOpacity: 0.38
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _DstBlend: 10
     - _DstBlendAlpha: 10
     - _EnvironmentReflections: 1
-    - _FoamAmount: 0.22
+    - _FoamAmount: 0.12
     - _FoamCutoff: 1.1
     - _FoamDistanceInner: 7.9
     - _FoamDistanceOuter: 8
@@ -120,23 +120,25 @@ Material:
     - _QueueControl: 0
     - _QueueOffset: 0
     - _ReceiveShadows: 0
-    - _ReflectionBlur: 3
+    - _ReflectionBlur: 2
     - _ReflectionDistortion: 0.012
-    - _ReflectionStrength: 0.38
-    - _ReflectionTint: 0.5
+    - _ReflectionSharpDistance: 25
+    - _ReflectionSoftDistance: 180
+    - _ReflectionStrength: 0.5
+    - _ReflectionTint: 0.12
     - _RefractionScale: 1
     - _RefractionSpeed: 0.05
-    - _RefractionStrength: 0.002
-    - _ShallowOpacity: 0.179
+    - _RefractionStrength: 0.008
+    - _ShallowOpacity: 0.05
     - _Smoothness: 0.9
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 5
     - _SrcBlendAlpha: 1
     - _Surface: 1
-    - _VisibilityDepth: 1.4
+    - _VisibilityDepth: 8
     - _WaterDepth: 5
-    - _WaveStrength: 0.14
+    - _WaveStrength: 0.18
     - _WorkflowMode: 1
     - _ZTest: 4
     - _ZWrite: 0

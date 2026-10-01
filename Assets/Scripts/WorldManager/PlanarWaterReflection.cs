@@ -27,7 +27,7 @@ public sealed class PlanarWaterReflection : MonoBehaviour
     private bool requestChecked;
     private bool requestSupported;
 
-    public void Configure(Camera source, float surfaceY, float textureScale = 0.35f,
+    public void Configure(Camera source, float surfaceY, float textureScale = 0.7f,
         float stationaryUpdatesPerSecond = 30f, float movingUpdatesPerSecond = 120f,
         float reflectionDistance = 300f)
     {

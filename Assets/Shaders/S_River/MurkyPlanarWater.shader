@@ -4,16 +4,18 @@ Shader "FirstSettlers/Murky Planar Water"
     {
         _ShallowWater("Shallow blue", Color) = (0.12, 0.34, 0.47, 1)
         _DeepWater("Deep blue", Color) = (0.025, 0.12, 0.23, 1)
-        _VisibilityDepth("Murky depth", Range(0.25, 8)) = 1.4
-        _ShallowOpacity("Shallow opacity", Range(0, 1)) = 0.74
-        _DeepOpacity("Deep opacity", Range(0, 1)) = 0.97
-        _ReflectionStrength("Planar reflection strength", Range(0, 1)) = 0.38
-        _ReflectionBlur("Reflection blur", Range(0, 5)) = 3
-        _ReflectionTint("Reflection blue tint", Range(0, 1)) = 0.5
+        _VisibilityDepth("Tint depth", Range(0.25, 24)) = 8
+        _ShallowOpacity("Shallow tint", Range(0, 1)) = 0.05
+        _DeepOpacity("Deep tint", Range(0, 1)) = 0.38
+        _ReflectionStrength("Planar reflection strength", Range(0, 1)) = 0.5
+        _ReflectionBlur("Distant reflection mip", Range(0, 5)) = 2
+        _ReflectionSharpDistance("Sharp reflection distance", Float) = 25
+        _ReflectionSoftDistance("Soft reflection distance", Float) = 180
+        _ReflectionTint("Reflection blue tint", Range(0, 1)) = 0.12
         _ReflectionDistortion("Reflection ripple distortion", Range(0, 0.06)) = 0.012
-        _RefractionStrength("Underwater distortion", Range(0, 0.02)) = 0.002
-        _WaveStrength("Surface normal movement", Range(0, 0.5)) = 0.14
-        _FoamAmount("Intersection ripple amount", Range(0, 1)) = 0.22
+        _RefractionStrength("Underwater distortion", Range(0, 0.02)) = 0.008
+        _WaveStrength("Surface normal movement", Range(0, 0.5)) = 0.18
+        _FoamAmount("Intersection ripple amount", Range(0, 1)) = 0.12
         _FoamColor("Intersection ripple color", Color) = (0.55, 0.75, 0.8, 1)
     }
 
@@ -56,6 +58,8 @@ Shader "FirstSettlers/Murky Planar Water"
                 half _DeepOpacity;
                 half _ReflectionStrength;
                 half _ReflectionBlur;
+                half _ReflectionSharpDistance;
+                half _ReflectionSoftDistance;
                 half _ReflectionTint;
                 half _ReflectionDistortion;
                 half _RefractionStrength;
@@ -98,7 +102,11 @@ Shader "FirstSettlers/Murky Planar Water"
                 float2 screenUV = GetNormalizedScreenSpaceUV(input.positionCS);
                 float rawDepth = SampleSceneDepth(screenUV);
                 float sceneEyeDepth = LinearEyeDepth(rawDepth, _ZBufferParams);
-                float waterDepth = max(0.0, sceneEyeDepth - input.eyeDepth);
+                // Convert the depth-buffer gap into vertical depth. Eye-space depth
+                // alone stretches tint contours into bands at grazing view angles.
+                float depthGap = max(0.0, sceneEyeDepth - input.eyeDepth);
+                float waterDepth = depthGap * abs(_WorldSpaceCameraPos.y - input.positionWS.y)
+                    / max(input.eyeDepth, 0.01);
 
                 // Two drifting, tiled noise normals break up straight wave fronts.
                 // Their mipmaps flatten detail naturally as the water recedes.
@@ -121,19 +129,20 @@ Shader "FirstSettlers/Murky Planar Water"
                 half3 waterTint = lerp(_ShallowWater.rgb, _DeepWater.rgb, depthBlend);
                 float opacity = lerp(_ShallowOpacity, _DeepOpacity, depthBlend);
 
-                // The opaque scene texture supplies only a short, tinted glimpse of the bed.
-                float2 refractedUV = saturate(screenUV + normalWS.xz * _RefractionStrength);
+                // Keep the bed visible, with small moving refraction away from shore.
+                float refractionFade = smoothstep(0.05, 0.8, waterDepth);
+                float2 refractedUV = saturate(screenUV + normalWS.xz *
+                    (_RefractionStrength * refractionFade));
                 half3 bedColor = SampleSceneColor(refractedUV);
                 half3 color = lerp(bedColor, waterTint, opacity);
 
-                // The old graph's depth-fade/noise contact effect is kept as a quiet moving ring.
-                float contact = 1.0 - smoothstep(0.02, 0.9, waterDepth);
-                float ring = sin(waterDepth * 20.0 - t * 2.4
-                    + sin(dot(p, float2(1.7, 1.2))) * 0.45);
-                float ripple = contact * smoothstep(0.38, 0.86, ring) * _FoamAmount;
+                // Sparse normal-driven shoreline highlights avoid repeating depth rings.
+                float contact = 1.0 - smoothstep(0.02, 0.45, waterDepth);
+                float ripple = contact * smoothstep(0.45, 0.8,
+                    abs(slope.x * 0.8 + slope.y * 0.6)) * _FoamAmount;
                 color = lerp(color, _FoamColor.rgb, ripple);
 
-                // The reflection camera is optional; blue murky water remains valid without it.
+                // The reflection camera is optional; refraction still works without it.
                 if (_WaterReflectionValid > 0.5)
                 {
                     // The mirrored camera and the viewer project points on the flat water
@@ -145,8 +154,11 @@ Shader "FirstSettlers/Murky Planar Water"
                         min(1.0 - reflectedUV.x, 1.0 - reflectedUV.y));
                     if (edge > 0.0)
                     {
+                        float reflectionMip = _ReflectionBlur * smoothstep(
+                            _ReflectionSharpDistance, max(_ReflectionSharpDistance + 0.01,
+                            _ReflectionSoftDistance), input.eyeDepth);
                         half3 reflected = SAMPLE_TEXTURE2D_LOD(_WaterReflectionTex,
-                            sampler_WaterReflectionTex, reflectedUV, _ReflectionBlur).rgb;
+                            sampler_WaterReflectionTex, reflectedUV, reflectionMip).rgb;
                         reflected = lerp(reflected, waterTint, _ReflectionTint);
 
                         float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - input.positionWS);
