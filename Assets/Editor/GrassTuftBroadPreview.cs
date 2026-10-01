@@ -139,7 +139,7 @@ public static class GrassTuftBroadPreview
         return tuft;
     }
 
-    private static void Capture(Camera camera, string path)
+    public static void Capture(Camera camera, string path)
     {
         // Supersample the cutout edges, then read back a resolved single-sample
         // target. Reading a multisampled target directly can produce a blank PNG.
@@ -157,13 +157,18 @@ public static class GrassTuftBroadPreview
             pixels.Apply();
             Color32[] samples = pixels.GetPixels32();
             int minGreen = 255, maxGreen = 0;
+            int magentaCount = 0, sampleCount = 0;
             for (int i = 0; i < samples.Length; i += 53)
             {
                 minGreen = Mathf.Min(minGreen, samples[i].g);
                 maxGreen = Mathf.Max(maxGreen, samples[i].g);
+                sampleCount++;
+                if (samples[i].r > 180 && samples[i].b > 180 && samples[i].g < 80) magentaCount++;
             }
             if (maxGreen - minGreen < 10)
                 throw new InvalidOperationException("Grass preview capture is blank: " + path);
+            if (magentaCount > sampleCount / 100)
+                throw new InvalidOperationException("Grass preview contains shader-error magenta: " + path);
             File.WriteAllBytes(path, pixels.EncodeToPNG());
         }
         finally

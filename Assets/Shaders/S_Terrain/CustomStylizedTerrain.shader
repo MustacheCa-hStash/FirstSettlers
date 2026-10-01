@@ -82,6 +82,22 @@ Shader "Custom/StylizedTerrainURP"
         _GrassNormalStrength("Grass Normal Strength", Range(0.0, 2.0)) = 0.6
         _GrassDetailStrength("Grass Detail Strength", Range(0.0, 1.0)) = 0.35
         _GrassDetailContrast("Grass Detail Contrast", Range(0.5, 3.0)) = 1.35
+        [Toggle(_GRASS_BLADE_GROUND)] _GrassBladeGround("Use Matching Blade Ground", Float) = 0
+        _GrassSurfaceMap("Blade Ground (Tone, Normal XZ, Height)", 2D) = "gray" {}
+        _GrassGroundTiling("Blade Ground Near Repeats Per Meter", Float) = 0.45
+        _GrassGroundFarTiling("Blade Ground Far Repeats Per Meter", Float) = 0.06
+        _GrassGroundScaleFadeStart("Blade Ground Far Scale Blend Start", Float) = 30
+        _GrassGroundScaleFadeEnd("Blade Ground Far Scale Blend End", Float) = 100
+        _GrassGroundGridScale("Blade Ground Randomized Blend Scale", Float) = 0.65
+        _GrassGroundDetailStrength("Blade Ground Tone Strength", Range(0, 1)) = 0.65
+        _GrassGroundDetailContrast("Blade Ground Tone Contrast", Range(0.5, 3)) = 1.6
+        _GrassGroundDetailFadeStart("Blade Ground Detail Fade Start", Float) = 180
+        _GrassGroundDetailFadeEnd("Blade Ground Detail Fade End", Float) = 400
+        _GrassGroundNormalFadeStart("Blade Ground Normal Fade Start", Float) = 10
+        _GrassGroundNormalFadeEnd("Blade Ground Normal Fade End", Float) = 30
+        _GrassGroundHeightDepth("Blade Ground Parallax Depth (Meters)", Range(0, 0.02)) = 0.008
+        _GrassGroundHeightFadeStart("Blade Ground Parallax Fade Start", Float) = 4
+        _GrassGroundHeightFadeEnd("Blade Ground Parallax Fade End", Float) = 12
 
         _SnowAlbedo("Snow Albedo", 2D) = "white" {}
         _SnowTint("Snow Tint", Color) = (0.95, 0.97, 1.00, 1)
@@ -124,6 +140,7 @@ Shader "Custom/StylizedTerrainURP"
             #pragma vertex vert
             #pragma fragment frag
             #pragma shader_feature_local_fragment _ROCK_DETAIL
+            #pragma shader_feature_local_fragment _GRASS_BLADE_GROUND
             #pragma multi_compile_fog
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
@@ -132,25 +149,30 @@ Shader "Custom/StylizedTerrainURP"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             TEXTURE2D(_ControlMap0);
+            // Chunk control maps share clamp/filter settings. Repeat detail
+            // normals share their layer's albedo sampler, leaving room for URP
+            // shadow samplers within the D3D11 limit of 16 sampler registers.
             SAMPLER(sampler_ControlMap0);
 
             TEXTURE2D(_ControlMap1);
-            SAMPLER(sampler_ControlMap1);
+
 
             TEXTURE2D(_ControlMap2);
-            SAMPLER(sampler_ControlMap2);
+
 
             TEXTURE2D(_GrassAlbedo);
             SAMPLER(sampler_GrassAlbedo);
 
             TEXTURE2D(_GrassNormal);
-            SAMPLER(sampler_GrassNormal);
+
+            TEXTURE2D(_GrassSurfaceMap);
+            SAMPLER(sampler_GrassSurfaceMap);
 
             TEXTURE2D(_LeafLitterAlbedo);
             SAMPLER(sampler_LeafLitterAlbedo);
 
             TEXTURE2D(_LeafLitterNormal);
-            SAMPLER(sampler_LeafLitterNormal);
+
             TEXTURE2D(_LeafLitterAO);
             TEXTURE2D(_LeafLitterHeight);
 
@@ -158,7 +180,7 @@ Shader "Custom/StylizedTerrainURP"
             SAMPLER(sampler_BareDirtAlbedo);
 
             TEXTURE2D(_BareDirtNormal);
-            SAMPLER(sampler_BareDirtNormal);
+
             TEXTURE2D(_BareDirtAO);
             TEXTURE2D(_BareDirtHeight);
 
@@ -166,7 +188,7 @@ Shader "Custom/StylizedTerrainURP"
             SAMPLER(sampler_MossAlbedo);
 
             TEXTURE2D(_MossNormal);
-            SAMPLER(sampler_MossNormal);
+
             TEXTURE2D(_MossAO);
             TEXTURE2D(_MossHeight);
             TEXTURE2D(_MixedForestFloorAlbedo);
@@ -177,18 +199,19 @@ Shader "Custom/StylizedTerrainURP"
             TEXTURE2D(_DenseMossHeight);
 
             TEXTURE2D(_SandAlbedo);
+            SAMPLER(sampler_SandAlbedo);
             TEXTURE2D(_SandNormal);
 
             TEXTURE2D(_SnowAlbedo);
             SAMPLER(sampler_SnowAlbedo);
 
             TEXTURE2D(_SnowNormal);
-            SAMPLER(sampler_SnowNormal);
+
 
             TEXTURE2D(_RockAlbedo);
             SAMPLER(sampler_RockAlbedo);
             TEXTURE2D(_RockNormal);
-            SAMPLER(sampler_RockNormal);
+
 
             struct Attributes
             {
@@ -273,6 +296,21 @@ Shader "Custom/StylizedTerrainURP"
                 float _GrassNormalStrength;
                 float _GrassDetailStrength;
                 float _GrassDetailContrast;
+                float _GrassBladeGround;
+                float _GrassGroundTiling;
+                float _GrassGroundFarTiling;
+                float _GrassGroundScaleFadeStart;
+                float _GrassGroundScaleFadeEnd;
+                float _GrassGroundGridScale;
+                float _GrassGroundDetailStrength;
+                float _GrassGroundDetailContrast;
+                float _GrassGroundDetailFadeStart;
+                float _GrassGroundDetailFadeEnd;
+                float _GrassGroundNormalFadeStart;
+                float _GrassGroundNormalFadeEnd;
+                float _GrassGroundHeightDepth;
+                float _GrassGroundHeightFadeStart;
+                float _GrassGroundHeightFadeEnd;
 
                 float _SnowNormalStrength;
                 float _SnowTilingNear;
@@ -332,6 +370,10 @@ Shader "Custom/StylizedTerrainURP"
 
                 return lerp(midGrassColor, lightGrassColor, (n - 0.5) * 2.0);
             }
+
+            #if defined(_GRASS_BLADE_GROUND)
+            #include "GrassGroundSurface.hlsl"
+            #endif
 
             float3 ApplyDetailNormal(float3 baseNormalWS, float3 tangentNormal, float strength)
             {
@@ -394,9 +436,9 @@ Shader "Custom/StylizedTerrainURP"
                 float2 uvY = RotateUV90(positionWS.xz * snowTiling);
                 float2 uvZ = RotateUV90(positionWS.xy * snowTiling);
 
-                float3 sampleX = UnpackNormal(SAMPLE_TEXTURE2D(_SnowNormal, sampler_SnowNormal, uvX));
-                float3 sampleY = UnpackNormal(SAMPLE_TEXTURE2D(_SnowNormal, sampler_SnowNormal, uvY));
-                float3 sampleZ = UnpackNormal(SAMPLE_TEXTURE2D(_SnowNormal, sampler_SnowNormal, uvZ));
+                float3 sampleX = UnpackNormal(SAMPLE_TEXTURE2D(_SnowNormal, sampler_SnowAlbedo, uvX));
+                float3 sampleY = UnpackNormal(SAMPLE_TEXTURE2D(_SnowNormal, sampler_SnowAlbedo, uvY));
+                float3 sampleZ = UnpackNormal(SAMPLE_TEXTURE2D(_SnowNormal, sampler_SnowAlbedo, uvZ));
 
                 // Match RotateUV90 on each projection: yz -> (-z,y), xz -> (-z,x), xy -> (-y,x).
                 // Convert texture slopes into world space before blending, as for rock detail.
@@ -419,9 +461,9 @@ Shader "Custom/StylizedTerrainURP"
                        + SAMPLE_TEXTURE2D(_RockAlbedo, sampler_RockAlbedo, uvY).rgb * blend.y
                        + SAMPLE_TEXTURE2D(_RockAlbedo, sampler_RockAlbedo, uvZ).rgb * blend.z;
 
-                float3 nx = UnpackNormal(SAMPLE_TEXTURE2D(_RockNormal, sampler_RockNormal, uvX));
-                float3 ny = UnpackNormal(SAMPLE_TEXTURE2D(_RockNormal, sampler_RockNormal, uvY));
-                float3 nz = UnpackNormal(SAMPLE_TEXTURE2D(_RockNormal, sampler_RockNormal, uvZ));
+                float3 nx = UnpackNormal(SAMPLE_TEXTURE2D(_RockNormal, sampler_RockAlbedo, uvX));
+                float3 ny = UnpackNormal(SAMPLE_TEXTURE2D(_RockNormal, sampler_RockAlbedo, uvY));
+                float3 nz = UnpackNormal(SAMPLE_TEXTURE2D(_RockNormal, sampler_RockAlbedo, uvZ));
                 // Transform each projection's slopes into world space; flat maps preserve the mesh normal.
                 float3 perturbation = float3(0, nx.x * axisSign.x, nx.y) * blend.x
                                     + float3(ny.y, 0, ny.x * axisSign.y) * blend.y
@@ -433,9 +475,9 @@ Shader "Custom/StylizedTerrainURP"
             void SampleSandDetail(float3 positionWS, float3 baseNormalWS, out half3 albedo, out float3 detailNormalWS)
             {
                 float2 uv = positionWS.xz * max(_SandTiling, 0.0001);
-                albedo = SAMPLE_TEXTURE2D(_SandAlbedo, sampler_GrassAlbedo, uv).rgb;
+                albedo = SAMPLE_TEXTURE2D(_SandAlbedo, sampler_SandAlbedo, uv).rgb;
 
-                float3 tangentNormal = UnpackNormal(SAMPLE_TEXTURE2D(_SandNormal, sampler_GrassNormal, uv));
+                float3 tangentNormal = UnpackNormal(SAMPLE_TEXTURE2D(_SandNormal, sampler_SandAlbedo, uv));
                 detailNormalWS = ApplyDetailNormal(baseNormalWS, tangentNormal, _SandNormalStrength);
             }
 
@@ -464,8 +506,8 @@ Shader "Custom/StylizedTerrainURP"
                 // Control pixels represent mesh samples, including the endpoints of each chunk.
                 float2 controlUV = IN.uv * (1.0 - _ControlMap0_TexelSize.xy) + 0.5 * _ControlMap0_TexelSize.xy;
                 float4 control0 = SAMPLE_TEXTURE2D(_ControlMap0, sampler_ControlMap0, controlUV);
-                float4 control1 = SAMPLE_TEXTURE2D(_ControlMap1, sampler_ControlMap1, controlUV);
-                float4 control2 = SAMPLE_TEXTURE2D(_ControlMap2, sampler_ControlMap2, controlUV);
+                float4 control1 = SAMPLE_TEXTURE2D(_ControlMap1, sampler_ControlMap0, controlUV);
+                float4 control2 = SAMPLE_TEXTURE2D(_ControlMap2, sampler_ControlMap0, controlUV);
                 control0 = pow(saturate(control0), max(_SurfaceBlendSharpness, 0.25));
                 control1 = pow(saturate(control1), max(_SurfaceBlendSharpness, 0.25));
                 float totalWeight = dot(control0, float4(1, 1, 1, 1)) + dot(control1.rgb, float3(1, 1, 1));
@@ -488,13 +530,19 @@ Shader "Custom/StylizedTerrainURP"
                 half forestVariantWeight = saturate(control1.a);
 
                 float distanceToCamera = distance(_WorldSpaceCameraPos.xyz, IN.positionWS);
-
+                #if defined(_GRASS_BLADE_GROUND)
+                // Explicit derivatives remain valid when distant detail takes
+                // the branch that skips texture fetches altogether.
+                float2 grassGroundDx = ddx(IN.positionWS.xz);
+                float2 grassGroundDy = ddy(IN.positionWS.xz);
+                #else
                 float grassDistanceBlend = GetNoisyDistanceBlend(
                     distanceToCamera,
                     _GrassTilingNearDistance,
                     _GrassTilingFarDistance,
                     IN.positionWS.xz
                 );
+                #endif
 
                 float snowDistanceBlend = GetNoisyDistanceBlend(
                     distanceToCamera,
@@ -539,12 +587,23 @@ Shader "Custom/StylizedTerrainURP"
 
                 if (grassWeight > 0.001h)
                 {
+                    #if defined(_GRASS_BLADE_GROUND)
+                    half grassVariation;
+                    float remainingGrass = (1.0 - leafLitterWeight) * (1.0 - bareDirtWeight) * (1.0 - mossWeight);
+                    SampleGrassGround(IN.positionWS, baseNormalWS, distanceToCamera, remainingGrass,
+                        grassGroundDx, grassGroundDy, grassVariation, normalWS);
+                    #else
                     float2 grassUVNear = IN.positionWS.xz * _GrassTilingNear;
                     float2 grassUVFar = IN.positionWS.xz * _GrassTilingFar;
 
                     half3 grassTexNear = SAMPLE_TEXTURE2D(_GrassAlbedo, sampler_GrassAlbedo, grassUVNear).rgb;
                     half3 grassTexFar = SAMPLE_TEXTURE2D(_GrassAlbedo, sampler_GrassAlbedo, grassUVFar).rgb;
                     half3 grassTex = lerp(grassTexNear, grassTexFar, grassDistanceBlend);
+                    half grassLuma = dot(grassTex, half3(0.299h, 0.587h, 0.114h));
+                    half grassCentered = (grassLuma - 0.5h) * 2.0h;
+                    half grassDetail = grassCentered * _GrassDetailContrast;
+                    half grassVariation = saturate(1.0h + grassDetail * _GrassDetailStrength);
+                    #endif
 
                     half3 grassTint = EvaluateGrassTint(
                         IN.positionWS.xz,
@@ -557,11 +616,6 @@ Shader "Custom/StylizedTerrainURP"
                         _GroundDarkGrassColor.rgb,
                         _GroundMidGrassColor.rgb,
                         _GroundLightGrassColor.rgb);
-
-                    half grassLuma = dot(grassTex, half3(0.299h, 0.587h, 0.114h));
-                    half grassCentered = (grassLuma - 0.5h) * 2.0h;
-                    half grassDetail = grassCentered * _GrassDetailContrast;
-                    half grassVariation = saturate(1.0h + grassDetail * _GrassDetailStrength);
 
                     half3 grassColor = grassTint * grassVariation;
                     grassColor = lerp(grassColor, darkGroundGrassTint * grassVariation, darkGrassCoverWeight);
@@ -652,21 +706,23 @@ Shader "Custom/StylizedTerrainURP"
                     grassColor = lerp(grassColor, mossColor, mossWeight);
                     baseColor += grassColor * grassWeight;
 
+                    #if !defined(_GRASS_BLADE_GROUND)
                     float3 grassTangentNormalNear = UnpackNormal(
-                        SAMPLE_TEXTURE2D(_GrassNormal, sampler_GrassNormal, grassUVNear)
+                        SAMPLE_TEXTURE2D(_GrassNormal, sampler_GrassAlbedo, grassUVNear)
                     );
                     float3 grassTangentNormalFar = UnpackNormal(
-                        SAMPLE_TEXTURE2D(_GrassNormal, sampler_GrassNormal, grassUVFar)
+                        SAMPLE_TEXTURE2D(_GrassNormal, sampler_GrassAlbedo, grassUVFar)
                     );
                     float3 grassTangentNormal = normalize(lerp(grassTangentNormalNear, grassTangentNormalFar, grassDistanceBlend));
 
                     normalWS = ApplyDetailNormal(baseNormalWS, grassTangentNormal, _GrassNormalStrength);
+                    #endif
 
                     if (leafLitterWeight > 0.001h)
                     {
                         float2 leafLitterNormalUV = leafLitterBaseUV * _LeafLitterNormal_ST.xy + _LeafLitterNormal_ST.zw;
                         float3 leafLitterTangentNormal = UnpackNormal(
-                            SAMPLE_TEXTURE2D(_LeafLitterNormal, sampler_LeafLitterNormal, leafLitterNormalUV)
+                            SAMPLE_TEXTURE2D(_LeafLitterNormal, sampler_LeafLitterAlbedo, leafLitterNormalUV)
                         );
 
                         float3 leafLitterNormalWS = ApplyDetailNormal(
@@ -678,7 +734,7 @@ Shader "Custom/StylizedTerrainURP"
                         if (forestVariantWeight > 0.001h)
                         {
                             float2 mixedNormalUV = mixedForestUV * _MixedForestFloorNormal_ST.xy + _MixedForestFloorNormal_ST.zw;
-                            float3 mixedNormal = UnpackNormal(SAMPLE_TEXTURE2D(_MixedForestFloorNormal, sampler_LeafLitterNormal, mixedNormalUV));
+                            float3 mixedNormal = UnpackNormal(SAMPLE_TEXTURE2D(_MixedForestFloorNormal, sampler_LeafLitterAlbedo, mixedNormalUV));
                             float3 mixedNormalWS = ApplyDetailNormal(baseNormalWS, mixedNormal, _LeafLitterNormalStrength);
                             normalWS = normalize(lerp(normalWS, mixedNormalWS, forestVariantWeight * leafLitterWeight));
                         }
@@ -687,7 +743,7 @@ Shader "Custom/StylizedTerrainURP"
                     if (bareDirtWeight > 0.001h)
                     {
                         float3 bareDirtTangentNormal = UnpackNormal(
-                            SAMPLE_TEXTURE2D(_BareDirtNormal, sampler_BareDirtNormal, bareDirtUV)
+                            SAMPLE_TEXTURE2D(_BareDirtNormal, sampler_BareDirtAlbedo, bareDirtUV)
                         );
 
                         float3 bareDirtNormalWS = ApplyDetailNormal(
@@ -701,7 +757,7 @@ Shader "Custom/StylizedTerrainURP"
                     if (mossWeight > 0.001h)
                     {
                         float3 mossTangentNormal = UnpackNormal(
-                            SAMPLE_TEXTURE2D(_MossNormal, sampler_MossNormal, mossUV)
+                            SAMPLE_TEXTURE2D(_MossNormal, sampler_MossAlbedo, mossUV)
                         );
 
                         float3 mossNormalWS = ApplyDetailNormal(
@@ -742,10 +798,10 @@ Shader "Custom/StylizedTerrainURP"
                     baseColor += snowColor * snowWeight;
 
                     float3 snowTangentNormalUVNear = UnpackNormal(
-                        SAMPLE_TEXTURE2D(_SnowNormal, sampler_SnowNormal, snowUVNear)
+                        SAMPLE_TEXTURE2D(_SnowNormal, sampler_SnowAlbedo, snowUVNear)
                     );
                     float3 snowTangentNormalUVFar = UnpackNormal(
-                        SAMPLE_TEXTURE2D(_SnowNormal, sampler_SnowNormal, snowUVFar)
+                        SAMPLE_TEXTURE2D(_SnowNormal, sampler_SnowAlbedo, snowUVFar)
                     );
                     float3 snowTangentNormalUV = lerp(snowTangentNormalUVNear, snowTangentNormalUVFar, snowDistanceBlend);
                     float3 snowPerturbationUV = float3(snowTangentNormalUV.y, 0, -snowTangentNormalUV.x);
