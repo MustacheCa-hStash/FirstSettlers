@@ -901,10 +901,10 @@ MonoBehaviour:
   chunkParent: {fileID: 1025920260}
   foliageParent: {fileID: 454788146}
   grassSettings:
-    grassPrefab: {fileID: 4547928979500997360, guid: 7acbea810f367244183cc3fa9cf18e75, type: 3}
+    grassPrefab: {fileID: 1247386779206939101, guid: dff49970887de25458a69ed12bb8b632, type: 3}
     gpuIndirectRendering: 1
     grassCompactShader: {fileID: 7200000, guid: 96b7aefeee2f40ea87a0c87c4235a78c, type: 3}
-    billboardCoverage: 0.2
+    billboardCoverage: 0.45
     transitionWidthChunks: 0.35
     representationTransitionSeconds: 0.4
     representationHysteresis: 0.03
@@ -912,7 +912,7 @@ MonoBehaviour:
     grassCompletionBudgetMs: 0.35
     maxGrassUploadsPerFrame: 8
     grassUploadBudgetMs: 0.35
-    cellsPerAxis: 125
+    cellsPerAxis: 144
     cellJitter: 1
     activeRingRadius: 1
     nearGrassPrecomputeChunkPadding: 0
@@ -932,9 +932,9 @@ MonoBehaviour:
     maxQueuedGroundFoliageGenerationWork: 48
     maxQueuedRenderBatchWork: 96
     densityRadius3: 1
-    densityRadius6: 0.6
-    densityRadius10: 0.2
-    densityBeyond10: 0.06
+    densityRadius6: 0.82
+    densityRadius10: 0.55
+    densityBeyond10: 0.4
     uniformScaleRange: {x: 0.9, y: 1.3}
     randomizeYaw: 1
     receiveGrassShadows: 1
@@ -943,7 +943,7 @@ MonoBehaviour:
     forestDarkGrassColor: {r: 0.1, g: 0.28, b: 0.09, a: 1}
     forestMidGrassColor: {r: 0.16, g: 0.4, b: 0.13, a: 1}
     forestLightGrassColor: {r: 0.25, g: 0.52, b: 0.19, a: 1}
-    billboardGrassPrefab: {fileID: 2274311721168609727, guid: e76b7893d4994f848a5f13029dbbffa1, type: 3}
+    billboardGrassPrefab: {fileID: 7070889263170737803, guid: fcbbf5456e50ad94cb3fb0802d388f74, type: 3}
     billboardRingRadius: 3
     billboardCellsPerAxis: 60
     billboardSpawnChance: 0.05

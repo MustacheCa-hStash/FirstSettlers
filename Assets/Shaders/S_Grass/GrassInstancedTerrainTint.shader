@@ -2,9 +2,7 @@ Shader "Custom/GrassInstancedTerrainTint"
 {
     Properties
     {
-        [MainTexture] _BaseMap("Base / Alpha Map", 2D) = "white" {}
-        _GrassTex("Grass Detail Texture", 2D) = "white" {}
-        _GrassNormal("Grass Normal", 2D) = "bump" {}
+        [MainTexture] _BaseMap("Blade Silhouette (Alpha Only)", 2D) = "white" {}
 
         [MainColor] _BaseColor("Base Color", Color) = (1, 1, 1, 1)
         _Color("Color", Color) = (1, 1, 1, 1)
@@ -26,8 +24,9 @@ Shader "Custom/GrassInstancedTerrainTint"
         _NoiseStrength("Noise Strength", Range(0, 4)) = 1
         _BlendSharpness("Blend Sharpness", Range(0.05, 4)) = 0.61
 
-        _GrassDetailStrength("Grass Detail Strength", Range(0, 1)) = 0.35
-        _GrassDetailContrast("Grass Detail Contrast", Range(0.1, 6)) = 2.14
+        _RootTint("Root Tone", Color) = (0.68, 0.76, 0.60, 1)
+        _TipTint("Tip Tone", Color) = (1.05, 1.06, 0.92, 1)
+        _HeightGradientPower("Height Gradient Curve", Range(0.2, 3)) = 0.85
         _AmbientStrength("Minimum Ambient Strength", Range(0, 1)) = 0.28
         [Toggle] _ReceiveShadows("Receive Shadows", Float) = 0
 
@@ -88,12 +87,8 @@ Shader "Custom/GrassInstancedTerrainTint"
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
 
-            TEXTURE2D(_GrassTex);
-            SAMPLER(sampler_GrassTex);
-
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
-                float4 _GrassTex_ST;
                 half4 _BaseColor;
                 half4 _Color;
                 half4 _DarkGrassColor;
@@ -107,8 +102,9 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half _NoiseScale;
                 half _NoiseStrength;
                 half _BlendSharpness;
-                half _GrassDetailStrength;
-                half _GrassDetailContrast;
+                half4 _RootTint;
+                half4 _TipTint;
+                half _HeightGradientPower;
                 half _AmbientStrength;
                 half _ReceiveShadows;
                 half _BladeMinY;
@@ -145,11 +141,12 @@ Shader "Custom/GrassInstancedTerrainTint"
                 float3 positionWS : TEXCOORD0;
                 half3 normalWS : TEXCOORD1;
                 float2 baseUV : TEXCOORD2;
-                float2 grassUV : TEXCOORD3;
+                half bladeHeight : TEXCOORD3;
                 float4 shadowCoord : TEXCOORD4;
                 #if defined(_BILLBOARD_RENDER_FADE_ON)
                 float4 screenPosition : TEXCOORD5;
                 #endif
+                float2 instanceXZ : TEXCOORD6;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -235,7 +232,10 @@ Shader "Custom/GrassInstancedTerrainTint"
                 OUT.screenPosition = ComputeScreenPos(OUT.positionCS);
                 #endif
                 OUT.baseUV = TRANSFORM_TEX(IN.uv, _BaseMap);
-                OUT.grassUV = TRANSFORM_TEX(IN.uv, _GrassTex);
+                OUT.bladeHeight = bladeHeight;
+                // One flat palette color per tuft. Wind and blade shape must
+                // not introduce noise or painted detail inside a blade.
+                OUT.instanceXZ = TransformObjectToWorld(float3(0.0, 0.0, 0.0)).xz;
 
                 half3 normalWS = TransformObjectToWorldNormal(IN.normalOS);
                 half upwardBlend = saturate(lerp(_BaseUpwardBlend, _TipUpwardBlend, bladeHeight) * _UpwardNormalBlend);
@@ -265,13 +265,9 @@ Shader "Custom/GrassInstancedTerrainTint"
                 }
                 #endif
 
-                half3 grassTint = PaletteTint(IN.positionWS.xz, forestBlend);
-
-                half3 detailSample = SAMPLE_TEXTURE2D(_GrassTex, sampler_GrassTex, IN.grassUV).rgb;
-                half detailLum = dot(detailSample, half3(0.299h, 0.587h, 0.114h));
-                half detailCentered = (detailLum - 0.5h) * 2.0h;
-                half detail = detailCentered * _GrassDetailContrast;
-                half grassVariation = saturate(1.0h + detail * _GrassDetailStrength);
+                half3 grassTint = PaletteTint(IN.instanceXZ, forestBlend);
+                half heightTone = pow(saturate(IN.bladeHeight), max(_HeightGradientPower, 0.001h));
+                half3 bladeTone = lerp(_RootTint.rgb, _TipTint.rgb, heightTone);
 
                 half3 normalWS = normalize(IN.normalWS);
                 Light mainLight = GetMainLight(IN.shadowCoord);
@@ -280,7 +276,7 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half3 ambient = max(SampleSH(normalWS), _AmbientStrength.xxx);
                 half3 lighting = ambient + mainLight.color * (0.35h + ndotl * 0.65h) * shadowAttenuation;
 
-                half3 color = grassTint * grassVariation * _BaseColor.rgb * _Color.rgb * lighting;
+                half3 color = grassTint * bladeTone * _BaseColor.rgb * _Color.rgb * lighting;
                 return half4(color, baseSample.a * _BaseColor.a * _Color.a);
             }
             ENDHLSL
