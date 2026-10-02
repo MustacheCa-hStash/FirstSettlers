@@ -54,6 +54,8 @@ public class FoliageManager
     private readonly TerrainWaterSettings waterSettings;
 
     private Mesh grassMesh;
+    private Mesh forestGrassMesh, forestFarGrassMesh;
+    private Material forestGrassMaterial, forestFarGrassMaterial;
     private Material grassMaterial;
     private int grassInstanceDataPropertyId;
     private Camera grassRenderCamera;
@@ -178,7 +180,8 @@ public class FoliageManager
     public void UpdateGrassStreaming(ChunkManager manager, List<ChunkCoord> activeCoords, Vector3 viewer, Camera camera)
     {
         grassStream.Update(manager, activeCoords, viewer, camera, camera != null ? grassGpuPlanes : null,
-            grassMesh, grassMaterial, billboardGrassMesh, billboardGrassMaterial);
+            grassMesh, grassMaterial, billboardGrassMesh, billboardGrassMaterial,
+            forestGrassMesh, forestGrassMaterial, forestFarGrassMesh, forestFarGrassMaterial);
     }
     private void PrepareStreamingGrass(ChunkRecord record)
     {
@@ -3770,6 +3773,8 @@ public class FoliageManager
 
     private void ResolveGrassRenderAssets()
     {
+        ResolveForestGrassAsset(grassSettings.forestGrassPrefab, "Foliage/ForestGrassTuft_LOD0", out forestGrassMesh, out forestGrassMaterial);
+        ResolveForestGrassAsset(grassSettings.forestBillboardGrassPrefab, "Foliage/ForestGrassTuft_LOD1", out forestFarGrassMesh, out forestFarGrassMaterial);
         string instanceDataPropertyName = string.IsNullOrEmpty(grassSettings.grassInstanceDataPropertyName)
             ? "_GrassInstanceData"
             : grassSettings.grassInstanceDataPropertyName;
@@ -3842,6 +3847,16 @@ public class FoliageManager
                 billboardGrassMaterial.enableInstancing = true;
             }
         }
+    }
+
+    private static void ResolveForestGrassAsset(GameObject prefab, string resource, out Mesh mesh, out Material material)
+    {
+        prefab = prefab != null ? prefab : Resources.Load<GameObject>(resource);
+        mesh = prefab != null ? prefab.GetComponentInChildren<MeshFilter>()?.sharedMesh : null;
+        material = prefab != null ? prefab.GetComponentInChildren<MeshRenderer>()?.sharedMaterial : null;
+        if (mesh == null || material == null)
+            Debug.LogWarning($"Forest grass asset {resource} is incomplete; using the standard grass asset for that distance.");
+        else material.enableInstancing = true;
     }
 
     private Material CreateBillboardGrassRenderFadeMaterial(Material sourceMaterial)

@@ -130,6 +130,7 @@ public class ChunkManager
     private readonly AmbientLifeManager butterflyManager;
     private readonly AmbientLifeManager beeManager;
     private readonly DistantTreeManager distantTrees;
+    private readonly LeafClusterSystem leafClusters;
     private readonly WorldFeatureGenerationSettings worldFeatureGenerationSettings;
 
     public ChunkManager(
@@ -188,7 +189,8 @@ public class ChunkManager
         float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma, WorldErosionSettings erosion = default,
         ButterflySettings butterflySettings = null,
         BeeSettings beeSettings = null,
-        TerrainHorizonShadowSettings terrainHorizonShadowSettings = null)
+        TerrainHorizonShadowSettings terrainHorizonShadowSettings = null,
+        LeafClusterSettings leafClusterSettings = null)
     {
         this.viewDistance = viewDistance;
         this.colliderDistance = colliderDistance;
@@ -212,6 +214,7 @@ public class ChunkManager
         this.terrainMaterial = terrainMaterial;
         this.waterMaterial = waterMaterial;
         this.terrainReceiveShadows = terrainReceiveShadows;
+        leafClusters = new LeafClusterSystem(leafClusterSettings, seed, chunkSize, worldScale, meshHeightMultiplier, grassSettings);
         terrainHorizonShadows = new TerrainHorizonShadowSystem(chunkSize, seed, sampleScale, worldScale,
             meshHeightMultiplier, waterSettings, mountainHorizontalScale, erosion, terrainHorizonShadowSettings);
         this.maxActiveTerrainDataJobs = Mathf.Max(1, maxActiveTerrainDataJobs);
@@ -286,6 +289,7 @@ public class ChunkManager
 
     public void Dispose()
     {
+        leafClusters.Dispose();
         terrainHorizonShadows?.Dispose();
         butterflyManager?.Dispose();
         beeManager?.Dispose();
@@ -632,6 +636,7 @@ public class ChunkManager
         }
         butterflyManager?.Update(this, viewerCoord, viewerCamera, Time.deltaTime);
         beeManager?.Update(this, viewerCoord, viewerCamera, Time.deltaTime);
+        leafClusters.Update(this, orderedActiveCoords, viewer.position, viewerCamera);
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FoliageTotal, foliageStart);
 
         lastViewerGlobalSubChunk = viewerGlobalSubChunk;
@@ -1767,6 +1772,7 @@ public class ChunkManager
         if (treeSettings == null)
             return settings;
 
+        settings.treeUniformScaleRange = treeSettings.treeUniformScaleRange;
         settings.forestRockPrefabCount =
             treeSettings.forestRockPrefabs != null ? treeSettings.forestRockPrefabs.Length : 0;
         settings.maxForestRocksPerChunk = Mathf.Max(0, treeSettings.maxForestRocksPerChunk);

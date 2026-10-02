@@ -1,5 +1,37 @@
 # FirstSettlers Work Notes
 
+## October 2: moss preview/game color correction
+
+The authoring clone used Gamma while the game uses Linear. Replaced the terrain shader's literal moss fill with a Color property so Unity converts the authored dark green correctly. Preview preparation now matches the game's color space, and the moss renderer requires Linear. Actual Unity before/after captures under identical lighting are in `ArtReferences/ForestFloor/Moss_Linear_Before.png` and `Moss_Floor.png`; the former reproduces the pale pre-fix result. Earlier Gamma captures are not exact live color references. All 24 terrain shader stages and the isolated Unity rendering passed. Restart Play mode to refresh chunk material copies. Global lighting, grass rims and generation are unchanged. See [FOREST_FLOOR.md](FOREST_FLOOR.md).
+
+## October 2: moss integration and disconnected tree scale fix
+
+The inspector's Tree Uniform Scale Range was unused by the world-feature planner: near and distant trees used hard-coded species sizes. It now passes through ChunkManager into shared worker settings and deterministically sets uniform scales for forest and meadow trees. The scene's existing 4–5 setting is preserved and now takes effect after restarting Play mode. Species, positions, counts, rotations, and placement clearances are unaffected; near GameObjects and distant CPU/GPU matrices consume the same planned scale. Reversed endpoints are normalized and invalid scales sanitized. Already-cached trees are not resized live; the inspector tooltip explains regeneration.
+
+Moss now forms stronger continuous patches, dominates blended terrain through a shared coverage curve, uses the existing mixed/dense textures with reduced fine contrast/saturation, and suppresses grass/clover while retaining some fallen leaves. Moss blends last over eligible terrain, including overlapping rock at patch edges; steep vertical faces and snow/water surfaces remain protected. No new moss geometry or foliage renderer. The user explicitly asked to hold the grass-rim fix: the existing control-map smoothing and grass/litter boundary behavior remain unchanged. See [FOREST_FLOOR.md](FOREST_FLOOR.md) for costs, tuning, and the isolated authoring preview. No live scene audit, Play mode, or computer control.
+
+Validation passed: 72 synthetic trees with inspector-to-near/sparse size transport, actual real-terrain near/distant placement parity, moss habitat/dominance and native grass/clover/leaf suppression, forest seams/far terrain/streaming regressions, runtime/editor C# and 24 terrain shader stages. The legacy distant-tree real-terrain test used a 200x height multiplier against 10x in the sparse path and omitted local moisture inputs; its fixture now matches production inputs. Actual Unity terrain/material preview saved to `ArtReferences/ForestFloor/Moss_Floor.png`. Log: `.utmp/forest-floor/moss-tree-unity2.log`.
+
+## October 2: forest scatter, opening clover, and requested Unity previews
+
+Replaced the five-leaf rosette with nine asymmetrically scattered, nearly solid-color leaves. The preserved atlas supplies alpha silhouettes only; no texture veins or grain appear. Near/far meshes use 72/16 triangles and complementary 18–30-unit LOD selection. Leaves now match grass's horizontal range automatically: 115.2 units in SmearScene, fading over 101.76–115.2. The extended radius increases candidate/cache/draw work; no performance improvement is claimed. GPU instancing remains DrawMeshInstanced with CPU culling, while grass retains its resident indirect path.
+
+Forest grass blades are wider (1.6–2.8 cm) and lighter olive, at the same 42/7-triangle budgets. Fixed current URP Forward+/fragment-fog handling. Clover uses its existing instanced system in forest DarkGrass openings only, at reduced colony frequency and a 22-degree slope ceiling; deep litter/moss remains excluded. Restart Play mode to regenerate.
+
+The user explicitly requested actual forest asset renders in this turn. Controlled offscreen Unity URP authoring renders are saved in [ArtReferences/ForestFloor](ArtReferences/ForestFloor), with matching before/after images, generated forest floor close-up/context, and arranged asset detail. They use actual asset meshes/shaders and generated foliage on a representative flat fixture; they do not reproduce the live world's complete lighting/terrain shader or measure performance. No Play mode or computer-control automation was used. This authorization applies to these authoring previews, not renewed automated live-scene audits. Generation/range/LOD/clover checks and runtime/editor compilation passed. See [LEAF_CLUSTERS.md](LEAF_CLUSTERS.md) and [FOREST_GRASS.md](FOREST_GRASS.md).
+
+## October 2: separate simple forest grass tuft
+
+Implemented the authorized step 1: a short, irregular forest-only tuft with separated blade roots, nearly uniform olive/dry-brown fills, and no detailed bitmap texture. New Resources prefabs supply 42-triangle near and 7-triangle distant meshes automatically; optional GrassSettings overrides are available. Forest and meadow draw lists share the existing resident GPU candidate arena and distance/density policy. Homogeneous chunks retain at most two grass draws; mixed chunks can use four. Leaf assets, ground texture, placement density, and grassland assets are unchanged. See [FOREST_GRASS.md](FOREST_GRASS.md) for assets, costs, and tuning. Restart Play mode; the user should inspect their actual views. No automated scene/camera tests.
+
+## October 1: instanced forest leaf clusters
+
+Added a ready-to-use five-leaf prefab, a painted four-leaf atlas, and a URP instanced shader. WorldManager now exposes Forest Leaf Clusters settings and automatically loads the default prefab. Placement favors quiet litter in forests, excludes steep/rock/wet terrain and object footprints, and renders within 28 units with a 20–28 fade. GPU instancing aggregates visible clusters across nearby chunks; no per-leaf GameObjects or new shadow casters. See [LEAF_CLUSTERS.md](LEAF_CLUSTERS.md) for asset paths, costs, tuning, and validation. Restart Play mode and inspect the user's actual forest views.
+
+## October 1: forest floor redesign
+
+Forest grass now follows a continuous, irregular density field with sparse interiors and fuller clearings. Litter remains beneath vegetation, with gradual soil/moss/mixed-litter blends in both detailed and distant terrain. The 45–50 degree wet slope band retains forest treatment, removing the meadow-density rims around rock faces while keeping the tree placement limit at 45 degrees. Step 3 adds the existing litter normal map with a distance fade and subtle world-space tone variation. See [FOREST_FLOOR.md](FOREST_FLOOR.md) for tuning, costs, and validation. Restart Play mode to regenerate; the user should check their actual views.
+
 ## September 12: streaming priorities 1 and 2
 
 User authorized allocation/GC cleanup and ground foliage generation first; remaining priorities and profiler evidence are tracked in [todo.md](todo.md). Do not run scene/camera tests; the user will profile their own walking route. No terrain CPU/GPU refactor or broader tree rendering rewrite in this pass.

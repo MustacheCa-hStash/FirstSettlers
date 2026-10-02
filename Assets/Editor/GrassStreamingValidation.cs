@@ -43,7 +43,14 @@ public static class GrassStreamingValidation
         var settings = new GrassSettings { cellsPerAxis=16, subChunksPerChunk=2, maxConcurrentGrassJobs=1,
             maxSubChunkGenerationsPerFrame=1, maxGrassUploadsPerFrame=1, billboardRingRadius=3 };
         var coords = new List<ChunkCoord>{record.ChunkCoord};
-        using (var stream = new GrassStream(settings,null,null,1234,16,1,10,_=>{},()=>false))
+        // Near discovery reads retained native maps, just as it does in a loaded terrain chunk.
+        void Prepare(ChunkRecord r)
+        {
+            r.NativeData?.Dispose();
+            Set(r, "nativeTerrainData", new ChunkRecord.NativeTerrainData(r.HeightMap, r.SlopeMap, r.BiomeMap,
+                r.SurfaceTypeMap, r.WaterStateMap, r.GroundCoverMap, r.RiverMaskMap));
+        }
+        using (var stream = new GrassStream(settings,null,null,1234,16,1,10,Prepare,()=>false))
         {
             void Tick() => stream.Update(manager,coords,Vector3.zero,null,null,null,null,null,null);
             void Drain(int expected)
@@ -69,6 +76,7 @@ public static class GrassStreamingValidation
             Check(record.FoliageData.GetTotalNearGrassInstanceCount()==0, "Empty replacement not published.");
             settings.cellsPerAxis=16; Tick(); coords.Clear(); Tick(); // disposal with retiring work
         }
+        record.Dispose();
         UnityEngine.Object.DestroyImmediate(root);
     }
     private static void ValidateGpu()

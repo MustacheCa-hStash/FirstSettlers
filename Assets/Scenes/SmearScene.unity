@@ -902,6 +902,8 @@ MonoBehaviour:
   foliageParent: {fileID: 454788146}
   grassSettings:
     grassPrefab: {fileID: 1247386779206939101, guid: dff49970887de25458a69ed12bb8b632, type: 3}
+    forestGrassPrefab: {fileID: 0}
+    forestBillboardGrassPrefab: {fileID: 0}
     gpuIndirectRendering: 1
     grassCompactShader: {fileID: 7200000, guid: 96b7aefeee2f40ea87a0c87c4235a78c, type: 3}
     billboardCoverage: 0.45
@@ -1141,6 +1143,9 @@ MonoBehaviour:
     - {fileID: 4919398732661662658, guid: 9a12c39052867774bbf56c1fb4c90611, type: 3}
     - {fileID: 1476561564074760266, guid: fccdc0ac73aac02459df082017731679, type: 3}
     - {fileID: 8386551719801728580, guid: dc25647382030b842a5800d8bac51aff, type: 3}
+    enableForestClover: 1
+    forestPatchChance: 0.55
+    forestMaxSlope: 22
     activeRingRadius: 1
     preGenerationRingPadding: 1
     receiveCloverShadows: 0
@@ -1184,6 +1189,23 @@ MonoBehaviour:
     treeExclusionRadius: 1
     bushExclusionRadius: 0.9
     rockExclusionRadius: 0.75
+  leafClusterSettings:
+    enabled: 1
+    prefab: {fileID: 0}
+    distantPrefab: {fileID: 0}
+    matchGrassRenderDistance: 1
+    renderDistance: 28
+    fadeWidth: 8
+    prewarmDistance: 8
+    cellSize: 1.5
+    density: 0.38
+    lodStart: 18
+    lodEnd: 30
+    maxSlope: 32
+    scaleRange: {x: 0.8, y: 1.25}
+    seedOffset: 47000
+    candidateBudgetPerFrame: 256
+    generationBudgetMs: 0.35
   treeSettings:
     mapleTreePrefab: {fileID: 0}
     sugarMapleTreePrefab: {fileID: 0}
@@ -1247,7 +1269,7 @@ MonoBehaviour:
     treeCellSize: 12
     treeSpawnChance: 0.03
     treeMinDistance: 9
-    treeUniformScaleRange: {x: 1.5, y: 2}
+    treeUniformScaleRange: {x: 4, y: 5}
     grassExclusionRadius: 0.5
     bushGrassExclusionRadius: 0.45
     seedOffset: 12000
@@ -1456,7 +1478,7 @@ Transform:
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 150, z: 0}
+  m_LocalPosition: {x: -300, y: 150, z: -1000}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1638,7 +1660,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameTimeManager
   startAutomatically: 1
   useUnscaledDeltaTime: 0
-  realSecondsPerGameHour: 5
+  realSecondsPerGameHour: 75
   timeScale: 1
   daylightHours: 16
   nighttimeHours: 8

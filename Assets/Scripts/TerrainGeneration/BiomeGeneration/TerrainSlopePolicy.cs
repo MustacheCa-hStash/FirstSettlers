@@ -40,7 +40,9 @@ public static class TerrainSlopePolicy
             return slope < ForestMaxDegrees ? BiomeType.Taiga : BiomeType.Grassland;
         if (temperature > 0.65f && moisture < 0.35f)
             return slope <= LooseSurfaceMaxDegrees ? BiomeType.Desert : BiomeType.Rock;
-        if (moisture > 0.65f && slope < ForestMaxDegrees) return BiomeType.Forest;
+        // Tree suitability ends at ForestMaxDegrees, but the forest floor continues to
+        // the rock boundary. Converting the 45-50 degree band to meadow creates grass rims.
+        if (moisture > 0.65f) return BiomeType.Forest;
         return BiomeType.Grassland;
     }
 }

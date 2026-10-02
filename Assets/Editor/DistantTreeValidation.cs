@@ -197,12 +197,14 @@ public static class DistantTreeValidation
         const float scale = 100f, water = 0.24f;
         foreach (var coord in new[] { new ChunkCoord(0, 0), new ChunkCoord(-3, 2), new ChunkCoord(8, -7), new ChunkCoord(30, 12) })
         {
-            var h = HeightMapGenerator.GenerateTerrainHeightField(size, seed, scale, coord, water, 1.5f);
+            // Both paths must use the same height multiplier for degree-based slope fields.
+            var h = HeightMapGenerator.GenerateTerrainHeightField(size, seed, scale, coord, water, 1.5f, 10f);
             var m = ClimateGenerator.GenerateTerrainMoistureMap(size, seed, scale, 5, 0.5f, 2f, coord);
             var t = ClimateGenerator.GenerateTerrainTemperatureMap(size, seed, scale, 5, 0.5f, 2f, coord);
             var b = BiomeMapGenerator.GenerateBiomeMap(h.HeightMap, m, t, h.SlopeMap, h.MountainMaskMap, h.RiverMaskMap, water);
             var s = SurfaceMapGenerator.GenerateSurfaceTypeMap(h.HeightMap, h.SlopeMap, h.RiverMaskMap, b, water);
-            var full = WorldFeaturePlanGenerator.Generate(coord, size, seed, b, s, m, t, h.SlopeMap, h.RiverMaskMap, WorldFeatureGenerationSettings.Default);
+            var full = WorldFeaturePlanGenerator.Generate(coord, size, seed, b, s, m, t, h.SlopeMap, h.RiverMaskMap,
+                WorldFeatureGenerationSettings.Default, h.HeightMap, water);
             var expected = full.Placements.Where(p => p.featureType == WorldFeatureType.Tree).ToArray();
             var sparse = System.Threading.Tasks.Task.Run(() => DistantTreePlacement.Generate(coord, size, seed, scale, 5, 0.5f, 2f, 1f, 10f, water, 1.5f, 12000, WorldFeatureGenerationSettings.Default)).GetAwaiter().GetResult();
             Require(expected.Length == sparse.Length, "Real terrain tree count mismatch at " + coord);

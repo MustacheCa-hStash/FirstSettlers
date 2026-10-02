@@ -16,7 +16,7 @@ Grass uses deterministic Burst candidate discovery and resident GPU-instanced dr
 
 ## Batching
 
-GPU grass has one resident source arena per chunk and separate visibility/argument buffers for the two meshes. Each completed subchunk uploads only its reserved range. There are at most two indirect draw submissions per rendered chunk; indirect draws are not split at 1,023 instances. Camera culling, density and representation selection happen on the GPU. The fallback uses DrawMeshInstanced batches of up to 1,023 and retains the same selection math.
+GPU grass has one resident source arena per chunk and separate visibility/argument buffers per biome and distance mesh. Each completed subchunk uploads only its reserved range. There are at most two indirect submissions for a chunk containing one grass type, or four for a mixed meadow/forest chunk using the forest tuft assets described in [FOREST_GRASS.md](FOREST_GRASS.md). Indirect draws are not split at 1,023 instances. Camera culling, density, biome and representation selection happen on the GPU. The fallback uses DrawMeshInstanced batches of up to 1,023 and retains the same selection math.
 
 Other foliage remains separate: flower/clover/dandelion and chunk tree-billboard batches have at most 1,023 instances each and are split by chunk/type/material. Near trees, bushes and rocks remain instantiated GameObjects. Whole-scene draw-call totals also include terrain, water, material passes and applicable shadows; they cannot identify grass overhead by themselves.
 

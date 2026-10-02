@@ -2,6 +2,7 @@ using UnityEngine;
 
 public struct WorldFeatureGenerationSettings
 {
+    public Vector2 treeUniformScaleRange;
     public int forestRockPrefabCount;
     public int maxForestRocksPerChunk;
     public Vector2 forestRockUniformScaleRange;
@@ -16,6 +17,7 @@ public struct WorldFeatureGenerationSettings
 
     public static WorldFeatureGenerationSettings Default => new WorldFeatureGenerationSettings
     {
+        treeUniformScaleRange = new Vector2(2f, 2f),
         forestRockPrefabCount = 0,
         maxForestRocksPerChunk = 2,
         forestRockUniformScaleRange = new Vector2(0.75f, 1.45f),

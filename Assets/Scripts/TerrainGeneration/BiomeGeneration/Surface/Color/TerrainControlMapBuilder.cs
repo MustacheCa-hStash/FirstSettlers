@@ -7,7 +7,8 @@ public static class TerrainControlMapBuilder
 
     public static ControlMapPixelData BuildRaw(SurfaceType[,] surfaceTypeMap, GroundCoverType[,] groundCoverMap,
         Unity.Mathematics.float2[,] mountainSnow = null,
-        float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma)
+        float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma,
+        ForestStructureFields forestStructure = null, BiomeType[,] biomeMap = null)
     {
         int width = surfaceTypeMap.GetLength(0);
         int height = surfaceTypeMap.GetLength(1);
@@ -43,6 +44,16 @@ public static class TerrainControlMapBuilder
                     {
                         Color32 variant = controlMap.Maps[1][pixelIndex];
                         variant.a = 255;
+                        controlMap.Maps[1][pixelIndex] = variant;
+                    }
+                    if (surfaceType == SurfaceType.Grass && forestStructure?.FloorEcologyMap != null &&
+                        biomeMap != null && biomeMap[x, z] == BiomeType.Forest)
+                    {
+                        var ecology = forestStructure.FloorEcologyMap[x, z];
+                        var weights = ForestFloorPolicy.ControlWeights(ecology);
+                        controlMap.Maps[2][pixelIndex] = new Color(weights.x, weights.y, weights.z, weights.w);
+                        Color32 variant = controlMap.Maps[1][pixelIndex];
+                        variant.a = (byte)Mathf.RoundToInt(ecology.w * 255f);
                         controlMap.Maps[1][pixelIndex] = variant;
                     }
                 }

@@ -4,6 +4,11 @@ using UnityEngine;
 public class GrassSettings
 {
     public GameObject grassPrefab;
+    [Header("Forest Grass Assets")]
+    [Tooltip("Optional forest-only override. Defaults to Resources/Foliage/ForestGrassTuft_LOD0.")]
+    public GameObject forestGrassPrefab;
+    [Tooltip("Optional distant forest tuft. Defaults to Resources/Foliage/ForestGrassTuft_LOD1.")]
+    public GameObject forestBillboardGrassPrefab;
 
     [Header("Grass GPU Rendering")]
     [Tooltip("Render the existing rank-selected grass clumps with resident buffers and compute visibility culling. Keeps all generation/density rules; falls back to CPU instancing when unavailable.")]

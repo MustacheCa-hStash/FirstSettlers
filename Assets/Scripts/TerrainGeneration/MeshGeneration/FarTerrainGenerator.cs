@@ -880,6 +880,17 @@ public static class FarTerrainGenerator
                 controlMap2[pixelIndex] = GroundCoverTypeToControlColor(groundCoverType);
                 if (groundCoverType == GroundCoverType.MixedForestFloor || groundCoverType == GroundCoverType.DenseMoss)
                     snowMap1.a = 255;
+                if (biome == BiomeType.Forest && surfaceType == SurfaceType.Grass)
+                {
+                    // Use the same continuous substrate as detailed chunks, without tree-radius islands.
+                    float4 ecology = ForestFloorPolicy.Evaluate(new float2(worldX, worldZ), seed,
+                        moisture, slope, center.RiverMask);
+                    float4 weights = ForestFloorPolicy.ControlWeights(ecology);
+                    controlMap2[pixelIndex] = new Color32((byte)math.round(weights.x * 255f),
+                        (byte)math.round(weights.y * 255f), (byte)math.round(weights.z * 255f),
+                        (byte)math.round(weights.w * 255f));
+                    snowMap1.a = (byte)math.round(ecology.w * 255f);
+                }
             }
             float2 snow = MountainSnow.Evaluate(new float2(worldX, worldZ), seed, center.Height,
                 center.MountainMask, center.RiverMask, waterLevel, temperature, moisture,

@@ -4,6 +4,15 @@ using UnityEngine;
 // CPU reference for the selection rules mirrored in GrassCompact.compute.
 public static class GrassStreamingPolicy
 {
+    public static float RenderDistance(GrassSettings settings, int chunkSize, float worldScale)
+    {
+        float world = Mathf.Max(.001f, chunkSize * worldScale);
+        return Mathf.Max(Mathf.Max(0, settings.activeRingRadius) * world + EdgeWidth(settings,chunkSize,worldScale),
+            Mathf.Max(0, settings.billboardRingRadius) * world);
+    }
+    public static float EdgeWidth(GrassSettings settings, int chunkSize, float worldScale) =>
+        Mathf.Max(Mathf.Max(.001f,chunkSize * worldScale) / Mathf.Max(1,settings.subChunksPerChunk),
+            settings.transitionWidthChunks * Mathf.Max(.001f,chunkSize * worldScale));
     public static float DistanceToSquare(Vector2 viewer, Vector2 center, float halfSize)
     {
         Vector2 d = new Vector2(Mathf.Max(0, Mathf.Abs(viewer.x - center.x) - halfSize),

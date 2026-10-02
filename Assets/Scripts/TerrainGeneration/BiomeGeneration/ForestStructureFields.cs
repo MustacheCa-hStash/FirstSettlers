@@ -9,6 +9,14 @@ public class ForestStructureFields
     public float[,] DampShadeMap { get; }
     public float[,] UnderstoryDensityMap { get; }
     public float[,] OrganicFloorIntentMap { get; }
+    // Allocated only for chunks containing forest land. X=density, Y=soil, Z=moss, W=mixed litter.
+    public Unity.Mathematics.float4[,] FloorEcologyMap { get; private set; }
+
+    public void EnsureFloorEcologyMap(int width, int height)
+    {
+        if (FloorEcologyMap == null)
+            FloorEcologyMap = new Unity.Mathematics.float4[width, height];
+    }
 
     public ForestStructureFields(int width, int height)
     {

@@ -85,6 +85,7 @@ public class TreeSettings
     public float treeSpawnChance = 0.3f;
 
     public float treeMinDistance = 9f;
+    [Tooltip("Uniform instance scale for forest and grassland trees, including distant billboards. Restart Play Mode after changing this range to regenerate cached placements.")]
     public Vector2 treeUniformScaleRange = new Vector2(2f, 2f);
 
     public float grassExclusionRadius = 1.5f;

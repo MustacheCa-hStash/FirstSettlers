@@ -45,6 +45,10 @@ Shader "Custom/StylizedTerrainURP"
         _LeafLitterHeightStrength("Leaf Litter Height Depth", Range(0, 0.05)) = 0
         _LeafLitterTiling("Leaf Litter Tiling", Float) = 0.35
         _LeafLitterNormalStrength("Leaf Litter Normal Strength", Range(0.0, 2.0)) = 0.45
+        _LeafLitterNormalFadeStart("Litter Normal Fade Start", Float) = 12
+        _LeafLitterNormalFadeEnd("Litter Normal Fade End", Float) = 45
+        _ForestFloorMacroScale("Forest Floor Macro Repeats Per Meter", Float) = 0.025
+        _ForestFloorMacroStrength("Forest Floor Macro Tone Strength", Range(0, 0.3)) = 0.12
         _BareDirtAlbedo("Bare Dirt Albedo", 2D) = "white" {}
         _BareDirtNormal("Bare Dirt Normal", 2D) = "bump" {}
         _BareDirtAO("Bare Dirt AO (Optional)", 2D) = "white" {}
@@ -61,6 +65,9 @@ Shader "Custom/StylizedTerrainURP"
         _MossHeightStrength("Moss Height Depth", Range(0, 0.05)) = 0
         _MossTiling("Moss Tiling", Float) = 0.32
         _MossNormalStrength("Moss Normal Strength", Range(0.0, 2.0)) = 0.25
+        _MossDetailContrast("Moss Fine Detail Contrast", Range(0, 1)) = 0.35
+        _MossSaturation("Moss Saturation", Range(0, 1)) = 0.7
+        _MossFillColor("Moss Broad Fill Color", Color) = (0.12, 0.18, 0.035, 1)
         _MixedForestFloorAlbedo("Mixed Forest Floor Albedo", 2D) = "white" {}
         _MixedForestFloorNormal("Mixed Forest Floor Normal", 2D) = "bump" {}
         _MixedForestFloorHeight("Mixed Forest Floor Height", 2D) = "gray" {}
@@ -271,6 +278,7 @@ Shader "Custom/StylizedTerrainURP"
                 half4 _LeafLitterColor;
                 half4 _BareDirtColor;
                 half4 _MossColor;
+                half4 _MossFillColor;
                 half4 _MixedForestFloorColor;
                 half4 _DenseMossColor;
                 float _LeafLitterTiling;
@@ -279,6 +287,10 @@ Shader "Custom/StylizedTerrainURP"
                 float4 _LeafLitterAO_ST;
                 float4 _LeafLitterHeight_ST;
                 float _LeafLitterNormalStrength;
+                float _LeafLitterNormalFadeStart;
+                float _LeafLitterNormalFadeEnd;
+                float _ForestFloorMacroScale;
+                float _ForestFloorMacroStrength;
                 float _LeafLitterAOStrength;
                 float _LeafLitterHeightStrength;
                 float _BareDirtTiling;
@@ -287,6 +299,8 @@ Shader "Custom/StylizedTerrainURP"
                 float _BareDirtHeightStrength;
                 float _MossTiling;
                 float _MossNormalStrength;
+                float _MossDetailContrast;
+                float _MossSaturation;
                 float _MossAOStrength;
                 float _MossHeightStrength;
                 float4 _MixedForestFloorAlbedo_ST;
@@ -406,6 +420,18 @@ Shader "Custom/StylizedTerrainURP"
                 }
 
                 return lerp(midGrassColor, lightGrassColor, (n - 0.5) * 2.0);
+            }
+
+            half3 ForestFloorMacroTone(float2 worldXZ)
+            {
+                // Low-contrast world-space decomposition/moisture variation, shared across chunks.
+                // Arithmetic noise avoids another texture or an additional terrain layer.
+                float2 p = worldXZ * _ForestFloorMacroScale;
+                float macro = ValueNoise(p + float2(17.3, 41.7)) * 0.72 +
+                    ValueNoise(p * 3.1 + float2(-23.8, 8.4)) * 0.28;
+                half variation = (macro * 2.0 - 1.0) * _ForestFloorMacroStrength;
+                return (1.0h + variation) * half3(1.0h + variation * 0.12h,
+                    1.0h, 1.0h - variation * 0.16h);
             }
 
             #if defined(_GRASS_BLADE_GROUND)
@@ -714,42 +740,10 @@ Shader "Custom/StylizedTerrainURP"
                         bareDirtColor *= lerp(1.0h, ao, _BareDirtAOStrength);
                     }
 
-                    float2 mossUV = IN.positionWS.xz * _MossTiling;
-                    if (mossWeight > 0.001h && _MossHeightStrength > 0.0)
-                    {
-                        half height = SAMPLE_TEXTURE2D(_MossHeight, sampler_MossAlbedo, mossUV).r;
-                        mossUV -= parallaxDirection * ((height - 0.5h) * _MossHeightStrength);
-                    }
-                    half3 mossTex = SAMPLE_TEXTURE2D(_MossAlbedo, sampler_MossAlbedo, mossUV).rgb;
-                    half3 mossColor = mossTex * _MossColor.rgb;
-                    if (mossWeight > 0.001h && _MossAOStrength > 0.0)
-                    {
-                        half ao = SAMPLE_TEXTURE2D(_MossAO, sampler_MossAlbedo, mossUV).r;
-                        mossColor *= lerp(1.0h, ao, _MossAOStrength);
-                    }
-                    if (mossWeight > 0.001h && forestVariantWeight > 0.001h)
-                    {
-                        float2 denseMossUV = IN.positionWS.xz * _MossTiling;
-                        if (_DenseMossHeightStrength > 0.0)
-                        {
-                            float2 heightUV = denseMossUV * _DenseMossHeight_ST.xy + _DenseMossHeight_ST.zw;
-                            half height = SAMPLE_TEXTURE2D(_DenseMossHeight, sampler_MossAlbedo, heightUV).r;
-                            denseMossUV -= parallaxDirection * ((height - 0.5h) * _DenseMossHeightStrength);
-                        }
-                        float2 albedoUV = denseMossUV * _DenseMossAlbedo_ST.xy + _DenseMossAlbedo_ST.zw;
-                        half3 denseMossColor = SAMPLE_TEXTURE2D(_DenseMossAlbedo, sampler_MossAlbedo, albedoUV).rgb * _DenseMossColor.rgb;
-                        if (_DenseMossAOStrength > 0.0)
-                        {
-                            float2 aoUV = denseMossUV * _DenseMossAO_ST.xy + _DenseMossAO_ST.zw;
-                            half ao = SAMPLE_TEXTURE2D(_DenseMossAO, sampler_MossAlbedo, aoUV).r;
-                            denseMossColor *= lerp(1.0h, ao, _DenseMossAOStrength);
-                        }
-                        mossColor = lerp(mossColor, denseMossColor, forestVariantWeight);
-                    }
-
+                    if (leafLitterWeight > 0.001h && _ForestFloorMacroStrength > 0.0)
+                        leafLitterColor *= ForestFloorMacroTone(IN.positionWS.xz);
                     grassColor = lerp(grassColor, leafLitterColor, leafLitterWeight);
                     grassColor = lerp(grassColor, bareDirtColor, bareDirtWeight);
-                    grassColor = lerp(grassColor, mossColor, mossWeight);
                     baseColor += grassColor * grassWeight;
 
                     #if !defined(_GRASS_BLADE_GROUND)
@@ -764,7 +758,9 @@ Shader "Custom/StylizedTerrainURP"
                     normalWS = ApplyDetailNormal(baseNormalWS, grassTangentNormal, _GrassNormalStrength);
                     #endif
 
-                    if (leafLitterWeight > 0.001h)
+                    float litterNormalFade = 1.0 - smoothstep(_LeafLitterNormalFadeStart,
+                        max(_LeafLitterNormalFadeEnd, _LeafLitterNormalFadeStart + 0.01), distanceToCamera);
+                    if (leafLitterWeight > 0.001h && litterNormalFade > 0.001)
                     {
                         float2 leafLitterNormalUV = leafLitterBaseUV * _LeafLitterNormal_ST.xy + _LeafLitterNormal_ST.zw;
                         float3 leafLitterTangentNormal = UnpackNormal(
@@ -774,14 +770,14 @@ Shader "Custom/StylizedTerrainURP"
                         float3 leafLitterNormalWS = ApplyDetailNormal(
                             baseNormalWS,
                             leafLitterTangentNormal,
-                            _LeafLitterNormalStrength);
+                            _LeafLitterNormalStrength * litterNormalFade);
 
                         normalWS = normalize(lerp(normalWS, leafLitterNormalWS, leafLitterWeight));
                         if (forestVariantWeight > 0.001h)
                         {
                             float2 mixedNormalUV = mixedForestUV * _MixedForestFloorNormal_ST.xy + _MixedForestFloorNormal_ST.zw;
                             float3 mixedNormal = UnpackNormal(SAMPLE_TEXTURE2D(_MixedForestFloorNormal, sampler_LeafLitterAlbedo, mixedNormalUV));
-                            float3 mixedNormalWS = ApplyDetailNormal(baseNormalWS, mixedNormal, _LeafLitterNormalStrength);
+                            float3 mixedNormalWS = ApplyDetailNormal(baseNormalWS, mixedNormal, _LeafLitterNormalStrength * litterNormalFade);
                             normalWS = normalize(lerp(normalWS, mixedNormalWS, forestVariantWeight * leafLitterWeight));
                         }
                     }
@@ -800,20 +796,6 @@ Shader "Custom/StylizedTerrainURP"
                         normalWS = normalize(lerp(normalWS, bareDirtNormalWS, bareDirtWeight));
                     }
 
-                    if (mossWeight > 0.001h)
-                    {
-                        float3 mossTangentNormal = UnpackNormal(
-                            SAMPLE_TEXTURE2D(_MossNormal, sampler_MossAlbedo, mossUV)
-                        );
-
-                        float3 mossNormalWS = ApplyDetailNormal(
-                            baseNormalWS,
-                            mossTangentNormal,
-                            _MossNormalStrength);
-
-                        normalWS = normalize(lerp(normalWS, mossNormalWS, mossWeight));
-                        normalWS = normalize(lerp(normalWS, baseNormalWS, forestVariantWeight * mossWeight));
-                    }
                     weightedNormal += normalWS * grassWeight;
                 }
                 else
@@ -867,6 +849,61 @@ Shader "Custom/StylizedTerrainURP"
                     weightedNormal += baseNormalWS * snowWeight;
                 }
                 normalWS = normalize(weightedNormal);
+
+                // Independent cover on the finished substrate. Leave grass/rock/litter
+                // control interpolation unchanged; only actual moss patches take priority.
+                // This curve matches ForestFloorPolicy.MossDominance for foliage suppression.
+                float mossDominance = smoothstep(0.03, 0.58, mossWeight);
+                float mossBlend = mossDominance * saturate(grassWeight + rockWeight + cliffWeight) *
+                    saturate((abs(baseNormalWS.y) - 0.25) / 0.35);
+                if (mossBlend > 0.001)
+                {
+                    float reliefFade = 1.0 - smoothstep(12.0, 45.0, distanceToCamera);
+                    float3 viewDirectionWS = normalize(_WorldSpaceCameraPos.xyz - IN.positionWS);
+                    float2 parallaxDirection = viewDirectionWS.xz / max(abs(viewDirectionWS.y), 0.35);
+                    float2 mossUV = IN.positionWS.xz * _MossTiling;
+                    if (_MossHeightStrength > 0.0 && reliefFade > 0.001)
+                    {
+                        half height = SAMPLE_TEXTURE2D(_MossHeight, sampler_MossAlbedo, mossUV).r;
+                        mossUV -= parallaxDirection * ((height - 0.5h) * _MossHeightStrength * reliefFade);
+                    }
+                    half3 mossColor = SAMPLE_TEXTURE2D(_MossAlbedo, sampler_MossAlbedo, mossUV).rgb * _MossColor.rgb;
+                    if (_MossAOStrength > 0.0)
+                        mossColor *= lerp(1.0h, SAMPLE_TEXTURE2D(_MossAO, sampler_MossAlbedo, mossUV).r, _MossAOStrength);
+                    float denseBlend = smoothstep(0.4, 0.85, mossDominance);
+                    if (denseBlend > 0.001)
+                    {
+                        float2 denseUV = IN.positionWS.xz * _MossTiling;
+                        if (_DenseMossHeightStrength > 0.0 && reliefFade > 0.001)
+                        {
+                            half height = SAMPLE_TEXTURE2D(_DenseMossHeight, sampler_MossAlbedo,
+                                denseUV * _DenseMossHeight_ST.xy + _DenseMossHeight_ST.zw).r;
+                            denseUV -= parallaxDirection * ((height - 0.5h) * _DenseMossHeightStrength * reliefFade);
+                        }
+                        half3 denseColor = SAMPLE_TEXTURE2D(_DenseMossAlbedo, sampler_MossAlbedo,
+                            denseUV * _DenseMossAlbedo_ST.xy + _DenseMossAlbedo_ST.zw).rgb * _DenseMossColor.rgb;
+                        if (_DenseMossAOStrength > 0.0)
+                            denseColor *= lerp(1.0h, SAMPLE_TEXTURE2D(_DenseMossAO, sampler_MossAlbedo,
+                                denseUV * _DenseMossAO_ST.xy + _DenseMossAO_ST.zw).r, _DenseMossAOStrength);
+                        mossColor = lerp(mossColor,denseColor,denseBlend);
+                    }
+                    // Broad olive fill keeps the photographic source's fine twigs/grain quiet.
+                    // A Color property is converted by Unity for the active color space.
+                    // A literal RGB here was interpreted as linear in-game but gamma in
+                    // the old authoring project, making the live floor pale and washed out.
+                    mossColor = lerp(_MossFillColor.rgb,mossColor,saturate(_MossDetailContrast));
+                    half mossLuma = dot(mossColor,half3(0.299h,0.587h,0.114h));
+                    mossColor = lerp(mossLuma.xxx,mossColor,saturate(_MossSaturation));
+                    mossColor *= lerp(1.0,ForestFloorMacroTone(IN.positionWS.xz),0.35);
+                    baseColor = lerp(baseColor,mossColor,mossBlend);
+                    float3 mossNormalWS = baseNormalWS;
+                    if (reliefFade > 0.001 && _MossNormalStrength > 0.0 && denseBlend < 0.999)
+                        mossNormalWS = ApplyDetailNormal(baseNormalWS,UnpackNormal(
+                            SAMPLE_TEXTURE2D(_MossNormal,sampler_MossAlbedo,mossUV)),
+                            _MossNormalStrength * reliefFade * (1.0-denseBlend));
+                    normalWS = normalize(lerp(normalWS,mossNormalWS,mossBlend));
+                }
+
 
                 Light mainLight = GetMainLight(IN.shadowCoord);
                 half terrainVisibility = TerrainHorizonVisibility(IN.positionWS, IN.horizonLight);

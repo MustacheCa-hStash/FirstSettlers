@@ -277,13 +277,14 @@ public class TerrainRequestManager : System.IDisposable
                         surfaceTypeMap,
                         groundCoverMap,
                         mountainSnow,
-                        mountainSnowRenderCoverageGamma);
+                        mountainSnowRenderCoverageGamma,
+                        worldFeaturePlan.ForestStructure, biomeMap);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainControlMapBuild, stageStart);
 
                     retainedNativeData = new ChunkRecord.NativeTerrainData(
                         finalHeightMap, slopeMap, biomeMap, surfaceTypeMap, waterStateMap, groundCoverMap, riverMaskMap,
                         nativeHeights, nativeSlopes, nativeBiomes, nativeSurfaces, nativeWaterStates,
-                        nativeGroundCovers, nativeRiverMasks);
+                        nativeGroundCovers, nativeRiverMasks, worldFeaturePlan.ForestStructure.FloorEcologyMap);
                     nativeHeights = default;
                     nativeSlopes = default;
                     nativeBiomes = default;

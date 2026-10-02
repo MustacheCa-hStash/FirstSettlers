@@ -6,6 +6,11 @@ public class CloverSettings
     public bool enableClover = true;
     public GameObject cloverClumpPrefab;
     public GameObject[] cloverClumpPrefabs;
+    [Header("Forest Openings")]
+    public bool enableForestClover = true;
+    [Range(0,1), Tooltip("Relative colony frequency in forest openings; dense litter/moss floor remains excluded.")]
+    public float forestPatchChance = 0.55f;
+    [Range(0,40)] public float forestMaxSlope = 22f;
 
     [Header("Render Range")]
     [Tooltip("Circular radius in whole chunks around the player chunk; diagonal chunks outside the radius are excluded.")]

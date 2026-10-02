@@ -106,7 +106,8 @@ public static class WorldFeaturePlanGenerator
             moistureMap,
             temperatureMap,
             slopeMap,
-            riverMaskMap);
+            riverMaskMap,
+            settings);
 
         AddGrasslandTrees(
             plan,
@@ -137,8 +138,31 @@ public static class WorldFeaturePlanGenerator
             riverMaskMap);
 
         BuildOrganicFloorIntentMap(plan, chunkCoord, chunkSize, seed);
+        BuildForestFloorEcology(plan, chunkCoord, chunkSize, seed, biomeMap, surfaceTypeMap,
+            moistureMap, slopeMap, riverMaskMap);
 
         return plan;
+    }
+
+    private static void BuildForestFloorEcology(WorldFeaturePlan plan, ChunkCoord coord, int chunkSize,
+        int seed, BiomeType[,] biomes, SurfaceType[,] surfaces, float[,] moisture,
+        float[,] slopes, float[,] rivers)
+    {
+        ForestStructureFields fields = plan.ForestStructure;
+        int width = biomes.GetLength(0), height = biomes.GetLength(1);
+        for (int x = 0; x < width; x++)
+            for (int z = 0; z < height; z++)
+            {
+                if (biomes[x, z] != BiomeType.Forest || surfaces[x, z] != SurfaceType.Grass)
+                    continue;
+                fields.EnsureFloorEcologyMap(width, height);
+                // Sample coordinates (including the halo) stay global across chunk boundaries.
+                var worldXZ = new Unity.Mathematics.float2(coord.x * chunkSize + x - 1,
+                    coord.z * chunkSize + z - 1);
+                fields.FloorEcologyMap[x, z] = ForestFloorPolicy.Evaluate(worldXZ, seed,
+                    moisture[x, z], slopes[x, z], rivers[x, z],
+                    fields.CanopyIntentMap[x, z], fields.ClearingMap[x, z]);
+            }
     }
 
     // Sparse path: keep identical candidate order, limits, rocks and exclusions, but evaluate
@@ -198,7 +222,7 @@ public static class WorldFeaturePlanGenerator
         }
         AddForestBoulders(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
         AddGrasslandRocks(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
-        AddForestTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, PrepareTree);
+        AddForestTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, settings, PrepareTree);
         AddGrasslandTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, settings, PrepareGrasslandTree);
         return plan;
     }
@@ -650,7 +674,7 @@ public static class WorldFeaturePlanGenerator
         float[,] moistureMap,
         float[,] temperatureMap,
         float[,] slopeMap,
-        float[,] riverMaskMap, System.Action<int, int> prepare = null)
+        float[,] riverMaskMap, WorldFeatureGenerationSettings settings, System.Action<int, int> prepare = null)
     {
         int placed = 0;
         float cellSize = chunkSize / (float)TreeCandidateCellsPerAxis;
@@ -706,7 +730,7 @@ public static class WorldFeaturePlanGenerator
                 hash);
 
             float yaw = Hash01(hash + 79) * 360f;
-            float uniformScale = GetForestTreeScale(variant, Hash01(hash + 97));
+            float uniformScale = GetTreeScale(settings.treeUniformScaleRange, Hash01(hash + 97));
             float exclusionRadius = GetForestTreeExclusionRadius(variant, Hash01(hash + 131));
 
             if (IntersectsExistingPlacement(plan, sampleX, sampleZ, exclusionRadius))
@@ -896,7 +920,7 @@ public static class WorldFeaturePlanGenerator
                 hash);
 
             float yaw = Hash01(hash + 79) * 360f;
-            float uniformScale = GetGrasslandTreeScale(variant, Hash01(hash + 97), riparian, grove);
+            float uniformScale = GetTreeScale(settings.treeUniformScaleRange, Hash01(hash + 97));
             float exclusionRadius = GetGrasslandTreeExclusionRadius(variant, Hash01(hash + 131));
 
             if (IntersectsExistingPlacement(plan, sampleX, sampleZ, exclusionRadius))
@@ -1214,23 +1238,15 @@ public static class WorldFeaturePlanGenerator
         return Mathf.Lerp(0.62f, 1.48f, broadPatch) * Mathf.Lerp(0.88f, 1.12f, fineBreakup);
     }
 
-    private static float GetForestTreeScale(WorldFeatureVariant variant, float roll)
+    private static float GetTreeScale(Vector2 range, float roll)
     {
-        switch (variant)
-        {
-            case WorldFeatureVariant.BirchAspenTree:
-                return Mathf.Lerp(1.45f, 2.0f, roll);
-            case WorldFeatureVariant.BeechTree:
-                return Mathf.Lerp(1.65f, 2.15f, roll);
-            case WorldFeatureVariant.SpruceTree:
-                return Mathf.Lerp(1.85f, 2.45f, roll);
-            case WorldFeatureVariant.WhitePineTree:
-                return Mathf.Lerp(2.05f, 2.75f, roll);
-            case WorldFeatureVariant.OakTree:
-                return Mathf.Lerp(1.75f, 2.25f, roll);
-            default:
-                return Mathf.Lerp(1.65f, 2.2f, roll);
-        }
+        // Zero-initialized worker settings retain the normal default. Invalid inspector
+        // values cannot produce inverted, negative, or NaN transforms.
+        if (range == Vector2.zero || !float.IsFinite(range.x) || !float.IsFinite(range.y))
+            range = WorldFeatureGenerationSettings.Default.treeUniformScaleRange;
+        float min = Mathf.Max(0.01f,Mathf.Min(range.x,range.y));
+        float max = Mathf.Max(min,Mathf.Max(range.x,range.y));
+        return Mathf.Lerp(min,max,roll);
     }
 
     private static float GetForestTreeExclusionRadius(WorldFeatureVariant variant, float roll)
@@ -1264,26 +1280,6 @@ public static class WorldFeaturePlanGenerator
                 return Mathf.Lerp(22f, 30f, roll);
             default:
                 return Mathf.Lerp(18f, 25f, roll);
-        }
-    }
-
-    private static float GetGrasslandTreeScale(WorldFeatureVariant variant, float roll, float riparian, float grove)
-    {
-        float groveBoost = Mathf.Lerp(0.94f, 1.08f, Mathf.Clamp01(grove));
-        float riparianBoost = Mathf.Lerp(0.96f, 1.10f, Mathf.Clamp01(riparian));
-
-        switch (variant)
-        {
-            case WorldFeatureVariant.GrasslandOakTree:
-                return Mathf.Lerp(1.75f, 2.45f, roll) * groveBoost;
-            case WorldFeatureVariant.GrasslandWhitePineTree:
-                return Mathf.Lerp(1.75f, 2.35f, roll);
-            case WorldFeatureVariant.GrasslandWillowTree:
-                return Mathf.Lerp(1.50f, 2.15f, roll) * riparianBoost;
-            case WorldFeatureVariant.GrasslandBirchAspenTree:
-                return Mathf.Lerp(1.35f, 1.95f, roll) * riparianBoost;
-            default:
-                return Mathf.Lerp(1.45f, 2.05f, roll) * riparianBoost;
         }
     }
 

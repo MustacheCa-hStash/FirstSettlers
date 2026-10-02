@@ -114,7 +114,8 @@ public sealed class GrassStream : IDisposable
         }
     }
     public void Update(ChunkManager manager, List<ChunkCoord> activeCoords, Vector3 viewer, Camera camera,
-        Vector4[] planes, Mesh nearMesh, Material nearMaterial, Mesh farMesh, Material farMaterial)
+        Vector4[] planes, Mesh nearMesh, Material nearMaterial, Mesh farMesh, Material farMaterial,
+        Mesh forestNear = null, Material forestNearMaterial = null, Mesh forestFar = null, Material forestFarMaterial = null)
     {
         long phaseStart = TerrainGenerationProfiler.GetTimestamp();
         int hash = GenerationHash();
@@ -124,8 +125,8 @@ public sealed class GrassStream : IDisposable
         int axis = Mathf.Max(1, settings.subChunksPerChunk);
         float chunkWorld = Mathf.Max(0.001f, chunkSize * worldScale), subSize = chunkWorld / axis;
         float nearRadius = Mathf.Max(0, settings.activeRingRadius) * chunkWorld;
-        float width = Mathf.Max(subSize, settings.transitionWidthChunks * chunkWorld);
-        float outer = Mathf.Max(nearRadius + width, Mathf.Max(0, settings.billboardRingRadius) * chunkWorld);
+        float width = GrassStreamingPolicy.EdgeWidth(settings,chunkSize,worldScale);
+        float outer = GrassStreamingPolicy.RenderDistance(settings,chunkSize,worldScale);
         float prefetch = Mathf.Max(subSize, settings.nearGrassPrecomputeChunkPadding * chunkWorld);
         Vector2 player = new Vector2(viewer.x, viewer.z);
         // Movement is reconciled immediately; stationary terrain arrivals/invalidation are checked
@@ -265,7 +266,7 @@ public sealed class GrassStream : IDisposable
         phaseStart = TerrainGenerationProfiler.GetTimestamp();
         using (PublishMarker.Auto())
         {
-            Publish(nearMesh, farMesh);
+            Publish(nearMesh, farMesh, forestNearMaterial != null ? forestNear : null, forestFarMaterial != null ? forestFar : null);
         }
 #if UNITY_EDITOR
         PublishMs = TerrainGenerationProfiler.GetElapsedMilliseconds(phaseStart);
@@ -285,7 +286,8 @@ public sealed class GrassStream : IDisposable
         {
         foreach (var entry in entries.Values)
             if (entry.Runtime.IsVisible && entry.Runtime.HasTerrainMesh && entry.Runtime.IsFoliageRenderVisible)
-                entry.Renderer.Draw(settings, nearMesh, nearMaterial, farMesh, farMaterial, camera, planes, viewer, subSize, outer, width);
+                entry.Renderer.Draw(settings, nearMesh, nearMaterial, farMesh, farMaterial, camera, planes, viewer, subSize, outer, width,
+                    forestNear, forestNearMaterial, forestFar, forestFarMaterial);
         }
 #if UNITY_EDITOR
         DrawMs = TerrainGenerationProfiler.GetElapsedMilliseconds(phaseStart);
@@ -324,7 +326,7 @@ public sealed class GrassStream : IDisposable
         }
         }
     }
-    private void Publish(Mesh near, Mesh far)
+    private void Publish(Mesh near, Mesh far, Mesh forestNear, Mesh forestFar)
     {
         using (BuildUploadsMarker.Auto())
         {
@@ -337,7 +339,7 @@ public sealed class GrassStream : IDisposable
         long start = TerrainGenerationProfiler.GetTimestamp(); int count = 0;
         foreach (var tile in requests)
         {
-            tile.Owner.Renderer.Upload(tile.Index, tile.Candidates, tile.Owner.Transform, near, far);
+            tile.Owner.Renderer.Upload(tile.Index, tile.Candidates, tile.Owner.Transform, near, far, forestNear, forestFar);
             tile.State.DisplayVersion = tile.State.DataVersion;
             if (++count >= Mathf.Max(1, settings.maxGrassUploadsPerFrame) ||
                 TerrainGenerationProfiler.GetElapsedMilliseconds(start) >= Mathf.Max(0.05f, settings.grassUploadBudgetMs)) break;

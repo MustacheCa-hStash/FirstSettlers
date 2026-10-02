@@ -61,7 +61,7 @@ void ScatterGrass(uint3 id : SV_DispatchThreadID, uint3 group : SV_GroupID)
 StructuredBuffer<float4> _ResidentSlots;
 AppendStructuredBuffer<uint> _ResidentVisible;
 uint _ResidentSlotSize, _ResidentSlotCount, _ResidentRepresentation;
-int _ResidentForce;
+int _ResidentForce, _ResidentForest;
 float3 _ResidentViewer;
 float4 _ResidentDensities, _ResidentDistances;
 float ResidentDensity(float d)
@@ -79,6 +79,8 @@ void CullResidentGrass(uint3 id : SV_DispatchThreadID)
     float4 metadata = _ResidentSlots[slot];
     if (id.x % _ResidentSlotSize >= (uint)metadata.x) return;
     GrassIndirectInstance instance = _GrassInstances[id.x];
+    // One resident candidate arena, separate meadow/forest draw lists for each LOD.
+    if (_ResidentForest >= 0 && (instance.data.x >= 0.5 ? 1 : 0) != _ResidentForest) return;
     float3 position = mul(instance.objectToWorld, float4(0,0,0,1)).xyz;
     float distance = length(position.xz - _ResidentViewer.xz);
     float blend = _ResidentForce < 0 ? metadata.y : (float)_ResidentForce;
