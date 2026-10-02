@@ -98,7 +98,7 @@ Material:
     - _AlphaClipThreshold: 0.4
     - _AlphaToMask: 1
     - _AmbientStrength: 0.28
-    - _BaseUpwardBlend: 0.39
+    - _BaseUpwardBlend: 0.671
     - _BladeMaxY: 0.37
     - _BladeMinY: 0
     - _Blend: 0

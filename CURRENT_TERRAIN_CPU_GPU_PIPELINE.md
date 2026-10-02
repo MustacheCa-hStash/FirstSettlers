@@ -160,7 +160,15 @@ For every rasterized terrain pixel, the fragment shader:
    cover appearance;
 4. samples world-space detail textures and normal maps where applicable;
 5. applies procedural grass tint variation and distance-based detail fading;
-6. applies main-light/shadow, ambient, fog, and final color output.
+6. applies main-light/shadow, ambient, fog, and final color output. Broad terrain
+   occlusion now also samples two cached horizon textures; their angles are
+   compared with the current sun/moon direction, beyond URP's shadow distance.
+
+`TerrainHorizonShadowSystem` generates the coarse horizon data separately from
+mesh requests, on one optional background worker after near terrain/mesh/collider
+workers settle. It reuses height samples and batches missing procedural samples
+through Burst, then uploads small 5/17/33-square textures on the main thread.
+See `TERRAIN_HORIZON_SHADOWS.md` for budgets, settings and approximation limits.
 
 Therefore, **surface classification is CPU/Burst-generated, while final color,
 texture detail, normals, lighting, shadows, and fog are GPU fragment-shader

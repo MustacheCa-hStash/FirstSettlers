@@ -121,6 +121,11 @@ Shader "Custom/StylizedTerrainURP"
         _BlendSharpness("Blend Sharpness", Range(0.25, 3.0)) = 1.0
         _AmbientStrength("Minimum Ambient Strength", Range(0.0, 1.0)) = 0.26
         [Toggle] _ReceiveShadows("Receive Shadows", Float) = 1.0
+        [HideInInspector] _TerrainHorizon0("Terrain Horizon 0", 2D) = "black" {}
+        [HideInInspector] _TerrainHorizon1("Terrain Horizon 1", 2D) = "black" {}
+        [HideInInspector] _TerrainHorizonUV("Terrain Horizon UV", Vector) = (0,0,0,0)
+        [HideInInspector] _TerrainHorizonParams("Terrain Horizon Strength / Softness", Vector) = (0,0,0,0)
+        [HideInInspector] _TerrainHorizonTint("Terrain Horizon Tint", Color) = (1,1,1,1)
     }
 
     SubShader
@@ -143,6 +148,8 @@ Shader "Custom/StylizedTerrainURP"
             #pragma shader_feature_local_fragment _ROCK_DETAIL
             #pragma shader_feature_local_fragment _GRASS_BLADE_GROUND
             #pragma multi_compile_fog
+            // PC_Renderer uses Forward+: GetMainLight needs its clustered attenuation variant.
+            #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
@@ -159,6 +166,9 @@ Shader "Custom/StylizedTerrainURP"
 
 
             TEXTURE2D(_ControlMap2);
+            // Reuse the linear-clamp control-map sampler: no extra sampler registers.
+            TEXTURE2D(_TerrainHorizon0);
+            TEXTURE2D(_TerrainHorizon1);
 
 
             TEXTURE2D(_GrassAlbedo);
@@ -229,6 +239,7 @@ Shader "Custom/StylizedTerrainURP"
                 float2 uv : TEXCOORD2;
                 float fogFactor : TEXCOORD3;
                 float4 shadowCoord : TEXCOORD4;
+                float2 horizonLight : TEXCOORD5;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -331,7 +342,31 @@ Shader "Custom/StylizedTerrainURP"
                 float _BlendSharpness;
                 float _AmbientStrength;
                 float _ReceiveShadows;
+                float4 _TerrainHorizonUV;
+                float4 _TerrainHorizonParams;
+                half4 _TerrainHorizonTint;
             CBUFFER_END
+
+            half HorizonChannel(half4 first, half4 second, uint direction)
+            {
+                return direction < 4u ? first[direction & 3u] : second[direction & 3u];
+            }
+
+            half TerrainHorizonVisibility(float3 positionWS, float2 horizonLight)
+            {
+                [branch] if (_TerrainHorizonParams.x <= 0.0) return 1.0h;
+                float2 uv = positionWS.xz * _TerrainHorizonUV.xy + _TerrainHorizonUV.zw;
+                half4 first = SAMPLE_TEXTURE2D(_TerrainHorizon0, sampler_ControlMap0, uv);
+                half4 second = SAMPLE_TEXTURE2D(_TerrainHorizon1, sampler_ControlMap0, uv);
+                // Channels run +X, +X/+Z, +Z, ... . Light angles are calculated per vertex.
+                float azimuth = horizonLight.x;
+                uint sector = (uint)floor(azimuth);
+                float horizon = lerp(HorizonChannel(first, second, sector),
+                    HorizonChannel(first, second, (sector + 1u) & 7u), frac(azimuth)) * (PI * 0.5);
+                float halfWidth = _TerrainHorizonParams.y * 0.5;
+                half visibility = smoothstep(horizon - halfWidth, horizon + halfWidth, horizonLight.y);
+                return lerp(1.0h, visibility, (half)_TerrainHorizonParams.x);
+            }
 
             float Hash21(float2 p)
             {
@@ -496,6 +531,10 @@ Shader "Custom/StylizedTerrainURP"
                 OUT.uv = IN.uv;
                 OUT.fogFactor = ComputeFogFactor(positionInputs.positionCS.z);
                 OUT.shadowCoord = TransformWorldToShadowCoord(positionInputs.positionWS);
+                half3 lightDirection = GetMainLight().direction;
+                OUT.horizonLight = float2(
+                    frac(atan2(lightDirection.z, lightDirection.x) * (1.0 / (2.0 * PI))) * 8.0,
+                    atan2(lightDirection.y, max(length(lightDirection.xz), 0.0001)));
 
                 return OUT;
             }
@@ -830,13 +869,16 @@ Shader "Custom/StylizedTerrainURP"
                 normalWS = normalize(weightedNormal);
 
                 Light mainLight = GetMainLight(IN.shadowCoord);
-                half shadowAttenuation = lerp(1.0h, mainLight.shadowAttenuation, saturate(_ReceiveShadows));
+                half terrainVisibility = TerrainHorizonVisibility(IN.positionWS, IN.horizonLight);
+                half shadowAttenuation = lerp(1.0h, mainLight.shadowAttenuation * terrainVisibility, saturate(_ReceiveShadows));
                 half3 diffuse = LightingLambert(mainLight.color, mainLight.direction, normalWS) *
                     mainLight.distanceAttenuation *
                     shadowAttenuation;
                 half3 ambient = max(SampleSH(normalWS), half3(_AmbientStrength, _AmbientStrength, _AmbientStrength));
                 half3 lighting = diffuse + ambient;
                 half3 color = baseColor * lighting;
+                half tintWeight = saturate(1.0h - terrainVisibility) * saturate(_TerrainHorizonParams.z) * saturate(_ReceiveShadows);
+                color *= lerp(half3(1, 1, 1), _TerrainHorizonTint.rgb, tintWeight);
                 color = MixFog(color, IN.fogFactor);
 
                 return half4(color, 1.0);

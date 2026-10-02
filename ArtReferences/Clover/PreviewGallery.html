@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clover v02 · Asset review</title>
+<style>
+:root{color-scheme:dark;font:16px/1.5 system-ui,sans-serif;background:#131a17;color:#edf0e9}
+body{margin:0 auto;max-width:1500px;padding:40px 24px}h1{font-size:40px;line-height:1.1;margin:10px 0 18px}
+p{max-width:800px;color:#bfc8bc}small{color:#b4c893}a{color:#c7df9c}header{margin-bottom:28px}
+.hero{margin:0 0 28px}.hero img{width:100%;display:block;border-radius:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+figure{margin:0;background:#1c241f;border:1px solid #344033;border-radius:12px;overflow:hidden}
+figure img{width:100%;aspect-ratio:1.4;object-fit:contain;display:block;cursor:zoom-in}figcaption{padding:16px 20px;color:#cbd4c6}
+figcaption b{display:block;color:#f1f4ed;font-size:18px;margin-bottom:5px}.texture{background:repeating-conic-gradient(#26312a 0 25%,#344138 0 50%) 0 / 24px 24px}
+nav{display:flex;flex-wrap:wrap;gap:12px;margin:24px 0}nav a{padding:8px 15px;border:1px solid #43523c;border-radius:6px;text-decoration:none}
+dialog{border:none;padding:0;background:#101710;max-width:96vw;max-height:96vh;cursor:zoom-out}dialog img{display:block;max-width:94vw;max-height:90vh}dialog::backdrop{background:#000c}
+footer{margin:32px 0;color:#a7b3a0}@media(max-width:800px){.grid{grid-template-columns:1fr}h1{font-size:32px}body{padding:24px 15px}}
+</style>
+<header><small>FIRST SETTLERS / FOLIAGE ASSET REVIEW</small><h1>Clover, built leaf by leaf.</h1>
+<p>Individual three-leaf heads, combined into irregular meshes. Shallow leaf curvature, clear silhouettes, simple green shading and occasional white blooms. Every image below is a render of the delivered asset.</p>
+<nav><a href="README.md">Design &amp; setup</a><a href="Clover_v02_Source.blend">Blender source</a><a href="../../Assets/Textures/Flowers/T_CloverLeaf_v02.png">Leaf texture</a><a href="TexturePrompts.md">Texture prompts</a></nav></header>
+<figure class="hero"><img src="Clover_v02_Unity_Woodland.png" alt="Rendered clover patch on woodland litter"><figcaption><b>Woodland ground · Unity URP</b>New clover assets over the project's existing leaf litter texture. Isolated authoring preview.</figcaption></figure>
+<div class="grid">
+<figure><img src="Clover_v02_Unity_Clump.png" alt="Green clover clump"><figcaption><b>Main clump</b>34 heads · 1,122 triangles · one instanced mesh and material.</figcaption></figure>
+<figure><img src="Clover_v02_Unity_Flowering.png" alt="White flowering clover clump"><figcaption><b>Flowering variant</b>38 heads + 3 white blooms · 1,812 triangles.</figcaption></figure>
+<figure><img src="Clover_v02_Unity_Top.png" alt="Top view of intact clover leaf UV mapping"><figcaption><b>Top view</b>Complete leaf silhouettes with direct UV mapping and varied head rotations.</figcaption></figure>
+<figure><img src="Clover_v02_Unity_Single.png" alt="Single three leaf clover"><figcaption><b>Individual clover</b>Reusable authoring building block · 33 triangles.</figcaption></figure>
+<figure><img src="Clover_v02_Unity_Patch.png" alt="Overlapping green clover patch"><figcaption><b>Patch coverage</b>28 overlapping clumps demonstrate a continuous mat with a loose perimeter.</figcaption></figure>
+<figure><img src="Clover_v02_Unity_GroundView.png" alt="Low view showing clover geometry"><figcaption><b>Ground level</b>Separate leaf heights and curved geometry create parallax.</figcaption></figure>
+<figure><img class="texture" src="../../Assets/Textures/Flowers/T_CloverLeaf_v02.png" alt="One leaflet transparent albedo texture"><figcaption><b>Shared leaflet texture</b>Imagegen source · Unity imports at 256 px with alpha coverage mipmaps.</figcaption></figure>
+<figure><img src="Clover_v02_Studio.png" alt="Cycles studio clover render"><figcaption><b>Blender studio render</b>Same source geometry and texture under soft daylight.</figcaption></figure>
+</div>
+<footer>Click any image to inspect it. The world scene retains its existing asset assignments; these v02 prefabs are ready for selection. More geometry than the previous cards; live performance remains to be profiled.</footer>
+<dialog id="zoom"><img alt="Enlarged asset preview"></dialog>
+<script>const zoom=document.getElementById('zoom');document.querySelectorAll('figure img').forEach(img=>img.addEventListener('click',()=>{zoom.querySelector('img').src=img.src;zoom.querySelector('img').alt=img.alt;zoom.showModal()}));zoom.addEventListener('click',()=>zoom.close());</script>
+</html>

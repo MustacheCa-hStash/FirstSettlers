@@ -886,7 +886,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 14567
+  worldSeed: 145678
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -1137,7 +1137,10 @@ MonoBehaviour:
   cloverSettings:
     enableClover: 1
     cloverClumpPrefab: {fileID: 2522059427205176057, guid: 34276995c6e0cb44b90eb27277ebdff7, type: 3}
-    cloverClumpPrefabs: []
+    cloverClumpPrefabs:
+    - {fileID: 4919398732661662658, guid: 9a12c39052867774bbf56c1fb4c90611, type: 3}
+    - {fileID: 1476561564074760266, guid: fccdc0ac73aac02459df082017731679, type: 3}
+    - {fileID: 8386551719801728580, guid: dc25647382030b842a5800d8bac51aff, type: 3}
     activeRingRadius: 1
     preGenerationRingPadding: 1
     receiveCloverShadows: 0
@@ -1149,7 +1152,7 @@ MonoBehaviour:
     minClumpsPerPatch: 2
     maxClumpsPerPatch: 5
     patchRadiusRange: {x: 0.8, y: 2.1}
-    uniformScaleRange: {x: 0.4, y: 0.6}
+    uniformScaleRange: {x: 1.2, y: 1.4}
     randomizeYaw: 1
     seedOffset: 24000
     cloverInstanceDataPropertyName: _CloverInstanceData
@@ -1346,6 +1349,17 @@ MonoBehaviour:
   waterReflectionMovingUpdatesPerSecond: 120
   waterReflectionDistance: 300
   terrainReceiveShadows: 1
+  terrainHorizonShadows:
+    enabled: 1
+    searchDistance: 6000
+    strength: 0.8
+    shadowTint: {r: 0.45, g: 0.52, b: 0.65, a: 1}
+    tintStrength: 0.5
+    softnessDegrees: 3
+    heightBias: 1.5
+    searchSteps: 32
+    cachedHeightSamples: 65536
+    cachedInactiveTiles: 128
   logTerrainGenerationProfile: 1
   terrainGenerationProfileLogInterval: 5
   resetTerrainGenerationProfileAfterLog: 1
@@ -1624,7 +1638,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameTimeManager
   startAutomatically: 1
   useUnscaledDeltaTime: 0
-  realSecondsPerGameHour: 75
+  realSecondsPerGameHour: 5
   timeScale: 1
   daylightHours: 16
   nighttimeHours: 8

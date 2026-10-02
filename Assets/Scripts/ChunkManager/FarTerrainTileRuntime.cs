@@ -8,6 +8,7 @@ public class FarTerrainTileRuntime
     private MeshFilter meshFilter;
     private MeshRenderer meshRenderer;
     private Material runtimeMaterial;
+    private TerrainHorizonShadowSystem.Binding terrainHorizonBinding;
     private GameObject waterRoot;
     private MeshFilter waterMeshFilter;
     private MeshRenderer waterMeshRenderer;
@@ -61,6 +62,8 @@ public class FarTerrainTileRuntime
         bool terrainReceiveShadows)
     {
         this.record = record;
+        terrainHorizonBinding?.Dispose();
+        terrainHorizonBinding = null;
         ChunkCoord tileCoord = record.TileCoord;
         Vector3 worldPosition = new Vector3(
             (tileCoord.x * tileWorldChunkSize + tileWorldChunkSize * 0.5f) * worldScale,
@@ -118,6 +121,12 @@ public class FarTerrainTileRuntime
         }
     }
 
+    public void SetTerrainHorizon(TerrainHorizonShadowSystem shadows, int x, int z, int size, float[,] heights, int halo)
+    {
+        terrainHorizonBinding?.Dispose();
+        terrainHorizonBinding = shadows?.Bind(runtimeMaterial, new Unity.Mathematics.int2(x, z), size, heights, halo);
+    }
+
     public void SetRenderVisible(bool renderVisible)
     {
         if (this.renderVisible == renderVisible)
@@ -162,6 +171,8 @@ public class FarTerrainTileRuntime
 
     public void DestroyRuntime()
     {
+        terrainHorizonBinding?.Dispose();
+        terrainHorizonBinding = null;
         visible = false;
 
         SetMesh(null, null);
@@ -206,6 +217,8 @@ public class FarTerrainTileRuntime
 
     private void ResetControlMaps()
     {
+        terrainHorizonBinding?.Dispose();
+        terrainHorizonBinding = null;
         if (runtimeMaterial == null)
             return;
 

@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class ChunkManager
 {
+    private readonly TerrainHorizonShadowSystem terrainHorizonShadows;
     private const int FarTerrainLOD = 5;
     // The first leaf keeps the current 4x4 macro footprint. Larger leaves are
     // selected only when their complete footprint is beyond the preceding band.
@@ -186,7 +187,8 @@ public class ChunkManager
         float mountainHorizontalScale = 1f,
         float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma, WorldErosionSettings erosion = default,
         ButterflySettings butterflySettings = null,
-        BeeSettings beeSettings = null)
+        BeeSettings beeSettings = null,
+        TerrainHorizonShadowSettings terrainHorizonShadowSettings = null)
     {
         this.viewDistance = viewDistance;
         this.colliderDistance = colliderDistance;
@@ -210,6 +212,8 @@ public class ChunkManager
         this.terrainMaterial = terrainMaterial;
         this.waterMaterial = waterMaterial;
         this.terrainReceiveShadows = terrainReceiveShadows;
+        terrainHorizonShadows = new TerrainHorizonShadowSystem(chunkSize, seed, sampleScale, worldScale,
+            meshHeightMultiplier, waterSettings, mountainHorizontalScale, erosion, terrainHorizonShadowSettings);
         this.maxActiveTerrainDataJobs = Mathf.Max(1, maxActiveTerrainDataJobs);
         this.maxActiveFarTerrainJobs = Mathf.Max(1, maxActiveFarTerrainJobs);
         this.maxActiveMeshJobs = Mathf.Max(1, maxActiveMeshJobs);
@@ -282,6 +286,7 @@ public class ChunkManager
 
     public void Dispose()
     {
+        terrainHorizonShadows?.Dispose();
         butterflyManager?.Dispose();
         beeManager?.Dispose();
         distantTrees?.Dispose();
@@ -586,6 +591,13 @@ public class ChunkManager
 
         ProcessRuntimeCreationQueue();
         UpdateVisibleChunkContent(viewerCoord);
+
+        // Optional horizon work never delays uploading a terrain mesh. Dispatch only after
+        // player-proximate generation/collision has settled; one shadow worker at a time.
+        terrainHorizonShadows.Update(viewer.position,
+            terrainRequestManager.ActiveTerrainDataJobCount == 0 &&
+            terrainRequestManager.ActiveMeshJobCount == 0 &&
+            terrainRequestManager.ActiveColliderJobCount == 0);
 
         long foliageStart = TerrainGenerationProfiler.GetTimestamp();
 
@@ -1786,6 +1798,8 @@ public class ChunkManager
             return;
 
         runtime.SetControlMaps(record.FarTerrainControlMapData);
+        runtime.SetTerrainHorizon(terrainHorizonShadows, record.ChunkCoord.x * chunkSize,
+            record.ChunkCoord.z * chunkSize, chunkSize, record.FarTreeHeightGrid, 0);
         runtime.SetMeshes(terrainMesh, record.FarTerrainWaterMesh, FarTerrainLOD);
     }
 
@@ -1800,6 +1814,9 @@ public class ChunkManager
             return;
 
         runtime.SetControlMaps(record.ControlMapData);
+        int tileSize = chunkSize * record.SizeInChunks;
+        runtime.SetTerrainHorizon(terrainHorizonShadows, record.TileCoord.x * tileSize,
+            record.TileCoord.z * tileSize, tileSize, record.FarTreeHeightGrid, 0);
         runtime.SetMesh(terrainMesh, record.WaterMesh);
     }
 
@@ -1887,6 +1904,8 @@ public class ChunkManager
             record.TryGetLODWaterMesh(lod, out waterMesh);
 
             runtime.SetControlMaps(record.ControlMapData);
+            runtime.SetTerrainHorizon(terrainHorizonShadows, record.ChunkCoord.x * chunkSize,
+                record.ChunkCoord.z * chunkSize, chunkSize, record.HeightMap, 1);
             runtime.SetMeshes(terrainMesh, waterMesh, lod);
         }
     }

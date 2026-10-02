@@ -14,6 +14,7 @@ public class ChunkRuntime
     private MeshFilter terrainMeshFilter;
     private MeshRenderer terrainMeshRenderer;
     private Material runtimeTerrainMaterial;
+    private TerrainHorizonShadowSystem.Binding terrainHorizonBinding;
 
     private GameObject waterRoot;
     private MeshFilter waterMeshFilter;
@@ -83,6 +84,8 @@ public class ChunkRuntime
         bool terrainReceiveShadows)
     {
         this.chunkRecord = chunkRecord;
+        terrainHorizonBinding?.Dispose();
+        terrainHorizonBinding = null;
 
         ChunkCoord chunkCoord = chunkRecord.ChunkCoord;
         Vector3 worldPosition = new Vector3(
@@ -152,6 +155,12 @@ public class ChunkRuntime
 
         if (controlMaps.Length > 2)
             runtimeTerrainMaterial.SetTexture("_ControlMap2", controlMaps[2]);
+    }
+
+    public void SetTerrainHorizon(TerrainHorizonShadowSystem shadows, int x, int z, int size, float[,] heights, int halo)
+    {
+        terrainHorizonBinding?.Dispose();
+        terrainHorizonBinding = shadows?.Bind(runtimeTerrainMaterial, new Unity.Mathematics.int2(x, z), size, heights, halo);
     }
 
     public void SetMeshes(Mesh terrainMesh, Mesh waterMesh, int lod)
@@ -311,6 +320,8 @@ public class ChunkRuntime
 
     public void DestroyRuntime()
     {
+        terrainHorizonBinding?.Dispose();
+        terrainHorizonBinding = null;
         chunkRecord?.ClearActiveRuntime(this);
 
         RemoveCollider();
@@ -358,6 +369,8 @@ public class ChunkRuntime
 
     private void ResetControlMaps()
     {
+        terrainHorizonBinding?.Dispose();
+        terrainHorizonBinding = null;
         if (runtimeTerrainMaterial == null)
             return;
 

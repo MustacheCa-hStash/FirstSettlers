@@ -1,0 +1,58 @@
+[
+  {
+    "name": "CloverClump_v02_A",
+    "heads": 34,
+    "blooms": 0,
+    "vertices": 1224,
+    "triangles": 1122,
+    "preview_dimensions_m": [
+      0.8098,
+      0.6426,
+      0.1138
+    ],
+    "author_scale": 2.0,
+    "submeshes": 1
+  },
+  {
+    "name": "CloverClump_v02_B_Flowering",
+    "heads": 38,
+    "blooms": 3,
+    "vertices": 1710,
+    "triangles": 1812,
+    "preview_dimensions_m": [
+      0.8184,
+      0.7306,
+      0.1884
+    ],
+    "author_scale": 2.0,
+    "submeshes": 1
+  },
+  {
+    "name": "CloverClump_v02_Edge",
+    "heads": 19,
+    "blooms": 0,
+    "vertices": 684,
+    "triangles": 627,
+    "preview_dimensions_m": [
+      0.5454,
+      0.4455,
+      0.1197
+    ],
+    "author_scale": 2.0,
+    "submeshes": 1
+  },
+  {
+    "name": "CloverSingle_v02",
+    "heads": 1,
+    "blooms": 0,
+    "vertices": 36,
+    "triangles": 33,
+    "preview_dimensions_m": [
+      0.085,
+      0.0807,
+      0.0887
+    ],
+    "author_scale": 2.0,
+    "submeshes": 1
+  }
+]

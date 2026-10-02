@@ -62,6 +62,7 @@ public class WorldManager : MonoBehaviour
     [SerializeField, Min(20f)] float waterReflectionDistance = 300f;
     [Header("Terrain Lighting")]
     [SerializeField] bool terrainReceiveShadows = true;
+    [SerializeField] TerrainHorizonShadowSettings terrainHorizonShadows = new TerrainHorizonShadowSettings();
     [Header("Terrain Generation Profiling")]
     [SerializeField] bool logTerrainGenerationProfile = true;
     [SerializeField] float terrainGenerationProfileLogInterval = 5f;
@@ -116,7 +117,7 @@ public class WorldManager : MonoBehaviour
             farTerrainTileContentBudgetMsPerFrame,
             completedRequestApplyBudgetMsPerFrame,
             terrainDataApplyBudgetMsPerFrame, farTerrainApplyBudgetMsPerFrame,
-            lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame, mountainWidth, mountainSnowBlendGamma, erosion.Sanitized(), butterflySettings, beeSettings);
+            lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame, mountainWidth, mountainSnowBlendGamma, erosion.Sanitized(), butterflySettings, beeSettings, terrainHorizonShadows);
 
         if (waterMaterial != null && waterMaterial.shader != null &&
             waterMaterial.shader.name == "FirstSettlers/Murky Planar Water")
