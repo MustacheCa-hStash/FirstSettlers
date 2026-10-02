@@ -1199,13 +1199,34 @@ MonoBehaviour:
     prewarmDistance: 8
     cellSize: 1.5
     density: 0.38
+    placementMultiplier: 6
     lodStart: 18
     lodEnd: 30
     maxSlope: 32
-    scaleRange: {x: 0.8, y: 1.25}
+    scaleRange: {x: 0.55, y: 1.5}
     seedOffset: 47000
     candidateBudgetPerFrame: 256
     generationBudgetMs: 0.35
+  fernSettings:
+    enabled: 1
+    prefab: {fileID: 0}
+    distantPrefab: {fileID: 0}
+    matchGrassRenderDistance: 0
+    renderDistance: 65
+    fadeWidth: 10
+    prewarmDistance: 8
+    cellSize: 1.5
+    density: 0.65
+    placementMultiplier: 1
+    lodStart: 22
+    lodEnd: 38
+    maxSlope: 26
+    scaleRange: {x: 0.75, y: 1.2}
+    seedOffset: 48000
+    candidateBudgetPerFrame: 256
+    generationBudgetMs: 0.35
+    minMoisture: 0.35
+    sizeMultiplier: 2
   treeSettings:
     mapleTreePrefab: {fileID: 0}
     sugarMapleTreePrefab: {fileID: 0}

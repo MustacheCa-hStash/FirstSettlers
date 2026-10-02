@@ -18,7 +18,7 @@ public sealed class LeafClusterGeneration
     public bool Complete { get; private set; }
     public int VisitedCells { get; private set; }
     private readonly ChunkRecord record;
-    private readonly float[,] heights, slopes, rivers;
+    private readonly float[,] heights, slopes, rivers, moisture;
     private readonly BiomeType[,] biomes;
     private readonly SurfaceType[,] surfaces;
     private readonly WorldFeaturePlan plan;
@@ -29,6 +29,7 @@ public sealed class LeafClusterGeneration
     private readonly float footprint;
     private readonly Dictionary<Vector2Int, List<Blocker>> blockers = new Dictionary<Vector2Int, List<Blocker>>();
     private const float BlockerCellSize = 4f;
+    private const float DriftAmplitude = 1.4f;
     private struct Blocker { public Vector2 position; public float radius; }
 
     public LeafClusterGeneration(ChunkRecord record, LeafClusterSettings settings,
@@ -38,14 +39,16 @@ public sealed class LeafClusterGeneration
         signature = settings.PlacementSignature;
         size = chunkSize; scale = Mathf.Max(0.001f, worldScale); this.heightMultiplier = heightMultiplier;
         heights = record.HeightMap; slopes = record.SlopeMap; rivers = record.RiverMaskMap;
+        moisture = record.MoistureMap;
         biomes = record.BiomeMap; surfaces = record.SurfaceTypeMap; plan = record.WorldFeaturePlan;
         floor = plan?.ForestStructure.FloorEcologyMap;
-        spacing = Mathf.Max(0.75f, settings.cellSize);
-        footprint = meshRadius * Mathf.Max(0.1f, Mathf.Max(settings.scaleRange.x, settings.scaleRange.y));
-        minX = Mathf.FloorToInt(record.ChunkCoord.x * size * scale / spacing);
-        minZ = Mathf.FloorToInt(record.ChunkCoord.z * size * scale / spacing);
-        countX = Mathf.CeilToInt((record.ChunkCoord.x + 1) * size * scale / spacing) - minX;
-        countZ = Mathf.CeilToInt((record.ChunkCoord.z + 1) * size * scale / spacing) - minZ;
+        spacing = Mathf.Max(0.75f, settings.cellSize) / Mathf.Sqrt(Mathf.Max(1f,settings.placementMultiplier));
+        footprint = meshRadius * Mathf.Max(0.1f, Mathf.Max(settings.scaleRange.x, settings.scaleRange.y)) * settings.SizeMultiplier;
+        int halo=Mathf.CeilToInt(DriftAmplitude/spacing);
+        minX = Mathf.FloorToInt(record.ChunkCoord.x * size * scale / spacing)-halo;
+        minZ = Mathf.FloorToInt(record.ChunkCoord.z * size * scale / spacing)-halo;
+        countX = Mathf.CeilToInt((record.ChunkCoord.x + 1) * size * scale / spacing)+halo - minX;
+        countZ = Mathf.CeilToInt((record.ChunkCoord.z + 1) * size * scale / spacing)+halo - minZ;
         Complete = heights == null || slopes == null || biomes == null || surfaces == null ||
             floor == null || countX <= 0 || countZ <= 0;
         if (!Complete && plan != null)
@@ -75,7 +78,8 @@ public sealed class LeafClusterGeneration
         signature == options.PlacementSignature && ReferenceEquals(heights, current.HeightMap) &&
         ReferenceEquals(slopes, current.SlopeMap) && ReferenceEquals(biomes, current.BiomeMap) &&
         ReferenceEquals(surfaces, current.SurfaceTypeMap) && ReferenceEquals(rivers, current.RiverMaskMap) &&
-        ReferenceEquals(plan, current.WorldFeaturePlan) && ReferenceEquals(floor, current.WorldFeaturePlan?.ForestStructure.FloorEcologyMap);
+        ReferenceEquals(plan, current.WorldFeaturePlan) && ReferenceEquals(floor, current.WorldFeaturePlan?.ForestStructure.FloorEcologyMap) &&
+        (!settings.IsFern || ReferenceEquals(moisture,current.MoistureMap));
 
     public void Step(int budget)
     {
@@ -83,13 +87,25 @@ public sealed class LeafClusterGeneration
         {
             int cell = VisitedCells++;
             int cx = minX + cell % countX, cz = minZ + cell / countX;
-            uint rank = math.hash(new int4(seed, settings.seedOffset, cx, cz));
-            Vector2 world = new Vector2(cx + 0.18f + Unit(rank, 17) * 0.64f,
-                cz + 0.18f + Unit(rank, 31) * 0.64f) * spacing;
-            Vector2 sample = world / scale - new Vector2(record.ChunkCoord.x, record.ChunkCoord.z) * size;
-            // Half-open ownership gives neighboring chunks identical candidates with no duplicates.
-            if (sample.x >= 0 && sample.y >= 0 && sample.x < size && sample.y < size)
-                TryAdd(sample, world, rank);
+            uint cellRank = math.hash(new int4(seed, settings.seedOffset, cx, cz));
+            // Variable occupancy (0/1/2/3, mean 1) and full-cell random offsets
+            // remove the one-patch-per-grid-cell pattern without raising the budget.
+            float occupancy=Unit(cellRank,7);
+            int candidates=occupancy<.35f?0:occupancy<.75f?1:occupancy<.9f?2:3;
+            for(int candidate=0;candidate<candidates;candidate++)
+            {
+                uint rank=math.hash(new uint2(cellRank,(uint)candidate+211));
+                float2 p=new float2(cx+Unit(rank,17),cz+Unit(rank,31))*spacing;
+                float2 drift=new float2(noise.snoise(p*.07f+seed*.0013f),
+                    noise.snoise(p*.07f+seed*.0013f+57.3f));
+                p+=math.clamp(drift,-1f,1f)*DriftAmplitude;
+                Vector2 world=new Vector2(p.x,p.y);
+                Vector2 sample = world / scale - new Vector2(record.ChunkCoord.x, record.ChunkCoord.z) * size;
+                // The search halo includes displaced candidates; only their final
+                // position owns them, preserving seams even at negative coordinates.
+                if (sample.x >= 0 && sample.y >= 0 && sample.x < size && sample.y < size)
+                    TryAdd(sample, world, rank);
+            }
             Complete = VisitedCells >= countX * countZ;
         }
     }
@@ -111,14 +127,26 @@ public sealed class LeafClusterGeneration
             (1 - ecology.y * 0.5f) * ForestFloorPolicy.LeafRetention(ecology.z) *
             (1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(settings.maxSlope * 0.4f, settings.maxSlope, slope))) *
             (1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.15f, 0.5f, river)));
+        if (settings is FernSettings fern)
+        {
+            if (ForestFloorPolicy.MossBlocksVegetation(ecology.z)) return;
+            float dampness = moisture == null ? 0 : Sample(moisture,sample);
+            float shade = plan.ForestStructure.CanopyIntentMap == null ? 0 : Sample(plan.ForestStructure.CanopyIntentMap,sample);
+            float clearing = plan.ForestStructure.ClearingMap == null ? 0 : Sample(plan.ForestStructure.ClearingMap,sample);
+            keep = Mathf.Clamp01(settings.density) * colony * Mathf.SmoothStep(0,1,Mathf.InverseLerp(fern.minMoisture,Mathf.Max(.8f,fern.minMoisture+.01f),dampness)) *
+                Mathf.Lerp(.25f,1,shade) * (1-clearing*.85f) * (1-ecology.y) *
+                (1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.15f,.5f,river))) *
+                (1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(10,settings.maxSlope,slope)));
+        }
         if (Unit(rank, 59) >= keep || Blocked(sample * scale)) return;
         float y = SampleTerrain(heights, sample) * heightMultiplier * scale;
         float s = Mathf.Lerp(Mathf.Max(0.1f, Mathf.Min(settings.scaleRange.x, settings.scaleRange.y)),
-            Mathf.Max(0.1f, Mathf.Max(settings.scaleRange.x, settings.scaleRange.y)), Unit(rank, 83));
+            Mathf.Max(0.1f, Mathf.Max(settings.scaleRange.x, settings.scaleRange.y)), Unit(rank, 83)) * settings.SizeMultiplier;
         Quaternion rotation = Quaternion.FromToRotation(Vector3.up, normal) * Quaternion.Euler(0, Unit(rank, 101) * 360, 0);
         float tone = Mathf.Lerp(0.77f, 0.98f, Unit(rank, 127));
+        if (settings.IsFern) tone = Mathf.Lerp(.94f,1.04f,Unit(rank,127));
         Instances.Add(new LeafClusterInstance {
-            position = new Vector3(world.x, y, world.y) + normal * 0.006f,
+            position = new Vector3(world.x, y, world.y) + normal * (settings.IsFern?-0.006f:0.006f),
             rotation = rotation, scale = s, rank = rank,
             tint = new Vector4(tone, tone * Mathf.Lerp(0.95f, 1.02f, Unit(rank, 151)), tone * 0.94f, 1)
         });

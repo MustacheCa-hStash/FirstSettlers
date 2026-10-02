@@ -47,7 +47,7 @@ public static class LeafClusterValidation
         var options = new LeafClusterSettings();
         using var record = Record(new ChunkCoord(-2, 3), size);
         var a = Generate(record, size, options); var b = Generate(record, size, options, 4096);
-        Check(a.Instances.Count > 20 && a.Instances.Count < 160, "Sparse interior budget drifted.");
+        Check(a.Instances.Count > 120 && a.Instances.Count < 960, "Increased interior litter budget drifted.");
         Check(a.Instances.Count == b.Instances.Count, "Slicing changed placement count.");
         for (int i = 0; i < a.Instances.Count; i++)
         {
@@ -126,6 +126,12 @@ public static class LeafClusterValidation
         Mesh mesh = prefab.GetComponent<MeshFilter>().sharedMesh;
         MeshRenderer renderer = prefab.GetComponent<MeshRenderer>();
         Check(mesh != null && mesh.triangles.Length / 3 == 72 && mesh.subMeshCount == 1, "Leaf mesh budget changed.");
+        var scatter=new List<Vector4>();mesh.GetUVs(1,scatter);
+        Check(scatter.Count==mesh.vertexCount,"Leaf mesh is missing per-leaf origin/identity data.");
+        var identities=new HashSet<int>();foreach(var entry in scatter) {Check(entry.w==1,"Leaf variation metadata is invalid.");identities.Add((int)entry.z);}
+        Check(identities.Count==9,"Leaves lost their independent identities.");
+        var parameters=new HashSet<Vector4>();for(uint rank=0;rank<64;rank++) parameters.Add(LeafClusterSystem.ScatterParams(rank));
+        Check(parameters.Count==64,"Leaf instances repeated their scatter parameters.");
         Check(mesh.bounds.size.y > 0.008f && mesh.bounds.size.y < 0.05f && mesh.bounds.size.x > .8f && mesh.bounds.size.z < 1f,
             "Leaves lost their close-range curled silhouette.");
         Check(Math.Abs(mesh.bounds.min.y) < 0.0001f, "Prefab pivot is not seated at the lowest leaf.");

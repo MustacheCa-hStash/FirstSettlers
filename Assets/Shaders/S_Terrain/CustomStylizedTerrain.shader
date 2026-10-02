@@ -575,6 +575,11 @@ Shader "Custom/StylizedTerrainURP"
                 float4 control0 = SAMPLE_TEXTURE2D(_ControlMap0, sampler_ControlMap0, controlUV);
                 float4 control1 = SAMPLE_TEXTURE2D(_ControlMap1, sampler_ControlMap0, controlUV);
                 float4 control2 = SAMPLE_TEXTURE2D(_ControlMap2, sampler_ControlMap0, controlUV);
+                // Cover maps are zero outside the grass substrate. Divide by its
+                // unsharpened support so the same transition is not applied twice,
+                // exposing a green strip between forest litter and rock/cliff.
+                float coverSupport = max(control0.b, 0.001);
+                float forestCoverVariant = saturate(control1.a / coverSupport);
                 control0 = pow(saturate(control0), max(_SurfaceBlendSharpness, 0.25));
                 control1 = pow(saturate(control1), max(_SurfaceBlendSharpness, 0.25));
                 float totalWeight = dot(control0, float4(1, 1, 1, 1)) + dot(control1.rgb, float3(1, 1, 1));
@@ -590,11 +595,11 @@ Shader "Custom/StylizedTerrainURP"
                 half cliffWeight = control1.g;
                 half riverbedWeight = control1.b;
 
-                half darkGrassCoverWeight = control2.r;
-                half leafLitterWeight = control2.g;
-                half bareDirtWeight = control2.b;
+                half darkGrassCoverWeight = saturate(control2.r / coverSupport);
+                half leafLitterWeight = saturate(control2.g / coverSupport);
+                half bareDirtWeight = saturate(control2.b / coverSupport);
                 half mossWeight = control2.a;
-                half forestVariantWeight = saturate(control1.a);
+                half forestVariantWeight = forestCoverVariant;
 
                 float distanceToCamera = distance(_WorldSpaceCameraPos.xyz, IN.positionWS);
                 #if defined(_GRASS_BLADE_GROUND)

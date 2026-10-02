@@ -8,9 +8,10 @@ using Unity.Profiling;
 // distance-dependent batches; DrawMeshInstanced submits leaves without Renderer objects.
 public sealed class LeafClusterSystem : IDisposable
 {
-    private static readonly ProfilerMarker GenerationMarker = new ProfilerMarker("FS.Streaming.LeafClusters.Generate");
-    private static readonly ProfilerMarker DrawMarker = new ProfilerMarker("FS.Streaming.LeafClusters.Draw");
+    private readonly ProfilerMarker GenerationMarker;
+    private readonly ProfilerMarker DrawMarker;
     private static readonly int TintId = Shader.PropertyToID("_LeafInstanceTint");
+    private static readonly int ScatterId = Shader.PropertyToID("_LeafScatterParams");
     private static readonly int FadeStartId = Shader.PropertyToID("_FadeStart");
     private static readonly int FadeEndId = Shader.PropertyToID("_FadeEnd");
     private readonly LeafClusterSettings settings;
@@ -22,6 +23,7 @@ public sealed class LeafClusterSystem : IDisposable
     private readonly HashSet<ChunkCoord> wanted = new HashSet<ChunkCoord>();
     private readonly Matrix4x4[] matrices = new Matrix4x4[1023];
     private readonly Vector4[] tints = new Vector4[1023];
+    private readonly Vector4[] scatters = new Vector4[1023];
     private readonly Plane[] frustum = new Plane[6];
     private readonly MaterialPropertyBlock properties = new MaterialPropertyBlock();
     private GameObject resolvedPrefab;
@@ -40,6 +42,9 @@ public sealed class LeafClusterSystem : IDisposable
     public LeafClusterSystem(LeafClusterSettings settings, int seed, int size, float scale, float heightMultiplier, GrassSettings grassSettings = null)
     {
         this.settings = settings ?? new LeafClusterSettings(); this.seed = seed;
+        string kind=this.settings.IsFern?"Ferns":"LeafClusters";
+        GenerationMarker=new ProfilerMarker("FS.Streaming."+kind+".Generate");
+        DrawMarker=new ProfilerMarker("FS.Streaming."+kind+".Draw");
         this.size = size; this.scale = scale; this.heightMultiplier = heightMultiplier;
         this.grassSettings = grassSettings;
     }
@@ -47,6 +52,9 @@ public sealed class LeafClusterSystem : IDisposable
         ? GrassStreamingPolicy.RenderDistance(grassSettings,size,scale) : Mathf.Max(1,settings.renderDistance);
     public static int SelectLod(uint rank, float distance, float start, float end) =>
         LeafClusterGeneration.Unit(rank,193) < Mathf.SmoothStep(0,1,Mathf.InverseLerp(start,Mathf.Max(start+.01f,end),distance)) ? 1 : 0;
+    public static Vector4 ScatterParams(uint rank) => new Vector4(rank%8192+1,
+        Mathf.Lerp(.28f,1f,LeafClusterGeneration.Unit(rank,229)),
+        Mathf.Lerp(.65f,1.35f,LeafClusterGeneration.Unit(rank,251)),1);
 
     public void Update(ChunkManager manager, List<ChunkCoord> coords, Vector3 viewer, Camera camera)
     {
@@ -129,6 +137,7 @@ public sealed class LeafClusterSystem : IDisposable
                         if (farMesh != null && farMaterial != null && SelectLod(instance.rank,distance,settings.lodStart,settings.lodEnd) != lod) continue;
                         if (camera != null && !InsideFrustum(instance.position, radius, frustum)) continue;
                         matrices[count] = Matrix4x4.TRS(instance.position, instance.rotation, Vector3.one * instance.scale) * (lod == 0 ? meshLocal : farLocal);
+                        scatters[count]=ScatterParams(instance.rank);
                         tints[count++] = instance.tint;
                         if (count == matrices.Length) { Submit(count, camera, lod); count = 0; }
                     }
@@ -141,9 +150,9 @@ public sealed class LeafClusterSystem : IDisposable
     private void ResolveAssets()
     {
         GameObject prefab = settings.prefab != null ? settings.prefab : defaultPrefab != null
-            ? defaultPrefab : defaultPrefab = Resources.Load<GameObject>("Foliage/LeafCluster");
+            ? defaultPrefab : defaultPrefab = Resources.Load<GameObject>(settings.DefaultPrefabPath);
         GameObject distant = settings.distantPrefab != null ? settings.distantPrefab : defaultFarPrefab != null
-            ? defaultFarPrefab : defaultFarPrefab = Resources.Load<GameObject>("Foliage/LeafScatter_LOD1");
+            ? defaultFarPrefab : defaultFarPrefab = Resources.Load<GameObject>(settings.DefaultDistantPrefabPath);
         if (prefab == resolvedPrefab && distant == resolvedFarPrefab && mesh != null && material != null) return;
         resident.Clear();
         resolvedPrefab = prefab; resolvedFarPrefab = distant; mesh = farMesh = null; material = farMaterial = null;
@@ -162,11 +171,14 @@ public sealed class LeafClusterSystem : IDisposable
             if (farMesh != null) meshRadius = Mathf.Max(meshRadius,farMesh.bounds.extents.magnitude *
                 Mathf.Max(farLocal.lossyScale.x,farLocal.lossyScale.y,farLocal.lossyScale.z) + farLocal.MultiplyPoint3x4(farMesh.bounds.center).magnitude);
         }
+        // Bound per-leaf spread, heading/size variation and local offsets in the shader.
+        if(!settings.IsFern) meshRadius=meshRadius*1.5f+.1f;
     }
 
     private void Submit(int count, Camera camera, int lod)
     {
         properties.SetVectorArray(TintId, tints);
+        if(!settings.IsFern) properties.SetVectorArray(ScatterId,scatters);
         Graphics.DrawMeshInstanced(lod == 0 ? mesh : farMesh, 0, lod == 0 ? material : farMaterial, matrices, count, properties,
             ShadowCastingMode.Off, true, 0, camera, LightProbeUsage.Off);
         VisibleInstances += count; DrawCalls++;

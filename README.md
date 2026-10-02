@@ -1,5 +1,17 @@
 # FirstSettlers Work Notes
 
+## October 2: irregular leaf groups and broader, more visible ferns
+
+Leaf candidates now use variable cell occupancy, full-cell offsets and world-space drift, with a halo for deterministic chunk ownership. Per-leaf pivots/IDs let the instanced shader vary leaf quantities, heading, scale and arrangement; the same nine-leaf stamp no longer repeats. Instance scale ranges from 0.55–1.5. The sixfold candidate budget remains, and the updated fixture achieved 161->949 placements (5.89x). The atlas artwork is unchanged.
+
+Fern leaflets are roughly twice as broad, distant leaflets preserve both halves, and the fern range/settings expose an explicit **Fern Size Multiplier**, set to 2 in SmearScene. Spacing/density/moisture tuning substantially increases opportunities; the same authoring fixture increased from 18 to 138 plants. Mesh budgets are now 273/100 triangles. Runtime instancing and existing moss/forest exclusions remain. Tests and actual Linear render previews passed (`variation-unity.log`); no live frame-time benchmark was run. Restart Play mode for rebuilt mesh/settings uptake. See [LEAF_CLUSTERS.md](LEAF_CLUSTERS.md) and [FOREST_FERNS.md](FOREST_FERNS.md).
+
+## October 2: moss grass exclusion, meadow insects, ferns and denser fallen leaves
+
+Moss now blocks grass completely, with a margin for terrain control-map interpolation and matching near/billboard/fallback rules. Leaves can still accumulate on moss. Bees/butterflies require a cached grassland majority from a 5x5 chunk sample grid and grassland at their actual terrain probes; forest and mixed unowned chunks do not host them. The terrain shader now preserves litter substrate at rock transitions, removing the residual green rim from double-blended cover weights.
+
+Added simple geometry-only forest ferns with instanced near/far meshes (273/60 triangles), uniform leaflet fills, moist shaded forest placement and bounded streaming. Leaf scatter candidate frequency is now 6x (+500%), confirmed at 155->938 placements in the same fixture. More instances/geometry add cost; performance remains unmeasured. Restart Play mode to regenerate. See [FOREST_FERNS.md](FOREST_FERNS.md) and [FOREST_FLOOR.md](FOREST_FLOOR.md) for settings, authoring renders and validation.
+
 ## October 2: moss preview/game color correction
 
 The authoring clone used Gamma while the game uses Linear. Replaced the terrain shader's literal moss fill with a Color property so Unity converts the authored dark green correctly. Preview preparation now matches the game's color space, and the moss renderer requires Linear. Actual Unity before/after captures under identical lighting are in `ArtReferences/ForestFloor/Moss_Linear_Before.png` and `Moss_Floor.png`; the former reproduces the pale pre-fix result. Earlier Gamma captures are not exact live color references. All 24 terrain shader stages and the isolated Unity rendering passed. Restart Play mode to refresh chunk material copies. Global lighting, grass rims and generation are unchanged. See [FOREST_FLOOR.md](FOREST_FLOOR.md).

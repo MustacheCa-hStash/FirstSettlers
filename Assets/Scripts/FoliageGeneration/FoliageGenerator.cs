@@ -2076,7 +2076,7 @@ public static class FoliageGenerator
         int width = source?.GetLength(0) ?? 0, height = source?.GetLength(1) ?? 0;
         var result = new NativeArray<float>(width * height, Allocator.Persistent);
         for (int x = 0; x < width; x++)
-            for (int z = 0; z < height; z++) result[x * height + z] = source[x, z].x;
+            for (int z = 0; z < height; z++) result[x * height + z] = ForestFloorPolicy.GrassDensityAt(source,x,z);
         return result;
     }
 
@@ -2087,6 +2087,8 @@ public static class FoliageGenerator
         float z = math.clamp(sampleZ + 1f, 0f, height - 1f);
         int x0 = (int)math.floor(x), z0 = (int)math.floor(z);
         int x1 = math.min(x0 + 1, width - 1), z1 = math.min(z0 + 1, height - 1);
+        if (math.min(math.min(map[x0*height+z0],map[x1*height+z0]),
+            math.min(map[x0*height+z1],map[x1*height+z1])) < 0f) return -1f;
         return math.lerp(math.lerp(map[x0 * height + z0], map[x1 * height + z0], x - x0),
             math.lerp(map[x0 * height + z1], map[x1 * height + z1], x - x0), z - z0);
     }
@@ -2790,9 +2792,11 @@ public static class FoliageGenerator
             int paddedX = mapX + 1;
             int paddedZ = mapZ + 1;
 
-            if (!AllowsInstancedGrass(paddedX, paddedZ) ||
+            float floorDensity = hasForestGrassDensityMap
+                ? SampleForestDensity(forestGrassDensityMap,surfaceMapWidth,surfaceMapHeight,sampleX,sampleZ) : 1f;
+            if (!AllowsInstancedGrass(paddedX, paddedZ) || floorDensity < 0f ||
                 (IsForestFloor(paddedX, paddedZ) && Hash01(cellHash + 811) >=
-                    SampleForestDensity(forestGrassDensityMap, surfaceMapWidth, surfaceMapHeight, sampleX, sampleZ)))
+                    floorDensity))
             {
                 results[index] = default;
                 return;
@@ -3677,9 +3681,11 @@ public static class FoliageGenerator
             int paddedX = mapX + 1;
             int paddedZ = mapZ + 1;
 
-            if (!AllowsInstancedGrass(paddedX, paddedZ) ||
+            float floorDensity = hasForestGrassDensityMap
+                ? SampleForestDensity(forestGrassDensityMap,surfaceMapWidth,surfaceMapHeight,sampleX,sampleZ) : 1f;
+            if (!AllowsInstancedGrass(paddedX, paddedZ) || floorDensity < 0f ||
                 (IsForestFloor(paddedX, paddedZ) && Hash01(cellHash + 811) >=
-                    SampleForestDensity(forestGrassDensityMap, surfaceMapWidth, surfaceMapHeight, sampleX, sampleZ)))
+                    floorDensity))
             {
                 results[index] = default;
                 return;

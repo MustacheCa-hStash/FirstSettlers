@@ -157,7 +157,7 @@ public class ChunkRecord : System.IDisposable
             int width = source?.GetLength(0) ?? 0, height = source?.GetLength(1) ?? 0;
             var result = new NativeArray<float>(width * height, Allocator.Persistent);
             for (int x = 0; x < width; x++)
-                for (int z = 0; z < height; z++) result[x * height + z] = source[x, z].x;
+                for (int z = 0; z < height; z++) result[x * height + z] = ForestFloorPolicy.GrassDensityAt(source,x,z);
             return result;
         }
 
@@ -301,6 +301,20 @@ public class ChunkRecord : System.IDisposable
     public float[,] MoistureMap => moistureMap;
     public float[,] TemperatureMap => temperatureMap;
     public BiomeType[,] BiomeMap => biomeMap;
+    private BiomeType[,] ownershipSource;
+    private BiomeType? dominantBiome;
+    public BiomeType? DominantBiome
+    {
+        get
+        {
+            if (!ReferenceEquals(ownershipSource,biomeMap))
+            {
+                dominantBiome = ChunkBiomeOwnership.Classify(biomeMap);
+                ownershipSource = biomeMap;
+            }
+            return dominantBiome;
+        }
+    }
     public SurfaceType[,] SurfaceTypeMap => surfaceTypeMap;
     public WaterState[,] WaterStateMap => waterStateMap;
     public GroundCoverType[,] GroundCoverMap => groundCoverMap;

@@ -49,7 +49,7 @@ public static class ForestFloorPolicy
             (1f - math.smoothstep(0.62f, 0.82f, riverMask)) *
             (1f - math.smoothstep(38f, 60f, slope) * 0.65f);
         float moss = math.smoothstep(0.43f, 0.62f, mossNoise) * mossHabitat;
-        density *= math.lerp(1f, 0.02f, MossDominance(moss));
+        if (MossBlocksVegetation(moss)) density = 0f;
         float mixedLitter = math.smoothstep(0.35f, 0.8f, damp) *
             math.lerp(0.2f, 0.7f, Sample01(worldXZ * 0.014f, seed + 8454));
         return math.saturate(new float4(density, soil, moss, mixedLitter));
@@ -63,6 +63,18 @@ public static class ForestFloorPolicy
     public static float MossDominance(float coverage) => math.smoothstep(0.03f, 0.58f, coverage);
     public static float LeafRetention(float coverage) => math.lerp(1f, 0.25f, MossDominance(coverage));
     public static float CloverRetention(float coverage) => 1f - MossDominance(coverage);
+
+    public static bool MossBlocksVegetation(float coverage) => coverage > 0.03f;
+
+    // Negative density marks a hard exclusion. Include the control-map blur's
+    // one-sample neighborhood so interpolation cannot grow tufts through moss edges.
+    public static float GrassDensityAt(float4[,] map, int x, int z)
+    {
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++)
+            if (MossBlocksVegetation(map[math.clamp(x+dx,0,map.GetLength(0)-1),
+                math.clamp(z+dz,0,map.GetLength(1)-1)].z)) return -1f;
+        return map[x,z].x;
+    }
 
     public static float SampleMoss(float4[,] map, float2 sample)
     {

@@ -24,16 +24,20 @@ public static class ForestFloorPreview
         var record = new ChunkRecord(new ChunkCoord(0,0));
         int n = Size+3;
         var heights = new float[n,n]; var slopes = new float[n,n]; var biomes = new BiomeType[n,n];
+        var moisture = new float[n,n];
         var surfaces = new SurfaceType[n,n]; var ground = new GroundCoverType[n,n];
         var plan = new WorldFeaturePlan(n,n); plan.ForestStructure.EnsureFloorEcologyMap(n,n);
         for(int x=0;x<n;x++) for(int z=0;z<n;z++)
         {
             float clearing = opening ? Mathf.SmoothStep(0,1,Mathf.InverseLerp(.35f,.8f,Mathf.PerlinNoise(x*.022f,z*.022f))) * .75f : 0;
             biomes[x,z] = BiomeType.Forest; surfaces[x,z] = SurfaceType.Grass;
+            moisture[x,z]=.62f;
+            plan.ForestStructure.CanopyIntentMap[x,z]=.65f;plan.ForestStructure.ClearingMap[x,z]=clearing;
             ground[x,z] = coverOverride ?? (clearing > .35f ? GroundCoverType.DarkGrass : GroundCoverType.LeafLitter);
             plan.ForestStructure.FloorEcologyMap[x,z] = ForestFloorPolicy.Evaluate(new float2(x-1,z-1),Seed,.62f,0,0,.65f,clearing);
         }
         Set(record,"heightMap",heights); Set(record,"slopeMap",slopes); Set(record,"biomeMap",biomes);
+        Set(record,"moistureMap",moisture);
         Set(record,"surfaceTypeMap",surfaces); Set(record,"groundCoverMap",ground); Set(record,"worldFeaturePlan",plan);
         Set(record,"nativeTerrainData",new ChunkRecord.NativeTerrainData(heights,slopes,biomes,surfaces,null,ground,null,plan.ForestStructure.FloorEcologyMap));
         return record;
@@ -105,7 +109,9 @@ public static class ForestFloorPreview
                 foreach(var leaf in leaves.Instances)
                 {
                     var obj=Instance(leafPrefab,leaf.position-new Vector3(Size*Scale*.5f,0,Size*Scale*.5f),leaf.rotation,Vector3.one*leaf.scale,scene,group,leafMat);
-                    var block=new MaterialPropertyBlock(); block.SetVector("_LeafInstanceTint",leaf.tint); obj.GetComponent<MeshRenderer>().SetPropertyBlock(block);
+                    var block=new MaterialPropertyBlock(); block.SetVector("_LeafInstanceTint",leaf.tint);
+                    block.SetVector("_LeafScatterParams",LeafClusterSystem.ScatterParams(leaf.rank));
+                    obj.GetComponent<MeshRenderer>().SetPropertyBlock(block);
                 }
                 if(pass==1) foreach(var c in record.FoliageData.cloverInstances)
                 {

@@ -29,23 +29,29 @@ public static class ForestFloorValidation
 
     private static void ValidatePolicy()
     {
-        double interior = 0, opening = 0;
+        double interior = 0, opening = 0, openingOutsideMoss=0;
+        int openingSamples=0;
         for (int i = 0; i < 4096; i++)
         {
             float2 position = new float2(i % 64 * 3.1f - 70, i / 64 * 2.7f - 100);
             float4 closed = ForestFloorPolicy.Evaluate(position, 1937, 0.72f, 4, 0, 0.8f, 0);
             float4 gap = ForestFloorPolicy.Evaluate(position, 1937, 0.72f, 4, 0, 0.05f, 1);
             Check(math.all(math.isfinite(closed)) && math.all(closed >= 0) && math.all(closed <= 1), "Invalid ecology sample.");
-            Check(gap.x > closed.x, "Openings did not support more grass.");
+            Check(gap.x >= closed.x, "Openings did not support more grass outside moss exclusions.");
             Check(ForestFloorPolicy.Evaluate(position, 1937, 0.1f, 4, 0).x == 0, "Dry ground retained grass.");
             Check(ForestFloorPolicy.Evaluate(position, 1937, 0.72f, 50, 0).x == 0, "Steep ground retained grass.");
             Check(ForestFloorPolicy.Evaluate(position, 1937, 0.72f, 4, 0.8f).x == 0, "River retained grass.");
             float4 nearby = ForestFloorPolicy.Evaluate(position + new float2(0.01f, 0), 1937, 0.72f, 4, 0, 0.8f, 0);
-            Check(math.cmax(math.abs(closed - nearby)) < 0.005f, "Continuous field contains an abrupt step.");
+            var delta=math.abs(closed-nearby);
+            // Grass now has a deliberate hard exclusion at the moss threshold.
+            if(ForestFloorPolicy.MossBlocksVegetation(closed.z)!=ForestFloorPolicy.MossBlocksVegetation(nearby.z)) delta.x=0;
+            Check(math.cmax(delta) < 0.005f, "Substrate field or grass outside a moss edge contains an abrupt step.");
             Check(ForestFloorPolicy.ControlWeights(gap).y > 0.85f, "Opening erased the litter substrate.");
             interior += closed.x; opening += gap.x;
+            if(!ForestFloorPolicy.MossBlocksVegetation(gap.z)) {openingOutsideMoss+=gap.x;openingSamples++;}
         }
-        Check(interior / 4096 < 0.2 && opening / 4096 > 0.45, "Forest density budget drifted.");
+        Check(interior / 4096 < 0.2 && openingSamples>0 && openingOutsideMoss/openingSamples > 0.45,
+            "Forest density outside hard moss exclusions drifted.");
         Debug.Log($"FOREST FLOOR density: closed={interior / 4096:P1}, opening={opening / 4096:P1} of meadow candidates, before object exclusions.");
     }
 

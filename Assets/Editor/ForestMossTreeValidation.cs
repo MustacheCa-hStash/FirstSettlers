@@ -93,7 +93,7 @@ public static class ForestMossTreeValidation
         var grass=new GrassSettings {cellsPerAxis=144,subChunksPerChunk=10};
         FoliageGenerator.GenerateGrassForChunk(clear,grass,null,null,145678,128,.3f,10);
         FoliageGenerator.GenerateGrassForChunk(carpet,grass,null,null,145678,128,.3f,10);
-        Check(carpet.FoliageData.GetTotalNearGrassInstanceCount()<clear.FoliageData.GetTotalNearGrassInstanceCount()*.05f,"Native grass ignored moss suppression.");
+        Check(carpet.FoliageData.GetTotalNearGrassInstanceCount()==0,"Native grass grew in moss.");
         Debug.Log($"MOSS PASS: {strong} carpet samples, mean coverage {total/16384:P1}; clover cores excluded, leaves {a.Instances.Count}->{c.Instances.Count}, grass {clear.FoliageData.GetTotalNearGrassInstanceCount()}->{carpet.FoliageData.GetTotalNearGrassInstanceCount()}.");
     }
     private static void SetMoss(ChunkRecord record,float moss)
@@ -102,7 +102,7 @@ public static class ForestMossTreeValidation
         for(int x=0;x<floor.GetLength(0);x++) for(int z=0;z<floor.GetLength(1);z++)
         {
             var ecology=floor[x,z]; ecology.z=moss;
-            ecology.x=moss==0 ? .25f : .005f; floor[x,z]=ecology;
+            ecology.x=moss==0 ? .25f : 0; floor[x,z]=ecology;
         }
         record.NativeData.Dispose();
         Set(record,"nativeTerrainData",new ChunkRecord.NativeTerrainData(record.HeightMap,record.SlopeMap,record.BiomeMap,

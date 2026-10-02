@@ -131,6 +131,7 @@ public class ChunkManager
     private readonly AmbientLifeManager beeManager;
     private readonly DistantTreeManager distantTrees;
     private readonly LeafClusterSystem leafClusters;
+    private readonly LeafClusterSystem ferns;
     private readonly WorldFeatureGenerationSettings worldFeatureGenerationSettings;
 
     public ChunkManager(
@@ -190,7 +191,7 @@ public class ChunkManager
         ButterflySettings butterflySettings = null,
         BeeSettings beeSettings = null,
         TerrainHorizonShadowSettings terrainHorizonShadowSettings = null,
-        LeafClusterSettings leafClusterSettings = null)
+        LeafClusterSettings leafClusterSettings = null, FernSettings fernSettings = null)
     {
         this.viewDistance = viewDistance;
         this.colliderDistance = colliderDistance;
@@ -215,6 +216,7 @@ public class ChunkManager
         this.waterMaterial = waterMaterial;
         this.terrainReceiveShadows = terrainReceiveShadows;
         leafClusters = new LeafClusterSystem(leafClusterSettings, seed, chunkSize, worldScale, meshHeightMultiplier, grassSettings);
+        ferns = new LeafClusterSystem(fernSettings ?? new FernSettings(), seed, chunkSize, worldScale, meshHeightMultiplier);
         terrainHorizonShadows = new TerrainHorizonShadowSystem(chunkSize, seed, sampleScale, worldScale,
             meshHeightMultiplier, waterSettings, mountainHorizontalScale, erosion, terrainHorizonShadowSettings);
         this.maxActiveTerrainDataJobs = Mathf.Max(1, maxActiveTerrainDataJobs);
@@ -290,6 +292,7 @@ public class ChunkManager
     public void Dispose()
     {
         leafClusters.Dispose();
+        ferns.Dispose();
         terrainHorizonShadows?.Dispose();
         butterflyManager?.Dispose();
         beeManager?.Dispose();
@@ -637,6 +640,7 @@ public class ChunkManager
         butterflyManager?.Update(this, viewerCoord, viewerCamera, Time.deltaTime);
         beeManager?.Update(this, viewerCoord, viewerCamera, Time.deltaTime);
         leafClusters.Update(this, orderedActiveCoords, viewer.position, viewerCamera);
+        ferns.Update(this, orderedActiveCoords, viewer.position, viewerCamera);
         TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FoliageTotal, foliageStart);
 
         lastViewerGlobalSubChunk = viewerGlobalSubChunk;

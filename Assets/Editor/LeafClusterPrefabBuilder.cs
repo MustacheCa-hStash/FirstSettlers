@@ -97,6 +97,7 @@ public static class LeafClusterPrefabBuilder
         // CopySerialized alone can leave existing renderer GPU vertex buffers stale.
         mesh.Clear(); mesh.name=built.name; mesh.vertices=built.vertices; mesh.normals=built.normals;
         mesh.uv=built.uv; mesh.colors=built.colors; mesh.triangles=built.triangles; mesh.bounds=built.bounds;
+        var scatter=new List<Vector4>();built.GetUVs(1,scatter);mesh.SetUVs(1,scatter);
         mesh.UploadMeshData(false); EditorUtility.SetDirty(mesh);
     }
 
@@ -105,6 +106,7 @@ public static class LeafClusterPrefabBuilder
     {
         var vertices = new List<Vector3>(); var uv = new List<Vector2>();
         var triangles = new List<int>(); var colors = new List<Color>();
+        var scatter = new List<Vector4>();int leafIndex=0;
         Color32[] pixels = atlas.GetPixels32();
         AddLeaf(0, new Vector2(-.40f, .12f), -19, .27f, .002f, .009f, .95f);
         AddLeaf(1, new Vector2(.08f, -.19f), 73, .28f, .003f, .007f, .92f);
@@ -120,6 +122,7 @@ public static class LeafClusterPrefabBuilder
         }
         Mesh result = new Mesh { name = far ? "LeafScatter_LOD1" : "LeafScatter" };
         result.SetVertices(vertices); result.SetUVs(0, uv); result.SetColors(colors); result.SetTriangles(triangles, 0);
+        result.SetUVs(1,scatter);
         result.RecalculateBounds();
         float baseY = result.bounds.min.y;
         for (int i = 0; i < vertices.Count; i++) vertices[i] -= Vector3.up * baseY;
@@ -129,6 +132,7 @@ public static class LeafClusterPrefabBuilder
 
         void AddLeaf(int tile, Vector2 center, float yaw, float length, float lift, float curl, float tone)
         {
+            int identity=leafIndex++;
             int tileSizeX = atlas.width / 2, tileSizeY = atlas.height / 2;
             int ox = tile % 2 * tileSizeX, oy = (1 - tile / 2) * tileSizeY;
             int minX = ox + tileSizeX, minY = oy + tileSizeY, maxX = ox, maxY = oy;
@@ -161,6 +165,7 @@ public static class LeafClusterPrefabBuilder
                     if (column == 1) height += curl * 0.22f * Mathf.Sin(t * Mathf.PI);
                     Vector3 p = rotation * new Vector3((px - centerX) / pixelsPerMeter, height, (y - (minY + maxY) * 0.5f) / pixelsPerMeter);
                     vertices.Add(p + new Vector3(center.x, 0, center.y));
+                    scatter.Add(new Vector4(center.x,center.y,identity,1));
                     uv.Add(new Vector2((px + 0.5f) / atlas.width, (y + 0.5f) / atlas.height));
                     // Plain color per silhouette; the atlas contributes alpha only.
                     Color[] palette = { new Color(.43f,.29f,.13f), new Color(.34f,.24f,.14f),

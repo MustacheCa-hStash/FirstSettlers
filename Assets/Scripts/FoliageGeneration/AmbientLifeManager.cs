@@ -217,7 +217,7 @@ public sealed class AmbientLifeManager : IDisposable
             ChunkCoord offset = ringOffsets[i];
             ChunkCoord coord = new(viewerCoord.x + offset.x, viewerCoord.z + offset.z);
             ChunkRecord record = manager.GetChunkRecord(coord);
-            if (record == null || !record.HasTerrainData || record.ActiveRuntime == null ||
+            if (record == null || !record.HasTerrainData || record.DominantBiome != BiomeType.Grassland || record.ActiveRuntime == null ||
                 !record.ActiveRuntime.IsVisible || !record.ActiveRuntime.HasTerrainMesh || record.FoliageData == null ||
                 !record.FoliageData.flowersGenerated)
                 continue;
@@ -801,7 +801,7 @@ public sealed class AmbientLifeManager : IDisposable
     private static bool CanEnterChunk(ChunkManager manager, ChunkCoord coord)
     {
         ChunkRecord record = manager.GetChunkRecord(coord);
-        return record != null && record.HasTerrainData && record.ActiveRuntime != null &&
+        return record != null && record.HasTerrainData && record.DominantBiome == BiomeType.Grassland && record.ActiveRuntime != null &&
             record.ActiveRuntime.IsVisible && record.ActiveRuntime.HasTerrainMesh &&
             record.FoliageData != null && record.FoliageData.flowersGenerated;
     }
@@ -885,7 +885,13 @@ public sealed class AmbientLifeManager : IDisposable
         int cx = Mathf.FloorToInt(worldX / chunkWorldSize);
         int cz = Mathf.FloorToInt(worldZ / chunkWorldSize);
         ChunkCoord coord = new(cx, cz);
-        return ButterflyTerrainSampler.TrySampleDryGround(manager.GetChunkRecord(coord), coord,
+        ChunkRecord record = manager.GetChunkRecord(coord);
+        if (record == null || record.DominantBiome != BiomeType.Grassland) return false;
+        if (record.BiomeMap == null) return false;
+        int px = Mathf.Clamp(Mathf.RoundToInt((worldX/ worldScale)-cx*chunkSize)+1,1,record.BiomeMap.GetLength(0)-2);
+        int pz = Mathf.Clamp(Mathf.RoundToInt((worldZ/ worldScale)-cz*chunkSize)+1,1,record.BiomeMap.GetLength(1)-2);
+        if (record.BiomeMap[px,pz] != BiomeType.Grassland) return false;
+        return ButterflyTerrainSampler.TrySampleDryGround(record, coord,
             worldX, worldZ, chunkSize, worldScale, terrainHeightScale, waterSurfaceY,
             settings.shoreBuffer, out groundY);
     }

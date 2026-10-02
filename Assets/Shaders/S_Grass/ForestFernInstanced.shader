@@ -1,35 +1,29 @@
-Shader "FirstSettlers/Leaf Cluster Instanced"
+Shader "FirstSettlers/Forest Fern Instanced"
 {
     Properties
     {
-        [MainTexture] _BaseMap("Painted Leaf Atlas", 2D) = "white" {}
-        [MainColor] _BaseColor("Leaf Tint", Color) = (1,1,1,1)
-        [ToggleUI] _UseAtlasColor("Use Painted Atlas Color", Float) = 0
+        [MainColor] _BaseColor("Fern Tint", Color) = (1,1,1,1)
+        _WindStrength("Frond Sway", Range(0,0.1)) = 0.016
         [PerRendererData] _LeafInstanceTint("Instance Tint", Vector) = (1,1,1,1)
-        [PerRendererData] _LeafScatterParams("Scatter Seed, Amount, Spread, Enabled", Vector) = (1,1,1,0)
-        _Cutoff("Alpha Cutoff", Range(0,1)) = 0.45
         _AmbientStrength("Minimum Ambient", Range(0,1)) = 0.12
         _FadeStart("Detail Fade Start", Float) = 20
         _FadeEnd("Detail Fade End", Float) = 28
     }
     SubShader
     {
-        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="TransparentCutout" "Queue"="AlphaTest" }
-        Cull Off ZWrite On AlphaToMask On
+        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" }
+        Cull Off ZWrite On
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-        TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
         CBUFFER_START(UnityPerMaterial)
-            float4 _BaseMap_ST;
             half4 _BaseColor;
-            half _Cutoff, _AmbientStrength, _UseAtlasColor;
+            half _AmbientStrength, _WindStrength;
             float _FadeStart, _FadeEnd;
             float4 _LeafViewer;
         CBUFFER_END
         UNITY_INSTANCING_BUFFER_START(LeafProperties)
             UNITY_DEFINE_INSTANCED_PROP(float4, _LeafInstanceTint)
-            UNITY_DEFINE_INSTANCED_PROP(float4, _LeafScatterParams)
         UNITY_INSTANCING_BUFFER_END(LeafProperties)
         struct Attributes
         {
@@ -37,7 +31,6 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
             float3 normalOS : NORMAL;
             float2 uv : TEXCOORD0;
             half4 color : COLOR;
-            float4 scatter : TEXCOORD1;
             UNITY_VERTEX_INPUT_INSTANCE_ID
         };
         struct Varyings
@@ -48,57 +41,33 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
             float2 uv : TEXCOORD2;
             half4 color : TEXCOORD3;
             half fog : TEXCOORD4;
-            half leafVisible : TEXCOORD5;
             UNITY_VERTEX_INPUT_INSTANCE_ID
             UNITY_VERTEX_OUTPUT_STEREO
         };
-        float LeafRandom(float seed,float leaf,float salt)
-        {
-            return frac(sin(seed*.754877666+leaf*12.9898+salt*78.233)*43758.5453);
-        }
         Varyings vert(Attributes input)
         {
             Varyings output;
             UNITY_SETUP_INSTANCE_ID(input);
             UNITY_TRANSFER_INSTANCE_ID(input, output);
             UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
-            float4 scatter=UNITY_ACCESS_INSTANCED_PROP(LeafProperties,_LeafScatterParams);
-            output.leafVisible=1;
-            if(scatter.w>.5 && input.scatter.w>.5)
-            {
-                float id=input.scatter.z;
-                float angle=(LeafRandom(scatter.x,id,3)-.5)*6.2831853;
-                float sine,cosine;sincos(angle,sine,cosine);
-                float2x2 rotation=float2x2(cosine,-sine,sine,cosine);
-                float leafScale=lerp(.6,1.4,LeafRandom(scatter.x,id,7));
-                float2 offset=(float2(LeafRandom(scatter.x,id,11),LeafRandom(scatter.x,id,13))-.5)*.28;
-                input.positionOS.xz=input.scatter.xy*scatter.z+offset+
-                    mul(rotation,input.positionOS.xz-input.scatter.xy)*leafScale;
-                input.normalOS.xz=mul(rotation,input.normalOS.xz);
-                // Keep the first leaf in both LODs; all other identities thin
-                // consistently so each patch has a different leaf quantity.
-                output.leafVisible=id<.5 || LeafRandom(scatter.x,id,17)<scatter.y ? 1 : 0;
-                input.color.rgb*=lerp(.88,1.06,LeafRandom(scatter.x,id,19));
-            }
             output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
+            float sway = sin(_Time.y * 1.3 + dot(output.positionWS.xz,float2(.7,.4))) * _WindStrength * saturate(input.positionOS.y * 2.5);
+            output.positionWS.xz += float2(sway,sway*.4);
             output.positionCS = TransformWorldToHClip(output.positionWS);
             output.normalWS = TransformObjectToWorldNormal(input.normalOS);
-            output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
+            output.uv = input.uv;
             output.color = input.color * _BaseColor * UNITY_ACCESS_INSTANCED_PROP(LeafProperties, _LeafInstanceTint);
             output.fog = ComputeFogFactor(output.positionCS.z);
             return output;
         }
         half4 LeafSample(Varyings input)
         {
-            clip(input.leafVisible-.5);
-            half4 texel = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
-            clip(texel.a - _Cutoff);
+            half4 texel = half4(1,1,1,1);
             float2 viewer = _LeafViewer.w > 0.5 ? _LeafViewer.xz : _WorldSpaceCameraPos.xz;
             float fade = 1 - smoothstep(_FadeStart, max(_FadeEnd, _FadeStart + 0.01), distance(input.positionWS.xz, viewer));
             // Screen-space dither removes coverage without an alpha-blended overdraw layer.
             float dither = frac(dot(floor(input.positionCS.xy), float2(0.754877666, 0.569840296)));
             clip(fade - dither - 0.0001);
-            texel.rgb = lerp(half3(1,1,1), texel.rgb, saturate(_UseAtlasColor));
             return texel;
         }
         half4 frag(Varyings input, FRONT_FACE_TYPE face : FRONT_FACE_SEMANTIC) : SV_Target

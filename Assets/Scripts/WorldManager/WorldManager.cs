@@ -35,6 +35,8 @@ public class WorldManager : MonoBehaviour
     [SerializeField] DandelionSettings dandelionSettings = new DandelionSettings();
     [Header("Forest Leaf Clusters")]
     [SerializeField] LeafClusterSettings leafClusterSettings = new LeafClusterSettings();
+    [Header("Forest Ferns")]
+    [SerializeField] FernSettings fernSettings = new FernSettings();
     [SerializeField] TreeSettings treeSettings;
     [Header("Broad Terrain")]
     [Tooltip("Scale of the base landforms. Erosion Wavelength has its own independent terrain-space scale.")]
@@ -119,7 +121,7 @@ public class WorldManager : MonoBehaviour
             farTerrainTileContentBudgetMsPerFrame,
             completedRequestApplyBudgetMsPerFrame,
             terrainDataApplyBudgetMsPerFrame, farTerrainApplyBudgetMsPerFrame,
-            lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame, mountainWidth, mountainSnowBlendGamma, erosion.Sanitized(), butterflySettings, beeSettings, terrainHorizonShadows, leafClusterSettings);
+            lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame, mountainWidth, mountainSnowBlendGamma, erosion.Sanitized(), butterflySettings, beeSettings, terrainHorizonShadows, leafClusterSettings, fernSettings);
 
         if (waterMaterial != null && waterMaterial.shader != null &&
             waterMaterial.shader.name == "FirstSettlers/Murky Planar Water")
