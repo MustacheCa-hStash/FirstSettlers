@@ -149,15 +149,15 @@ Material:
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _DarkGrassColor: {r: 0.2, g: 0.48, b: 0.18, a: 1}
+    - _DarkGrassColor: {r: 0.15413615, g: 0.37106913, b: 0.13885917, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _ForestDarkGrassColor: {r: 0.1, g: 0.28, b: 0.09, a: 1}
     - _ForestLightGrassColor: {r: 0.25, g: 0.52, b: 0.19, a: 1}
     - _ForestMidGrassColor: {r: 0.16, g: 0.4, b: 0.13, a: 1}
     - _GrassColor: {r: 0.4693729, g: 0.91194963, b: 0.3642062, a: 1}
     - _GrassInstanceData: {r: 0, g: 0, b: 0, a: 0}
-    - _LightGrassColor: {r: 0.44, g: 0.78, b: 0.3, a: 1}
-    - _MidGrassColor: {r: 0.29, g: 0.62, b: 0.24, a: 1}
+    - _LightGrassColor: {r: 0.34700444, g: 0.57232696, b: 0.25376755, a: 1}
+    - _MidGrassColor: {r: 0.21138844, g: 0.42138356, b: 0.1788892, a: 1}
     - _RootTint: {r: 0.68, g: 0.76, b: 0.6, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _TipTint: {r: 1.05, g: 1.06, b: 0.92, a: 1}

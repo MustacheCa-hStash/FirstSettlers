@@ -204,6 +204,14 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _TerrainHorizon0:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _TerrainHorizon1:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - unity_Lightmaps:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -244,6 +252,8 @@ Material:
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
+    - _ForestFloorMacroScale: 0.025
+    - _ForestFloorMacroStrength: 0.12
     - _ForestGrassBlendStrength: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
@@ -255,15 +265,15 @@ Material:
     - _GrassGroundDetailFadeEnd: 400
     - _GrassGroundDetailFadeStart: 180
     - _GrassGroundDetailStrength: 0.76
-    - _GrassGroundGridScale: 0.65
     - _GrassGroundFarTiling: 0.06
+    - _GrassGroundGridScale: 0.65
     - _GrassGroundHeightDepth: 0.008
     - _GrassGroundHeightFadeEnd: 12
     - _GrassGroundHeightFadeStart: 4
     - _GrassGroundNormalFadeEnd: 30
     - _GrassGroundNormalFadeStart: 10
-    - _GrassGroundScaleFadeStart: 30
     - _GrassGroundScaleFadeEnd: 100
+    - _GrassGroundScaleFadeStart: 30
     - _GrassGroundTiling: 0.45
     - _GrassNormalStrength: 0.25
     - _GrassTiling: 0.5
@@ -273,18 +283,16 @@ Material:
     - _GrassTilingNearDistance: 100
     - _LeafLitterAOStrength: 0.327
     - _LeafLitterHeightStrength: 0
-    - _LeafLitterNormalStrength: 0.45
-    - _LeafLitterNormalFadeStart: 12
     - _LeafLitterNormalFadeEnd: 45
-    - _ForestFloorMacroScale: 0.025
-    - _ForestFloorMacroStrength: 0.12
+    - _LeafLitterNormalFadeStart: 12
+    - _LeafLitterNormalStrength: 0.45
     - _LeafLitterTiling: 0.35
     - _Metallic: 0
     - _MixedForestFloorHeightStrength: 0.015
     - _MossAOStrength: 0.5
+    - _MossDetailContrast: 0.35
     - _MossHeightStrength: 0.012
     - _MossNormalStrength: 0.25
-    - _MossDetailContrast: 0.35
     - _MossSaturation: 0.7
     - _MossTiling: 0.32
     - _NoiseScale: 0.023
@@ -326,21 +334,21 @@ Material:
     - _CliffColor: {r: 0.29999998, g: 0.29999998, b: 0.29999998, a: 1}
     - _Color: {r: 0.12549016, g: 0.545098, b: 0.1568627, a: 1}
     - _DarkColor: {r: 0.19999996, g: 0.47999996, b: 0.17999998, a: 1}
-    - _DarkGrassColor: {r: 0.19999996, g: 0.47999996, b: 0.17999998, a: 1}
+    - _DarkGrassColor: {r: 0.118474066, g: 0.28930807, b: 0.106443495, a: 1}
     - _DenseMossColor: {r: 0.85, g: 0.9, b: 0.7, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _ForestDarkGrassColor: {r: 0.1, g: 0.28, b: 0.09, a: 1}
     - _ForestLightGrassColor: {r: 0.25, g: 0.52, b: 0.19, a: 1}
     - _ForestMidGrassColor: {r: 0.16, g: 0.4, b: 0.13, a: 1}
+    - _GrassGroundTint: {r: 0.9, g: 0.9, b: 0.78, a: 1}
     - _GroundDarkGrassColor: {r: 0.09999997, g: 0.27999997, b: 0.089999996, a: 1}
     - _GroundLightGrassColor: {r: 0.24999997, g: 0.52, b: 0.18999997, a: 1}
     - _GroundMidGrassColor: {r: 0.15999997, g: 0.39999998, b: 0.12999997, a: 1}
-    - _GrassGroundTint: {r: 0.9, g: 0.9, b: 0.78, a: 1}
     - _LeafLitterColor: {r: 1, g: 1, b: 1, a: 1}
     - _LightColor: {r: 0.43999997, g: 0.78, b: 0.29999998, a: 1}
-    - _LightGrassColor: {r: 0.43999997, g: 0.78, b: 0.29999998, a: 1}
+    - _LightGrassColor: {r: 0.2918464, g: 0.54088044, b: 0.18879783, a: 1}
     - _MidColor: {r: 0.28999996, g: 0.62, b: 0.23999995, a: 1}
-    - _MidGrassColor: {r: 0.28999996, g: 0.62, b: 0.23999995, a: 1}
+    - _MidGrassColor: {r: 0.17862315, g: 0.38993704, b: 0.1459198, a: 1}
     - _MixedForestFloorColor: {r: 1, g: 1, b: 1, a: 1}
     - _MossColor: {r: 0.65, g: 0.85, b: 0.65, a: 1}
     - _MossFillColor: {r: 0.12, g: 0.18, b: 0.035, a: 1}
@@ -351,5 +359,8 @@ Material:
     - _SnowColor: {r: 0.92, g: 0.94, b: 0.97999996, a: 1}
     - _SnowTint: {r: 1, g: 1, b: 1, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
+    - _TerrainHorizonParams: {r: 0, g: 0, b: 0, a: 0}
+    - _TerrainHorizonTint: {r: 1, g: 1, b: 1, a: 1}
+    - _TerrainHorizonUV: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
