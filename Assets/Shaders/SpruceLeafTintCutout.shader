@@ -3,6 +3,8 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
     Properties
     {
         [MainTexture] _BaseMap("White Leaf Atlas / Alpha", 2D) = "white" {}
+        [NoScaleOffset] _SnowMap("Snow Caps / Alpha (Same Leaf Card UVs)", 2D) = "black" {}
+        _SnowCoverage("Instance Snow Coverage", Range(0, 1)) = 0
         [MainColor] _LeafColor("Base Needle Color", Color) = (0.18431373, 0.35294118, 0.21176471, 1.0)
         _CoolNeedleColor("Cool Blue-Green Color", Color) = (0.13, 0.25, 0.22, 1.0)
         _DeepNeedleColor("Deep Shadow Green", Color) = (0.055, 0.16, 0.09, 1.0)
@@ -73,6 +75,9 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
 
+            TEXTURE2D(_SnowMap);
+            SAMPLER(sampler_SnowMap);
+
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 half4 _LeafColor;
@@ -105,6 +110,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 half _WindGustScale;
                 half _WindHeightMin;
                 half _WindHeightMax;
+                half _SnowCoverage;
             CBUFFER_END
 
             struct Attributes
@@ -255,7 +261,19 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 ApplyDistantTreeFade(IN.positionCS.xy);
 
                 half4 atlas = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
-                clip(atlas.a - _Cutoff);
+                half coverage = saturate(_SnowCoverage);
+                half4 snowyCard = 0.0h;
+                half snowAlpha = 0.0h;
+                UNITY_BRANCH if (coverage > 0.0h)
+                {
+                    snowyCard = SAMPLE_TEXTURE2D(_SnowMap, sampler_SnowMap, IN.uv);
+                    half snowMask = smoothstep(0.18h, 0.50h, min(snowyCard.r, min(snowyCard.g, snowyCard.b)));
+                    snowAlpha = snowMask * snowyCard.a * coverage;
+                }
+                // Caps bridge small needle gaps inside the existing card; bare needles retain
+                // their original alpha. Zero coverage reproduces the original cutout exactly.
+                half alpha = max(atlas.a, snowAlpha);
+                clip(alpha - _Cutoff);
 
                 #ifdef LOD_FADE_CROSSFADE
                     LODFadeCrossFade(IN.positionCS);
@@ -270,13 +288,20 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 half3 litNormal = normalize(lerp(inputData.normalWS, half3(0.0h, 1.0h, 0.0h), _LightWrap * 0.22h));
                 inputData.normalWS = litNormal;
 
-                SurfaceData surfaceData = InitializeSpruceLeafSurfaceData(atlas.rgb * leafColor, atlas.a);
+                // Normalize against union alpha so snow-only pixels don't blend with black
+                // transparent needle texels. Blend after tinting to keep snow white.
+                half snowBlend = saturate(snowAlpha / max(alpha, 0.0001h));
+                half3 needleAlbedo = atlas.rgb * lerp(leafColor, _CoolNeedleColor.rgb, coverage * 0.28h);
+                half3 albedo = lerp(needleAlbedo, snowyCard.rgb, snowBlend);
+                inputData.normalWS = normalize(lerp(litNormal, half3(0.0h, 1.0h, 0.0h), snowBlend * 0.65h));
+                SurfaceData surfaceData = InitializeSpruceLeafSurfaceData(albedo, alpha);
                 half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
                 Light mainLight = GetMainLight(inputData.shadowCoord);
                 half backlight = pow(saturate(dot(-inputData.normalWS, mainLight.direction)), _BacklightPower);
                 backlight *= _BacklightStrength * mainLight.shadowAttenuation * mainLight.distanceAttenuation;
+                backlight *= 1.0h - snowBlend;
                 color.rgb += surfaceData.albedo * _BacklightColor.rgb * mainLight.color * backlight;
-                return half4(saturate(color.rgb), atlas.a);
+                return half4(saturate(color.rgb), alpha);
             }
             ENDHLSL
         }
@@ -305,6 +330,8 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
+            TEXTURE2D(_SnowMap);
+            SAMPLER(sampler_SnowMap);
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
@@ -313,6 +340,12 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 half4 _DeepNeedleColor;
                 half4 _TipColor;
                 half _ColorVariationStrength;
+                half _MacroVariationScale;
+                half _MacroVariationStrength;
+                half _FineVariationStrength;
+                half _HeightColorVariation;
+                half _ColorHeightMin;
+                half _ColorHeightMax;
                 half _NeedleContrast;
                 half _TipStrength;
                 half _Cutoff;
@@ -320,6 +353,9 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 half _LightWrap;
                 half _Smoothness;
                 half _SpecularStrength;
+                half4 _BacklightColor;
+                half _BacklightStrength;
+                half _BacklightPower;
                 half _UseVertexColor;
                 float4 _WindDirection;
                 half _WindStrength;
@@ -329,6 +365,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 half _WindGustScale;
                 half _WindHeightMin;
                 half _WindHeightMax;
+                half _SnowCoverage;
             CBUFFER_END
 
             float3 _LightDirection;
@@ -412,9 +449,15 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
 
-                if (_AlphaCutoutShadows > 0.5h)
+                if (_AlphaCutoutShadows > 0.5h || _SnowCoverage > 0.0h)
                 {
                     half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
+                    UNITY_BRANCH if (_SnowCoverage > 0.0h)
+                    {
+                        half4 snowyCard = SAMPLE_TEXTURE2D(_SnowMap, sampler_SnowMap, IN.uv);
+                        half snowMask = smoothstep(0.18h, 0.50h, min(snowyCard.r, min(snowyCard.g, snowyCard.b)));
+                        alpha = max(alpha, snowMask * snowyCard.a * saturate(_SnowCoverage));
+                    }
                     clip(alpha - _Cutoff);
                 }
 

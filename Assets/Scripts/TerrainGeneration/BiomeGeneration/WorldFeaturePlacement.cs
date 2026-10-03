@@ -11,6 +11,7 @@ public struct WorldFeaturePlacement
     public float exclusionRadius;
     public float influenceRadius;
     public int prefabIndex;
+    public float snowCoverage;
 
     public WorldFeaturePlacement(
         WorldFeatureType featureType,
@@ -21,7 +22,8 @@ public struct WorldFeaturePlacement
         Vector3 scale,
         float exclusionRadius,
         float influenceRadius,
-        int prefabIndex = 0)
+        int prefabIndex = 0,
+        float snowCoverage = 0f)
     {
         this.featureType = featureType;
         this.variant = variant;
@@ -32,5 +34,6 @@ public struct WorldFeaturePlacement
         this.exclusionRadius = exclusionRadius;
         this.influenceRadius = influenceRadius;
         this.prefabIndex = prefabIndex;
+        this.snowCoverage = snowCoverage;
     }
 }

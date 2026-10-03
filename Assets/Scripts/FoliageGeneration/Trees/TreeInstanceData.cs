@@ -8,6 +8,7 @@ public struct TreeInstanceData
     public WorldFeatureVariant variant;
     public Color32 leafTint;
     public Color32 barkTint;
+    public float snowCoverage;
     
     public TreeInstanceData(
         Vector3 localPosition,
@@ -30,7 +31,8 @@ public struct TreeInstanceData
         Vector3 localScale,
         WorldFeatureVariant variant,
         Color32 leafTint,
-        Color32 barkTint)
+        Color32 barkTint,
+        float snowCoverage = 0f)
     {
         this.localPosition = localPosition;
         this.localRotation = localRotation;
@@ -38,5 +40,6 @@ public struct TreeInstanceData
         this.variant = variant;
         this.leafTint = leafTint;
         this.barkTint = barkTint;
+        this.snowCoverage = snowCoverage;
     }
 }

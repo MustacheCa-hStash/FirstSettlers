@@ -1245,7 +1245,7 @@ MonoBehaviour:
     sugarMapleTreePrefab: {fileID: 0}
     birchAspenTreePrefab: {fileID: 0}
     beechTreePrefab: {fileID: 0}
-    spruceTreePrefab: {fileID: 8923281884864634577, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
+    spruceTreePrefab: {fileID: 0}
     whitePineTreePrefab: {fileID: 0}
     oakTreePrefab: {fileID: 0}
     treeLOD0GameObjectPrefab: {fileID: 8923281884864634577, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
@@ -1509,7 +1509,7 @@ Transform:
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -350, y: 150, z: -1550}
+  m_LocalPosition: {x: -460, y: 150, z: -740}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

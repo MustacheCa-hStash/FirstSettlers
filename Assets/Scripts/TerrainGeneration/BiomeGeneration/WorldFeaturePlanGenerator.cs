@@ -128,6 +128,10 @@ public static class WorldFeaturePlanGenerator
             riverMaskMap,
             settings);
 
+        AddSnowSpruceTrees(plan, chunkCoord, chunkSize, seed, biomeMap, surfaceTypeMap,
+            moistureMap, temperatureMap, slopeMap, riverMaskMap, settings,
+            sampleHeight: heightMap == null ? null : (x, z) => heightMap[x, z], waterLevel: waterLevel);
+
         BuildCanopyDensityMap(plan, chunkCoord, chunkSize, seed);
         UpdateForestUnderstoryFromCanopy(plan, biomeMap, surfaceTypeMap, moistureMap, riverMaskMap);
 
@@ -230,6 +234,8 @@ public static class WorldFeaturePlanGenerator
         AddGrasslandRocks(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
         AddForestTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, settings, PrepareTree);
         AddGrasslandTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, settings, PrepareTree);
+        AddSnowSpruceTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature,
+            slopes, rivers, settings, Prepare, sampleHeight, waterLevel);
         return plan;
     }
 
@@ -771,6 +777,52 @@ public static class WorldFeaturePlanGenerator
                 exclusionRadius,
                 influenceRadius));
 
+            placed++;
+        }
+    }
+
+    // Shared by dense near terrain and sparse distant placement to keep handoffs identical.
+    // Snow includes lowland winter habitat as well as barren summits; keep spruce below
+    // the existing normalized mountain treeline and out of the driest/coldest tundra.
+    private static void AddSnowSpruceTrees(WorldFeaturePlan plan, ChunkCoord coord, int chunkSize,
+        int seed, BiomeType[,] biomes, SurfaceType[,] surfaces, float[,] moisture,
+        float[,] temperature, float[,] slopes, float[,] rivers, WorldFeatureGenerationSettings settings,
+        System.Action<int, int> prepare = null, System.Func<int, int, float> sampleHeight = null,
+        float waterLevel = 0f)
+    {
+        // Without elevation data we cannot distinguish a snowy valley from a summit.
+        if (sampleHeight == null) return;
+        const int cells = 7, maxTrees = 8;
+        int placed = 0;
+        float cellSize = chunkSize / (float)cells;
+        int offset = (Hash(seed, coord.x, coord.z, 6371) & int.MaxValue) % (cells * cells);
+        for (int i = 0; i < cells * cells && placed < maxTrees; i++)
+        {
+            int cell = (i * 37 + offset) % (cells * cells);
+            int hash = Hash(seed, coord.x, coord.z, cell % cells, cell / cells, 6373);
+            float x = Mathf.Clamp((cell % cells + Hash01(hash + 17)) * cellSize, 5f, chunkSize - 5f);
+            float z = Mathf.Clamp((cell / cells + Hash01(hash + 31)) * cellSize, 5f, chunkSize - 5f);
+            int px = Mathf.Clamp(Mathf.RoundToInt(x), 0, chunkSize) + 1;
+            int pz = Mathf.Clamp(Mathf.RoundToInt(z), 0, chunkSize) + 1;
+            prepare?.Invoke(px, pz);
+            if (biomes[px, pz] != BiomeType.Snow || surfaces[px, pz] != SurfaceType.Snow ||
+                rivers[px, pz] >= 0.32f || slopes[px, pz] >= 35f) continue;
+            float height = sampleHeight(px, pz);
+            if (height <= waterLevel || height >= 0.8f) continue;
+            float warmth = Mathf.InverseLerp(0.10f, 0.17f, temperature[px, pz]);
+            float wetness = Mathf.InverseLerp(0.35f, 0.65f, moisture[px, pz]);
+            float elevation = 1f - Mathf.InverseLerp(0.62f, 0.8f, height);
+            float slope = 1f - Mathf.InverseLerp(20f, 35f, slopes[px, pz]);
+            float stand = Sample01(coord.x * chunkSize + x, coord.z * chunkSize + z, 0.012f, seed + 6377);
+            float chance = warmth * wetness * elevation * slope * Mathf.Lerp(0.06f, 0.42f, stand);
+            if (Hash01(hash + 53) >= chance) continue;
+            float radius = GetForestTreeExclusionRadius(WorldFeatureVariant.SpruceTree, Hash01(hash + 131));
+            if (IntersectsExistingPlacement(plan, x, z, radius)) continue;
+            plan.Placements.Add(new WorldFeaturePlacement(WorldFeatureType.Tree, WorldFeatureVariant.SpruceTree,
+                x, z, Quaternion.Euler(0f, Hash01(hash + 79) * 360f, 0f),
+                Vector3.one * GetTreeScale(settings.treeUniformScaleRange, Hash01(hash + 97)), radius,
+                GetForestTreeInfluenceRadius(WorldFeatureVariant.SpruceTree, Hash01(hash + 149)),
+                snowCoverage: Mathf.Lerp(0.8f, 1f, Hash01(hash + 163))));
             placed++;
         }
     }

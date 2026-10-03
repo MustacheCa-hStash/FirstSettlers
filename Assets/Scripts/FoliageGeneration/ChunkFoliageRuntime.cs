@@ -1078,7 +1078,7 @@ public class ChunkFoliageRuntime
                 treeObject.Renderers,
                 castShadows,
                 receiveShadows,
-                IsGrasslandTreeVariant(instance.variant));
+                IsGrasslandTreeVariant(instance.variant) || instance.snowCoverage > 0f);
             treeObject.GameObject.SetActive(true);
             treeGameObjects.Add(treeObject);
         }
@@ -1159,6 +1159,8 @@ public class ChunkFoliageRuntime
             treePropertyBlock.SetFloat("_DistantTreeNearFade", DistantTreeNearFade);
             treePropertyBlock.SetColor(TreeLeafTintPropertyId, instance.leafTint);
             treePropertyBlock.SetColor(TreeBarkTintPropertyId, instance.barkTint);
+            // Always reset this override: pooled spruce instances can move between climates.
+            treePropertyBlock.SetFloat("_SnowCoverage", instance.snowCoverage);
             renderer.SetPropertyBlock(treePropertyBlock);
         }
     }

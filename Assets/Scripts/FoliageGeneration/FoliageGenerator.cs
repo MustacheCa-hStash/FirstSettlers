@@ -1852,7 +1852,9 @@ public static class FoliageGenerator
             int paddedX = mapX + 1;
             int paddedZ = mapZ + 1;
 
-            if (record.SurfaceTypeMap[paddedX, paddedZ] != SurfaceType.Grass)
+            if (record.SurfaceTypeMap[paddedX, paddedZ] != SurfaceType.Grass &&
+                !(placement.variant == WorldFeatureVariant.SpruceTree && placement.snowCoverage > 0f &&
+                  record.SurfaceTypeMap[paddedX, paddedZ] == SurfaceType.Snow))
                 continue;
 
             float height = SampleHeightBilinear(
@@ -1882,7 +1884,8 @@ public static class FoliageGenerator
                 placement.scale,
                 placement.variant,
                 leafTint,
-                barkTint));
+                barkTint,
+                placement.snowCoverage));
         }
 
         foliageData.treeCubesGenerated = true;
