@@ -114,7 +114,8 @@ public sealed class LeafClusterGeneration
     {
         int x = Mathf.Clamp(Mathf.RoundToInt(sample.x) + 1, 0, biomes.GetLength(0) - 1);
         int z = Mathf.Clamp(Mathf.RoundToInt(sample.y) + 1, 0, biomes.GetLength(1) - 1);
-        if (biomes[x, z] != BiomeType.Forest || surfaces[x, z] != SurfaceType.Grass) return;
+        float forest = BiomeTransitionPolicy.ForestWeight(plan, biomes[x,z], x,z);
+        if (forest <= 0f || surfaces[x, z] != SurfaceType.Grass) return;
         float slope = Sample(slopes, sample);
         if (slope >= Mathf.Max(0.01f, settings.maxSlope)) return;
         Vector3 normal = TerrainNormal(sample);
@@ -138,6 +139,7 @@ public sealed class LeafClusterGeneration
                 (1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.15f,.5f,river))) *
                 (1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(10,settings.maxSlope,slope)));
         }
+        keep *= forest;
         if (Unit(rank, 59) >= keep || Blocked(sample * scale)) return;
         float y = SampleTerrain(heights, sample) * heightMultiplier * scale;
         float s = Mathf.Lerp(Mathf.Max(0.1f, Mathf.Min(settings.scaleRange.x, settings.scaleRange.y)),

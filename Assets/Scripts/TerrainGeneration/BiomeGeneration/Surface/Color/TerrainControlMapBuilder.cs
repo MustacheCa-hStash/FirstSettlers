@@ -8,7 +8,7 @@ public static class TerrainControlMapBuilder
     public static ControlMapPixelData BuildRaw(SurfaceType[,] surfaceTypeMap, GroundCoverType[,] groundCoverMap,
         Unity.Mathematics.float2[,] mountainSnow = null,
         float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma,
-        ForestStructureFields forestStructure = null, BiomeType[,] biomeMap = null)
+        ForestStructureFields forestStructure = null, BiomeType[,] biomeMap = null, byte[,] forestMembership = null)
     {
         int width = surfaceTypeMap.GetLength(0);
         int height = surfaceTypeMap.GetLength(1);
@@ -47,10 +47,11 @@ public static class TerrainControlMapBuilder
                         controlMap.Maps[1][pixelIndex] = variant;
                     }
                     if (surfaceType == SurfaceType.Grass && forestStructure?.FloorEcologyMap != null &&
-                        biomeMap != null && biomeMap[x, z] == BiomeType.Forest)
+                        biomeMap != null && (biomeMap[x, z] == BiomeType.Forest || forestMembership != null && forestMembership[x,z] != 0))
                     {
                         var ecology = forestStructure.FloorEcologyMap[x, z];
-                        var weights = ForestFloorPolicy.ControlWeights(ecology);
+                        float membership = BiomeTransitionPolicy.ForestWeight(forestMembership == null ? (byte)0 : forestMembership[x,z], biomeMap[x,z]);
+                        var weights = BiomeTransitionPolicy.FloorControls(ecology, membership);
                         controlMap.Maps[2][pixelIndex] = new Color(weights.x, weights.y, weights.z, weights.w);
                         Color32 variant = controlMap.Maps[1][pixelIndex];
                         variant.a = (byte)Mathf.RoundToInt(ecology.w * 255f);

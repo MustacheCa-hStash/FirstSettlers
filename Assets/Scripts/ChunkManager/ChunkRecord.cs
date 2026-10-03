@@ -15,6 +15,7 @@ public class ChunkRecord : System.IDisposable
         private readonly SurfaceType[,] sourceSurfaceMap;
         private readonly GroundCoverType[,] sourceGroundCoverMap;
         private readonly Unity.Mathematics.float4[,] sourceForestFloorMap;
+        private readonly byte[,] sourceForestMembershipMap;
 
         public sealed class Lease : System.IDisposable
         {
@@ -40,10 +41,10 @@ public class ChunkRecord : System.IDisposable
 
         public bool Matches(float[,] height, float[,] slope, BiomeType[,] biome,
             SurfaceType[,] surface, GroundCoverType[,] ground,
-            Unity.Mathematics.float4[,] forestFloor = null) =>
+            Unity.Mathematics.float4[,] forestFloor = null, byte[,] forestMembership = null) =>
             ReferenceEquals(sourceHeightMap, height) && ReferenceEquals(sourceSlopeMap, slope) &&
             ReferenceEquals(sourceBiomeMap, biome) && ReferenceEquals(sourceSurfaceMap, surface) &&
-            ReferenceEquals(sourceGroundCoverMap, ground) && ReferenceEquals(sourceForestFloorMap, forestFloor);
+            ReferenceEquals(sourceGroundCoverMap, ground) && ReferenceEquals(sourceForestFloorMap, forestFloor) && ReferenceEquals(sourceForestMembershipMap, forestMembership);
 
         public NativeArray<float> HeightMap { get; private set; }
         public NativeArray<float> SlopeMap { get; private set; }
@@ -53,6 +54,7 @@ public class ChunkRecord : System.IDisposable
         public NativeArray<GroundCoverType> GroundCoverMap { get; private set; }
         public NativeArray<float> RiverMaskMap { get; private set; }
         public NativeArray<float> ForestGrassDensityMap { get; private set; }
+        public NativeArray<byte> ForestMembershipMap { get; private set; }
         public bool HasForestGrassDensityMap => ForestGrassDensityMap.IsCreated && ForestGrassDensityMap.Length > 0;
 
         public int HeightMapWidth { get; private set; }
@@ -84,7 +86,7 @@ public class ChunkRecord : System.IDisposable
             SurfaceType[,] surfaceTypeMap,
             WaterState[,] waterStateMap,
             GroundCoverType[,] groundCoverMap,
-            float[,] riverMaskMap, Unity.Mathematics.float4[,] forestFloorMap = null)
+            float[,] riverMaskMap, Unity.Mathematics.float4[,] forestFloorMap = null, byte[,] forestMembershipMap = null)
         {
             sourceHeightMap = heightMap;
             sourceSlopeMap = slopeMap;
@@ -92,6 +94,8 @@ public class ChunkRecord : System.IDisposable
             sourceSurfaceMap = surfaceTypeMap;
             sourceGroundCoverMap = groundCoverMap;
             sourceForestFloorMap = forestFloorMap;
+            sourceForestMembershipMap = forestMembershipMap;
+            ForestMembershipMap = forestMembershipMap == null ? new NativeArray<byte>(0, Allocator.Persistent) : CopyMap(forestMembershipMap, out _, out _);
             ForestGrassDensityMap = CopyForestGrassDensity(forestFloorMap);
             HeightMap = CopyFloatMap(heightMap, out int heightWidth, out int heightHeight);
             HeightMapWidth = heightWidth;
@@ -130,7 +134,7 @@ public class ChunkRecord : System.IDisposable
             NativeArray<float> heights, NativeArray<float> slopes,
             NativeArray<BiomeType> biomes, NativeArray<SurfaceType> surfaces,
             NativeArray<WaterState> waters, NativeArray<GroundCoverType> covers,
-            NativeArray<float> rivers, Unity.Mathematics.float4[,] forestFloorMap = null)
+            NativeArray<float> rivers, Unity.Mathematics.float4[,] forestFloorMap = null, byte[,] forestMembershipMap = null)
         {
             sourceHeightMap = heightMap;
             sourceSlopeMap = slopeMap;
@@ -138,6 +142,8 @@ public class ChunkRecord : System.IDisposable
             sourceSurfaceMap = surfaceTypeMap;
             sourceGroundCoverMap = groundCoverMap;
             sourceForestFloorMap = forestFloorMap;
+            sourceForestMembershipMap = forestMembershipMap;
+            ForestMembershipMap = forestMembershipMap == null ? new NativeArray<byte>(0, Allocator.Persistent) : CopyMap(forestMembershipMap, out _, out _);
             ForestGrassDensityMap = CopyForestGrassDensity(forestFloorMap);
             HeightMap = heights; SlopeMap = slopes; BiomeMap = biomes;
             SurfaceTypeMap = surfaces; WaterStateMap = waters;
@@ -234,6 +240,7 @@ public class ChunkRecord : System.IDisposable
             if (GroundCoverMap.IsCreated) GroundCoverMap.Dispose();
             if (RiverMaskMap.IsCreated) RiverMaskMap.Dispose();
             if (ForestGrassDensityMap.IsCreated) ForestGrassDensityMap.Dispose();
+            if (ForestMembershipMap.IsCreated) ForestMembershipMap.Dispose();
         }
     }
 
@@ -485,7 +492,7 @@ public class ChunkRecord : System.IDisposable
         nativeTerrainData?.Dispose();
         nativeTerrainData = retainedNativeData ?? new NativeTerrainData(
             heightMap, slopeMap, biomeMap, surfaceTypeMap, waterStateMap, groundCoverMap, riverMaskMap,
-            worldFeaturePlan?.ForestStructure.FloorEcologyMap);
+            worldFeaturePlan?.ForestStructure.FloorEcologyMap, worldFeaturePlan?.ForestMembershipMap);
 
         terrainDataRequestInFlight = false;
         return true;

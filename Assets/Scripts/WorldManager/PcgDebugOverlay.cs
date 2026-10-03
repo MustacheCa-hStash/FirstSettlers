@@ -67,7 +67,7 @@ public class PcgDebugOverlay : MonoBehaviour
         panelRect.anchorMax = new Vector2(0f, 1f);
         panelRect.pivot = new Vector2(0f, 1f);
         panelRect.anchoredPosition = new Vector2(12f, -12f);
-        panelRect.sizeDelta = new Vector2(430f, 245f);
+        panelRect.sizeDelta = new Vector2(430f, 510f);
 
         Image panelImage = panelObject.AddComponent<Image>();
         panelImage.color = new Color(0f, 0f, 0f, 0.72f);
@@ -163,6 +163,13 @@ public class PcgDebugOverlay : MonoBehaviour
 
         builder.Append("Biome: ");
         builder.AppendLine(info.Biome.ToString());
+        if (info.ForestMembership >= 0f)
+        {
+            builder.Append("Forest / meadow: ");
+            builder.Append(info.ForestMembership.ToString("0.00"));
+            builder.Append(" / ");
+            builder.AppendLine((1f - info.ForestMembership).ToString("0.00"));
+        }
         builder.Append("Surface: ");
         builder.AppendLine(info.SurfaceType.ToString());
         builder.Append("Ground Cover: ");

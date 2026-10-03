@@ -9,6 +9,7 @@ public readonly struct WorldDebugInfo
     public readonly bool HasRuntime;
     public readonly bool HasFoliageRuntime;
     public readonly BiomeType Biome;
+    public readonly float ForestMembership;
     public readonly SurfaceType SurfaceType;
     public readonly GroundCoverType GroundCoverType;
     public readonly float WorldHeight;
@@ -51,7 +52,7 @@ public readonly struct WorldDebugInfo
         int gpuCattailInstanceCount,
         int gpuCloverInstanceCount,
         int gpuDandelionInstanceCount,
-        int gpuTreeInstanceCount)
+        int gpuTreeInstanceCount, float forestMembership = -1f)
     {
         WorldPosition = worldPosition;
         ChunkCoord = chunkCoord;
@@ -60,6 +61,7 @@ public readonly struct WorldDebugInfo
         HasRuntime = hasRuntime;
         HasFoliageRuntime = hasFoliageRuntime;
         Biome = biome;
+        ForestMembership = forestMembership;
         SurfaceType = surfaceType;
         GroundCoverType = groundCoverType;
         WorldHeight = worldHeight;

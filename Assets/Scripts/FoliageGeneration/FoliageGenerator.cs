@@ -14,7 +14,7 @@ public static class FoliageGenerator
         ChunkRecord.NativeTerrainData data = record.NativeData;
         return data != null && data.HasGrassMaps && data.SlopeMap.IsCreated && data.GroundCoverMap.IsCreated &&
             data.Matches(record.HeightMap, record.SlopeMap, record.BiomeMap,
-            record.SurfaceTypeMap, record.GroundCoverMap, record.WorldFeaturePlan?.ForestStructure.FloorEcologyMap) ? data.AcquireLease() : null;
+            record.SurfaceTypeMap, record.GroundCoverMap, record.WorldFeaturePlan?.ForestStructure.FloorEcologyMap, record.WorldFeaturePlan?.ForestMembershipMap) ? data.AcquireLease() : null;
     }
 
     public static void GenerateGrassForChunk(
@@ -195,6 +195,7 @@ public static class FoliageGenerator
                 groundCoverMapWidth = nativeData.GroundCoverMapWidth,
                 groundCoverMapHeight = nativeData.GroundCoverMapHeight,
                 hasGroundCoverMap = nativeData.HasGroundCoverMap,
+                forestMembershipMap = nativeData.ForestMembershipMap,
                 forestGrassDensityMap = nativeData.ForestGrassDensityMap,
                 hasForestGrassDensityMap = nativeData.HasForestGrassDensityMap,
                 treeExclusionPositions = treeExclusionPositions,
@@ -482,6 +483,7 @@ public static class FoliageGenerator
         NativeArray<SurfaceType> surfaceMap = default;
         NativeArray<BiomeType> biomeMap = default;
         NativeArray<GroundCoverType> groundCoverMap = default;
+        NativeArray<byte> forestMembershipMap = default;
         NativeArray<float> forestGrassDensityMap = default;
         NativeArray<float2> treeExclusionPositions = default;
         NativeArray<float2> bushExclusionPositions = default;
@@ -503,6 +505,7 @@ public static class FoliageGenerator
                 surfaceMap = data.SurfaceTypeMap; surfaceMapWidth = data.SurfaceTypeMapWidth; surfaceMapHeight = data.SurfaceTypeMapHeight;
                 biomeMap = data.BiomeMap; biomeMapWidth = data.BiomeMapWidth; biomeMapHeight = data.BiomeMapHeight;
                 groundCoverMap = data.GroundCoverMap; groundCoverMapWidth = data.GroundCoverMapWidth; groundCoverMapHeight = data.GroundCoverMapHeight;
+                forestMembershipMap = data.ForestMembershipMap;
                 forestGrassDensityMap = data.ForestGrassDensityMap;
             }
             else
@@ -511,6 +514,7 @@ public static class FoliageGenerator
                 surfaceMap = FlattenSurfaceMap(record.SurfaceTypeMap, Allocator.Persistent, out surfaceMapWidth, out surfaceMapHeight);
                 biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.Persistent, out biomeMapWidth, out biomeMapHeight);
                 groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.Persistent, out groundCoverMapWidth, out groundCoverMapHeight);
+                forestMembershipMap = FlattenMembershipMap(record.WorldFeaturePlan?.ForestMembershipMap);
                 forestGrassDensityMap = FlattenForestFloorMap(record.WorldFeaturePlan?.ForestStructure.FloorEcologyMap);
             }
             treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.Persistent);
@@ -537,6 +541,7 @@ public static class FoliageGenerator
                 groundCoverMapWidth = groundCoverMapWidth,
                 groundCoverMapHeight = groundCoverMapHeight,
                 hasGroundCoverMap = record.GroundCoverMap != null,
+                forestMembershipMap = forestMembershipMap,
                 forestGrassDensityMap = forestGrassDensityMap,
                 hasForestGrassDensityMap = forestGrassDensityMap.Length > 0,
                 treeExclusionPositions = treeExclusionPositions,
@@ -570,7 +575,7 @@ public static class FoliageGenerator
             handle = job.Schedule(candidateCount, 64);
             handle = new BillboardResultSortJob { results = results }.Schedule(handle);
             return new BillboardGrassGenerationJob(record, handle, nativeLease, heightMap, surfaceMap,
-                biomeMap, groundCoverMap, forestGrassDensityMap, treeExclusionPositions, bushExclusionPositions,
+                biomeMap, groundCoverMap, forestGrassDensityMap, forestMembershipMap, treeExclusionPositions, bushExclusionPositions,
                 rockExclusionPositions, cloverInfluences, results);
         }
         catch
@@ -584,6 +589,7 @@ public static class FoliageGenerator
                 if (biomeMap.IsCreated) biomeMap.Dispose();
                 if (groundCoverMap.IsCreated) groundCoverMap.Dispose();
                 if (forestGrassDensityMap.IsCreated) forestGrassDensityMap.Dispose();
+                if (forestMembershipMap.IsCreated) forestMembershipMap.Dispose();
             }
             if (treeExclusionPositions.IsCreated)
                 treeExclusionPositions.Dispose();
@@ -628,6 +634,7 @@ public static class FoliageGenerator
         private NativeArray<SurfaceType> surfaceMap;
         private NativeArray<BiomeType> biomeMap;
         private NativeArray<GroundCoverType> groundCoverMap;
+        private NativeArray<byte> forestMembershipMap;
         private NativeArray<float> forestGrassDensityMap;
         private NativeArray<float2> treeExclusionPositions;
         private NativeArray<float2> bushExclusionPositions;
@@ -652,6 +659,7 @@ public static class FoliageGenerator
             NativeArray<BiomeType> biomeMap,
             NativeArray<GroundCoverType> groundCoverMap,
             NativeArray<float> forestGrassDensityMap,
+            NativeArray<byte> forestMembershipMap,
             NativeArray<float2> treeExclusionPositions,
             NativeArray<float2> bushExclusionPositions,
             NativeArray<float2> rockExclusionPositions,
@@ -668,6 +676,7 @@ public static class FoliageGenerator
             this.biomeMap = biomeMap;
             this.groundCoverMap = groundCoverMap;
             this.forestGrassDensityMap = forestGrassDensityMap;
+            this.forestMembershipMap = forestMembershipMap;
             this.treeExclusionPositions = treeExclusionPositions;
             this.bushExclusionPositions = bushExclusionPositions;
             this.rockExclusionPositions = rockExclusionPositions;
@@ -725,6 +734,7 @@ public static class FoliageGenerator
                 if (biomeMap.IsCreated) biomeMap.Dispose();
                 if (groundCoverMap.IsCreated) groundCoverMap.Dispose();
                 if (forestGrassDensityMap.IsCreated) forestGrassDensityMap.Dispose();
+                if (forestMembershipMap.IsCreated) forestMembershipMap.Dispose();
             }
             nativeLease = null;
             if (treeExclusionPositions.IsCreated)
@@ -830,6 +840,7 @@ public static class FoliageGenerator
         int patchCandidateCount = globalCellCountX * globalCellCountZ * maxPatchCentersPerCell;
         int flowerCandidateCount = patchCandidateCount * maxFlowersPerPatch;
 
+        NativeArray<byte> plantMembershipMap = default;
         NativeArray<float> heightMap = default;
         NativeArray<SurfaceType> surfaceMap = default;
         NativeArray<BiomeType> biomeMap = default;
@@ -862,8 +873,11 @@ public static class FoliageGenerator
             results =
                 new NativeArray<FlowerDiscoveryResult>(flowerCandidateCount, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
-            FlowerDiscoveryJob job = new FlowerDiscoveryJob
+            plantMembershipMap = nativeLease != null ? nativeLease.Data.ForestMembershipMap :
+                FlattenMembershipMap(record.WorldFeaturePlan?.ForestMembershipMap);
+            FlowerDiscoveryJob transitionJob = new FlowerDiscoveryJob
             {
+                forestMembershipMap = plantMembershipMap,
                 heightMap = heightMap,
                 heightMapWidth = heightMapWidth,
                 heightMapHeight = heightMapHeight,
@@ -913,7 +927,7 @@ public static class FoliageGenerator
                 maxScale = flowerSettings.uniformScaleRange.y
             };
 
-            handle = job.Schedule(patchCandidateCount, Mathf.Max(1, 64 / maxFlowersPerPatch));
+            handle = transitionJob.Schedule(patchCandidateCount, Mathf.Max(1, 64 / maxFlowersPerPatch));
             JobHandle.ScheduleBatchedJobs();
             yield return false;
             while (!handle.IsCompleted) yield return false;
@@ -935,7 +949,7 @@ public static class FoliageGenerator
                 }
 
                 FlowerDiscoveryResult result = results[i];
-                if (result.valid == 0)
+                if (result.valid == 0 || PlantBlockedByMoss(record, result.localPosition, worldScale, topLeftX, bottomLeftZ))
                     continue;
 
                 Color32 petalColor = GetDeterministicPetalColor(
@@ -954,6 +968,7 @@ public static class FoliageGenerator
         {
             // Disposal is the only cancellation/shutdown path allowed to wait.
             handle.Complete();
+            if (nativeLease == null && plantMembershipMap.IsCreated) plantMembershipMap.Dispose();
             if (nativeLease != null) nativeLease.Dispose();
             else
             {
@@ -1124,7 +1139,7 @@ public static class FoliageGenerator
                     int mapX = Mathf.Clamp(Mathf.RoundToInt(localSampleX), 0, chunkSize) + 1;
                     int mapZ = Mathf.Clamp(Mathf.RoundToInt(localSampleZ), 0, chunkSize) + 1;
                     if (record.SurfaceTypeMap[mapX, mapZ] != SurfaceType.Grass ||
-                        record.BiomeMap[mapX, mapZ] != BiomeType.Grassland ||
+                        !AllowsMeadowPlant(record, mapX, mapZ, flowerHash) ||
                         (record.SlopeMap != null && record.SlopeMap[mapX, mapZ] > settings.maxSlope))
                     {
                         continue;
@@ -1268,7 +1283,7 @@ public static class FoliageGenerator
                     int mapX = Mathf.Clamp(Mathf.RoundToInt(localSampleX), 0, chunkSize) + 1;
                     int mapZ = Mathf.Clamp(Mathf.RoundToInt(localSampleZ), 0, chunkSize) + 1;
                     if (record.SurfaceTypeMap[mapX, mapZ] != SurfaceType.Grass ||
-                        record.BiomeMap[mapX, mapZ] != BiomeType.Grassland ||
+                        !AllowsMeadowPlant(record, mapX, mapZ, instanceHash) ||
                         (record.SlopeMap != null && record.SlopeMap[mapX, mapZ] > settings.daisyWeedMaxSlope))
                         continue;
 
@@ -1386,6 +1401,7 @@ public static class FoliageGenerator
         using var plannedClearance = PlannedPlantClearanceIndex.Create(
             record, chunkSize, worldScale, LargestClearanceMinimum(clearancePolicy));
 
+        NativeArray<byte> plantMembershipMap = default;
         NativeArray<float> heightMap = default;
         NativeArray<SurfaceType> surfaceMap = default;
         NativeArray<BiomeType> biomeMap = default;
@@ -1420,8 +1436,11 @@ public static class FoliageGenerator
             results =
                 new NativeArray<CloverDiscoveryResult>(clumpCandidateCount, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
-            CloverDiscoveryJob job = new CloverDiscoveryJob
+            plantMembershipMap = nativeLease != null ? nativeLease.Data.ForestMembershipMap :
+                FlattenMembershipMap(record.WorldFeaturePlan?.ForestMembershipMap);
+            CloverDiscoveryJob transitionJob = new CloverDiscoveryJob
             {
+                forestMembershipMap = plantMembershipMap,
                 heightMap = heightMap,
                 heightMapWidth = heightMapWidth,
                 heightMapHeight = heightMapHeight,
@@ -1479,7 +1498,7 @@ public static class FoliageGenerator
                 grassInfluenceRadius = Mathf.Max(0.01f, cloverSettings.grassInfluenceRadius)
             };
 
-            handle = job.Schedule(patchCandidateCount, Mathf.Max(1, 64 / maxClumpsPerPatch));
+            handle = transitionJob.Schedule(patchCandidateCount, Mathf.Max(1, 64 / maxClumpsPerPatch));
             JobHandle.ScheduleBatchedJobs();
             yield return false;
             while (!handle.IsCompleted) yield return false;
@@ -1512,7 +1531,7 @@ public static class FoliageGenerator
                         Mathf.Max(0.0001f,worldScale) + chunkSize * 0.5f;
                     int x = Mathf.Clamp(Mathf.RoundToInt(sample.x)+1,0,record.BiomeMap.GetLength(0)-1);
                     int z = Mathf.Clamp(Mathf.RoundToInt(sample.y)+1,0,record.BiomeMap.GetLength(1)-1);
-                    if (record.BiomeMap[x,z] == BiomeType.Forest && Hash01(unchecked((int)result.selectionRank + 1499)) >=
+                    if (BiomeTransitionPolicy.ForestWeight(record.WorldFeaturePlan, record.BiomeMap[x,z], x,z) > 0f && Hash01(unchecked((int)result.selectionRank + 1499)) >=
                         ForestFloorPolicy.CloverRetention(ForestFloorPolicy.SampleMoss(
                             record.WorldFeaturePlan.ForestStructure.FloorEcologyMap,sample))) continue;
                 }
@@ -1534,6 +1553,7 @@ public static class FoliageGenerator
         {
             // Disposal is the only cancellation/shutdown path allowed to wait.
             handle.Complete();
+            if (nativeLease == null && plantMembershipMap.IsCreated) plantMembershipMap.Dispose();
             if (nativeLease != null) nativeLease.Dispose();
             else
             {
@@ -1639,6 +1659,7 @@ public static class FoliageGenerator
         using var plannedClearance = PlannedPlantClearanceIndex.Create(
             record, chunkSize, worldScale, LargestClearanceMinimum(clearancePolicy));
 
+        NativeArray<byte> plantMembershipMap = default;
         NativeArray<float> heightMap = default;
         NativeArray<SurfaceType> surfaceMap = default;
         NativeArray<BiomeType> biomeMap = default;
@@ -1673,8 +1694,11 @@ public static class FoliageGenerator
             results =
                 new NativeArray<CloverDiscoveryResult>(dandelionCandidateCount, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
-            CloverDiscoveryJob job = new CloverDiscoveryJob
+            plantMembershipMap = nativeLease != null ? nativeLease.Data.ForestMembershipMap :
+                FlattenMembershipMap(record.WorldFeaturePlan?.ForestMembershipMap);
+            CloverDiscoveryJob transitionJob = new CloverDiscoveryJob
             {
+                forestMembershipMap = plantMembershipMap,
                 heightMap = heightMap,
                 heightMapWidth = heightMapWidth,
                 heightMapHeight = heightMapHeight,
@@ -1729,7 +1753,7 @@ public static class FoliageGenerator
                 grassInfluenceRadius = 0.01f
             };
 
-            handle = job.Schedule(patchCandidateCount, Mathf.Max(1, 64 / maxDandelionsPerPatch));
+            handle = transitionJob.Schedule(patchCandidateCount, Mathf.Max(1, 64 / maxDandelionsPerPatch));
             JobHandle.ScheduleBatchedJobs();
             yield return false;
             while (!handle.IsCompleted) yield return false;
@@ -1751,7 +1775,7 @@ public static class FoliageGenerator
                 }
 
                 CloverDiscoveryResult result = results[i];
-                if (result.valid == 0)
+                if (result.valid == 0 || PlantBlockedByMoss(record, result.localPosition, worldScale, topLeftX, bottomLeftZ))
                     continue;
 
                 foliageData.dandelionInstances.Add(new DandelionInstanceData(
@@ -1769,6 +1793,7 @@ public static class FoliageGenerator
         {
             // Disposal is the only cancellation/shutdown path allowed to wait.
             handle.Complete();
+            if (nativeLease == null && plantMembershipMap.IsCreated) plantMembershipMap.Dispose();
             if (nativeLease != null) nativeLease.Dispose();
             else
             {
@@ -2070,6 +2095,27 @@ public static class FoliageGenerator
 
         return false;
     }
+
+    private static NativeArray<byte> FlattenMembershipMap(byte[,] source)
+    {
+        int width = source?.GetLength(0) ?? 0, height = source?.GetLength(1) ?? 0;
+        var result = new NativeArray<byte>(width * height, Allocator.Persistent);
+        for (int x = 0; x < width; x++) for (int z = 0; z < height; z++) result[x * height + z] = source[x,z];
+        return result;
+    }
+
+    private static bool AllowsMeadowPlant(ChunkRecord record, int x, int z, int hash)
+    {
+        byte membership = record.WorldFeaturePlan?.ForestMembershipMap[x,z] ?? 0;
+        bool meadow = membership == 0 ? record.BiomeMap[x,z] == BiomeType.Grassland :
+            !BiomeTransitionPolicy.SelectForest(Hash01(hash + 1481), BiomeTransitionPolicy.ForestWeight(membership, record.BiomeMap[x,z]));
+        return meadow && !ForestFloorPolicy.MossBlocksVegetation(record.WorldFeaturePlan?.ForestStructure.FloorEcologyMap?[x,z].z ?? 0f);
+    }
+
+    private static bool PlantBlockedByMoss(ChunkRecord record, float3 position, float worldScale,
+        float topLeftX, float bottomLeftZ) => ForestFloorPolicy.MossBlocksVegetation(ForestFloorPolicy.SampleMoss(
+            record.WorldFeaturePlan?.ForestStructure.FloorEcologyMap,
+            new float2(position.x / worldScale - topLeftX, position.z / worldScale - bottomLeftZ)));
 
     private static NativeArray<float> FlattenForestFloorMap(float4[,] source)
     {
@@ -2750,6 +2796,7 @@ public static class FoliageGenerator
         public int groundCoverMapWidth;
         public int groundCoverMapHeight;
         public bool hasGroundCoverMap;
+        [ReadOnly] public NativeArray<byte> forestMembershipMap;
         [ReadOnly] public NativeArray<float> forestGrassDensityMap;
         public bool hasForestGrassDensityMap;
         [ReadOnly] public NativeArray<float2> treeExclusionPositions;
@@ -2794,9 +2841,10 @@ public static class FoliageGenerator
 
             float floorDensity = hasForestGrassDensityMap
                 ? SampleForestDensity(forestGrassDensityMap,surfaceMapWidth,surfaceMapHeight,sampleX,sampleZ) : 1f;
+            float forestBlend = GetGrassForestBlend(paddedX, paddedZ, cellHash, floorDensity, out float profileDensity);
             if (!AllowsInstancedGrass(paddedX, paddedZ) || floorDensity < 0f ||
                 (IsForestFloor(paddedX, paddedZ) && Hash01(cellHash + 811) >=
-                    floorDensity))
+                    profileDensity))
             {
                 results[index] = default;
                 return;
@@ -2842,13 +2890,16 @@ public static class FoliageGenerator
                 yaw = yaw,
                 uniformScale = uniformScale,
                 selectionRank = selectionRank,
-                forestBlend = GetGrassForestBlend(paddedX, paddedZ)
+                forestBlend = forestBlend
             };
         }
 
-        private bool IsForestFloor(int x, int z) =>
-            hasForestGrassDensityMap && biomeMap[math.clamp(x, 0, biomeMapWidth - 1) * biomeMapHeight +
-                math.clamp(z, 0, biomeMapHeight - 1)] == BiomeType.Forest;
+        private bool IsForestFloor(int x, int z)
+        {
+            int index = math.clamp(x, 0, biomeMapWidth - 1) * biomeMapHeight + math.clamp(z, 0, biomeMapHeight - 1);
+            return hasForestGrassDensityMap && (biomeMap[index] == BiomeType.Forest ||
+                forestMembershipMap.Length > 0 && forestMembershipMap[index] > 1);
+        }
 
         private bool AllowsInstancedGrass(int paddedX, int paddedZ)
         {
@@ -2863,8 +2914,19 @@ public static class FoliageGenerator
                    groundCover == GroundCoverType.DarkGrass;
         }
 
-        private float GetGrassForestBlend(int paddedX, int paddedZ)
+        private float GetGrassForestBlend(int paddedX, int paddedZ, int cellHash, float blendedDensity, out float profileDensity)
         {
+            profileDensity = blendedDensity;
+            int index = math.clamp(paddedX, 0, biomeMapWidth - 1) * biomeMapHeight + math.clamp(paddedZ, 0, biomeMapHeight - 1);
+            if (forestMembershipMap.Length > 0 && forestMembershipMap[index] != 0)
+            {
+                float weight = BiomeTransitionPolicy.ForestWeight(forestMembershipMap[index], biomeMap[index]);
+                bool forest = BiomeTransitionPolicy.SelectForest(Hash01(cellHash + 821), weight);
+                // Choose a profile before thinning: expected counts are w*dForest and
+                // (1-w)*dMeadow, rather than giving both families the blended density.
+                profileDensity = forest ? BiomeTransitionPolicy.ForestGrassDensity(blendedDensity, weight) : 1f;
+                return forest ? 1f : 0f;
+            }
             if (IsForestFloor(paddedX, paddedZ) ||
                 (hasGroundCoverMap && ReadGroundCover(paddedX, paddedZ) == GroundCoverType.DarkGrass))
                 return 1f;
@@ -2970,6 +3032,7 @@ public static class FoliageGenerator
         [ReadOnly] public NativeArray<SurfaceType> surfaceMap;
         public int surfaceMapWidth;
         public int surfaceMapHeight;
+        [ReadOnly] public NativeArray<byte> forestMembershipMap;
         [ReadOnly] public NativeArray<BiomeType> biomeMap;
         public int biomeMapWidth;
         public int biomeMapHeight;
@@ -3087,7 +3150,7 @@ public static class FoliageGenerator
             int paddedX = mapX + 1;
             int paddedZ = mapZ + 1;
 
-            if (!IsValidFlowerSample(paddedX, paddedZ, out BiomeType biome))
+            if (!IsValidFlowerSample(paddedX, paddedZ, flowerHash, out BiomeType biome))
             {
                 results[index] = default;
                 return;
@@ -3120,9 +3183,13 @@ public static class FoliageGenerator
             };
         }
 
-        private bool IsValidFlowerSample(int paddedX, int paddedZ, out BiomeType biome)
+        private bool IsValidFlowerSample(int paddedX, int paddedZ, int hash, out BiomeType biome)
         {
             biome = ReadBiome(paddedX, paddedZ);
+            int index = paddedX * biomeMapHeight + paddedZ;
+            if (forestMembershipMap.Length > 0 && forestMembershipMap[index] != 0)
+                biome = BiomeTransitionPolicy.SelectForest(Hash01(hash + 1481),
+                    BiomeTransitionPolicy.ForestWeight(forestMembershipMap[index], biome)) ? BiomeType.Forest : BiomeType.Grassland;
 
             if (ReadSurface(paddedX, paddedZ) != SurfaceType.Grass)
                 return false;
@@ -3254,6 +3321,7 @@ public static class FoliageGenerator
         [ReadOnly] public NativeArray<SurfaceType> surfaceMap;
         public int surfaceMapWidth;
         public int surfaceMapHeight;
+        [ReadOnly] public NativeArray<byte> forestMembershipMap;
         [ReadOnly] public NativeArray<BiomeType> biomeMap;
         public int biomeMapWidth;
         public int biomeMapHeight;
@@ -3391,13 +3459,19 @@ public static class FoliageGenerator
             int paddedX = mapX + 1;
             int paddedZ = mapZ + 1;
 
-            if (!IsValidCloverSample(paddedX, paddedZ))
+            BiomeType sampleBiome = ReadBiome(paddedX, paddedZ);
+            int biomeIndex = paddedX * biomeMapHeight + paddedZ;
+            byte membership = forestMembershipMap.Length > 0 ? forestMembershipMap[biomeIndex] : (byte)0;
+            bool forest = membership == 0 ? sampleBiome == BiomeType.Forest :
+                BiomeTransitionPolicy.SelectForest(Hash01(clumpHash + 1481), BiomeTransitionPolicy.ForestWeight(membership, sampleBiome));
+            if (!IsValidCloverSample(paddedX, paddedZ, forest, BiomeTransitionPolicy.IsMixed(membership),
+                BiomeTransitionPolicy.ForestWeight(membership, sampleBiome), clumpHash))
             {
                 results[index] = default;
                 return;
             }
 
-            if (ReadBiome(paddedX,paddedZ) == BiomeType.Forest &&
+            if (forest &&
                 Hash01(Hash6(worldSeed,seedOffset,globalCellX,globalCellZ,patchIndex,1493)) >= forestPatchChance)
                 return;
 
@@ -3435,22 +3509,24 @@ public static class FoliageGenerator
             };
         }
 
-        private bool IsValidCloverSample(int paddedX, int paddedZ)
+        private bool IsValidCloverSample(int paddedX, int paddedZ, bool forest, bool mixed, float forestWeight, int hash)
         {
             if (ReadSurface(paddedX, paddedZ) != SurfaceType.Grass)
                 return false;
 
             BiomeType biome = ReadBiome(paddedX,paddedZ);
-            bool forest = biome == BiomeType.Forest;
-            if (biome != BiomeType.Grassland && !(forest && allowForestClover))
+            if (forest ? !allowForestClover : biome != BiomeType.Grassland && !mixed)
                 return false;
 
             // Existing forest DarkGrass cover denotes openings/partial shade. Leaf litter
             // remains the terrain substrate; quiet closed-canopy litter and moss are excluded.
-            if (forest && (!hasGroundCoverMap || ReadGroundCover(paddedX,paddedZ) != GroundCoverType.DarkGrass))
+            // Allow a diminishing margin colony on mixed litter; reach the existing
+            // DarkGrass-only forest habitat continuously at weight 1.
+            if (forest && (!hasGroundCoverMap || ReadGroundCover(paddedX,paddedZ) != GroundCoverType.DarkGrass) &&
+                (!mixed || Hash01(hash + 1495) >= 1f - forestWeight))
                 return false;
 
-            if (hasGroundCoverMap)
+            if (hasGroundCoverMap && !mixed)
             {
                 GroundCoverType groundCover = ReadGroundCover(paddedX, paddedZ);
                 if (groundCover != GroundCoverType.Default &&
@@ -3624,6 +3700,7 @@ public static class FoliageGenerator
         public int groundCoverMapWidth;
         public int groundCoverMapHeight;
         public bool hasGroundCoverMap;
+        [ReadOnly] public NativeArray<byte> forestMembershipMap;
         [ReadOnly] public NativeArray<float> forestGrassDensityMap;
         public bool hasForestGrassDensityMap;
         [ReadOnly] public NativeArray<float2> treeExclusionPositions;
@@ -3683,9 +3760,10 @@ public static class FoliageGenerator
 
             float floorDensity = hasForestGrassDensityMap
                 ? SampleForestDensity(forestGrassDensityMap,surfaceMapWidth,surfaceMapHeight,sampleX,sampleZ) : 1f;
+            float forestBlend = GetGrassForestBlend(paddedX, paddedZ, cellHash, floorDensity, out float profileDensity);
             if (!AllowsInstancedGrass(paddedX, paddedZ) || floorDensity < 0f ||
                 (IsForestFloor(paddedX, paddedZ) && Hash01(cellHash + 811) >=
-                    floorDensity))
+                    profileDensity))
             {
                 results[index] = default;
                 return;
@@ -3731,7 +3809,7 @@ public static class FoliageGenerator
                 yaw = yaw,
                 uniformScale = uniformScale,
                 selectionRank = selectionRank,
-                forestBlend = GetGrassForestBlend(paddedX, paddedZ)
+                forestBlend = forestBlend
             };
         }
 
@@ -3748,9 +3826,12 @@ public static class FoliageGenerator
             return insideX && insideZ;
         }
 
-        private bool IsForestFloor(int x, int z) =>
-            hasForestGrassDensityMap && biomeMap[math.clamp(x, 0, biomeMapWidth - 1) * biomeMapHeight +
-                math.clamp(z, 0, biomeMapHeight - 1)] == BiomeType.Forest;
+        private bool IsForestFloor(int x, int z)
+        {
+            int index = math.clamp(x, 0, biomeMapWidth - 1) * biomeMapHeight + math.clamp(z, 0, biomeMapHeight - 1);
+            return hasForestGrassDensityMap && (biomeMap[index] == BiomeType.Forest ||
+                forestMembershipMap.Length > 0 && forestMembershipMap[index] > 1);
+        }
 
         private bool AllowsInstancedGrass(int paddedX, int paddedZ)
         {
@@ -3765,8 +3846,19 @@ public static class FoliageGenerator
                    groundCover == GroundCoverType.DarkGrass;
         }
 
-        private float GetGrassForestBlend(int paddedX, int paddedZ)
+        private float GetGrassForestBlend(int paddedX, int paddedZ, int cellHash, float blendedDensity, out float profileDensity)
         {
+            profileDensity = blendedDensity;
+            int index = math.clamp(paddedX, 0, biomeMapWidth - 1) * biomeMapHeight + math.clamp(paddedZ, 0, biomeMapHeight - 1);
+            if (forestMembershipMap.Length > 0 && forestMembershipMap[index] != 0)
+            {
+                float weight = BiomeTransitionPolicy.ForestWeight(forestMembershipMap[index], biomeMap[index]);
+                bool forest = BiomeTransitionPolicy.SelectForest(Hash01(cellHash + 821), weight);
+                // Choose a profile before thinning: expected counts are w*dForest and
+                // (1-w)*dMeadow, rather than giving both families the blended density.
+                profileDensity = forest ? BiomeTransitionPolicy.ForestGrassDensity(blendedDensity, weight) : 1f;
+                return forest ? 1f : 0f;
+            }
             if (IsForestFloor(paddedX, paddedZ) ||
                 (hasGroundCoverMap && ReadGroundCover(paddedX, paddedZ) == GroundCoverType.DarkGrass))
                 return 1f;

@@ -1,0 +1,3 @@
+Seed 1456789; center samples (8192.00, 256.00); span 2048; sample scale 600; water 0.24; mountain width 1.3.
+Yellow: meadow; green: forest; cyan: mixed membership. Other colors: categorical biomes.
+Generated 256² samples; 9464 mixed points. Center (8192.00, 256.00); span 2048 samples.

@@ -381,9 +381,12 @@ public class ChunkManager
         int gpuDandelionInstanceCount = 0;
         int gpuTreeInstanceCount = 0;
 
+        float forestMembership = -1f;
         if (hasTerrainData && TryGetPaddedSampleIndices(coord, worldPosition, record, out int sampleX, out int sampleZ))
         {
             biome = record.BiomeMap[sampleX, sampleZ];
+            byte membership = record.WorldFeaturePlan?.ForestMembershipMap[sampleX,sampleZ] ?? 0;
+            if (membership != 0) forestMembership = BiomeTransitionPolicy.ForestWeight(membership, biome);
             surfaceType = record.SurfaceTypeMap[sampleX, sampleZ];
             if (record.GroundCoverMap != null)
                 groundCoverType = record.GroundCoverMap[sampleX, sampleZ];
@@ -437,7 +440,7 @@ public class ChunkManager
             gpuCattailInstanceCount,
             gpuCloverInstanceCount,
             gpuDandelionInstanceCount,
-            gpuTreeInstanceCount);
+            gpuTreeInstanceCount, forestMembership);
     }
 
     private static int CountPlannedTrees(WorldFeaturePlan plan)

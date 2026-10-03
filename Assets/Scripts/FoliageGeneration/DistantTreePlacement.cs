@@ -15,7 +15,7 @@ public static class DistantTreePlacement
         public readonly SurfaceType[,] Surfaces;
         public readonly float[,] Moisture, Temperature, Slopes, Rivers;
         public readonly bool[,] Sampled, Prepared;
-        public readonly Dictionary<int, TerrainHeightSample> Heights = new Dictionary<int, TerrainHeightSample>();
+        public readonly Dictionary<long, TerrainHeightSample> Heights = new Dictionary<long, TerrainHeightSample>();
         public readonly WorldFeaturePlan Plan;
         public Scratch(int size)
         {
@@ -52,7 +52,9 @@ public static class DistantTreePlacement
 
             TerrainHeightSample Height(int x, int z)
             {
-                int key = x * size + z;
+                // Signed coordinates include the four-sample slope halo. Linear keys
+                // would collide when an offset crosses a row outside the chunk map.
+                long key = ((long)x << 32) | (uint)z;
                 if (!heights.TryGetValue(key, out var value))
                 {
                     value = HeightMapGenerator.SampleTerrainHeightNative(coord.x * chunkSize + x - 1,
@@ -66,8 +68,9 @@ public static class DistantTreePlacement
             {
                 if (sampled[x, z]) return;
                 var center = Height(x, z);
-                int x0 = Mathf.Max(x - 4, 0), x1 = Mathf.Min(x + 4, size - 1);
-                int z0 = Mathf.Max(z - 4, 0), z1 = Mathf.Min(z + 4, size - 1);
+                // Match the full height generator's world-sampled slope halo.
+                int x0 = x - 4, x1 = x + 4;
+                int z0 = z - 4, z1 = z + 4;
                 float dx = (Height(x1, z).Height - Height(x0, z).Height) / Mathf.Max(1, x1 - x0);
                 float dz = (Height(x, z1).Height - Height(x, z0).Height) / Mathf.Max(1, z1 - z0);
                 slopes[x, z] = TerrainSlopePolicy.FromGradient(math.sqrt(dx * dx + dz * dz), heightMultiplier);
@@ -84,7 +87,7 @@ public static class DistantTreePlacement
             }
             var plan = WorldFeaturePlanGenerator.GenerateTreePlacements(coord, chunkSize, seed,
                 biomes, surfaces, moisture, temperature, slopes, rivers, settings, Sample, scratch.Plan, scratch.Prepared,
-                (x, z) => Height(x, z).Height, waterLevel);
+                (x, z) => Height(x, z).Height, waterLevel, (x, z) => Height(x, z).MountainMask);
             var trees = new List<TreeInstanceData>();
             foreach (var p in plan.Placements)
             {

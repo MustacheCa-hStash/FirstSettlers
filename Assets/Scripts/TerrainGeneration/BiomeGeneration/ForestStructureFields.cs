@@ -9,13 +9,20 @@ public class ForestStructureFields
     public float[,] DampShadeMap { get; }
     public float[,] UnderstoryDensityMap { get; }
     public float[,] OrganicFloorIntentMap { get; }
-    // Allocated only for chunks containing forest land. X=density, Y=soil, Z=moss, W=mixed litter.
+    // Allocated only where forest membership is positive. X=blended density,
+    // Y=weighted soil, Z=weighted moss, W=weighted mixed litter.
     public Unity.Mathematics.float4[,] FloorEcologyMap { get; private set; }
 
     public void EnsureFloorEcologyMap(int width, int height)
     {
         if (FloorEcologyMap == null)
+        {
             FloorEcologyMap = new Unity.Mathematics.float4[width, height];
+            // Preserve meadow density when jobs interpolate across the forest footprint.
+            for (int x = 0; x < width; x++)
+                for (int z = 0; z < height; z++)
+                    FloorEcologyMap[x,z] = new Unity.Mathematics.float4(1f, 0f, 0f, 0f);
+        }
     }
 
     public ForestStructureFields(int width, int height)
