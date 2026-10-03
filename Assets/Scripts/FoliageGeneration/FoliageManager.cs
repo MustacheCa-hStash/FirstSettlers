@@ -9,7 +9,6 @@ using UnityEngine;
 
 public class FoliageManager
 {
-    private const string BillboardRenderFadeKeyword = "_BILLBOARD_RENDER_FADE_ON";
 
     private static readonly ProfilerMarker HandleViewerSubChunkChangedMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleViewerSubChunkChanged");
     private static readonly ProfilerMarker HandleSubChunkLoopMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleSubChunkLoop");
@@ -38,7 +37,6 @@ public class FoliageManager
     private static readonly ProfilerMarker ProcessFoliageBatchQueueMarker = new ProfilerMarker("FS.Streaming.Foliage.ProcessBatchQueue");
     private static readonly ProfilerMarker ProcessTreeRepresentationQueueMarker = new ProfilerMarker("FS.Streaming.Foliage.ProcessTreeRepresentationQueue");
 
-    private readonly Transform foliageParent;
     private readonly GrassSettings grassSettings;
     private readonly FlowerSettings flowerSettings;
     private readonly LilyPadSettings lilyPadSettings;
@@ -64,7 +62,6 @@ public class FoliageManager
 
     private Mesh billboardGrassMesh;
     private Material billboardGrassMaterial;
-    private bool ownsBillboardGrassMaterial;
 
     private Mesh flowerMesh;
     private Material flowerMaterial;
@@ -145,7 +142,6 @@ public class FoliageManager
     public FoliageManager(Transform foliageParent, GrassSettings grassSettings, FlowerSettings flowerSettings, LilyPadSettings lilyPadSettings, CattailSettings cattailSettings, CloverSettings cloverSettings, DandelionSettings dandelionSettings, TreeSettings treeSettings, int worldSeed,
         int chunkSize, float worldScale, float meshHeightMultiplier, TerrainWaterSettings waterSettings)
     {
-        this.foliageParent = foliageParent;
         this.grassSettings = grassSettings;
         this.flowerSettings = flowerSettings;
         this.lilyPadSettings = lilyPadSettings;
@@ -232,7 +228,6 @@ public class FoliageManager
         queuedFoliageManagementWork.Clear();
         deferredFoliageManagementRetries.Clear();
         dirtyGrassChunks.Clear();
-        DestroyOwnedBillboardGrassMaterial();
         RecordFoliageQueueSnapshot(0);
     }
 
@@ -3712,9 +3707,9 @@ public class FoliageManager
 
         chunkRuntime.FoliageRuntime.billboardMesh = billboardGrassMesh;
         chunkRuntime.FoliageRuntime.billboardMaterial = billboardGrassMaterial;
-        chunkRuntime.FoliageRuntime.enableBillboardGrassRenderFade = grassSettings.enableBillboardRenderFade;
-        chunkRuntime.FoliageRuntime.billboardGrassRenderFadeDuration = grassSettings.billboardRenderFadeDuration;
-        chunkRuntime.FoliageRuntime.billboardGrassFadeDitherPixelSize = grassSettings.billboardFadeDitherPixelSize;
+        // GrassStream owns representation and outer-distance fades. The retired
+        // per-chunk billboard fade must not be enabled on pooled runtimes.
+        chunkRuntime.FoliageRuntime.enableBillboardGrassRenderFade = false;
 
         chunkRuntime.FoliageRuntime.flowerMesh = flowerMesh;
         chunkRuntime.FoliageRuntime.flowerMaterial = flowerMaterial;
@@ -3786,11 +3781,8 @@ public class FoliageManager
     {
         ResolveForestGrassAsset(grassSettings.forestGrassPrefab, "Foliage/ForestGrassTuft_LOD0", out forestGrassMesh, out forestGrassMaterial);
         ResolveForestGrassAsset(grassSettings.forestBillboardGrassPrefab, "Foliage/ForestGrassTuft_LOD1", out forestFarGrassMesh, out forestFarGrassMaterial);
-        string instanceDataPropertyName = string.IsNullOrEmpty(grassSettings.grassInstanceDataPropertyName)
-            ? "_GrassInstanceData"
-            : grassSettings.grassInstanceDataPropertyName;
-
-        grassInstanceDataPropertyId = Shader.PropertyToID(instanceDataPropertyName);
+        // Resident grass CPU and GPU paths share this fixed shader contract.
+        grassInstanceDataPropertyId = Shader.PropertyToID("_GrassInstanceData");
 
         if (grassSettings.grassPrefab == null)
         {
@@ -3845,16 +3837,7 @@ public class FoliageManager
             }
             else
             {
-                if (grassSettings.enableBillboardRenderFade)
-                {
-                    billboardGrassMaterial = CreateBillboardGrassRenderFadeMaterial(meshRenderer.sharedMaterial);
-                }
-                else
-                {
-                    DestroyOwnedBillboardGrassMaterial();
-                    billboardGrassMaterial = meshRenderer.sharedMaterial;
-                }
-
+                billboardGrassMaterial = meshRenderer.sharedMaterial;
                 billboardGrassMaterial.enableInstancing = true;
             }
         }
@@ -3868,33 +3851,6 @@ public class FoliageManager
         if (mesh == null || material == null)
             Debug.LogWarning($"Forest grass asset {resource} is incomplete; using the standard grass asset for that distance.");
         else material.enableInstancing = true;
-    }
-
-    private Material CreateBillboardGrassRenderFadeMaterial(Material sourceMaterial)
-    {
-        DestroyOwnedBillboardGrassMaterial();
-
-        Material fadeMaterial = new Material(sourceMaterial)
-        {
-            name = $"{sourceMaterial.name} (Billboard Render Fade)"
-        };
-        fadeMaterial.EnableKeyword(BillboardRenderFadeKeyword);
-        fadeMaterial.SetFloat("_RenderFadeEnabled", 1f);
-        fadeMaterial.SetFloat("_RenderFadeProgress", 1f);
-        fadeMaterial.enableInstancing = true;
-
-        ownsBillboardGrassMaterial = true;
-        return fadeMaterial;
-    }
-
-    private void DestroyOwnedBillboardGrassMaterial()
-    {
-        if (!ownsBillboardGrassMaterial || billboardGrassMaterial == null)
-            return;
-
-        UnityEngine.Object.Destroy(billboardGrassMaterial);
-        billboardGrassMaterial = null;
-        ownsBillboardGrassMaterial = false;
     }
 
     private void ResolveFlowerRenderAssets()

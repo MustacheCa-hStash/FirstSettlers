@@ -27,8 +27,7 @@ Material:
   m_ValidKeywords:
   - _GRASS_BLADE_GROUND
   - _ROCK_DETAIL
-  m_InvalidKeywords:
-  - _RECEIVESHADOWS_ON
+  m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -56,14 +55,6 @@ Material:
         m_Texture: {fileID: 2800000, guid: 5afb1ec63ffe9174cb83167f4906b1eb, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _BaseMap:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _BumpMap:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
     - _ControlMap0:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -86,22 +77,6 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _DenseMossHeight:
         m_Texture: {fileID: 2800000, guid: ef5cb4734a7ac3044847d96768b4fd99, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _DetailAlbedoMap:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _DetailMask:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _DetailNormalMap:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _EmissionMap:
-        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _GrassAlbedo:
@@ -132,14 +107,6 @@ Material:
         m_Texture: {fileID: 2800000, guid: fa3c6735d2dd47843a90fd875e3f2f38, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _MainTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _MetallicGlossMap:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
     - _MixedForestFloorAlbedo:
         m_Texture: {fileID: 2800000, guid: 9e04409f4e4e97046a67446a22a916ff, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -168,14 +135,6 @@ Material:
         m_Texture: {fileID: 2800000, guid: e513d752c23d94e49b039c1bcf0ab391, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _OcclusionMap:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _ParallaxMap:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
     - _RockAlbedo:
         m_Texture: {fileID: 2800000, guid: f8f5a7a85cce4ea497b88b1550714f1f, type: 3}
         m_Scale: {x: 0.1, y: 0.1}
@@ -200,10 +159,6 @@ Material:
         m_Texture: {fileID: 2800000, guid: 710d20a96779f1d41bb42ae60e8eb78b, type: 3}
         m_Scale: {x: 0.1, y: 0.1}
         m_Offset: {x: 0, y: 0}
-    - _SpecGlossMap:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
     - _TerrainHorizon0:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -226,38 +181,19 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AddPrecomputedVelocity: 0
-    - _AlphaClip: 0
-    - _AlphaToMask: 0
     - _AmbientStrength: 0.26
     - _BareDirtAOStrength: 0
     - _BareDirtHeightStrength: 0
     - _BareDirtNormalStrength: 0.35
     - _BareDirtTiling: 0.35
-    - _Blend: 0
-    - _BlendModePreserveSpecular: 1
     - _BlendSharpness: 0.61
-    - _BumpScale: 1
-    - _ClearCoatMask: 0
-    - _ClearCoatSmoothness: 0
     - _CliffNormalStrength: 0.65
-    - _Cull: 2
-    - _Cutoff: 0.5
     - _DenseMossAOStrength: 0.5
     - _DenseMossHeightStrength: 0.012
-    - _DetailAlbedoMapScale: 1
-    - _DetailNormalMapScale: 1
     - _DistanceBlendNoiseScale: 0.01
     - _DistanceBlendNoiseStrength: 0.15
-    - _DstBlend: 0
-    - _DstBlendAlpha: 0
-    - _EnvironmentReflections: 1
     - _ForestFloorMacroScale: 0.025
     - _ForestFloorMacroStrength: 0.12
-    - _ForestGrassBlendStrength: 1
-    - _GlossMapScale: 0
-    - _Glossiness: 0
-    - _GlossyReflections: 0
     - _GrassBladeGround: 1
     - _GrassDetailContrast: 2.14
     - _GrassDetailStrength: 0.35
@@ -276,7 +212,6 @@ Material:
     - _GrassGroundScaleFadeStart: 30
     - _GrassGroundTiling: 0.45
     - _GrassNormalStrength: 0.25
-    - _GrassTiling: 0.5
     - _GrassTilingFar: 0.15
     - _GrassTilingFarDistance: 300
     - _GrassTilingNear: 0.5
@@ -287,7 +222,6 @@ Material:
     - _LeafLitterNormalFadeStart: 12
     - _LeafLitterNormalStrength: 0.45
     - _LeafLitterTiling: 0.35
-    - _Metallic: 0
     - _MixedForestFloorHeightStrength: 0.015
     - _MossAOStrength: 0.5
     - _MossDetailContrast: 0.35
@@ -297,9 +231,6 @@ Material:
     - _MossTiling: 0.32
     - _NoiseScale: 0.023
     - _NoiseStrength: 1
-    - _OcclusionStrength: 1
-    - _Parallax: 0.005
-    - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _RockDetail: 1
     - _RockDetailFadeEnd: 450
@@ -313,10 +244,7 @@ Material:
     - _SandDetailStrength: 0.35
     - _SandNormalStrength: 0.3
     - _SandTiling: 0.35
-    - _Smoothness: 0.5
-    - _SmoothnessTextureChannel: 0
     - _SnowNormalStrength: 0.35
-    - _SnowTiling: 0.6
     - _SnowTilingFar: 0.1
     - _SnowTilingFarDistance: 200
     - _SnowTilingNear: 0.4
@@ -324,33 +252,18 @@ Material:
     - _SnowTriplanarEnd: 0.75
     - _SnowTriplanarSharpness: 4
     - _SnowTriplanarStart: 0.35
-    - _SpecularHighlights: 1
-    - _SrcBlend: 1
-    - _SrcBlendAlpha: 1
-    - _Surface: 0
     - _SurfaceBlendSharpness: 1
-    - _WorkflowMode: 1
-    - _ZWrite: 1
     m_Colors:
     - _BareDirtColor: {r: 0.2, g: 0.13, b: 0.08, a: 1}
-    - _BaseColor: {r: 0.1254902, g: 0.54509807, b: 0.15686275, a: 1}
     - _CliffColor: {r: 0.65, g: 0.64, b: 0.62, a: 1}
-    - _Color: {r: 0.12549016, g: 0.545098, b: 0.1568627, a: 1}
-    - _DarkColor: {r: 0.19999996, g: 0.47999996, b: 0.17999998, a: 1}
     - _DarkGrassColor: {r: 0.118474066, g: 0.28930807, b: 0.106443495, a: 1}
     - _DenseMossColor: {r: 0.85, g: 0.9, b: 0.7, a: 1}
-    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _ForestDarkGrassColor: {r: 0.1, g: 0.28, b: 0.09, a: 1}
-    - _ForestLightGrassColor: {r: 0.25, g: 0.52, b: 0.19, a: 1}
-    - _ForestMidGrassColor: {r: 0.16, g: 0.4, b: 0.13, a: 1}
     - _GrassGroundTint: {r: 0.9, g: 0.9, b: 0.78, a: 1}
     - _GroundDarkGrassColor: {r: 0.09999997, g: 0.27999997, b: 0.089999996, a: 1}
     - _GroundLightGrassColor: {r: 0.24999997, g: 0.52, b: 0.18999997, a: 1}
     - _GroundMidGrassColor: {r: 0.15999997, g: 0.39999998, b: 0.12999997, a: 1}
     - _LeafLitterColor: {r: 1, g: 1, b: 1, a: 1}
-    - _LightColor: {r: 0.43999997, g: 0.78, b: 0.29999998, a: 1}
     - _LightGrassColor: {r: 0.2918464, g: 0.54088044, b: 0.18879783, a: 1}
-    - _MidColor: {r: 0.28999996, g: 0.62, b: 0.23999995, a: 1}
     - _MidGrassColor: {r: 0.17862315, g: 0.38993704, b: 0.1459198, a: 1}
     - _MixedForestFloorColor: {r: 1, g: 1, b: 1, a: 1}
     - _MossColor: {r: 0.65, g: 0.85, b: 0.65, a: 1}
@@ -362,7 +275,6 @@ Material:
     - _SandColor: {r: 0.8, g: 0.75, b: 0.54999995, a: 1}
     - _SnowColor: {r: 0.92, g: 0.94, b: 0.97999996, a: 1}
     - _SnowTint: {r: 1, g: 1, b: 1, a: 1}
-    - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _TerrainHorizonParams: {r: 0, g: 0, b: 0, a: 0}
     - _TerrainHorizonTint: {r: 1, g: 1, b: 1, a: 1}
     - _TerrainHorizonUV: {r: 0, g: 0, b: 0, a: 0}

@@ -78,19 +78,14 @@ public class TreeSettings
     [Tooltip("Fallback merged billboard tree prefab used when a grassland species billboard is not assigned.")]
     public GameObject grasslandTreeBillboardFallbackPrefab;
 
-    [Header("Tree Placement")]
-    public float treeCellSize = 12f;
-
-    [Range(0f, 1f)]
-    public float treeSpawnChance = 0.3f;
-
-    public float treeMinDistance = 9f;
+    [Header("Tree Scale and Ground Clearance")]
     [Tooltip("Uniform instance scale for forest and grassland trees, including distant billboards. Restart Play Mode after changing this range to regenerate cached placements.")]
     public Vector2 treeUniformScaleRange = new Vector2(2f, 2f);
 
     public float grassExclusionRadius = 1.5f;
     public float bushGrassExclusionRadius = 0.45f;
 
+    [InspectorName("Tree Color Seed Offset"), Tooltip("Varies tree leaf and bark colors. Tree locations come from the world seed and feature plan, not this offset.")]
     public int seedOffset = 12000;
 
     [Header("Tree Representation Rings")]

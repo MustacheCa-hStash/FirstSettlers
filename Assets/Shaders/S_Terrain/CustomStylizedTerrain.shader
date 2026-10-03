@@ -2,22 +2,22 @@ Shader "Custom/StylizedTerrainURP"
 {
     Properties
     {
-        _ControlMap0("Control Map 0", 2D) = "black" {}
-        _ControlMap1("Control Map 1", 2D) = "black" {}
-        _ControlMap2("Ground Cover Map", 2D) = "black" {}
+        [HideInInspector] [NoScaleOffset] _ControlMap0("Control Map 0", 2D) = "black" {}
+        [HideInInspector] [NoScaleOffset] _ControlMap1("Control Map 1", 2D) = "black" {}
+        [HideInInspector] [NoScaleOffset] _ControlMap2("Ground Cover Map", 2D) = "black" {}
         _SurfaceBlendSharpness("Surface Blend Sharpness", Range(0.25, 4.0)) = 1.0
 
         _SandColor("Sand Color", Color) = (0.80, 0.75, 0.55, 1)
-        _SandAlbedo("Sand Albedo", 2D) = "white" {}
-        _SandNormal("Sand Normal", 2D) = "bump" {}
+        [NoScaleOffset] _SandAlbedo("Sand Albedo", 2D) = "white" {}
+        [NoScaleOffset] _SandNormal("Sand Normal", 2D) = "bump" {}
         _SandTiling("Sand Tiling (Repeats Per World Unit)", Float) = 0.35
         _SandDetailStrength("Sand Albedo Strength", Range(0, 1)) = 0.35
         _SandNormalStrength("Sand Normal Strength", Range(0, 2)) = 0.30
         _MudColor("Mud Color", Color) = (0.42, 0.32, 0.22, 1)
         _RockColor("Rock Color (Distance Fallback)", Color) = (0.45, 0.45, 0.45, 1)
         [Toggle(_ROCK_DETAIL)] _RockDetail("Enable Rock / Cliff Detail", Float) = 0
-        _RockAlbedo("Rock / Cliff Albedo", 2D) = "white" {}
-        _RockNormal("Rock / Cliff Normal", 2D) = "bump" {}
+        [NoScaleOffset] _RockAlbedo("Rock / Cliff Albedo", 2D) = "white" {}
+        [NoScaleOffset] _RockNormal("Rock / Cliff Normal", 2D) = "bump" {}
         _RockTiling("Rock / Cliff Tiling (Repeats Per World Unit)", Float) = 0.12
         _RockTextureStrength("Rock / Cliff Texture Strength", Range(0, 1)) = 1
         _RockDetailStrength("Rock / Cliff Distant Average Color Strength", Range(0, 1)) = 0.5
@@ -53,18 +53,18 @@ Shader "Custom/StylizedTerrainURP"
         _LeafLitterNormalFadeEnd("Litter Normal Fade End", Float) = 45
         _ForestFloorMacroScale("Forest Floor Macro Repeats Per Meter", Float) = 0.025
         _ForestFloorMacroStrength("Forest Floor Macro Tone Strength", Range(0, 0.3)) = 0.12
-        _BareDirtAlbedo("Bare Dirt Albedo", 2D) = "white" {}
-        _BareDirtNormal("Bare Dirt Normal", 2D) = "bump" {}
-        _BareDirtAO("Bare Dirt AO (Optional)", 2D) = "white" {}
-        _BareDirtHeight("Bare Dirt Height (Optional)", 2D) = "gray" {}
+        [NoScaleOffset] _BareDirtAlbedo("Bare Dirt Albedo", 2D) = "white" {}
+        [NoScaleOffset] _BareDirtNormal("Bare Dirt Normal", 2D) = "bump" {}
+        [NoScaleOffset] _BareDirtAO("Bare Dirt AO (Optional)", 2D) = "white" {}
+        [NoScaleOffset] _BareDirtHeight("Bare Dirt Height (Optional)", 2D) = "gray" {}
         _BareDirtAOStrength("Bare Dirt AO Strength", Range(0, 1)) = 0
         _BareDirtHeightStrength("Bare Dirt Height Depth", Range(0, 0.05)) = 0
         _BareDirtTiling("Bare Dirt Tiling", Float) = 0.35
         _BareDirtNormalStrength("Bare Dirt Normal Strength", Range(0.0, 2.0)) = 0.35
-        _MossAlbedo("Moss Albedo", 2D) = "white" {}
-        _MossNormal("Moss Normal", 2D) = "bump" {}
-        _MossAO("Moss AO (Optional)", 2D) = "white" {}
-        _MossHeight("Moss Height (Optional)", 2D) = "gray" {}
+        [NoScaleOffset] _MossAlbedo("Moss Albedo", 2D) = "white" {}
+        [NoScaleOffset] _MossNormal("Moss Normal", 2D) = "bump" {}
+        [NoScaleOffset] _MossAO("Moss AO (Optional)", 2D) = "white" {}
+        [NoScaleOffset] _MossHeight("Moss Height (Optional)", 2D) = "gray" {}
         _MossAOStrength("Moss AO Strength", Range(0, 1)) = 0
         _MossHeightStrength("Moss Height Depth", Range(0, 0.05)) = 0
         _MossTiling("Moss Tiling", Float) = 0.32
@@ -84,8 +84,8 @@ Shader "Custom/StylizedTerrainURP"
         _DenseMossAOStrength("Dense Moss AO Strength", Range(0, 1)) = 0
         _DenseMossHeightStrength("Dense Moss Height Depth", Range(0, 0.05)) = 0
 
-        _GrassAlbedo("Grass Albedo", 2D) = "white" {}
-        _GrassNormal("Grass Normal", 2D) = "bump" {}
+        [NoScaleOffset] _GrassAlbedo("Grass Albedo", 2D) = "white" {}
+        [NoScaleOffset] _GrassNormal("Grass Normal", 2D) = "bump" {}
         _GrassTilingNear("Grass Tiling Near", Float) = 0.5
         _GrassTilingFar("Grass Tiling Far", Float) = 0.15
         _GrassTilingNearDistance("Grass Tiling Near Distance", Float) = 100.0
@@ -94,7 +94,7 @@ Shader "Custom/StylizedTerrainURP"
         _GrassDetailStrength("Grass Detail Strength", Range(0.0, 1.0)) = 0.35
         _GrassDetailContrast("Grass Detail Contrast", Range(0.5, 3.0)) = 1.35
         [Toggle(_GRASS_BLADE_GROUND)] _GrassBladeGround("Use Matching Blade Ground", Float) = 0
-        _GrassSurfaceMap("Blade Ground (Tone, Normal XZ, Height)", 2D) = "gray" {}
+        [NoScaleOffset] _GrassSurfaceMap("Blade Ground (Tone, Normal XZ, Height)", 2D) = "gray" {}
         _GrassGroundTiling("Blade Ground Near Repeats Per Meter", Float) = 0.45
         _GrassGroundFarTiling("Blade Ground Far Repeats Per Meter", Float) = 0.06
         _GrassGroundScaleFadeStart("Blade Ground Far Scale Blend Start", Float) = 30
@@ -111,9 +111,9 @@ Shader "Custom/StylizedTerrainURP"
         _GrassGroundHeightFadeStart("Blade Ground Parallax Fade Start", Float) = 4
         _GrassGroundHeightFadeEnd("Blade Ground Parallax Fade End", Float) = 12
 
-        _SnowAlbedo("Snow Albedo", 2D) = "white" {}
+        [NoScaleOffset] _SnowAlbedo("Snow Albedo", 2D) = "white" {}
         _SnowTint("Snow Tint", Color) = (0.95, 0.97, 1.00, 1)
-        _SnowNormal("Snow Normal", 2D) = "bump" {}
+        [NoScaleOffset] _SnowNormal("Snow Normal", 2D) = "bump" {}
         _SnowNormalStrength("Snow Normal Strength", Range(0.0, 2.0)) = 0.35
         _SnowTilingNear("Snow Tiling Near", Float) = 0.06
         _SnowTilingFar("Snow Tiling Far", Float) = 0.02
@@ -131,9 +131,9 @@ Shader "Custom/StylizedTerrainURP"
         _NoiseStrength("Noise Strength", Range(0.0, 2.0)) = 1.0
         _BlendSharpness("Blend Sharpness", Range(0.25, 3.0)) = 1.0
         _AmbientStrength("Minimum Ambient Strength", Range(0.0, 1.0)) = 0.26
-        [Toggle] _ReceiveShadows("Receive Shadows", Float) = 1.0
-        [HideInInspector] _TerrainHorizon0("Terrain Horizon 0", 2D) = "black" {}
-        [HideInInspector] _TerrainHorizon1("Terrain Horizon 1", 2D) = "black" {}
+        _ReceiveShadows("Receive Shadows", Float) = 1.0
+        [HideInInspector] [NoScaleOffset] _TerrainHorizon0("Terrain Horizon 0", 2D) = "black" {}
+        [HideInInspector] [NoScaleOffset] _TerrainHorizon1("Terrain Horizon 1", 2D) = "black" {}
         [HideInInspector] _TerrainHorizonUV("Terrain Horizon UV", Vector) = (0,0,0,0)
         [HideInInspector] _TerrainHorizonParams("Terrain Horizon Strength / Softness", Vector) = (0,0,0,0)
         [HideInInspector] _TerrainHorizonTint("Terrain Horizon Tint", Color) = (1,1,1,1)
@@ -978,4 +978,5 @@ Shader "Custom/StylizedTerrainURP"
             ENDHLSL
         }
     }
+    CustomEditor "TerrainMaterialInspector"
 }

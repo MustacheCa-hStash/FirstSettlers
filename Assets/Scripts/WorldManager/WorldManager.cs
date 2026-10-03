@@ -20,25 +20,17 @@ public class WorldManager : MonoBehaviour
     [SerializeField] Transform viewer;
     [SerializeField] Camera viewerCamera;
     [SerializeField] Transform chunkParent;
-    [SerializeField] Transform foliageParent;
     [SerializeField] GrassSettings grassSettings;
     [SerializeField] FlowerSettings flowerSettings = new FlowerSettings();
-    [Header("Ambient Butterflies")]
     [SerializeField] ButterflySettings butterflySettings = new ButterflySettings();
-    [Header("Ambient Bees")]
     [SerializeField] BeeSettings beeSettings = new BeeSettings();
-    [Header("Lily Pads")]
     [SerializeField] LilyPadSettings lilyPadSettings = new LilyPadSettings();
-    [Header("Cattails")]
     [SerializeField] CattailSettings cattailSettings = new CattailSettings();
     [SerializeField] CloverSettings cloverSettings = new CloverSettings();
     [SerializeField] DandelionSettings dandelionSettings = new DandelionSettings();
-    [Header("Forest Leaf Clusters")]
     [SerializeField] LeafClusterSettings leafClusterSettings = new LeafClusterSettings();
-    [Header("Forest Ferns")]
     [SerializeField] FernSettings fernSettings = new FernSettings();
     [SerializeField] TreeSettings treeSettings;
-    [Header("Broad Terrain")]
     [Tooltip("Scale of the base landforms. Erosion Wavelength has its own independent terrain-space scale.")]
     [SerializeField] float sampleScale = 10f;
     [Tooltip("Broadens the smooth mountain mask before global erosion. Higher values create more mountainous land; no duplicated or stretched mountain surfaces. Regenerate after changing.")]
@@ -48,30 +40,24 @@ public class WorldManager : MonoBehaviour
     [Tooltip("Render-only gamma for mountain snow coverage. 1 disables the boost; lower values make blended mountain snow brighter without changing other surface transitions. Restart Play Mode after changing.")]
     [SerializeField, Range(0.35f, 1.25f)] float mountainSnowBlendGamma = MountainSnow.DefaultRenderCoverageGamma;
     [SerializeField] float worldScale = 1.0f;
-    [Header("Climate Noise (not terrain erosion)")]
     [SerializeField] int octaves = 3;
     [SerializeField] float persistence = 0.5f;
     [SerializeField] float lacunarity = 2f;
-    [Header("Heightfield overhaul")]
     [SerializeField] WorldErosionSettings erosion = WorldErosionSettings.Default;
     [SerializeField] float meshHeightMultiplier = 10f;
     [SerializeField] Material terrainMaterial;
     [SerializeField] Material waterMaterial;
-    [Header("Water")]
     [Tooltip("Shared world-space surface Y for rivers and lakes. Applied when the world starts; restart Play Mode after changing. Raising this also expands lakes and moves shorelines.")]
     [SerializeField] float globalWaterY = TerrainWaterSettings.DefaultWaterLevel * 10f;
     [SerializeField, Range(0.25f, 1f)] float waterReflectionResolution = 0.7f;
     [SerializeField, Range(1f, 60f)] float waterReflectionUpdatesPerSecond = 30f;
     [SerializeField, Range(30f, 240f)] float waterReflectionMovingUpdatesPerSecond = 120f;
     [SerializeField, Min(20f)] float waterReflectionDistance = 300f;
-    [Header("Terrain Lighting")]
     [SerializeField] bool terrainReceiveShadows = true;
     [SerializeField] TerrainHorizonShadowSettings terrainHorizonShadows = new TerrainHorizonShadowSettings();
-    [Header("Terrain Generation Profiling")]
     [SerializeField] bool logTerrainGenerationProfile = true;
     [SerializeField] float terrainGenerationProfileLogInterval = 5f;
     [SerializeField] bool resetTerrainGenerationProfileAfterLog = true;
-    [Header("Terrain Streaming Budgets")]
     [SerializeField] int maxActiveTerrainDataJobs = 3;
     [SerializeField] int maxActiveFarTerrainJobs = 1;
     [SerializeField] int maxActiveMeshJobs = 4;
@@ -108,7 +94,7 @@ public class WorldManager : MonoBehaviour
         chunkManager = new ChunkManager(viewDistance, colliderDistance, enableFarTerrain, farTerrainStartRing,
             farTerrainMacroTileSize, farTerrainHeightGridResolution, farTerrainControlMapResolution, farTerrainSkirtDepth,
             chunkSize, worldSeed, viewer, viewerCamera,
-            chunkParent, foliageParent, grassSettings, flowerSettings, lilyPadSettings, cattailSettings, cloverSettings, dandelionSettings, treeSettings, sampleScale, worldScale, octaves, persistence,
+            chunkParent, null, grassSettings, flowerSettings, lilyPadSettings, cattailSettings, cloverSettings, dandelionSettings, treeSettings, sampleScale, worldScale, octaves, persistence,
             lacunarity, meshHeightMultiplier, terrainMaterial, waterMaterial,
             terrainReceiveShadows, new TerrainWaterSettings(globalWaterY, meshHeightMultiplier, worldScale),
             maxActiveTerrainDataJobs, maxActiveFarTerrainJobs, maxActiveMeshJobs,

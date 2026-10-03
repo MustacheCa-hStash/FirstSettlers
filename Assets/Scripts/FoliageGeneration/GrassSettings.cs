@@ -62,7 +62,6 @@ public class GrassSettings
     public int seedOffset = 5000;
 
     [Header("Forest Grass Instance Tint")]
-    public string grassInstanceDataPropertyName = "_GrassInstanceData";
     public Color forestDarkGrassColor = new Color(0.10f, 0.28f, 0.09f, 1f);
     public Color forestMidGrassColor = new Color(0.16f, 0.40f, 0.13f, 1f);
     public Color forestLightGrassColor = new Color(0.25f, 0.52f, 0.19f, 1f);
@@ -74,12 +73,4 @@ public class GrassSettings
     [HideInInspector] public int billboardCellsPerAxis = 50;
     [HideInInspector] public float billboardSpawnChance = 0.4f;
 
-    [HideInInspector] public Vector2 billboardUniformScaleRange = new Vector2(1.5f, 2.5f);
-    [HideInInspector] public bool randomizeBillboardYaw = true;
-    [HideInInspector] public int billboardSeedOffset = 9000;
-
-    [Header("Billboard Render Fade")]
-    public bool enableBillboardRenderFade = true;
-    public float billboardRenderFadeDuration = 0.65f;
-    public float billboardFadeDitherPixelSize = 1f;
 }
