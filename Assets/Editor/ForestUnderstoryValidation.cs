@@ -49,7 +49,7 @@ public static class ForestUnderstoryValidation
         var floor=record.WorldFeaturePlan.ForestStructure.FloorEcologyMap;
         for(int x=0;x<131;x++) for(int z=0;z<131;z++)
         {
-            floor[x,z]=new float4(.8f,0,x>=55 && x<=75?.4f:0,0);
+            floor[x,z]=new float4(.8f,0,x>=55 && x<=75?1f:0,0);
             if(x<55) {record.BiomeMap[x,z]=BiomeType.Grassland;record.GroundCoverMap[x,z]=GroundCoverType.Default;}
         }
         record.NativeData.Dispose();Set(record,"nativeTerrainData",new ChunkRecord.NativeTerrainData(record.HeightMap,record.SlopeMap,
@@ -60,7 +60,7 @@ public static class ForestUnderstoryValidation
         foreach(var bucket in record.FoliageData.nearGrassInstancesBySubChunk) foreach(var i in bucket)
         {
             float sampleX=(i.localPosition.x+19.2f)/.3f;
-            Check(sampleX<52 || sampleX>76,"Grass poked through the moss transition.");
+            Check(sampleX<55 || sampleX>73,"Grass poked through a dense moss core.");
             ranks.Add(i.selectionRank);
         }
         Check(ranks.Count>100,"Moss removed grass outside its footprint.");
@@ -70,7 +70,7 @@ public static class ForestUnderstoryValidation
         record.NativeData.Dispose();Set(record,"nativeTerrainData",null);record.FoliageData.ClearBillboards();
         FoliageGenerator.GenerateBillboardGrassForChunk(record,grass,null,null,1937,128,.3f,10);
         Check(record.FoliageData.billboardGrassInstances.Count==ranks.Count,"Owned density fallback ignored moss.");
-        Debug.Log($"MOSS GRASS PASS: hard partial-moss stripe exclusion with edge margin; {ranks.Count} grasses outside moss, near/far/fallback parity.");
+        Debug.Log($"MOSS GRASS PASS: dense moss cores excluded with interpolated edges; {ranks.Count} grasses, near/far/fallback parity.");
     }
     private static void ValidateFernAndLeaves()
     {

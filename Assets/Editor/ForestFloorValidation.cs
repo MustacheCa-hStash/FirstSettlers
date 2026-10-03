@@ -43,9 +43,10 @@ public static class ForestFloorValidation
             Check(ForestFloorPolicy.Evaluate(position, 1937, 0.72f, 4, 0.8f).x == 0, "River retained grass.");
             float4 nearby = ForestFloorPolicy.Evaluate(position + new float2(0.01f, 0), 1937, 0.72f, 4, 0, 0.8f, 0);
             var delta=math.abs(closed-nearby);
-            // Grass now has a deliberate hard exclusion at the moss threshold.
-            if(ForestFloorPolicy.MossBlocksVegetation(closed.z)!=ForestFloorPolicy.MossBlocksVegetation(nearby.z)) delta.x=0;
-            Check(math.cmax(delta) < 0.005f, "Substrate field or grass outside a moss edge contains an abrupt step.");
+            Check(math.cmax(delta) < 0.005f, "Substrate or grass habitat field contains an abrupt step.");
+            Check(math.abs(closed.x * ForestFloorPolicy.GrassRetention(closed.z) -
+                nearby.x * ForestFloorPolicy.GrassRetention(nearby.z)) < .005f,
+                "Effective grass density contains an abrupt moss step.");
             Check(ForestFloorPolicy.ControlWeights(gap).y > 0.85f, "Opening erased the litter substrate.");
             interior += closed.x; opening += gap.x;
             if(!ForestFloorPolicy.MossBlocksVegetation(gap.z)) {openingOutsideMoss+=gap.x;openingSamples++;}

@@ -31,11 +31,15 @@ public static class BiomeTransitionSeamValidation
         {
             Check(a.ForestMembershipMap[Size+1,z]==east.ForestMembershipMap[1,z],"Membership X seam differs.");
             Check(math.cmax(math.abs(a.ForestStructure.FloorEcologyMap[Size+1,z]-east.ForestStructure.FloorEcologyMap[1,z]))<.000001f,"Floor X seam differs.");
+            Check(math.cmax(math.abs(ForestFloorPolicy.GrassSampleAt(a.ForestStructure.FloorEcologyMap,Size+1,z)-
+                ForestFloorPolicy.GrassSampleAt(east.ForestStructure.FloorEcologyMap,1,z)))<.000001f,"Grass habitat/moss X seam differs.");
         }
         for(int x=0;x<N;x++)
         {
             Check(a.ForestMembershipMap[x,Size+1]==north.ForestMembershipMap[x,1],"Membership Z seam differs.");
             Check(math.cmax(math.abs(a.ForestStructure.FloorEcologyMap[x,Size+1]-north.ForestStructure.FloorEcologyMap[x,1]))<.000001f,"Floor Z seam differs.");
+            Check(math.cmax(math.abs(ForestFloorPolicy.GrassSampleAt(a.ForestStructure.FloorEcologyMap,x,Size+1)-
+                ForestFloorPolicy.GrassSampleAt(north.ForestStructure.FloorEcologyMap,x,1)))<.000001f,"Grass habitat/moss Z seam differs.");
         }
         for(int i=0;i<=Size;i++) for(int map=0;map<3;map++)
         {

@@ -22,6 +22,7 @@ public static class BiomeTransitionValidation
         ValidatePlanner();
         ValidateGrassAndLifetime();
         ValidateGrassProfileSubsets();
+        ValidateGrassMoss();
         ValidatePlants();
         ValidateTerrain();
         BiomeTransitionSeamValidation.Run();
@@ -52,6 +53,77 @@ public static class BiomeTransitionValidation
             EditorApplication.Exit(0);
         }
         catch(Exception ex) {Debug.LogException(ex);EditorApplication.Exit(1);}
+    }
+
+    public static void RunGrassMossBatch()
+    {
+        try
+        {
+            Unity.Burst.BurstCompiler.Options.EnableBurstCompileSynchronously = true;
+            ValidateGrassMoss();
+            ValidateGrassAndLifetime();
+            ValidateGrassProfileSubsets();
+            BiomeTransitionSeamValidation.Run();
+            ForestFloorValidation.Run();
+            ForestUnderstoryValidation.Run();
+            Debug.Log("GRASS MOSS FIX PASS: gradual visible-moss retention, transition profiles, near/far/fallback identity, seams and existing floor/understory regressions.");
+            EditorApplication.Exit(0);
+        }
+        catch (Exception ex) { Debug.LogException(ex); EditorApplication.Exit(1); }
+    }
+
+    private static void ValidateGrassMoss()
+    {
+        var options = new GrassSettings { cellsPerAxis = 112, subChunksPerChunk = 5 };
+        foreach (float membership in new[] { 0f, .25f, .5f, 1f })
+        {
+            Dictionary<uint, FoliageInstanceData> baseline = null;
+            foreach (float rawMoss in new[] { 0f, .05f, .3f, .58f, 1f })
+            {
+                using var record = Fixture(membership);
+                var plan = record.WorldFeaturePlan;
+                float weight = BiomeTransitionPolicy.ForestWeight(plan.ForestMembershipMap[1,1], record.BiomeMap[1,1]);
+                for (int x = 0; x < N; x++) for (int z = 0; z < N; z++)
+                    plan.ForestStructure.FloorEcologyMap[x,z] = BiomeTransitionPolicy.BlendFloor(new float4(.2f,0f,rawMoss,.3f),weight);
+                RebuildNative(record);
+                FoliageGenerator.GenerateGrassForChunk(record,options,null,null,Seed,Size,Scale,10);
+                var near = new Dictionary<uint,FoliageInstanceData>();
+                foreach (var bucket in record.FoliageData.nearGrassInstancesBySubChunk)
+                    foreach (var g in bucket) Check(near.TryAdd(g.selectionRank,g), "Moss duplicated a grass candidate.");
+                if (baseline == null) baseline = near;
+                Check(near.All(p => baseline.TryGetValue(p.Key,out var b) && p.Value.forestBlend == b.forestBlend),
+                    "Moss added candidates or changed their chosen grass family.");
+                if (rawMoss <= .05f) Check(near.Count >= baseline.Count * .98f, "Faint moss removed a grass patch.");
+                if (membership == 0f) Check(near.Count == baseline.Count, "Unweighted moss reduced pure meadow grass.");
+                if (membership == .25f && rawMoss == 1f)
+                    Check(near.Values.Count(g => g.forestBlend == 0f) > 1000, "Faint weighted moss vetoed the meadow share.");
+                if (membership == 1f && rawMoss >= .58f) Check(near.Count == 0, "Dense visible moss retained grass.");
+                if (membership == 1f && rawMoss == .3f)
+                    Check(near.Count > baseline.Count * .3f && near.Count < baseline.Count * .7f,
+                        "Partial moss did not gradually thin grass.");
+                void CheckBillboards()
+                {
+                    FoliageGenerator.GenerateBillboardGrassForChunk(record,options,null,null,Seed,Size,Scale,10);
+                    Check(record.FoliageData.billboardGrassInstances.Count == near.Count,
+                        "Moss near/far/fallback counts disagree.");
+                    foreach (var g in record.FoliageData.billboardGrassInstances)
+                        Check(near.TryGetValue(g.selectionRank,out var n) && g.forestBlend == n.forestBlend && g.localPosition == n.localPosition,
+                            "Moss near/far/fallback changed candidate identity.");
+                }
+                CheckBillboards();
+                record.NativeData.Dispose(); Set(record,"nativeTerrainData",null); record.FoliageData.ClearBillboards();
+                CheckBillboards();
+                Debug.Log($"GRASS MOSS retention: forest={weight:F3}, visible coverage={rawMoss*weight:F3}, candidates={near.Count}/{baseline.Count}.");
+            }
+        }
+        // A faint neighboring colony must blur into coverage, never mark a whole cell as excluded.
+        var floor = new float4[5,5];
+        for (int x = 0; x < 5; x++) for (int z = 0; z < 5; z++) floor[x,z] = new float4(1,0,0,0);
+        floor[3,2].z = .05f;
+        var sample = ForestFloorPolicy.GrassSampleAt(floor,2,2);
+        Check(sample.x == 1f && ForestFloorPolicy.GrassRetention(sample.y) == 1f,
+            "A faint neighboring colony expanded into a grass exclusion.");
+        Debug.Log("GRASS MOSS PASS: faint edges survive, partial cover thins, dense cores clear, meadow share retained, and near/far/fallback parity.");
     }
 
     private static BiomeTransitionSample Sample(float moisture, BiomeType biome = BiomeType.Grassland,

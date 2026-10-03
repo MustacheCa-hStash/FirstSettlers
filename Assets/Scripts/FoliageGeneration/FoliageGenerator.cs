@@ -196,8 +196,8 @@ public static class FoliageGenerator
                 groundCoverMapHeight = nativeData.GroundCoverMapHeight,
                 hasGroundCoverMap = nativeData.HasGroundCoverMap,
                 forestMembershipMap = nativeData.ForestMembershipMap,
-                forestGrassDensityMap = nativeData.ForestGrassDensityMap,
-                hasForestGrassDensityMap = nativeData.HasForestGrassDensityMap,
+                forestGrassMap = nativeData.ForestGrassMap,
+                hasForestGrassMap = nativeData.HasForestGrassMap,
                 treeExclusionPositions = treeExclusionPositions,
                 bushExclusionPositions = bushExclusionPositions,
                 rockExclusionPositions = rockExclusionPositions,
@@ -484,7 +484,7 @@ public static class FoliageGenerator
         NativeArray<BiomeType> biomeMap = default;
         NativeArray<GroundCoverType> groundCoverMap = default;
         NativeArray<byte> forestMembershipMap = default;
-        NativeArray<float> forestGrassDensityMap = default;
+        NativeArray<float2> forestGrassMap = default;
         NativeArray<float2> treeExclusionPositions = default;
         NativeArray<float2> bushExclusionPositions = default;
         NativeArray<float2> rockExclusionPositions = default;
@@ -506,7 +506,7 @@ public static class FoliageGenerator
                 biomeMap = data.BiomeMap; biomeMapWidth = data.BiomeMapWidth; biomeMapHeight = data.BiomeMapHeight;
                 groundCoverMap = data.GroundCoverMap; groundCoverMapWidth = data.GroundCoverMapWidth; groundCoverMapHeight = data.GroundCoverMapHeight;
                 forestMembershipMap = data.ForestMembershipMap;
-                forestGrassDensityMap = data.ForestGrassDensityMap;
+                forestGrassMap = data.ForestGrassMap;
             }
             else
             {
@@ -515,7 +515,7 @@ public static class FoliageGenerator
                 biomeMap = FlattenBiomeMap(record.BiomeMap, Allocator.Persistent, out biomeMapWidth, out biomeMapHeight);
                 groundCoverMap = FlattenGroundCoverMap(record.GroundCoverMap, Allocator.Persistent, out groundCoverMapWidth, out groundCoverMapHeight);
                 forestMembershipMap = FlattenMembershipMap(record.WorldFeaturePlan?.ForestMembershipMap);
-                forestGrassDensityMap = FlattenForestFloorMap(record.WorldFeaturePlan?.ForestStructure.FloorEcologyMap);
+                forestGrassMap = FlattenForestFloorMap(record.WorldFeaturePlan?.ForestStructure.FloorEcologyMap);
             }
             treeExclusionPositions = CreateTreeExclusionPositions(foliageData.treeCubeInstances, Allocator.Persistent);
             bushExclusionPositions = CreateBushExclusionPositions(foliageData.bushInstances, Allocator.Persistent);
@@ -542,8 +542,8 @@ public static class FoliageGenerator
                 groundCoverMapHeight = groundCoverMapHeight,
                 hasGroundCoverMap = record.GroundCoverMap != null,
                 forestMembershipMap = forestMembershipMap,
-                forestGrassDensityMap = forestGrassDensityMap,
-                hasForestGrassDensityMap = forestGrassDensityMap.Length > 0,
+                forestGrassMap = forestGrassMap,
+                hasForestGrassMap = forestGrassMap.Length > 0,
                 treeExclusionPositions = treeExclusionPositions,
                 bushExclusionPositions = bushExclusionPositions,
                 rockExclusionPositions = rockExclusionPositions,
@@ -575,7 +575,7 @@ public static class FoliageGenerator
             handle = job.Schedule(candidateCount, 64);
             handle = new BillboardResultSortJob { results = results }.Schedule(handle);
             return new BillboardGrassGenerationJob(record, handle, nativeLease, heightMap, surfaceMap,
-                biomeMap, groundCoverMap, forestGrassDensityMap, forestMembershipMap, treeExclusionPositions, bushExclusionPositions,
+                biomeMap, groundCoverMap, forestGrassMap, forestMembershipMap, treeExclusionPositions, bushExclusionPositions,
                 rockExclusionPositions, cloverInfluences, results);
         }
         catch
@@ -588,7 +588,7 @@ public static class FoliageGenerator
                 if (surfaceMap.IsCreated) surfaceMap.Dispose();
                 if (biomeMap.IsCreated) biomeMap.Dispose();
                 if (groundCoverMap.IsCreated) groundCoverMap.Dispose();
-                if (forestGrassDensityMap.IsCreated) forestGrassDensityMap.Dispose();
+                if (forestGrassMap.IsCreated) forestGrassMap.Dispose();
                 if (forestMembershipMap.IsCreated) forestMembershipMap.Dispose();
             }
             if (treeExclusionPositions.IsCreated)
@@ -635,7 +635,7 @@ public static class FoliageGenerator
         private NativeArray<BiomeType> biomeMap;
         private NativeArray<GroundCoverType> groundCoverMap;
         private NativeArray<byte> forestMembershipMap;
-        private NativeArray<float> forestGrassDensityMap;
+        private NativeArray<float2> forestGrassMap;
         private NativeArray<float2> treeExclusionPositions;
         private NativeArray<float2> bushExclusionPositions;
         private NativeArray<float2> rockExclusionPositions;
@@ -658,7 +658,7 @@ public static class FoliageGenerator
             NativeArray<SurfaceType> surfaceMap,
             NativeArray<BiomeType> biomeMap,
             NativeArray<GroundCoverType> groundCoverMap,
-            NativeArray<float> forestGrassDensityMap,
+            NativeArray<float2> forestGrassMap,
             NativeArray<byte> forestMembershipMap,
             NativeArray<float2> treeExclusionPositions,
             NativeArray<float2> bushExclusionPositions,
@@ -675,7 +675,7 @@ public static class FoliageGenerator
             this.surfaceMap = surfaceMap;
             this.biomeMap = biomeMap;
             this.groundCoverMap = groundCoverMap;
-            this.forestGrassDensityMap = forestGrassDensityMap;
+            this.forestGrassMap = forestGrassMap;
             this.forestMembershipMap = forestMembershipMap;
             this.treeExclusionPositions = treeExclusionPositions;
             this.bushExclusionPositions = bushExclusionPositions;
@@ -733,7 +733,7 @@ public static class FoliageGenerator
                 if (surfaceMap.IsCreated) surfaceMap.Dispose();
                 if (biomeMap.IsCreated) biomeMap.Dispose();
                 if (groundCoverMap.IsCreated) groundCoverMap.Dispose();
-                if (forestGrassDensityMap.IsCreated) forestGrassDensityMap.Dispose();
+                if (forestGrassMap.IsCreated) forestGrassMap.Dispose();
                 if (forestMembershipMap.IsCreated) forestMembershipMap.Dispose();
             }
             nativeLease = null;
@@ -2117,24 +2117,22 @@ public static class FoliageGenerator
             record.WorldFeaturePlan?.ForestStructure.FloorEcologyMap,
             new float2(position.x / worldScale - topLeftX, position.z / worldScale - bottomLeftZ)));
 
-    private static NativeArray<float> FlattenForestFloorMap(float4[,] source)
+    private static NativeArray<float2> FlattenForestFloorMap(float4[,] source)
     {
         int width = source?.GetLength(0) ?? 0, height = source?.GetLength(1) ?? 0;
-        var result = new NativeArray<float>(width * height, Allocator.Persistent);
+        var result = new NativeArray<float2>(width * height, Allocator.Persistent);
         for (int x = 0; x < width; x++)
-            for (int z = 0; z < height; z++) result[x * height + z] = ForestFloorPolicy.GrassDensityAt(source,x,z);
+            for (int z = 0; z < height; z++) result[x * height + z] = ForestFloorPolicy.GrassSampleAt(source,x,z);
         return result;
     }
 
-    private static float SampleForestDensity(NativeArray<float> map, int width, int height,
+    private static float2 SampleForestGrass(NativeArray<float2> map, int width, int height,
         float sampleX, float sampleZ)
     {
         float x = math.clamp(sampleX + 1f, 0f, width - 1f);
         float z = math.clamp(sampleZ + 1f, 0f, height - 1f);
         int x0 = (int)math.floor(x), z0 = (int)math.floor(z);
         int x1 = math.min(x0 + 1, width - 1), z1 = math.min(z0 + 1, height - 1);
-        if (math.min(math.min(map[x0*height+z0],map[x1*height+z0]),
-            math.min(map[x0*height+z1],map[x1*height+z1])) < 0f) return -1f;
         return math.lerp(math.lerp(map[x0 * height + z0], map[x1 * height + z0], x - x0),
             math.lerp(map[x0 * height + z1], map[x1 * height + z1], x - x0), z - z0);
     }
@@ -2797,8 +2795,8 @@ public static class FoliageGenerator
         public int groundCoverMapHeight;
         public bool hasGroundCoverMap;
         [ReadOnly] public NativeArray<byte> forestMembershipMap;
-        [ReadOnly] public NativeArray<float> forestGrassDensityMap;
-        public bool hasForestGrassDensityMap;
+        [ReadOnly] public NativeArray<float2> forestGrassMap;
+        public bool hasForestGrassMap;
         [ReadOnly] public NativeArray<float2> treeExclusionPositions;
         [ReadOnly] public NativeArray<float2> bushExclusionPositions;
         [ReadOnly] public NativeArray<float2> rockExclusionPositions;
@@ -2839,11 +2837,12 @@ public static class FoliageGenerator
             int paddedX = mapX + 1;
             int paddedZ = mapZ + 1;
 
-            float floorDensity = hasForestGrassDensityMap
-                ? SampleForestDensity(forestGrassDensityMap,surfaceMapWidth,surfaceMapHeight,sampleX,sampleZ) : 1f;
-            float forestBlend = GetGrassForestBlend(paddedX, paddedZ, cellHash, floorDensity, out float profileDensity);
-            if (!AllowsInstancedGrass(paddedX, paddedZ) || floorDensity < 0f ||
-                (IsForestFloor(paddedX, paddedZ) && Hash01(cellHash + 811) >=
+            float2 floor = hasForestGrassMap
+                ? SampleForestGrass(forestGrassMap,surfaceMapWidth,surfaceMapHeight,sampleX,sampleZ) : new float2(1f, 0f);
+            float forestBlend = GetGrassForestBlend(paddedX, paddedZ, cellHash, floor.x, out float profileDensity);
+            profileDensity *= ForestFloorPolicy.GrassRetention(floor.y);
+            if (!AllowsInstancedGrass(paddedX, paddedZ) ||
+                ((IsForestFloor(paddedX, paddedZ) || floor.y > 0f) && Hash01(cellHash + 811) >=
                     profileDensity))
             {
                 results[index] = default;
@@ -2897,7 +2896,7 @@ public static class FoliageGenerator
         private bool IsForestFloor(int x, int z)
         {
             int index = math.clamp(x, 0, biomeMapWidth - 1) * biomeMapHeight + math.clamp(z, 0, biomeMapHeight - 1);
-            return hasForestGrassDensityMap && (biomeMap[index] == BiomeType.Forest ||
+            return hasForestGrassMap && (biomeMap[index] == BiomeType.Forest ||
                 forestMembershipMap.Length > 0 && forestMembershipMap[index] > 1);
         }
 
@@ -3701,8 +3700,8 @@ public static class FoliageGenerator
         public int groundCoverMapHeight;
         public bool hasGroundCoverMap;
         [ReadOnly] public NativeArray<byte> forestMembershipMap;
-        [ReadOnly] public NativeArray<float> forestGrassDensityMap;
-        public bool hasForestGrassDensityMap;
+        [ReadOnly] public NativeArray<float2> forestGrassMap;
+        public bool hasForestGrassMap;
         [ReadOnly] public NativeArray<float2> treeExclusionPositions;
         [ReadOnly] public NativeArray<float2> bushExclusionPositions;
         [ReadOnly] public NativeArray<float2> rockExclusionPositions;
@@ -3758,11 +3757,12 @@ public static class FoliageGenerator
             int paddedX = mapX + 1;
             int paddedZ = mapZ + 1;
 
-            float floorDensity = hasForestGrassDensityMap
-                ? SampleForestDensity(forestGrassDensityMap,surfaceMapWidth,surfaceMapHeight,sampleX,sampleZ) : 1f;
-            float forestBlend = GetGrassForestBlend(paddedX, paddedZ, cellHash, floorDensity, out float profileDensity);
-            if (!AllowsInstancedGrass(paddedX, paddedZ) || floorDensity < 0f ||
-                (IsForestFloor(paddedX, paddedZ) && Hash01(cellHash + 811) >=
+            float2 floor = hasForestGrassMap
+                ? SampleForestGrass(forestGrassMap,surfaceMapWidth,surfaceMapHeight,sampleX,sampleZ) : new float2(1f, 0f);
+            float forestBlend = GetGrassForestBlend(paddedX, paddedZ, cellHash, floor.x, out float profileDensity);
+            profileDensity *= ForestFloorPolicy.GrassRetention(floor.y);
+            if (!AllowsInstancedGrass(paddedX, paddedZ) ||
+                ((IsForestFloor(paddedX, paddedZ) || floor.y > 0f) && Hash01(cellHash + 811) >=
                     profileDensity))
             {
                 results[index] = default;
@@ -3829,7 +3829,7 @@ public static class FoliageGenerator
         private bool IsForestFloor(int x, int z)
         {
             int index = math.clamp(x, 0, biomeMapWidth - 1) * biomeMapHeight + math.clamp(z, 0, biomeMapHeight - 1);
-            return hasForestGrassDensityMap && (biomeMap[index] == BiomeType.Forest ||
+            return hasForestGrassMap && (biomeMap[index] == BiomeType.Forest ||
                 forestMembershipMap.Length > 0 && forestMembershipMap[index] > 1);
         }
 

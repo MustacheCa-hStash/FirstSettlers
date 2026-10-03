@@ -1,0 +1,31 @@
+{
+  "size": 1024,
+  "tile_meters_at_default": 8.333333333333334,
+  "relief_estimate_meters": 0.18,
+  "maps": {
+    "albedo": {
+      "max_opposite_edge_error_8bit": 0.0,
+      "mean_interior_neighbor_delta_8bit": 12.411035760834148
+    },
+    "height": {
+      "max_opposite_edge_error_8bit": 0.0,
+      "mean_interior_neighbor_delta_8bit": 2.1024961052052786
+    },
+    "normal": {
+      "max_opposite_edge_error_8bit": 0.0,
+      "mean_interior_neighbor_delta_8bit": 5.058822219167482
+    }
+  },
+  "normal_convention": "OpenGL +Y, importer flipGreenChannel=0",
+  "runtime_height": false,
+  "average_albedo_linear": [
+    0.23005659540579274,
+    0.2147719160722027,
+    0.1964622106745359
+  ],
+  "average_albedo_srgb": [
+    0.5169397042552376,
+    0.5007887449801225,
+    0.4805319516047852
+  ]
+}

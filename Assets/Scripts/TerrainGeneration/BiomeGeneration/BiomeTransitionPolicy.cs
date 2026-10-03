@@ -73,6 +73,8 @@ public static class BiomeTransitionPolicy
     public static float4 FloorControls(float4 blendedEcology, float membership)
     {
         float rawDensity = ForestGrassDensity(blendedEcology.x, membership);
+        if (membership > 0f)
+            rawDensity = ForestFloorPolicy.SubstrateGrassDensity(rawDensity, blendedEcology.z / membership);
         return new float4(membership, membership * (1f - rawDensity * .18f), blendedEcology.y, blendedEcology.z);
     }
 }

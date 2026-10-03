@@ -70,7 +70,7 @@ public static class ForestMossTreeValidation
         {
             var wet=ForestFloorPolicy.Evaluate(new float2(x,z),1937,.85f,4,0,.85f,0);
             var low=ForestFloorPolicy.Evaluate(new float2(x,z),1937,.1f,4,0,.85f,0);
-            if(wet.z>.58f) {strong++; Check(wet.x<.007f,"Dense moss retained meadow-like grass.");}
+            if(wet.z>.58f) {strong++; Check(wet.x*ForestFloorPolicy.GrassRetention(wet.z)==0,"Dense moss retained grass.");}
             if(low.z>0) dry++;
             total+=wet.z;
             Check(ForestFloorPolicy.Evaluate(new float2(x,z),1937,.85f,4,.9f,.85f,0).z==0,"Moss spread into open water.");
@@ -89,7 +89,7 @@ public static class ForestMossTreeValidation
         var c=new LeafClusterGeneration(carpet,leafSettings,145678,128,.3f,10);
         while(!a.Complete) a.Step(256);while(!c.Complete) c.Step(256);
         Check(c.Instances.Count>0 && c.Instances.Count<a.Instances.Count*.4f,"Moss did not retain sparse fallen leaves.");
-        // Native grass copies the density field after suppression, without adding a moss buffer.
+        // Native grass reuses the floor field's density and moss in one paired buffer.
         var grass=new GrassSettings {cellsPerAxis=144,subChunksPerChunk=10};
         FoliageGenerator.GenerateGrassForChunk(clear,grass,null,null,145678,128,.3f,10);
         FoliageGenerator.GenerateGrassForChunk(carpet,grass,null,null,145678,128,.3f,10);

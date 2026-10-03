@@ -1,0 +1,11 @@
+{
+  "shader_variants": 48,
+  "graphics_api": "Direct3D11",
+  "normal_vs_albedo_only_max_delta_8bit": 36,
+  "normal_vs_albedo_only_changed_pixels": 62951,
+  "offscreen_positive_negative_and_distance_captures": "passed",
+  "live_fps_benchmark": false,
+  "untinted_nearby_albedo": true,
+  "distant_before_after_max_delta_8bit": 0,
+  "distant_texture_settings_independence": "passed"
+}

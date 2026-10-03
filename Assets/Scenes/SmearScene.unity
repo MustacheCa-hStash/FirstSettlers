@@ -1520,7 +1520,7 @@ Transform:
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -300, y: 150, z: -1000}
+  m_LocalPosition: {x: -460, y: 150, z: -740}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1703,7 +1703,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameTimeManager
   startAutomatically: 1
   useUnscaledDeltaTime: 0
-  realSecondsPerGameHour: 5
+  realSecondsPerGameHour: 75
   timeScale: 1
   daylightHours: 16
   nighttimeHours: 8

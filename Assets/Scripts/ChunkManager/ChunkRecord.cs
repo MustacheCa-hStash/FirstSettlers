@@ -53,9 +53,9 @@ public class ChunkRecord : System.IDisposable
         public NativeArray<WaterState> WaterStateMap { get; private set; }
         public NativeArray<GroundCoverType> GroundCoverMap { get; private set; }
         public NativeArray<float> RiverMaskMap { get; private set; }
-        public NativeArray<float> ForestGrassDensityMap { get; private set; }
+        public NativeArray<Unity.Mathematics.float2> ForestGrassMap { get; private set; }
         public NativeArray<byte> ForestMembershipMap { get; private set; }
-        public bool HasForestGrassDensityMap => ForestGrassDensityMap.IsCreated && ForestGrassDensityMap.Length > 0;
+        public bool HasForestGrassMap => ForestGrassMap.IsCreated && ForestGrassMap.Length > 0;
 
         public int HeightMapWidth { get; private set; }
         public int HeightMapHeight { get; private set; }
@@ -96,7 +96,7 @@ public class ChunkRecord : System.IDisposable
             sourceForestFloorMap = forestFloorMap;
             sourceForestMembershipMap = forestMembershipMap;
             ForestMembershipMap = forestMembershipMap == null ? new NativeArray<byte>(0, Allocator.Persistent) : CopyMap(forestMembershipMap, out _, out _);
-            ForestGrassDensityMap = CopyForestGrassDensity(forestFloorMap);
+            ForestGrassMap = CopyForestGrass(forestFloorMap);
             HeightMap = CopyFloatMap(heightMap, out int heightWidth, out int heightHeight);
             HeightMapWidth = heightWidth;
             HeightMapHeight = heightHeight;
@@ -144,7 +144,7 @@ public class ChunkRecord : System.IDisposable
             sourceForestFloorMap = forestFloorMap;
             sourceForestMembershipMap = forestMembershipMap;
             ForestMembershipMap = forestMembershipMap == null ? new NativeArray<byte>(0, Allocator.Persistent) : CopyMap(forestMembershipMap, out _, out _);
-            ForestGrassDensityMap = CopyForestGrassDensity(forestFloorMap);
+            ForestGrassMap = CopyForestGrass(forestFloorMap);
             HeightMap = heights; SlopeMap = slopes; BiomeMap = biomes;
             SurfaceTypeMap = surfaces; WaterStateMap = waters;
             GroundCoverMap = covers; RiverMaskMap = rivers;
@@ -157,13 +157,13 @@ public class ChunkRecord : System.IDisposable
             RiverMaskMapWidth = riverMaskMap?.GetLength(0) ?? 0; RiverMaskMapHeight = riverMaskMap?.GetLength(1) ?? 0;
         }
 
-        private static NativeArray<float> CopyForestGrassDensity(Unity.Mathematics.float4[,] source)
+        private static NativeArray<Unity.Mathematics.float2> CopyForestGrass(Unity.Mathematics.float4[,] source)
         {
-            // Jobs retain only density; substrate channels remain in the managed generation plan.
+            // Reuse one grass buffer for habitat density and blurred, membership-weighted moss.
             int width = source?.GetLength(0) ?? 0, height = source?.GetLength(1) ?? 0;
-            var result = new NativeArray<float>(width * height, Allocator.Persistent);
+            var result = new NativeArray<Unity.Mathematics.float2>(width * height, Allocator.Persistent);
             for (int x = 0; x < width; x++)
-                for (int z = 0; z < height; z++) result[x * height + z] = ForestFloorPolicy.GrassDensityAt(source,x,z);
+                for (int z = 0; z < height; z++) result[x * height + z] = ForestFloorPolicy.GrassSampleAt(source,x,z);
             return result;
         }
 
@@ -239,7 +239,7 @@ public class ChunkRecord : System.IDisposable
             if (WaterStateMap.IsCreated) WaterStateMap.Dispose();
             if (GroundCoverMap.IsCreated) GroundCoverMap.Dispose();
             if (RiverMaskMap.IsCreated) RiverMaskMap.Dispose();
-            if (ForestGrassDensityMap.IsCreated) ForestGrassDensityMap.Dispose();
+            if (ForestGrassMap.IsCreated) ForestGrassMap.Dispose();
             if (ForestMembershipMap.IsCreated) ForestMembershipMap.Dispose();
         }
     }

@@ -177,12 +177,12 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _RockAlbedo:
-        m_Texture: {fileID: 2800000, guid: 81512cf2440cd9942809b85dd4cb799c, type: 3}
-        m_Scale: {x: 0.5, y: 0.5}
+        m_Texture: {fileID: 2800000, guid: f8f5a7a85cce4ea497b88b1550714f1f, type: 3}
+        m_Scale: {x: 0.1, y: 0.1}
         m_Offset: {x: 0, y: 0}
     - _RockNormal:
-        m_Texture: {fileID: 2800000, guid: 9adaa2918056e0f4188a338e5221a687, type: 3}
-        m_Scale: {x: 0.5, y: 0.5}
+        m_Texture: {fileID: 2800000, guid: 7d3736494cca4081a190702c4103f503, type: 3}
+        m_Scale: {x: 0.1, y: 0.1}
         m_Offset: {x: 0, y: 0}
     - _SandAlbedo:
         m_Texture: {fileID: 2800000, guid: 40481a7395ba9934eb64ce1ed6488677, type: 3}
@@ -304,9 +304,12 @@ Material:
     - _RockDetail: 1
     - _RockDetailFadeEnd: 450
     - _RockDetailFadeStart: 100
-    - _RockDetailStrength: 0.5
+    - _RockDetailStrength: 0.65
+    - _RockNormalFadeEnd: 110
+    - _RockNormalFadeStart: 35
     - _RockNormalStrength: 0.45
-    - _RockTiling: 0.12
+    - _RockTextureStrength: 1
+    - _RockTiling: 0.01
     - _SandDetailStrength: 0.35
     - _SandNormalStrength: 0.3
     - _SandTiling: 0.35
@@ -331,7 +334,7 @@ Material:
     m_Colors:
     - _BareDirtColor: {r: 0.2, g: 0.13, b: 0.08, a: 1}
     - _BaseColor: {r: 0.1254902, g: 0.54509807, b: 0.15686275, a: 1}
-    - _CliffColor: {r: 0.29999998, g: 0.29999998, b: 0.29999998, a: 1}
+    - _CliffColor: {r: 0.65, g: 0.64, b: 0.62, a: 1}
     - _Color: {r: 0.12549016, g: 0.545098, b: 0.1568627, a: 1}
     - _DarkColor: {r: 0.19999996, g: 0.47999996, b: 0.17999998, a: 1}
     - _DarkGrassColor: {r: 0.118474066, g: 0.28930807, b: 0.106443495, a: 1}
@@ -354,7 +357,8 @@ Material:
     - _MossFillColor: {r: 0.12, g: 0.18, b: 0.035, a: 1}
     - _MudColor: {r: 0.41999996, g: 0.31999996, b: 0.21999997, a: 1}
     - _RiverbedColor: {r: 0.34999996, g: 0.29999998, b: 0.23999995, a: 1}
-    - _RockColor: {r: 0.45, g: 0.45, b: 0.45, a: 1}
+    - _RockAverageAlbedo: {r: 0.5169397, g: 0.5007887, b: 0.480532, a: 1}
+    - _RockColor: {r: 0.65, g: 0.64, b: 0.62, a: 1}
     - _SandColor: {r: 0.8, g: 0.75, b: 0.54999995, a: 1}
     - _SnowColor: {r: 0.92, g: 0.94, b: 0.97999996, a: 1}
     - _SnowTint: {r: 1, g: 1, b: 1, a: 1}
