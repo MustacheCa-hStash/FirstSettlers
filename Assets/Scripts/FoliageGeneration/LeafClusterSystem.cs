@@ -4,8 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using Unity.Profiling;
 
-// Uses the same GPU instancing API as clover/dandelions. CPU culling selects
-// distance-dependent batches; DrawMeshInstanced submits leaves without Renderer objects.
+// Bounded CPU discovery with resident GPU culling/rendering and an instanced fallback.
 public sealed class LeafClusterSystem : IDisposable
 {
     private readonly ProfilerMarker GenerationMarker;
@@ -29,15 +28,37 @@ public sealed class LeafClusterSystem : IDisposable
     private GameObject resolvedPrefab;
     private GameObject defaultPrefab;
     private GameObject resolvedFarPrefab, defaultFarPrefab;
+    private GameObject resolvedCoarsePrefab,defaultCoarsePrefab;
     private Mesh mesh;
     private Material material;
     private Mesh farMesh;
     private Material farMaterial;
+    private Mesh coarseMesh;
+    private Material coarseMaterial;
+    private Matrix4x4 coarseLocal=Matrix4x4.identity;
     private Matrix4x4 farLocal = Matrix4x4.identity;
     private Matrix4x4 meshLocal = Matrix4x4.identity;
     private float meshRadius = 0.4f;
+    private ForestScatterGpuRenderer gpu;
+    private ComputeShader defaultCompute, activeCompute;
+    private readonly Dictionary<ChunkCoord, CpuTile> cpuTiles = new Dictionary<ChunkCoord, CpuTile>();
+    sealed class CpuTile
+    {
+        public LeafClusterGeneration Generation;
+        public readonly List<CachedInstance> Instances = new List<CachedInstance>();
+    }
+    struct CachedInstance
+    {
+        public LeafClusterInstance Instance;
+        public Matrix4x4 Near, Far, Coarse;
+        public Vector4 Scatter;
+        public float LodRank,DensityRank,CoarseRank;
+    }
     public int VisibleInstances { get; private set; }
     public int DrawCalls { get; private set; }
+    public bool UsesGpu => gpu != null;
+    public int ResidentInstances => gpu != null ? gpu.ResidentInstances : CountResident();
+    int CountResident() { int count = 0; foreach (var value in resident.Values) count += value.Instances.Count; return count; }
 
     public LeafClusterSystem(LeafClusterSettings settings, int seed, int size, float scale, float heightMultiplier, GrassSettings grassSettings = null)
     {
@@ -49,7 +70,9 @@ public sealed class LeafClusterSystem : IDisposable
         this.grassSettings = grassSettings;
     }
     public float RenderDistance => settings.matchGrassRenderDistance && grassSettings != null
-        ? GrassStreamingPolicy.RenderDistance(grassSettings,size,scale) : Mathf.Max(1,settings.renderDistance);
+        ? GrassStreamingPolicy.RenderDistance(grassSettings,size,scale)*Mathf.Clamp(settings.grassRenderDistanceMultiplier,.1f,1f) : Mathf.Max(1,settings.renderDistance);
+    public float DensityRingSize => ForestScatterPolicy.RingSize(grassSettings,size,scale);
+    public Vector4 LodDistances => ForestScatterPolicy.LodDistances(settings,grassSettings,size,scale);
     public static int SelectLod(uint rank, float distance, float start, float end) =>
         LeafClusterGeneration.Unit(rank,193) < Mathf.SmoothStep(0,1,Mathf.InverseLerp(start,Mathf.Max(start+.01f,end),distance)) ? 1 : 0;
     public static Vector4 ScatterParams(uint rank) => new Vector4(rank%8192+1,
@@ -59,12 +82,16 @@ public sealed class LeafClusterSystem : IDisposable
     public void Update(ChunkManager manager, List<ChunkCoord> coords, Vector3 viewer, Camera camera)
     {
         VisibleInstances = DrawCalls = 0;
-        if (!settings.enabled || !SystemInfo.supportsInstancing) { resident.Clear(); return; }
+        if (!settings.enabled || !SystemInfo.supportsInstancing) { resident.Clear(); cpuTiles.Clear(); gpu?.Dispose(); gpu = null; return; }
         ResolveAssets();
         if (mesh == null || material == null) return;
+        ConfigureGpu();
         float range = RenderDistance;
         float fade = settings.matchGrassRenderDistance && grassSettings != null
-            ? GrassStreamingPolicy.EdgeWidth(grassSettings,size,scale) : Mathf.Max(.01f,settings.fadeWidth);
+            ? GrassStreamingPolicy.EdgeWidth(grassSettings,size,scale)*Mathf.Clamp(settings.grassRenderDistanceMultiplier,.1f,1f) : Mathf.Max(.01f,settings.fadeWidth);
+        Vector4 lodDistances=LodDistances,densityRings=ForestScatterPolicy.Densities(settings);
+        float densityRingSize=DensityRingSize;
+        bool hasFar=farMesh!=null && farMaterial!=null,hasCoarse=hasFar && coarseMesh!=null && coarseMaterial!=null;
         float residentRange = range + Mathf.Max(0, settings.prewarmDistance);
         float half = size * scale * 0.5f;
         wanted.Clear();
@@ -86,6 +113,7 @@ public sealed class LeafClusterSystem : IDisposable
             {
                 // Start at most one new chunk per frame, including blocker-index construction.
                 resident.Remove(coord);
+                gpu?.Remove(coord); cpuTiles.Remove(coord);
                 generation = null;
             }
             if ((generation == null || !generation.Complete) && distance < best)
@@ -95,7 +123,7 @@ public sealed class LeafClusterSystem : IDisposable
         }
         eviction.Clear();
         foreach (var pair in resident) if (!wanted.Contains(pair.Key)) eviction.Add(pair.Key);
-        foreach (ChunkCoord coord in eviction) resident.Remove(coord);
+        foreach (ChunkCoord coord in eviction) { resident.Remove(coord); gpu?.Remove(coord); cpuTiles.Remove(coord); }
         if (best < float.MaxValue)
         {
             using (GenerationMarker.Auto())
@@ -118,26 +146,46 @@ public sealed class LeafClusterSystem : IDisposable
         if (camera != null) GeometryUtility.CalculateFrustumPlanes(camera, frustum);
         using (DrawMarker.Auto())
         {
+            if (gpu != null)
+            {
+                foreach (var pair in resident)
+                {
+                    var runtime = manager.GetChunkRecord(pair.Key)?.ActiveRuntime;
+                    gpu.Sync(pair.Key, pair.Value, runtime != null && runtime.IsVisible && runtime.IsFoliageRenderVisible,
+                        meshRadius, settings.IsFern);
+                }
+                gpu.Draw(mesh, material, meshLocal, farMesh, farMaterial, farLocal, camera, frustum, viewer,
+                    range, fade, lodDistances.x,lodDistances.y,coarseMesh,coarseMaterial,coarseLocal,
+                    lodDistances.z,lodDistances.w,densityRingSize,densityRings);
+                DrawCalls = gpu.DrawCalls;
+                // Exact GPU visibility would require a synchronous readback. Use
+                // ResidentInstances for residency; CPU fallback retains its exact count.
+                VisibleInstances = -1;
+                return;
+            }
+            foreach (var pair in resident) PrepareCpu(pair.Key, pair.Value);
             properties.Clear();
             properties.SetFloat(FadeStartId, Mathf.Max(0, range - fade));
             properties.SetFloat(FadeEndId, range);
             properties.SetVector("_LeafViewer", new Vector4(viewer.x,viewer.y,viewer.z,1));
-            for (int lod = 0; lod < (farMesh != null && farMaterial != null ? 2 : 1); lod++)
+            for (int lod = 0; lod < (hasCoarse?3:hasFar?2:1); lod++)
             {
                 int count = 0;
                 foreach (var pair in resident)
                 {
                     var runtime = manager.GetChunkRecord(pair.Key)?.ActiveRuntime;
                     if (runtime == null || !runtime.IsVisible || !runtime.IsFoliageRenderVisible) continue;
-                    foreach (LeafClusterInstance instance in pair.Value.Instances)
+                    foreach (CachedInstance cached in cpuTiles[pair.Key].Instances)
                     {
+                        LeafClusterInstance instance = cached.Instance;
                         float radius = meshRadius * instance.scale;
                         float distance = Vector2.Distance(new Vector2(instance.position.x,instance.position.z),new Vector2(viewer.x,viewer.z));
                         if (distance > range + radius) continue;
-                        if (farMesh != null && farMaterial != null && SelectLod(instance.rank,distance,settings.lodStart,settings.lodEnd) != lod) continue;
+                        if(cached.DensityRank>=GrassStreamingPolicy.Density(distance/densityRingSize,densityRings))continue;
+                        if(ForestScatterPolicy.SelectLod(cached.LodRank,cached.CoarseRank,distance,lodDistances,hasFar,hasCoarse)!=lod)continue;
                         if (camera != null && !InsideFrustum(instance.position, radius, frustum)) continue;
-                        matrices[count] = Matrix4x4.TRS(instance.position, instance.rotation, Vector3.one * instance.scale) * (lod == 0 ? meshLocal : farLocal);
-                        scatters[count]=ScatterParams(instance.rank);
+                        matrices[count] = lod == 0 ? cached.Near : lod==1?cached.Far:cached.Coarse;
+                        scatters[count]=cached.Scatter;
                         tints[count++] = instance.tint;
                         if (count == matrices.Length) { Submit(count, camera, lod); count = 0; }
                     }
@@ -153,9 +201,12 @@ public sealed class LeafClusterSystem : IDisposable
             ? defaultPrefab : defaultPrefab = Resources.Load<GameObject>(settings.DefaultPrefabPath);
         GameObject distant = settings.distantPrefab != null ? settings.distantPrefab : defaultFarPrefab != null
             ? defaultFarPrefab : defaultFarPrefab = Resources.Load<GameObject>(settings.DefaultDistantPrefabPath);
-        if (prefab == resolvedPrefab && distant == resolvedFarPrefab && mesh != null && material != null) return;
-        resident.Clear();
-        resolvedPrefab = prefab; resolvedFarPrefab = distant; mesh = farMesh = null; material = farMaterial = null;
+        GameObject coarse=settings is FernSettings fern?fern.coarsePrefab!=null?fern.coarsePrefab:
+            defaultCoarsePrefab!=null?defaultCoarsePrefab:defaultCoarsePrefab=Resources.Load<GameObject>("Foliage/ForestFern_LOD2"):null;
+        if (prefab == resolvedPrefab && distant == resolvedFarPrefab && coarse==resolvedCoarsePrefab && mesh != null && material != null) return;
+        resident.Clear(); cpuTiles.Clear(); gpu?.Dispose(); gpu = null;
+        resolvedPrefab = prefab; resolvedFarPrefab = distant; resolvedCoarsePrefab=coarse;
+        mesh = farMesh = coarseMesh = null; material = farMaterial = coarseMaterial = null;
         if (prefab == null) return;
         MeshFilter filter = prefab.GetComponentInChildren<MeshFilter>();
         MeshRenderer renderer = filter != null ? filter.GetComponent<MeshRenderer>() : null;
@@ -171,6 +222,14 @@ public sealed class LeafClusterSystem : IDisposable
             if (farMesh != null) meshRadius = Mathf.Max(meshRadius,farMesh.bounds.extents.magnitude *
                 Mathf.Max(farLocal.lossyScale.x,farLocal.lossyScale.y,farLocal.lossyScale.z) + farLocal.MultiplyPoint3x4(farMesh.bounds.center).magnitude);
         }
+        filter=coarse!=null?coarse.GetComponentInChildren<MeshFilter>():null;
+        renderer=filter!=null?filter.GetComponent<MeshRenderer>():null;
+        if(filter!=null && renderer!=null && renderer.sharedMaterial!=null && renderer.sharedMaterial.enableInstancing)
+        {
+            coarseMesh=filter.sharedMesh;coarseMaterial=renderer.sharedMaterial;coarseLocal=filter.transform.localToWorldMatrix;
+            if(coarseMesh!=null)meshRadius=Mathf.Max(meshRadius,coarseMesh.bounds.extents.magnitude *
+                Mathf.Max(coarseLocal.lossyScale.x,coarseLocal.lossyScale.y,coarseLocal.lossyScale.z)+coarseLocal.MultiplyPoint3x4(coarseMesh.bounds.center).magnitude);
+        }
         // Bound per-leaf spread, heading/size variation and local offsets in the shader.
         if(!settings.IsFern) meshRadius=meshRadius*1.5f+.1f;
     }
@@ -179,14 +238,36 @@ public sealed class LeafClusterSystem : IDisposable
     {
         properties.SetVectorArray(TintId, tints);
         if(!settings.IsFern) properties.SetVectorArray(ScatterId,scatters);
-        Graphics.DrawMeshInstanced(lod == 0 ? mesh : farMesh, 0, lod == 0 ? material : farMaterial, matrices, count, properties,
+        Graphics.DrawMeshInstanced(lod == 0 ? mesh : lod==1?farMesh:coarseMesh, 0, lod == 0 ? material : lod==1?farMaterial:coarseMaterial, matrices, count, properties,
             ShadowCastingMode.Off, true, 0, camera, LightProbeUsage.Off);
         VisibleInstances += count; DrawCalls++;
+    }
+    private void ConfigureGpu()
+    {
+        var compute = settings.scatterCompactShader != null ? settings.scatterCompactShader :
+            defaultCompute != null ? defaultCompute : defaultCompute = Resources.Load<ComputeShader>("Foliage/ForestScatterCompact");
+        bool supported = settings.gpuIndirectRendering && ForestScatterGpuRenderer.Supports(compute, material, farMaterial,coarseMaterial);
+        if (supported == (gpu != null) && compute == activeCompute) return;
+        gpu?.Dispose(); gpu = supported ? new ForestScatterGpuRenderer(compute,settings.IsFern?3:2) : null;
+        activeCompute = compute; cpuTiles.Clear();
+    }
+    private void PrepareCpu(ChunkCoord coord, LeafClusterGeneration generation)
+    {
+        if (!cpuTiles.TryGetValue(coord, out var tile) || !ReferenceEquals(tile.Generation, generation))
+            cpuTiles[coord] = tile = new CpuTile { Generation = generation };
+        for (int i = tile.Instances.Count; i < generation.Instances.Count; i++)
+        {
+            var instance = generation.Instances[i];
+            var transform = Matrix4x4.TRS(instance.position, instance.rotation, Vector3.one * instance.scale);
+            tile.Instances.Add(new CachedInstance { Instance = instance, Near = transform * meshLocal, Far = transform * farLocal,Coarse=transform*coarseLocal,
+                Scatter = settings.IsFern ? Vector4.zero : ScatterParams(instance.rank), LodRank = LeafClusterGeneration.Unit(instance.rank, 193),
+                DensityRank=LeafClusterGeneration.Unit(instance.rank,277),CoarseRank=LeafClusterGeneration.Unit(instance.rank,307) });
+        }
     }
     public static bool InsideFrustum(Vector3 position, float radius, Plane[] planes)
     {
         foreach (Plane plane in planes) if (plane.GetDistanceToPoint(position) < -radius) return false;
         return true;
     }
-    public void Dispose() { resident.Clear(); wanted.Clear(); eviction.Clear(); }
+    public void Dispose() { gpu?.Dispose(); gpu = null; cpuTiles.Clear(); resident.Clear(); wanted.Clear(); eviction.Clear(); }
 }

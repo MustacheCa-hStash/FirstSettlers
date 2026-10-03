@@ -9,6 +9,7 @@ public static class ForestFernPrefabBuilder
 {
     public const string NearPath="Assets/Resources/Foliage/ForestFern_LOD0.prefab";
     public const string FarPath="Assets/Resources/Foliage/ForestFern_LOD1.prefab";
+    public const string CoarsePath="Assets/Resources/Foliage/ForestFern_LOD2.prefab";
     public const string MaterialPath="Assets/Materials/M_Grass/M_ForestFern.mat";
     [MenuItem("Tools/Foliage/Build Forest Fern")]
     public static void Build()
@@ -22,12 +23,21 @@ public static class ForestFernPrefabBuilder
         material.SetColor("_BaseColor",new Color(.31f,.47f,.16f));
         material.SetFloat("_AmbientStrength",.12f);material.SetFloat("_WindStrength",.016f);
         EditorUtility.SetDirty(material);
-        BuildOne(false,material);BuildOne(true,material);AssetDatabase.SaveAssets();
+        BuildOne(0,material);BuildOne(1,material);BuildOne(2,material);AssetDatabase.SaveAssets();
+    }
+    [MenuItem("Tools/Foliage/Build Coarse Forest Fern")]
+    public static void BuildCoarse()
+    {
+        if(EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Author ferns in Edit mode.");
+        var material=AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
+        if(material==null) throw new InvalidOperationException("Build the original fern material first.");
+        BuildOne(2,material);AssetDatabase.SaveAssets();
     }
     private static Vector3 Spine(Vector3 outward,float length,float t) =>
         outward*(length*t)+Vector3.up*(length*.56f*Mathf.Sin(t*Mathf.PI*.88f));
-    private static void BuildOne(bool far,Material material)
+    private static void BuildOne(int lod,Material material)
     {
+        bool far=lod>0,coarse=lod==2;
         var vertices=new List<Vector3>();var colors=new List<Color>();var triangles=new List<int>();
         void Face(Vector3 a,Vector3 b,Vector3 c,Color tone)
         {
@@ -59,7 +69,7 @@ public static class ForestFernPrefabBuilder
                 Vector3 width=side*.007f;
                 Face(a-width,b-width,b+width,stem);Face(a-width,b+width,a+width,stem);
             }
-            int pairs=far?5:8;
+            int pairs=coarse?4:far?5:8;
             for(int row=0;row<pairs;row++)
             {
                 float t=.12f+row/(float)(pairs-1)*.75f;
@@ -68,18 +78,30 @@ public static class ForestFernPrefabBuilder
                 Vector3 root=StemAt(t);
                 float reach=length*(.23f*Mathf.Pow(Mathf.Sin(t*Mathf.PI),.85f)+.015f);
                 float halfWidth=length*(.027f+.057f*Mathf.Sin(t*Mathf.PI));
+                // Four broad lobes replace five narrower pairs: retain the
+                // distant green mass instead of exposing a bare stem skeleton.
+                if(coarse){reach*=1.12f;halfWidth*=1.4f;}
                 foreach(int sign in new[]{-1,1})
                 {
                     Vector3 tip=root+side*sign*reach+outward*(.024f+length*.04f)+Vector3.up*.008f;
                     Vector3 shoulder=Vector3.Lerp(root,tip,.43f)+Vector3.up*.009f;
-                    Face(root,shoulder-outward*halfWidth,tip,leaf);
-                    Face(root,tip,shoulder+outward*halfWidth,leaf);
+                    if(coarse)
+                    {
+                        // Wide single triangles keep the frond's solid-color
+                        // silhouette readable at distance without alpha cards.
+                        Face(root-outward*halfWidth,tip,root+outward*halfWidth,leaf);
+                    }
+                    else
+                    {
+                        Face(root,shoulder-outward*halfWidth,tip,leaf);
+                        Face(root,tip,shoulder+outward*halfWidth,leaf);
+                    }
                 }
             }
             var end=StemAt(.9f);var endTip=Spine(outward,length,1.05f);
             Face(end-side*.03f,endTip,end+side*.03f,leaf);
         }
-        string name=far?"ForestFern_LOD1":"ForestFern_LOD0";
+        string name="ForestFern_LOD"+lod;
         var built=new Mesh {name=name};built.SetVertices(vertices);built.SetColors(colors);built.SetTriangles(triangles,0);
         built.RecalculateNormals();built.RecalculateBounds();
         string meshPath="Assets/Models/Foliage/"+name+".asset";
@@ -97,7 +119,7 @@ public static class ForestFernPrefabBuilder
             obj.AddComponent<MeshFilter>().sharedMesh=mesh;
             var renderer=obj.AddComponent<MeshRenderer>();renderer.sharedMaterial=material;
             renderer.shadowCastingMode=ShadowCastingMode.Off;renderer.receiveShadows=true;
-            PrefabUtility.SaveAsPrefabAsset(obj,far?FarPath:NearPath);
+            PrefabUtility.SaveAsPrefabAsset(obj,coarse?CoarsePath:far?FarPath:NearPath);
         }
         finally {Object.DestroyImmediate(obj);}
         Debug.Log($"FERN BUILT: {name}, {mesh.triangles.Length/3} triangles, {mesh.vertexCount} vertices, {mesh.bounds.size} bounds; uniform leaflet colors, no bitmap/veins.");

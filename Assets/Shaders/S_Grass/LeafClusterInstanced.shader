@@ -7,6 +7,7 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
         [ToggleUI] _UseAtlasColor("Use Painted Atlas Color", Float) = 0
         [PerRendererData] _LeafInstanceTint("Instance Tint", Vector) = (1,1,1,1)
         [PerRendererData] _LeafScatterParams("Scatter Seed, Amount, Spread, Enabled", Vector) = (1,1,1,0)
+        [NoScaleOffset] _LeafVariationTex("Baked Scatter Data", 2D) = "black" {}
         _Cutoff("Alpha Cutoff", Range(0,1)) = 0.45
         _AmbientStrength("Minimum Ambient", Range(0,1)) = 0.12
         _FadeStart("Detail Fade Start", Float) = 20
@@ -14,14 +15,16 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
     }
     SubShader
     {
-        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="TransparentCutout" "Queue"="AlphaTest" }
+        Tags { "ForestScatterIndirect"="True" "RenderPipeline"="UniversalPipeline" "RenderType"="TransparentCutout" "Queue"="AlphaTest" }
         Cull Off ZWrite On AlphaToMask On
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
         TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
+        TEXTURE2D(_LeafVariationTex); SAMPLER(sampler_LeafVariationTex);
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
+            float4 _LeafVariationTex_TexelSize;
             half4 _BaseColor;
             half _Cutoff, _AmbientStrength, _UseAtlasColor;
             float _FadeStart, _FadeEnd;
@@ -31,6 +34,7 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
             UNITY_DEFINE_INSTANCED_PROP(float4, _LeafInstanceTint)
             UNITY_DEFINE_INSTANCED_PROP(float4, _LeafScatterParams)
         UNITY_INSTANCING_BUFFER_END(LeafProperties)
+        #include "Assets/Shaders/ForestScatterInstance.hlsl"
         struct Attributes
         {
             float4 positionOS : POSITION;
@@ -52,39 +56,44 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
             UNITY_VERTEX_INPUT_INSTANCE_ID
             UNITY_VERTEX_OUTPUT_STEREO
         };
-        float LeafRandom(float seed,float leaf,float salt)
-        {
-            return frac(sin(seed*.754877666+leaf*12.9898+salt*78.233)*43758.5453);
-        }
         Varyings vert(Attributes input)
         {
             Varyings output;
             UNITY_SETUP_INSTANCE_ID(input);
-            UNITY_TRANSFER_INSTANCE_ID(input, output);
             UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
-            float4 scatter=UNITY_ACCESS_INSTANCED_PROP(LeafProperties,_LeafScatterParams);
+            float4 scatter=ForestScatterParams(UNITY_ACCESS_INSTANCED_PROP(LeafProperties,_LeafScatterParams));
             output.leafVisible=1;
             if(scatter.w>.5 && input.scatter.w>.5)
             {
-                float id=input.scatter.z;
-                float angle=(LeafRandom(scatter.x,id,3)-.5)*6.2831853;
-                float sine,cosine;sincos(angle,sine,cosine);
-                float2x2 rotation=float2x2(cosine,-sine,sine,cosine);
-                float leafScale=lerp(.6,1.4,LeafRandom(scatter.x,id,7));
-                float2 offset=(float2(LeafRandom(scatter.x,id,11),LeafRandom(scatter.x,id,13))-.5)*.28;
-                input.positionOS.xz=input.scatter.xy*scatter.z+offset+
-                    mul(rotation,input.positionOS.xz-input.scatter.xy)*leafScale;
+                float index=(clamp(scatter.x,1,8192)-1)*18+clamp(input.scatter.z,0,8)*2;
+                float row=floor(index/256);
+                float2 lookupUV=float2(index-row*256+.5,row+.5)*_LeafVariationTex_TexelSize.xy;
+                float4 shape=SAMPLE_TEXTURE2D_LOD(_LeafVariationTex,sampler_LeafVariationTex,lookupUV,0);
+                float4 placement=SAMPLE_TEXTURE2D_LOD(_LeafVariationTex,sampler_LeafVariationTex,
+                    lookupUV+float2(_LeafVariationTex_TexelSize.x,0),0);
+                float2x2 rotation=float2x2(shape.x,-shape.y,shape.y,shape.x);
+                input.positionOS.xz=input.scatter.xy*scatter.z+placement.xy+
+                    mul(rotation,input.positionOS.xz-input.scatter.xy)*shape.z;
                 input.normalOS.xz=mul(rotation,input.normalOS.xz);
                 // Keep the first leaf in both LODs; all other identities thin
                 // consistently so each patch has a different leaf quantity.
-                output.leafVisible=id<.5 || LeafRandom(scatter.x,id,17)<scatter.y ? 1 : 0;
-                input.color.rgb*=lerp(.88,1.06,LeafRandom(scatter.x,id,19));
+                output.leafVisible=placement.z<scatter.y ? 1 : 0;
+                if(output.leafVisible<.5)
+                {
+                    // All vertices of a hidden leaf form a degenerate primitive:
+                    // no rasterization, atlas fetch, lighting or depth fragments.
+                    output.positionCS=float4(0,0,0,1);
+                    output.positionWS=0;output.normalWS=float3(0,1,0);
+                    output.uv=0;output.color=0;output.fog=0;
+                    return output;
+                }
+                input.color.rgb*=shape.w;
             }
             output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
             output.positionCS = TransformWorldToHClip(output.positionWS);
             output.normalWS = TransformObjectToWorldNormal(input.normalOS);
             output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
-            output.color = input.color * _BaseColor * UNITY_ACCESS_INSTANCED_PROP(LeafProperties, _LeafInstanceTint);
+            output.color = input.color * _BaseColor * ForestScatterTint(UNITY_ACCESS_INSTANCED_PROP(LeafProperties, _LeafInstanceTint));
             output.fog = ComputeFogFactor(output.positionCS.z);
             return output;
         }
@@ -103,7 +112,6 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
         }
         half4 frag(Varyings input, FRONT_FACE_TYPE face : FRONT_FACE_SEMANTIC) : SV_Target
         {
-            UNITY_SETUP_INSTANCE_ID(input);
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
             half4 texel = LeafSample(input);
             half3 normal = normalize(input.normalWS) * IS_FRONT_VFACE(face, 1.0h, -1.0h);
@@ -116,14 +124,12 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
         }
         half4 depth(Varyings input) : SV_Target
         {
-            UNITY_SETUP_INSTANCE_ID(input);
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
             LeafSample(input);
             return 0;
         }
         half4 depthNormal(Varyings input, FRONT_FACE_TYPE face : FRONT_FACE_SEMANTIC) : SV_Target
         {
-            UNITY_SETUP_INSTANCE_ID(input);
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
             LeafSample(input);
             float3 normal = normalize(input.normalWS) * IS_FRONT_VFACE(face, 1.0, -1.0);
@@ -143,6 +149,8 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma target 4.5 PROCEDURAL_INSTANCING_ON
+            #pragma instancing_options procedural:SetupForestScatter
             #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Fog.hlsl"
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
@@ -152,22 +160,28 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
         Pass
         {
             Name "DepthOnly" Tags { "LightMode"="DepthOnly" }
+            AlphaToMask Off
             ColorMask R
             HLSLPROGRAM
             #pragma target 3.0
             #pragma vertex vert
             #pragma fragment depth
             #pragma multi_compile_instancing
+            #pragma target 4.5 PROCEDURAL_INSTANCING_ON
+            #pragma instancing_options procedural:SetupForestScatter
             ENDHLSL
         }
         Pass
         {
             Name "DepthNormals" Tags { "LightMode"="DepthNormalsOnly" }
+            AlphaToMask Off
             HLSLPROGRAM
             #pragma target 3.0
             #pragma vertex vert
             #pragma fragment depthNormal
             #pragma multi_compile_instancing
+            #pragma target 4.5 PROCEDURAL_INSTANCING_ON
+            #pragma instancing_options procedural:SetupForestScatter
             #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
             ENDHLSL
         }

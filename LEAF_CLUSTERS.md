@@ -1,12 +1,38 @@
 # Forest leaf clusters
 
+## Player-distance density rings and shorter range
+
+WorldManager > **Forest Leaf Clusters > Distance Ring Density** now controls a stable subset of the resident scatters. The four controls follow grass's subchunk-distance curve: full first-tier density through 3 subchunks, smoothly reaching the next values at 6, 10 and 14. Density Beyond 10 remains constant beyond 14 until the outer shader fade. Defaults are **1 / 0.7 / 0.4 / 0.2**; **Use Distance Density** disables thinning when off. These are fractions of eligible placements after habitat/exclusion checks, not absolute ground coverage. The grass subchunk size controls the distances even if leaf render-distance matching is disabled; without grass settings it uses 10 subdivisions per chunk.
+
+With SmearScene's 38.4-unit chunks and 10 subdivisions, those endpoints are **11.52 / 23.04 / 38.4 / 53.76 world units** from the player. Each instance has an independent deterministic density rank, precomputed alongside its LOD ranks. CPU and GPU apply the same curve before selecting its representation; tuning rings or moving the viewer does not regenerate placement or upload unchanged instance records. Terrain/foliage visibility and habitat exclusions still apply.
+
+**Placement Multiplier** now defaults to **12**, also stored in SmearScene, versus the previous 6. This doubles candidate opportunities so the full-density nearby ring is fuller; remote rings retain fewer of that pool. The generation fixture produced 4,825 placements versus the previous 2,383 in its 64×64 forest. These are full eligible candidate counts, not live visible counts. Ring thinning lowers submitted geometry but retains generation/source records; higher near density still adds geometry and memory.
+
+**Grass Render Distance Multiplier** defaults to **0.8**, keeping the maximum leaf distance 20% closer than grass. In SmearScene this changes **115.2 → 92.16 units**, with the proportional outer fade at **81.41–92.16**. It follows subsequent grass-range edits. Manual range defaults to **22.4** when matching is off. Existing leaf sizes, art and 72/16-triangle meshes remain.
+
+The distance/culling/density/LOD GPU parity checks, moved-viewer upload checks, generation seams, near population increase and existing forest habitat regressions passed in isolated Unity/D3D11 (`.utmp/forest-floor/forest-distance.log`). No live FPS benchmark was run. Earlier sections describe preceding settings.
+
+## Resident GPU rendering revision
+
+**GPU Indirect Rendering** defaults on for leaves and ferns, including SmearScene. `ForestScatterGpuRenderer` uploads transforms, tint, scatter parameters, bounds and stable selection ranks when generation appends instances or relocates a chunk block. Unchanged frames visit chunks rather than rebuilding per-instance matrices and submission arrays. `ForestScatterCompact.compute` selects distance, density, frustum and complementary LOD lists in one dispatch: at most two indirect draws for leaves, three for ferns. Habitat exclusions and size remain unchanged.
+
+Unsupported hardware/materials or disabling the toggle uses CPU instancing. Its matrices, scatter parameters and LOD ranks are now cached once per generated instance. Custom indirect materials must implement `ForestScatterInstance.hlsl` and advertise `ForestScatterIndirect=True`. The compute override is optional; the default loads from Resources. Exact `VisibleInstances` is **-1** on the GPU path to avoid synchronous readback; `UsesGpu`, `ResidentInstances` and `DrawCalls` provide runtime diagnostics.
+
+Leaf transforms/tone/visibility thresholds are baked into `LeafScatterVariation.asset`: two point-sampled texels per leaf for the existing 8,192 seeds. This replaces vertex-stage random hashes and trigonometry in all passes, without editing artwork or adding veins. CPU/GPU sine precision can slightly change the former arrangement for a seed; variation ranges and deterministic placement remain. Hidden leaves collapse to degenerate triangles before rasterization, removing their fragment shading/atlas work while retaining vertex processing. Forward alpha-to-coverage remains; depth/normal passes use their existing alpha clipping without alpha-to-coverage suppressing zero-alpha outputs.
+
+Resident storage costs 128 bytes per source on both CPU and GPU, plus two 4-byte GPU visibility indices per allocated leaf slot or three per fern slot; generation records remain resident too. Density/coarse ranks use existing spare source components, without increasing the stride. Power-of-two chunk blocks and buffers retain peak capacity, reuse evicted blocks/slots and dispatch across inactive holes. The shared RGBAFloat lookup is about 2.25 MiB on GPU plus its readable CPU copy. This exchanges memory for lower recurring CPU submission and shader arithmetic costs; tree/foliage overdraw can still dominate forest frame time.
+
+**Tools > Foliage > Validate Forest Scatter GPU Rendering** checks default routing/fallback, more than 1,023 instances, CPU/GPU culling/LOD parity, unchanged-frame uploads, append/relocation/eviction/slot reuse, actual near/far forward/normal pixels and distance fades. Validation reads buffers only when explicitly invoked. **Bake Leaf Scatter Variation** rebuilds shader data; the leaf prefab builder also assigns it. Checked-in materials already reference the baked asset. Earlier sections describe previous rendering revisions.
+
+These checks and existing leaf generation regressions passed in isolated Unity/D3D11 (`.utmp/forest-floor/forest-gpu.log`). Fifty-four shader-stage variants and the compute kernel also compiled offline. No live FPS benchmark was run. Restart Play mode to create the resident buffers.
+
 ## Irregular scatter revision
 
 The sixfold candidate rate remains, but cells now contain **0/1/2/3 opportunities** with mean one, fully random positions across each cell and a smoothly varying world-space drift. A search halo includes displaced cells, and half-open ownership uses final positions, preserving deterministic negative-coordinate seams. Leaf instance Scale Range is now **0.55–1.5**, including SmearScene.
 
 Each leaf mesh now carries its own pivot and identity in UV channel 1. The instanced shader varies individual leaf heading, size, offset, color tone, spread and visibility from stable instance parameters. Patches therefore have different silhouettes and leaf quantities while retaining nearly uniform color within each leaf. The first leaf remains present in both LODs; other identities thin consistently. The alpha atlas image and its artwork are unchanged.
 
-Near/far meshes remain 72/16 triangles, with one material and the same batching/LOD architecture. Additional shader arithmetic and a 16-byte variation vector per submitted instance have a cost; hiding individual leaves does not remove their vertex work. Culling and blocker footprints use a conservative bound for the procedural spread. Actual preview renderers now receive the same scatter/tint parameters as runtime batches, avoiding another authoring/runtime discrepancy.
+Near/far meshes remain 72/16 triangles, with one material. The variation vector and conservative bounds remain; static variation arithmetic is now baked and rendering uses the resident path described above. Hiding individual leaves does not remove their vertex work. Actual preview renderers receive the same scatter/tint parameters as runtime batches.
 
 The new forest density fixture produced **161->949 placements (5.89x)** versus its 1x candidate rate, still above the requested +400% minimum. Validation passed for chunk seams, deterministic slices, placement exclusions, UV identity data, instanced/Forward+ shader variants and actual Linear Unity renders. Log: `.utmp/forest-floor/variation-unity.log`. Earlier sections describe previous scatter layouts and settings.
 
@@ -22,8 +48,8 @@ WorldManager exposes **Forest Leaf Clusters** settings. Existing scenes automati
 
 Default placement/render controls:
 
-- **Match Grass Render Distance** is enabled by default. With SmearScene's 128-sample chunks, worldScale 0.3, and grass billboard radius 3, leaves reach **115.2 world units**, fading from **101.76–115.2**. Distance is horizontal and follows the same viewer as grass. Changes to grass range update leaves automatically; terrain residency and foliage visibility still gate rendering.
-- Disable matching to use the manual 28-unit range and 8-unit fade width. Prewarm margin is 8 units.
+- **Match Grass Render Distance** is enabled by default, scaled by **Grass Render Distance Multiplier = 0.8**. Leaves reach **92.16 world units**, fading from **81.41–92.16** in SmearScene. Distance is horizontal and follows the same player as grass. Changes to grass range update leaves automatically; terrain residency and foliage visibility still gate rendering.
+- Disable matching to use the manual 22.4-unit range and 8-unit fade width. Prewarm margin is 8 units.
 - Near/far selection transitions over 18–30 units with a stable rank per scatter. Each instance draws exactly one representation; there is no duplicate transition layer.
 - Candidate cell size 1.5 world units, independent of terrain worldScale.
 - Base keep probability 0.38, reduced by colony noise, existing grass, soil, moss, slope, and river influence. Dominant moss carpets retain 25% of otherwise eligible leaf scatters, leaving occasional fallen leaves rather than clearing every instance. Existing serialized settings can retain their previous density value.
@@ -35,7 +61,7 @@ Default placement/render controls:
 
 Generation uses a world-aligned jittered grid with half-open chunk ownership, triangle-interpolated terrain height, and terrain-aligned rotations. The prefab pivot sits at its lowest leaf, and placement adds only a 0.006-unit separation to avoid surface fighting. Cached candidates are discarded when their terrain maps, ecology/plan, placement settings, or prefab change, and evicted outside the prewarm area. A spatial blocker index avoids scanning every tree for every candidate. The system is disposed with ChunkManager.
 
-Rendering uses **Graphics.DrawMeshInstanced**, the same GPU instancing API used by clover/dandelions. It does not instantiate a GameObject per cluster. CPU distance/frustum tests select visible candidates into reusable arrays; batches aggregate across nearby chunks separately for each LOD, with up to 1023 instances per submission. This path does not use grass's compute/indirect renderer. Enabled depth/normal prepasses add work. Tight cutout geometry limits alpha overdraw, but does not eliminate it.
+Rendering now uses **Graphics.DrawMeshInstancedIndirect** with resident records and GPU selection, as described above. The CPU fallback uses **Graphics.DrawMeshInstanced**, aggregating up to 1,023 instances per submission. Neither creates GameObjects per cluster. Enabled depth/normal prepasses add work. Tight cutout geometry limits alpha overdraw, but does not eliminate it.
 
 A synthetic flat 64 × 64 forest fixture generated 406 scatters before feature exclusions after the moss-retention revision: approximately 0.099 scatters per square world unit. This is a validation fixture, not measured world coverage or a frame-time result. Every visible scatter adds 72 near or 16 distant triangles per relevant pass. The 115.2-unit radius covers about 16.9 times the area of the previous 28-unit radius before frustum/terrain exclusions; CPU visits, cache memory, and submissions can therefore rise despite the cheaper distant mesh. No FPS improvement is claimed.
 

@@ -33,7 +33,7 @@ Shader "Custom/SpruceOctaImpostor"
 
     SubShader
     {
-        Tags { "RenderType"="TransparentCutout" "RenderPipeline"="UniversalPipeline" "Queue"="AlphaTest" "IgnoreProjector"="True" }
+        Tags { "DistantTreeIndirect"="True" "RenderType"="TransparentCutout" "RenderPipeline"="UniversalPipeline" "Queue"="AlphaTest" "IgnoreProjector"="True" }
         LOD 100
         Cull Off
         ZWrite On
@@ -52,6 +52,7 @@ Shader "Custom/SpruceOctaImpostor"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupDistantTree
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
@@ -75,6 +76,8 @@ Shader "Custom/SpruceOctaImpostor"
             UNITY_INSTANCING_BUFFER_START(SpruceOctaInstance)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _TreeLeafTint)
             UNITY_INSTANCING_BUFFER_END(SpruceOctaInstance)
+
+            #include "Assets/Shaders/DistantTreeFade.hlsl"
 
             struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings
@@ -165,6 +168,7 @@ Shader "Custom/SpruceOctaImpostor"
             half4 frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
+                ApplyDistantTreeFade(input.positionCS.xy);
                 float2 octaUV = OctEncode(input.viewDirectionLS);
                 half4 albedo = SampleAtlas(TEXTURE2D_ARGS(_AlbedoCoverage, sampler_AlbedoCoverage), octaUV, input.proxyUV, _AlbedoCoverage_TexelSize.zw);
                 if (_DebugView > 3.5h)
@@ -194,7 +198,7 @@ Shader "Custom/SpruceOctaImpostor"
                 half3 normalWS = normalize(mul(objectToWorld, normalLS));
                 half3 bentNormalWS = normalize(mul(objectToWorld, bentNormalLS));
                 half leafWeight = materialId.r / max(materialId.r + materialId.g, 0.0001h);
-                half3 perInstanceTint = UNITY_ACCESS_INSTANCED_PROP(SpruceOctaInstance, _TreeLeafTint).rgb;
+                half3 perInstanceTint = GetDistantTreeTint(UNITY_ACCESS_INSTANCED_PROP(SpruceOctaInstance, _TreeLeafTint)).rgb;
                 half3 leafTint = lerp(half3(1,1,1), _LeafSeasonTint.rgb * perInstanceTint, _SeasonStrength);
                 half3 baseColor = albedo.rgb * lerp(half3(1,1,1), leafTint, leafWeight);
 

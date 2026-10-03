@@ -1,5 +1,31 @@
 # FirstSettlers Work Notes
 
+## October 2: extended, continuous clover range
+
+Clover now renders independently of detailed grass. SmearScene and new settings use a three-chunk horizontal player radius (115.2 world units), with an outer half-chunk fade (96–115.2), replacing the grass-radius clamp and prefab material's 58-unit cutoff. Chunk gates use continuous player-to-chunk bounds with a mesh margin, so chunk crossings no longer toggle nearby diagonal colonies. A one-chunk prewarm prepares both placements and cached instanced batches ahead of visibility.
+
+Tune **Clover Settings > Render Range > Active Ring Radius**, **Render Fade Width Chunks**, and **Pre Generation Ring Padding**. Radius/padding edits schedule bounded refresh work even while stationary; fade settings apply at draw time. Both current and legacy clover shaders receive runtime distance overrides without changing shared art materials. Placement density, forest habitat and shadow settings remain. More distant clover increases draw work and retained cache memory; no live FPS benchmark was run. Restart Play mode for initial scene/settings uptake.
+
+**Tools > Foliage > Validate Clover Render Range** passed independent range, chunk seam/diagonal/negative-coordinate routing, prewarm batch eligibility, live setting refresh, actual instanced pixels beyond two chunks, partial/zero fading, height independence and material preservation for all four prefab variants, plus ground streaming and forest habitat regressions. Log: `.utmp/forest-floor/clover-range.log`. Runtime/editor compilation and 32 ordinary/instanced shader-stage checks passed.
+
+## October 2: third fern LOD and leaf distance-density rings
+
+Ferns now have a 52-triangle coarse LOD, with grass-aligned near/mid and mid/coarse transitions (11.52–23.04 and 24.96–51.84 units in SmearScene) and optional manual distances. Compute and CPU fallback select exactly one of three representations; placement frequency, plain art and 65-unit range remain. The checked-in [fern comparison](ArtReferences/ForestFloor/Fern_LOD_Comparison.png) shows actual LOD0/1/2 meshes at identical scale.
+
+Leaves expose grass-style 3/6/10/14-subchunk density controls, defaulting to 1/.7/.4/.2. Candidate frequency increases from 6x to 12x for fuller nearby ground; stable density ranks thin distant rendering without reseeding/re-uploading placements as the player moves. Grass distance matching now uses an adjustable 0.8 multiplier: 115.2→92.16 units, with fade 81.41–92.16. GPU/CPU selection/pixel/fade parity, streaming, increased near population, seams and forest habitat regressions passed in isolated Unity (`.utmp/forest-floor/forest-distance.log`); shader stages and compute compiled. No live FPS benchmark was run. Restart Play mode. See [LEAF_CLUSTERS.md](LEAF_CLUSTERS.md) and [FOREST_FERNS.md](FOREST_FERNS.md).
+
+## October 2: resident GPU leaves and ferns
+
+Leaves and ferns now default to resident compute/indirect rendering. Stable per-instance transforms/tints/scatter data upload only when chunks add instances or storage changes; compute selects distance, frustum and near/far LODs. CPU fallback caches transforms and variation parameters. Leaf static variation is baked into a shared lookup texture, and hidden leaves collapse before rasterization. Habitat, art, geometry and render distances remain. Leaf depth/normal passes also now avoid alpha-to-coverage suppressing their outputs.
+
+Actual near/far CPU/indirect pixel and fade parity, default routing/fallback, more than 1,023 instances, culling/LOD parity, chunk growth/eviction/slot reuse and unchanged-frame source uploads passed in isolated Unity (`.utmp/forest-floor/forest-gpu.log`). Fifty-four ordinary/instanced/procedural shader-stage checks and the compute kernel compiled. See [LEAF_CLUSTERS.md](LEAF_CLUSTERS.md) and [FOREST_FERNS.md](FOREST_FERNS.md) for settings, memory tradeoffs and the explicit **Validate Forest Scatter GPU Rendering** command. No live FPS benchmark was run. Restart Play mode.
+
+## October 2: spruce octa impostor GPU rendering
+
+The current `Spruce_OctaImpostor_Runtime` now supports the existing distant-tree compute/indirect path, including resident transforms/tints, GPU visibility/thinning/depth ordering, and load/near-handoff dither fades. The capability tag check now ignores case: Unity returned `true`, which the previous `True` comparison rejected. Camera-facing square corners have conservative bounds; authored crown footprints still determine ecological thinning. CPU instancing and standalone material use remain supported.
+
+Actual-prefab routing, CPU/indirect pixel parity across three angles with varied TRS/tints, fades, bounds and the existing >1023-instance compute suite passed in the isolated Unity project (`.utmp/tree-check/spruce-gpu-final.log`). Eighteen ordinary/instanced/procedural shader compile checks passed. No live scene or FPS benchmark was run. The five-atlas lighting cost remains; CPU height/transition bookkeeping and small state uploads also remain. Restart Play mode. See [FAR_TREES_HANDOFF.md](FAR_TREES_HANDOFF.md).
+
 ## October 2: irregular leaf groups and broader, more visible ferns
 
 Leaf candidates now use variable cell occupancy, full-cell offsets and world-space drift, with a halo for deterministic chunk ownership. Per-leaf pivots/IDs let the instanced shader vary leaf quantities, heading, scale and arrangement; the same nine-leaf stamp no longer repeats. Instance scale ranges from 0.55–1.5. The sixfold candidate budget remains, and the updated fixture achieved 161->949 placements (5.89x). The atlas artwork is unchanged.

@@ -11,6 +11,7 @@ Shader "Custom/CloverLeafInstancedLit"
         _InstanceVariationStrength("Instance Tone Variation", Range(0,0.5)) = 0.10
         _FadeStartDistance("Fade Start", Float) = 42
         _FadeEndDistance("Fade End", Float) = 58
+        [HideInInspector] _CloverViewer("Runtime Player Position", Vector) = (0,0,0,0)
         [PerRendererData] _CloverInstanceData("Clover Instance Data", Vector) = (0,0.5,0,0)
     }
     SubShader
@@ -29,6 +30,7 @@ Shader "Custom/CloverLeafInstancedLit"
             half _Cutoff, _NormalUpBlend, _AmbientStrength, _ReceiveShadows;
             half _InstanceVariationStrength;
             float _FadeStartDistance, _FadeEndDistance;
+            float4 _CloverViewer;
         CBUFFER_END
         UNITY_INSTANCING_BUFFER_START(CloverInstanceProperties)
             UNITY_DEFINE_INSTANCED_PROP(float4, _CloverInstanceData)
@@ -81,9 +83,10 @@ Shader "Custom/CloverLeafInstancedLit"
         {
             UNITY_SETUP_INSTANCE_ID(i);
             float4 data=UNITY_ACCESS_INSTANCED_PROP(CloverInstanceProperties,_CloverInstanceData);
+            float viewDistance=_CloverViewer.w>.5?distance(_CloverViewer.xz,i.positionWS.xz):distance(GetCameraPositionWS(),i.positionWS);
             float fade=_FadeEndDistance>_FadeStartDistance
-                ? saturate((_FadeEndDistance-distance(GetCameraPositionWS(),i.positionWS))/max(.001,_FadeEndDistance-_FadeStartDistance)) : 1;
-            clip(fade-Hash21(floor(i.positionCS.xy)+data.xy*float2(97.13,41.71)));
+                ? saturate((_FadeEndDistance-viewDistance)/max(.001,_FadeEndDistance-_FadeStartDistance)) : 1;
+            clip(fade-Hash21(floor(i.positionCS.xy)+data.xy*float2(97.13,41.71))-.0001);
         }
         ENDHLSL
         Pass

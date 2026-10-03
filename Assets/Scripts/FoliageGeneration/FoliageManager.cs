@@ -82,6 +82,10 @@ public class FoliageManager
 
     private CloverRenderData[] cloverRenderData;
     private int cloverInstanceDataPropertyId;
+    private Vector3 cloverViewerPosition;
+    private bool hasCloverViewerPosition;
+    private float cloverMeshRadius;
+    private int observedCloverRadius,observedCloverPadding;
 
     private Mesh dandelionMesh;
     private Material dandelionMaterial;
@@ -167,6 +171,8 @@ public class FoliageManager
         lastObservedBillboardSpawnChance = grassSettings.billboardSpawnChance;
         lastObservedBillboardCellsPerAxis = Mathf.Max(1, grassSettings.billboardCellsPerAxis);
         lastObservedNearGrassPrecomputeChunkPadding = Mathf.Max(0, grassSettings.nearGrassPrecomputeChunkPadding);
+        observedCloverRadius=cloverSettings!=null?cloverSettings.activeRingRadius:0;
+        observedCloverPadding=cloverSettings!=null?cloverSettings.preGenerationRingPadding:0;
     }
 
     private readonly List<Matrix4x4> groundMatrixScratch = new();
@@ -179,9 +185,17 @@ public class FoliageManager
     private ChunkRecord activeGroundRecord;
     public void UpdateGrassStreaming(ChunkManager manager, List<ChunkCoord> activeCoords, Vector3 viewer, Camera camera)
     {
+        RefreshCloverRangeWork(activeCoords);
         grassStream.Update(manager, activeCoords, viewer, camera, camera != null ? grassGpuPlanes : null,
             grassMesh, grassMaterial, billboardGrassMesh, billboardGrassMaterial,
             forestGrassMesh, forestGrassMaterial, forestFarGrassMesh, forestFarGrassMaterial);
+    }
+    private void RefreshCloverRangeWork(List<ChunkCoord> activeCoords)
+    {
+        if(cloverSettings==null || (observedCloverRadius==cloverSettings.activeRingRadius &&
+            observedCloverPadding==cloverSettings.preGenerationRingPadding))return;
+        observedCloverRadius=cloverSettings.activeRingRadius;observedCloverPadding=cloverSettings.preGenerationRingPadding;
+        foreach(var coord in activeCoords)EnqueueFoliageManagementWork(coord);
     }
     private void PrepareStreamingGrass(ChunkRecord record)
     {
@@ -263,11 +277,14 @@ public class FoliageManager
         ChunkCoord viewerCoord,
         SubChunkCoord viewerGlobalSubChunk,
         List<ChunkCoord> orderedActiveCoords,
-        Camera renderCamera = null)
+        Camera renderCamera = null,Vector3? viewerPosition = null)
     {
         using (DrawVisibleFoliageEveryFrameMarker.Auto())
         {
             grassRenderCamera = renderCamera;
+            cloverViewerPosition=viewerPosition ?? (renderCamera!=null?renderCamera.transform.position:
+                new Vector3((viewerCoord.x+.5f)*chunkSize*worldScale,0,(viewerCoord.z+.5f)*chunkSize*worldScale));
+            hasCloverViewerPosition=true;
             if (renderCamera != null && grassSettings.gpuIndirectRendering)
             {
                 GeometryUtility.CalculateFrustumPlanes(renderCamera, grassFrustum);
@@ -377,7 +394,9 @@ public class FoliageManager
             return;
 
         if (useClover && HasCloverRenderAssets())
-            runtime.FoliageRuntime.DrawClover();
+            runtime.FoliageRuntime.DrawClover(GetCloverViewer(viewerCoord),
+                CloverStreamingPolicy.RenderDistance(cloverSettings,chunkSize,worldScale),
+                CloverStreamingPolicy.FadeWidth(cloverSettings,chunkSize,worldScale));
 
         if (useFlowers && HasFlowerRenderAssets())
             runtime.FoliageRuntime.DrawFlowers();
@@ -587,7 +606,7 @@ public class FoliageManager
 
         using (HandleSubChunkCloverMarker.Auto())
         {
-            if (useClover && HasCloverRenderAssets())
+            if ((useClover || preGenerateClover) && HasCloverRenderAssets())
             {
                 if (record.FoliageData == null || !record.FoliageData.cloverGenerated)
                 {
@@ -601,12 +620,6 @@ public class FoliageManager
             else
             {
                 runtime.FoliageRuntime.ClearCloverBatches();
-            }
-
-            if (preGenerateClover && HasCloverRenderAssets() &&
-                (record.FoliageData == null || !record.FoliageData.cloverGenerated))
-            {
-                EnqueueGroundFoliageGeneration(record, GroundFoliageGenerationType.Clover);
             }
         }
 
@@ -785,7 +798,7 @@ public class FoliageManager
         if (useCattails && HasCattailRenderAssets() && !foliageRuntime.HasValidCattailRenderData())
             return true;
 
-        if (useClover &&
+        if ((useClover || IsWithinCloverGenerationRange(viewerCoord,record.ChunkCoord)) &&
             HasCloverRenderAssets() &&
             !foliageRuntime.HasValidCloverRenderData())
         {
@@ -2228,7 +2241,7 @@ public class FoliageManager
                 return IsWithinCattailRenderRange(viewerCoord, record.ChunkCoord) &&
                        HasCattailRenderAssets();
             case FoliageBatchWorkType.Clover:
-                return IsWithinCloverRenderRange(viewerCoord, record.ChunkCoord) &&
+                return IsWithinCloverGenerationRange(viewerCoord, record.ChunkCoord) &&
                        HasCloverRenderAssets();
             case FoliageBatchWorkType.Dandelion:
                 return IsWithinDandelionRenderRange(viewerCoord, record.ChunkCoord) &&
@@ -3373,10 +3386,8 @@ public class FoliageManager
         if (!IsCloverSystemEnabled())
             return false;
 
-        int activeRingRadius = Mathf.Min(
-            Mathf.Max(0, cloverSettings.activeRingRadius),
-            Mathf.Max(0, grassSettings.activeRingRadius));
-        return IsWithinChunkRadius(viewerCoord, targetCoord, activeRingRadius);
+        return CloverStreamingPolicy.WithinRange(GetCloverViewer(viewerCoord),targetCoord,chunkSize,worldScale,
+            CloverStreamingPolicy.RenderDistance(cloverSettings,chunkSize,worldScale)+CloverGeometryMargin);
     }
 
     private bool IsWithinCloverGenerationRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
@@ -3384,13 +3395,13 @@ public class FoliageManager
         if (!IsCloverSystemEnabled())
             return false;
 
-        int activeRingRadius = Mathf.Min(
-            Mathf.Max(0, cloverSettings.activeRingRadius),
-            Mathf.Max(0, grassSettings.activeRingRadius));
-        int preGenerationPadding = Mathf.Max(0, cloverSettings.preGenerationRingPadding);
-        int generationRingRadius = activeRingRadius + preGenerationPadding;
-        return IsWithinChunkRadius(viewerCoord, targetCoord, generationRingRadius);
+        float radius=CloverStreamingPolicy.RenderDistance(cloverSettings,chunkSize,worldScale)+CloverGeometryMargin+
+            Mathf.Max(0,cloverSettings.preGenerationRingPadding)*Mathf.Max(.001f,chunkSize*worldScale);
+        return CloverStreamingPolicy.WithinRange(GetCloverViewer(viewerCoord),targetCoord,chunkSize,worldScale,radius);
     }
+    private Vector3 GetCloverViewer(ChunkCoord viewerCoord) => hasCloverViewerPosition?cloverViewerPosition:
+        new Vector3((viewerCoord.x+.5f)*chunkSize*worldScale,0,(viewerCoord.z+.5f)*chunkSize*worldScale);
+    private float CloverGeometryMargin => cloverMeshRadius*Mathf.Max(1,Mathf.Max(cloverSettings.uniformScaleRange.x,cloverSettings.uniformScaleRange.y));
 
     private bool IsWithinDandelionRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
@@ -4039,9 +4050,12 @@ public class FoliageManager
         }
 
         cloverRenderData = new CloverRenderData[prefabs.Count];
+        cloverMeshRadius=0;
         for (int i = 0; i < prefabs.Count; i++)
         {
             cloverRenderData[i] = ResolveCloverRenderData(prefabs[i], $"clover clump prefab {i}");
+            var mesh=cloverRenderData[i].mesh;
+            if(mesh!=null)cloverMeshRadius=Mathf.Max(cloverMeshRadius,mesh.bounds.extents.magnitude+mesh.bounds.center.magnitude);
         }
     }
 

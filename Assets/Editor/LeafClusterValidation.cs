@@ -47,7 +47,9 @@ public static class LeafClusterValidation
         var options = new LeafClusterSettings();
         using var record = Record(new ChunkCoord(-2, 3), size);
         var a = Generate(record, size, options); var b = Generate(record, size, options, 4096);
-        Check(a.Instances.Count > 120 && a.Instances.Count < 960, "Increased interior litter budget drifted.");
+        var previous=Generate(record,size,new LeafClusterSettings{placementMultiplier=6});
+        Check(a.Instances.Count>previous.Instances.Count*1.7f && a.Instances.Count<previous.Instances.Count*2.3f,
+            "Full-density nearby litter did not roughly double its previous candidate population.");
         Check(a.Instances.Count == b.Instances.Count, "Slicing changed placement count.");
         for (int i = 0; i < a.Instances.Count; i++)
         {

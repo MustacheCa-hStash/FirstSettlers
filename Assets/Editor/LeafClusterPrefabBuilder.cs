@@ -51,6 +51,7 @@ public static class LeafClusterPrefabBuilder
         Material material = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
         if (material == null) { material = new Material(shader); AssetDatabase.CreateAsset(material, MaterialPath); }
         material.shader = shader;
+        material.SetTexture("_LeafVariationTex", LeafScatterVariationBuilder.Build());
         material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(TexturePath));
         material.SetColor("_BaseColor", Color.white);
         material.SetFloat("_UseAtlasColor", 0f);

@@ -11,7 +11,7 @@ Shader "FirstSettlers/Forest Fern Instanced"
     }
     SubShader
     {
-        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" }
+        Tags { "ForestScatterIndirect"="True" "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" }
         Cull Off ZWrite On
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -25,6 +25,7 @@ Shader "FirstSettlers/Forest Fern Instanced"
         UNITY_INSTANCING_BUFFER_START(LeafProperties)
             UNITY_DEFINE_INSTANCED_PROP(float4, _LeafInstanceTint)
         UNITY_INSTANCING_BUFFER_END(LeafProperties)
+        #include "Assets/Shaders/ForestScatterInstance.hlsl"
         struct Attributes
         {
             float4 positionOS : POSITION;
@@ -48,7 +49,6 @@ Shader "FirstSettlers/Forest Fern Instanced"
         {
             Varyings output;
             UNITY_SETUP_INSTANCE_ID(input);
-            UNITY_TRANSFER_INSTANCE_ID(input, output);
             UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
             output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
             float sway = sin(_Time.y * 1.3 + dot(output.positionWS.xz,float2(.7,.4))) * _WindStrength * saturate(input.positionOS.y * 2.5);
@@ -56,7 +56,7 @@ Shader "FirstSettlers/Forest Fern Instanced"
             output.positionCS = TransformWorldToHClip(output.positionWS);
             output.normalWS = TransformObjectToWorldNormal(input.normalOS);
             output.uv = input.uv;
-            output.color = input.color * _BaseColor * UNITY_ACCESS_INSTANCED_PROP(LeafProperties, _LeafInstanceTint);
+            output.color = input.color * _BaseColor * ForestScatterTint(UNITY_ACCESS_INSTANCED_PROP(LeafProperties, _LeafInstanceTint));
             output.fog = ComputeFogFactor(output.positionCS.z);
             return output;
         }
@@ -72,7 +72,6 @@ Shader "FirstSettlers/Forest Fern Instanced"
         }
         half4 frag(Varyings input, FRONT_FACE_TYPE face : FRONT_FACE_SEMANTIC) : SV_Target
         {
-            UNITY_SETUP_INSTANCE_ID(input);
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
             half4 texel = LeafSample(input);
             half3 normal = normalize(input.normalWS) * IS_FRONT_VFACE(face, 1.0h, -1.0h);
@@ -85,14 +84,12 @@ Shader "FirstSettlers/Forest Fern Instanced"
         }
         half4 depth(Varyings input) : SV_Target
         {
-            UNITY_SETUP_INSTANCE_ID(input);
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
             LeafSample(input);
             return 0;
         }
         half4 depthNormal(Varyings input, FRONT_FACE_TYPE face : FRONT_FACE_SEMANTIC) : SV_Target
         {
-            UNITY_SETUP_INSTANCE_ID(input);
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
             LeafSample(input);
             float3 normal = normalize(input.normalWS) * IS_FRONT_VFACE(face, 1.0, -1.0);
@@ -112,6 +109,8 @@ Shader "FirstSettlers/Forest Fern Instanced"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma target 4.5 PROCEDURAL_INSTANCING_ON
+            #pragma instancing_options procedural:SetupForestScatter
             #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Fog.hlsl"
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
@@ -127,6 +126,8 @@ Shader "FirstSettlers/Forest Fern Instanced"
             #pragma vertex vert
             #pragma fragment depth
             #pragma multi_compile_instancing
+            #pragma target 4.5 PROCEDURAL_INSTANCING_ON
+            #pragma instancing_options procedural:SetupForestScatter
             ENDHLSL
         }
         Pass
@@ -137,6 +138,8 @@ Shader "FirstSettlers/Forest Fern Instanced"
             #pragma vertex vert
             #pragma fragment depthNormal
             #pragma multi_compile_instancing
+            #pragma target 4.5 PROCEDURAL_INSTANCING_ON
+            #pragma instancing_options procedural:SetupForestScatter
             #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
             ENDHLSL
         }

@@ -13,11 +13,11 @@ public static class ForestFloorRedesignValidation
         var settings=new LeafClusterSettings();
         using(var system=new LeafClusterSystem(settings,145678,128,.3f,10,grass))
         {
-            Check(Math.Abs(system.RenderDistance-115.2f)<.001f,"Leaf range differs from grass.");
+            Check(Math.Abs(system.RenderDistance-92.16f)<.001f,"Leaf range is not 80% of grass.");
             grass.billboardRingRadius=5;
-            Check(Math.Abs(system.RenderDistance-192)<.001f,"Changed grass range did not update leaves.");
+            Check(Math.Abs(system.RenderDistance-153.6f)<.001f,"Changed grass range did not update leaves.");
             settings.matchGrassRenderDistance=false;
-            Check(system.RenderDistance==28,"Manual leaf range override failed.");
+            Check(system.RenderDistance==settings.renderDistance,"Manual leaf range override failed.");
         }
         for(uint rank=0;rank<1024;rank++)
         {

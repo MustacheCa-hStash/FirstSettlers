@@ -886,7 +886,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 145678
+  worldSeed: 1456789
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -1146,7 +1146,8 @@ MonoBehaviour:
     enableForestClover: 1
     forestPatchChance: 0.55
     forestMaxSlope: 22
-    activeRingRadius: 1
+    activeRingRadius: 3
+    renderFadeWidthChunks: 0.5
     preGenerationRingPadding: 1
     receiveCloverShadows: 0
     patchCellSize: 16
@@ -1191,15 +1192,23 @@ MonoBehaviour:
     rockExclusionRadius: 0.75
   leafClusterSettings:
     enabled: 1
+    gpuIndirectRendering: 1
+    scatterCompactShader: {fileID: 0}
     prefab: {fileID: 0}
     distantPrefab: {fileID: 0}
     matchGrassRenderDistance: 1
-    renderDistance: 28
+    grassRenderDistanceMultiplier: 0.8
+    renderDistance: 22.4
     fadeWidth: 8
     prewarmDistance: 8
     cellSize: 1.5
     density: 0.38
-    placementMultiplier: 6
+    placementMultiplier: 12
+    useDistanceDensity: 1
+    densityRadius3: 1
+    densityRadius6: 0.7
+    densityRadius10: 0.4
+    densityBeyond10: 0.2
     lodStart: 18
     lodEnd: 30
     maxSlope: 32
@@ -1209,15 +1218,23 @@ MonoBehaviour:
     generationBudgetMs: 0.35
   fernSettings:
     enabled: 1
+    gpuIndirectRendering: 1
+    scatterCompactShader: {fileID: 0}
     prefab: {fileID: 0}
     distantPrefab: {fileID: 0}
     matchGrassRenderDistance: 0
+    grassRenderDistanceMultiplier: 1
     renderDistance: 65
     fadeWidth: 10
     prewarmDistance: 8
     cellSize: 1.5
     density: 0.65
     placementMultiplier: 1
+    useDistanceDensity: 0
+    densityRadius3: 1
+    densityRadius6: 0.7
+    densityRadius10: 0.4
+    densityBeyond10: 0.2
     lodStart: 22
     lodEnd: 38
     maxSlope: 26
@@ -1225,6 +1242,10 @@ MonoBehaviour:
     seedOffset: 48000
     candidateBudgetPerFrame: 256
     generationBudgetMs: 0.35
+    coarsePrefab: {fileID: 0}
+    matchGrassLodDistances: 1
+    coarseLodStart: 40
+    coarseLodEnd: 55
     minMoisture: 0.35
     sizeMultiplier: 2
   treeSettings:
@@ -1645,6 +1666,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1967121500}
   - component: {fileID: 1967121501}
+  - component: {fileID: 1967121502}
   m_Layer: 0
   m_Name: GameTimeManager
   m_TagString: Untagged
@@ -1681,7 +1703,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameTimeManager
   startAutomatically: 1
   useUnscaledDeltaTime: 0
-  realSecondsPerGameHour: 75
+  realSecondsPerGameHour: 5
   timeScale: 1
   daylightHours: 16
   nighttimeHours: 8
@@ -1690,6 +1712,24 @@ MonoBehaviour:
   startingHour: 14
   startingMinute: 0
   maxDiscreteMinutesProcessedPerFrame: 360
+--- !u!114 &1967121502
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1967121499}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e693395bb214f4c9cd5afc60142ed86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkyboxCycleController
+  timeManager: {fileID: 1967121501}
+  daySkybox: {fileID: 2100000, guid: 85cf0b004bc4a654b9e501efcce47902, type: 2}
+  sunriseSunsetSkybox: {fileID: 2100000, guid: e391f00234292cc4f935308c11cf0e54, type: 2}
+  nightSkybox: {fileID: 2100000, guid: d4454f71d85928744be7771e2143dab7, type: 2}
+  twilightHours: 1
+  updateDynamicGIOnSwap: 1
 --- !u!1 &1971578341
 GameObject:
   m_ObjectHideFlags: 0

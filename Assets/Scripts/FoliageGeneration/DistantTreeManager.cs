@@ -114,16 +114,15 @@ public sealed class DistantTreeManager : IDisposable
         // turns its cards. Expand an owned copy so a thin source card cannot pop at screen edges.
         var mesh = UnityEngine.Object.Instantiate(filter.sharedMesh);
         mesh.name += " (Distant Tree Bounds)";
-        var bounds = mesh.bounds;
-        float radius = Mathf.Max(Mathf.Abs(bounds.min.x), Mathf.Abs(bounds.max.x), Mathf.Abs(bounds.min.z), Mathf.Abs(bounds.max.z));
-        mesh.bounds = new Bounds(new Vector3(0f, bounds.center.y, 0f), new Vector3(radius * 2f, bounds.size.y, radius * 2f));
+        mesh.bounds = DistantTreeGpuBatch.RenderingBounds(mesh.bounds, material);
         var batch = new Batch
         {
             Mesh = mesh,
             SourceMesh = filter.sharedMesh,
             Material = material,
             SourceMaterial = renderer.sharedMaterial,
-            SupportsIndirect = material.GetTag("DistantTreeIndirect", false, "False") == "True"
+            SupportsIndirect = string.Equals(material.GetTag("DistantTreeIndirect", false, "False"),
+                "True", StringComparison.OrdinalIgnoreCase)
         };
         // Procedural variants are selected by Unity for indirect draws only.
         material.DisableKeyword("DISTANT_TREE_INDIRECT");
@@ -356,10 +355,13 @@ public sealed class DistantTreeManager : IDisposable
             if (batches.TryGetValue(t.variant, out var batch))
             {
                 var b = batch.Mesh.bounds;
-                float horizontal = Mathf.Max(Mathf.Abs(b.min.x), Mathf.Abs(b.max.x), Mathf.Abs(b.min.z), Mathf.Abs(b.max.z)) *
+                // Visibility bounds can grow for camera-facing proxy corners;
+                // keep ecological crowding based on the authored crown footprint.
+                var crown = batch.SourceMesh.bounds;
+                float horizontal = Mathf.Max(Mathf.Abs(crown.min.x), Mathf.Abs(crown.max.x), Mathf.Abs(crown.min.z), Mathf.Abs(crown.max.z)) *
                     Mathf.Max(Mathf.Abs(t.localScale.x), Mathf.Abs(t.localScale.z));
                 m.CrownArea[cell] += Mathf.PI * horizontal * horizontal;
-                Vector4 envelope = DistantTreeGpuBatch.CalculateBounds(b, m.Matrices[i]);
+                Vector4 envelope = DistantTreeGpuBatch.CalculateBounds(b, m.Matrices[i], batch.Material);
                 Vector3 minimum = position + new Vector3(-envelope.x, envelope.y, -envelope.x);
                 Vector3 maximum = position + new Vector3(envelope.x, envelope.z, envelope.x);
                 if (!hasBounds) { m.Bounds = new Bounds((minimum + maximum) * 0.5f, maximum - minimum); hasBounds = true; }

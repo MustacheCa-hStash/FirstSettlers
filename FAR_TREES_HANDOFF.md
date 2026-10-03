@@ -1,5 +1,17 @@
 # Distant tree implementation handoff
 
+## October 2: current spruce octa proxy supports compute
+
+`SpruceOctaImpostor.shader` now advertises indirect support and uses `SetupDistantTree`, the shared resident instance buffer, GPU tint access and distant-tree dither fade helper. Its atlas reconstruction, seasonal tint, lighting and diagnostic views are preserved. Fades discard pixels before atlas sampling. The CPU-instanced fallback uses the same fades; standalone draws default to fade disabled.
+
+`DistantTreeManager` checks capability tags without case sensitivity, because this Unity version returned `true` for the authored `True` tag. Compatible materials enter the compute path when the inspector option and hardware support are present. The current SmearScene already enables the option and assigns the compute shader. Restart Play mode to recreate its batches.
+
+Owned octa rendering bounds contain the full camera-facing square at arbitrary viewing angles. Per-instance bounds match the shader's X-column uniform radius, including non-uniform/negative TRS overrides. Density-aware crowding uses the original authored mesh footprint rather than the enlarged visibility bounds.
+
+Validation: `SpruceImpostorGpuValidation.RunBatch` passed in an isolated Linear Unity project with the game URP pipeline. It verifies the actual prefab's GPU routing and disabled-option fallback, unchanged ecological footprint, rotated/scaled bounds, and CPU/indirect pixel parity across three camera angles with differing positions, yaw, scales and tints. Full visibility, load/thinning fade, half/zero handoff, and standalone fade defaults passed. The existing compute suite passed for >1023 instances, culling/depth ordering, tint/seating/fade data, thinning, capacity growth and slot reuse. Its stale thinning fixture now uses high ranks that should disappear in the partially thinned annulus, and freezes density during the capacity-growth check. Eighteen D3D shader stage/variant compilations passed. Log: `.utmp/tree-check/spruce-gpu-final.log`.
+
+Limits: these are correctness checks, not an FPS benchmark. Tree manifest/height/transition CPU bookkeeping and 16-byte per-slot state uploads remain. Five atlas samples, lighting, alpha coverage and overlapping proxy pixel costs remain on the GPU. Offscreen URP initialization also reported existing `ApplyShadowBias` compile errors in unrelated daisy/tall-flower shadow shaders; these were outside this change.
+
 ## Request and constraints
 - Implement consistent GPU-instanced trees over far terrain, inspector controls, stable thinning, and transitions without a deliberately empty ring.
 - User will perform performance tests. Do not run performance benchmarks.

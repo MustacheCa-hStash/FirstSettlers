@@ -37,14 +37,14 @@ public static class DistantTreeGpuValidation
             {
                 float x = i % 11 == 0 ? 100f : 0f;
                 slots.Add(batch.Register(Matrix4x4.Translate(new Vector3(x, 0, 20 + i % 100)),
-                    new Vector4(i, 0.5f, 0.25f, 1), new Vector4(0.5f, 10, 0, 0), 1));
+                    new Vector4(i, 0.5f, 0.25f, 1), new Vector4(0.99f, 10, 0, 0), 1));
                 if (x == 0) expected++;
             }
-            void Draw(float transition)
+            void Draw(float transition, float fadeStep = 1)
             {
                 batch.BeginFrame();
-                foreach (int slot in slots) batch.Submit(slot, 2, 1, transition, new Vector4(0.5f, 10, 0, 0));
-                batch.Draw(settings, camera, Vector3.zero, planes, 200, 10, 5, 1);
+                foreach (int slot in slots) batch.Submit(slot, 2, 1, transition, new Vector4(0.99f, 10, 0, 0));
+                batch.Draw(settings, camera, Vector3.zero, planes, 200, 10, 5, fadeStep);
             }
             Draw(0.75f);
             var visible = batch.ReadVisibleForValidation();
@@ -62,13 +62,16 @@ public static class DistantTreeGpuValidation
                 previousBand = band;
             }
             settings.distantTreeDensity = 0;
+            // These high-priority ranks must disappear even in the partially
+            // thinned annulus; a 0.5 rank legitimately survives near its start.
             Draw(1);
             Require(batch.ReadVisibleForValidation().Length == 0, "Distance thinning failed.");
-            // Grow resident storage after density has reached zero: old state must survive.
+            // Grow after thinning has removed coverage. Freeze density updates
+            // to detect old density being reset to one during buffer growth.
             for (int i = 1300; i < 2100; i++)
                 slots.Add(batch.Register(Matrix4x4.Translate(new Vector3(0, 0, 30)), Vector4.one,
-                    new Vector4(0.5f, 10, 0, 0), 0));
-            Draw(1);
+                    new Vector4(0.99f, 10, 0, 0), 0));
+            Draw(1, 0);
             Require(batch.ReadVisibleForValidation().Length == 0, "Buffer growth reset density or exposed new instances.");
             settings.distantTreeDensity = 1;
             settings.distantTreeDepthOrdering = false;
@@ -106,7 +109,8 @@ public static class DistantTreeGpuValidation
                 var material = new Material(shader) { enableInstancing = true };
                 try
                 {
-                    if (material.GetTag("DistantTreeIndirect", false, "False") != "True") continue;
+                    if (!string.Equals(material.GetTag("DistantTreeIndirect", false, "False"),
+                        "True", StringComparison.OrdinalIgnoreCase)) continue;
                     foreach (string variant in new[] { "", "INSTANCING_ON", "PROCEDURAL_INSTANCING_ON" })
                     {
                         material.DisableKeyword("INSTANCING_ON"); material.DisableKeyword("PROCEDURAL_INSTANCING_ON");

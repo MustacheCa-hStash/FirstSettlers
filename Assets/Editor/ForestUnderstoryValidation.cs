@@ -98,7 +98,7 @@ public static class ForestUnderstoryValidation
         Check(Generate(wet,new FernSettings()).Instances.Count==0,"Dry ground retained ferns.");
         for(int x=0;x<131;x++) for(int z=0;z<131;z++) {wet.MoistureMap[x,z]=.8f;wet.BiomeMap[x,z]=BiomeType.Grassland;}
         Check(Generate(wet,new FernSettings()).Instances.Count==0,"Fern forest rule leaked into meadows.");
-        foreach(string path in new[]{ForestFernPrefabBuilder.NearPath,ForestFernPrefabBuilder.FarPath})
+        foreach(string path in new[]{ForestFernPrefabBuilder.NearPath,ForestFernPrefabBuilder.FarPath,ForestFernPrefabBuilder.CoarsePath})
         {
             var prefab=AssetDatabase.LoadAssetAtPath<GameObject>(path);Check(prefab!=null,"Missing fern prefab.");
             var mesh=prefab.GetComponent<MeshFilter>().sharedMesh;var renderer=prefab.GetComponent<MeshRenderer>();

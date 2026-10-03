@@ -1658,7 +1658,7 @@ public class ChunkFoliageRuntime
         }
     }
 
-    public void DrawClover()
+    public void DrawClover(Vector3? viewer=null,float renderDistance=0,float fadeWidth=0)
     {
         if (!isVisible || !HasValidCloverRenderData() || cloverRenderBatches.Count == 0)
             return;
@@ -1680,6 +1680,13 @@ public class ChunkFoliageRuntime
 
             cloverPropertyBlock.Clear();
             cloverPropertyBlock.SetVectorArray(cloverInstanceDataPropertyId, batch.instanceData);
+            if(viewer.HasValue && renderDistance>0)
+            {
+                var player=viewer.Value;
+                cloverPropertyBlock.SetVector("_CloverViewer",new Vector4(player.x,player.y,player.z,1));
+                cloverPropertyBlock.SetFloat("_FadeStartDistance",Mathf.Max(0,renderDistance-fadeWidth));
+                cloverPropertyBlock.SetFloat("_FadeEndDistance",renderDistance);
+            }
 
             Graphics.DrawMeshInstanced(
                 renderData.mesh,

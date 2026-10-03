@@ -21,6 +21,7 @@ Shader "Custom/CloverInstancedSimpleLit"
         _NormalUpBlend("Upward Normal Blend", Range(0, 1)) = 0.72
         _FadeStartDistance("Fade Start Distance", Float) = 42
         _FadeEndDistance("Fade End Distance", Float) = 58
+        [HideInInspector] _CloverViewer("Runtime Player Position", Vector) = (0,0,0,0)
         _FadeDitherPixelSize("Fade Dither Pixel Size", Float) = 1
     }
 
@@ -74,6 +75,7 @@ Shader "Custom/CloverInstancedSimpleLit"
                 half _NormalUpBlend;
                 half _FadeStartDistance;
                 half _FadeEndDistance;
+                float4 _CloverViewer;
                 half _FadeDitherPixelSize;
             CBUFFER_END
 
@@ -161,13 +163,14 @@ Shader "Custom/CloverInstancedSimpleLit"
 
                 half4 instanceData = UNITY_ACCESS_INSTANCED_PROP(CloverInstanceProperties, _CloverInstanceData);
                 half fadeRange = max(_FadeEndDistance - _FadeStartDistance, 0.001h);
+                float viewDistance = _CloverViewer.w > .5 ? distance(_CloverViewer.xz, IN.positionWS.xz) : distance(GetCameraPositionWS(), IN.positionWS);
                 half distanceFade = _FadeEndDistance > _FadeStartDistance
-                    ? saturate((_FadeEndDistance - distance(GetCameraPositionWS(), IN.positionWS)) / fadeRange)
+                    ? saturate((_FadeEndDistance - viewDistance) / fadeRange)
                     : 1.0h;
                 float2 screenUv = IN.screenPosition.xy / max(IN.screenPosition.w, 0.0001);
                 float2 pixelCoord = floor(screenUv * _ScreenParams.xy / max(_FadeDitherPixelSize, 1.0h));
                 half ditherThreshold = Hash21(pixelCoord + instanceData.xy * float2(97.13, 41.71));
-                clip(distanceFade - ditherThreshold);
+                clip(distanceFade - ditherThreshold - .0001);
 
                 half worldNoise = SmoothNoise(IN.positionWS.xz * _VariationScale + instanceData.x * 17.0h);
                 half uvNoise = SmoothNoise(IN.uv * (_VariationScale * 1.9h) + instanceData.y * 23.0h);

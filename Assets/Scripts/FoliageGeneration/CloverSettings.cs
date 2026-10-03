@@ -13,8 +13,11 @@ public class CloverSettings
     [Range(0,40)] public float forestMaxSlope = 22f;
 
     [Header("Render Range")]
-    [Tooltip("Circular radius in whole chunks around the player chunk; diagonal chunks outside the radius are excluded.")]
-    public int activeRingRadius = 1;
+    [Min(1), Tooltip("Horizontal render distance in chunk widths from the actual player. Independent of detailed-grass range.")]
+    public int activeRingRadius = 3;
+    [Min(.01f), Tooltip("Outer distance fade in chunk widths. Runtime overrides prefab material fade distances.")]
+    public float renderFadeWidthChunks = .5f;
+    [Min(0), Tooltip("Prepare placements and cached render batches this many chunk widths beyond the render distance.")]
     public int preGenerationRingPadding = 1;
     public bool receiveCloverShadows = false;
 

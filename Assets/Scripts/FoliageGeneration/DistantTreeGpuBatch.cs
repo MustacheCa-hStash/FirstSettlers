@@ -67,7 +67,7 @@ public sealed class DistantTreeGpuBatch : IDisposable
         sources[slot] = new SourceInstance
         {
             ObjectToWorld = transform, Tint = tint, Ecology = ecology,
-            Bounds = CalculateBounds(mesh.bounds, transform)
+            Bounds = CalculateBounds(mesh.bounds, transform, material)
         };
         // Positive w resets GPU density on the first dispatch, including reused slots.
         states[slot].w = 1f + Mathf.Clamp01(initialDensity);
@@ -104,10 +104,36 @@ public sealed class DistantTreeGpuBatch : IDisposable
         else { drawBounds.Encapsulate(low); drawBounds.Encapsulate(high); }
     }
 
+    public static Bounds RenderingBounds(Bounds local, Material material)
+    {
+        if (material.shader.name == "Custom/SpruceOctaImpostor")
+        {
+            // The octa proxy faces the camera on both axes. Its square corners
+            // can rotate beyond the authored axis-aligned capture-radius box.
+            Vector3 center = material.GetVector("_CaptureCenterLS");
+            float radius = Mathf.Abs(material.GetFloat("_CaptureRadius")) * Mathf.Sqrt(2f);
+            return new Bounds(center, Vector3.one * (radius * 2f));
+        }
+        float horizontal = Mathf.Max(Mathf.Abs(local.min.x), Mathf.Abs(local.max.x),
+            Mathf.Abs(local.min.z), Mathf.Abs(local.max.z));
+        return new Bounds(new Vector3(0f, local.center.y, 0f),
+            new Vector3(horizontal * 2f, local.size.y, horizontal * 2f));
+    }
+
     // Includes both rotated fixed-plane geometry and upright camera-facing cards,
     // non-uniform scale, and mesh offsets. Bounds are relative to the tree origin.
-    public static Vector4 CalculateBounds(Bounds local, Matrix4x4 transform)
+    public static Vector4 CalculateBounds(Bounds local, Matrix4x4 transform, Material material = null)
     {
+        if (material != null && material.shader.name == "Custom/SpruceOctaImpostor")
+        {
+            Vector3 captureCenter = material.GetVector("_CaptureCenterLS");
+            Vector3 c = transform.MultiplyVector(captureCenter);
+            // Match the shader: its billboard uses the X-column length as a
+            // uniform radius, even if an override supplies non-uniform TRS.
+            float r = Mathf.Abs(material.GetFloat("_CaptureRadius")) * Mathf.Sqrt(2f) *
+                ((Vector3)transform.GetColumn(0)).magnitude;
+            return new Vector4(Mathf.Max(Mathf.Abs(c.x), Mathf.Abs(c.z)) + r, c.y - r, c.y + r, 0);
+        }
         Vector3 center = transform.MultiplyVector(local.center);
         Vector3 e = local.extents;
         Vector3 extents = new Vector3(

@@ -1,5 +1,19 @@
 # Forest ferns
 
+## Third LOD and grass-aligned transitions
+
+`Assets/Resources/Foliage/ForestFern_LOD2.prefab` adds a **52-triangle / 156-vertex** coarse mesh, compared with near **273/819** and mid **100/300**. Four arching fronds keep four broad pairs each, using one solid triangle per leaflet instead of a folded diamond. Broader lobes preserve distant green mass; the existing plain material, size multiplier, pivot and wind remain. It adds no texture, alpha cards, veins, collider or shadow caster. LOD2 uses 48% fewer triangles than LOD1.
+
+WorldManager > **Forest Ferns > Fern Distant LOD** exposes **Coarse Prefab**, **Match Grass Lod Distances**, **Coarse Lod Start** and **Coarse Lod End**. Matching defaults on. Near→mid follows grass density tiers 3–6 subchunks; mid→coarse follows the detailed-grass/billboard boundary, using grass's active-ring radius and transition width. With current SmearScene settings, the transitions are **11.52–23.04** and **24.96–51.84 world units**. Each plant chooses exactly one mesh using independent stable ranks and smooth complementary selection. Thresholds update when grass settings change.
+
+Disable matching to use the existing manual near/mid controls (22–38 by default) and new coarse controls (40–55). Coarse Start is clamped beyond the first transition to preserve ordered LODs. Missing coarse assets retain the first two LODs. The GPU and CPU fallback both implement all three tiers. Fern render distance remains **65**, with fade **55–65**; it is independent of matching LOD thresholds. Fern distance-density thinning defaults off, preserving placement frequency.
+
+Actual near/mid/coarse CPU/GPU pixel and fade parity, compute selection, ring density selection and existing habitat/generation regressions passed (`.utmp/forest-floor/forest-distance.log`). [Fern_LOD_Comparison.png](ArtReferences/ForestFloor/Fern_LOD_Comparison.png) shows LOD0/1/2 left to right at the same 2x scale using actual meshes/materials and Linear URP lighting. It is an authoring comparison, not a live-world/FPS benchmark. **Tools > Foliage > Render Fern LOD Comparison** regenerates it; **Build Coarse Forest Fern** authors only LOD2 while preserving existing near/mid assets and material settings. The full fern builder now authors all three. Earlier sections describe earlier versions.
+
+## Resident GPU rendering
+
+Ferns share the resident GPU renderer and compute distance/frustum/LOD selection described in [LEAF_CLUSTERS.md](LEAF_CLUSTERS.md). **GPU Indirect Rendering** defaults on, including SmearScene; the three-LOD system submits at most three indirect draws. Stable transforms/tints upload only as generation adds instances or storage grows/relocates. Unsupported hardware/materials or disabling the toggle retains CPU instancing with cached transforms and LOD ranks. The fern shader supports procedural instancing in forward/depth/normal passes; its dynamic wind remains. Colors, frequency, size multiplier, habitat rules and 65-unit range remain unchanged. Resident buffers add memory and retain peak capacity; this does not remove frond overlap or tree shading costs. Explicit correctness checks are under **Tools > Foliage > Validate Forest Scatter GPU Rendering**.
+
 ## Broader foliage and higher frequency
 
 The second pass roughly doubles leaflet width and widens stems/tips without adding near triangles. Both halves of each distant leaflet now remain visible: the far mesh is **100 triangles / 300 vertices**, while near remains **273 / 819**. The plain green fills and texture-free shader remain.
@@ -16,7 +30,7 @@ The plant has seven uneven arching fronds, paired pointed leaflets, and a roughl
 
 WorldManager exposes Forest Ferns settings. Defaults favor moist shaded Forest/Grass terrain, irregular colonies, and sparse floor coverage. Candidates use a world-aligned 2.5-unit jittered grid with density 0.30, a moisture threshold of 0.45, a 26-degree slope ceiling, and 0.75–1.2 instance scale. Clearings, dry soil and river proximity reduce placement; moss above the visible-cover threshold blocks fern roots. Existing tree/bush/boulder footprints and actual terrain triangle normals/heights also apply. Grassland terrain receives no ferns.
 
-Ferns reuse the bounded forest-scatter cache and streaming kernel used by fallen leaves, with their own settings, seed, resource paths and profiler markers. Runtime placement creates no per-plant GameObjects. `Graphics.DrawMeshInstanced` batches up to 1,023 plants across chunks, with CPU range/frustum selection and complementary near/far LOD selection over 22–38 units. Their default range is 65 units, fading over the final 10; it can optionally follow grass distance.
+Ferns reuse the bounded forest-scatter cache and streaming kernel used by fallen leaves, with their own settings, seed, resource paths and profiler markers. Runtime placement creates no per-plant GameObjects. The resident indirect renderer selects complementary near/far LODs over 22–38 units. CPU fallback batches up to 1,023 plants across chunks. Their default range is 65 units, fading over the final 10; it can optionally follow grass distance.
 
 | Mesh | Fronds | Triangles | Vertices |
 |---|---:|---:|---:|

@@ -216,7 +216,7 @@ public class ChunkManager
         this.waterMaterial = waterMaterial;
         this.terrainReceiveShadows = terrainReceiveShadows;
         leafClusters = new LeafClusterSystem(leafClusterSettings, seed, chunkSize, worldScale, meshHeightMultiplier, grassSettings);
-        ferns = new LeafClusterSystem(fernSettings ?? new FernSettings(), seed, chunkSize, worldScale, meshHeightMultiplier);
+        ferns = new LeafClusterSystem(fernSettings ?? new FernSettings(), seed, chunkSize, worldScale, meshHeightMultiplier, grassSettings);
         terrainHorizonShadows = new TerrainHorizonShadowSystem(chunkSize, seed, sampleScale, worldScale,
             meshHeightMultiplier, waterSettings, mountainHorizontalScale, erosion, terrainHorizonShadowSettings);
         this.maxActiveTerrainDataJobs = Mathf.Max(1, maxActiveTerrainDataJobs);
@@ -626,7 +626,8 @@ public class ChunkManager
             viewerCoord,
             viewerGlobalSubChunk,
             frustumVisibleCoords,
-            viewerCamera);
+            viewerCamera,
+            viewer.position);
 
         using (UpdateGrassStreamingMarker.Auto())
         {
