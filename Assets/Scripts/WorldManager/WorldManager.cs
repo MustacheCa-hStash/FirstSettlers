@@ -83,9 +83,11 @@ public class WorldManager : MonoBehaviour
     private ChunkManager chunkManager;
     private PlanarWaterReflection planarWaterReflection;
     public Transform Viewer => viewer;
+    public int TerrainGenerationRevision { get; private set; }
 
     void Awake()
     {
+        TerrainGenerationRevision++;
         TerrainGenerationProfiler.SetEnabled(logTerrainGenerationProfile);
         butterflySettings ??= new ButterflySettings();
         beeSettings ??= new BeeSettings();

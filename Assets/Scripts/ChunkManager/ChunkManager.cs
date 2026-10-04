@@ -358,28 +358,14 @@ public class ChunkManager
 
         bool hasChunkRecord = record != null;
         bool hasTerrainData = hasChunkRecord && record.HasTerrainData;
-        ChunkRuntime runtime = null;
-        bool hasRuntime = hasChunkRecord && loadedChunks.TryGetValue(coord, out runtime);
-        bool hasFoliageRuntime = hasRuntime && runtime.FoliageRuntime != null && runtime.FoliageRuntime.IsCreated;
 
         BiomeType biome = default;
         SurfaceType surfaceType = default;
-        GroundCoverType groundCoverType = default;
         float worldHeight = 0f;
         float slope = 0f;
         float moisture = 0f;
         float temperature = 0f;
         float riverMask = 0f;
-        int plannedTreeCount = 0;
-        int generatedTreeCount = 0;
-        int treeGameObjectCount = 0;
-        int gpuGrassInstanceCount = 0;
-        int gpuFlowerInstanceCount = 0;
-        int gpuLilyPadInstanceCount = 0;
-        int gpuCattailInstanceCount = 0;
-        int gpuCloverInstanceCount = 0;
-        int gpuDandelionInstanceCount = 0;
-        int gpuTreeInstanceCount = 0;
 
         float forestMembership = -1f;
         if (hasTerrainData && TryGetPaddedSampleIndices(coord, worldPosition, record, out int sampleX, out int sampleZ))
@@ -388,8 +374,6 @@ public class ChunkManager
             byte membership = record.WorldFeaturePlan?.ForestMembershipMap[sampleX,sampleZ] ?? 0;
             if (membership != 0) forestMembership = BiomeTransitionPolicy.ForestWeight(membership, biome);
             surfaceType = record.SurfaceTypeMap[sampleX, sampleZ];
-            if (record.GroundCoverMap != null)
-                groundCoverType = record.GroundCoverMap[sampleX, sampleZ];
 
             worldHeight = record.HeightMap[sampleX, sampleZ] * meshHeightMultiplier * worldScale;
             slope = record.SlopeMap[sampleX, sampleZ];
@@ -398,64 +382,19 @@ public class ChunkManager
             riverMask = record.RiverMaskMap[sampleX, sampleZ];
         }
 
-        if (hasTerrainData && record.WorldFeaturePlan != null)
-            plannedTreeCount = CountPlannedTrees(record.WorldFeaturePlan);
-
-        if (record != null && record.FoliageData != null && record.FoliageData.treeCubesGenerated)
-            generatedTreeCount = record.FoliageData.GetTotalTreeCubeInstanceCount();
-
-        if (hasFoliageRuntime)
-        {
-            treeGameObjectCount = runtime.FoliageRuntime.TreeGameObjectCount;
-            gpuGrassInstanceCount = runtime.FoliageRuntime.GpuGrassInstanceCount;
-            gpuFlowerInstanceCount = runtime.FoliageRuntime.GpuFlowerInstanceCount;
-            gpuLilyPadInstanceCount = runtime.FoliageRuntime.GpuLilyPadInstanceCount;
-            gpuCattailInstanceCount = runtime.FoliageRuntime.GpuCattailInstanceCount;
-            gpuCloverInstanceCount = runtime.FoliageRuntime.GpuCloverInstanceCount;
-            gpuDandelionInstanceCount = runtime.FoliageRuntime.GpuDandelionInstanceCount;
-            gpuTreeInstanceCount = runtime.FoliageRuntime.GpuTreeInstanceCount;
-        }
 
         return new WorldDebugInfo(
             worldPosition,
             coord,
             hasChunkRecord,
             hasTerrainData,
-            hasRuntime,
-            hasFoliageRuntime,
             biome,
             surfaceType,
-            groundCoverType,
             worldHeight,
             slope,
             moisture,
             temperature,
-            riverMask,
-            plannedTreeCount,
-            generatedTreeCount,
-            treeGameObjectCount,
-            gpuGrassInstanceCount,
-            gpuFlowerInstanceCount,
-            gpuLilyPadInstanceCount,
-            gpuCattailInstanceCount,
-            gpuCloverInstanceCount,
-            gpuDandelionInstanceCount,
-            gpuTreeInstanceCount, forestMembership);
-    }
-
-    private static int CountPlannedTrees(WorldFeaturePlan plan)
-    {
-        if (plan == null || plan.Placements == null)
-            return 0;
-
-        int count = 0;
-        for (int i = 0; i < plan.Placements.Count; i++)
-        {
-            if (plan.Placements[i].featureType == WorldFeatureType.Tree)
-                count++;
-        }
-
-        return count;
+            riverMask, forestMembership);
     }
 
     public WorldRenderStatsDebugInfo GetVisibleRenderStatsDebugInfo()

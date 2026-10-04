@@ -1,0 +1,4 @@
+"capture","patches","surface_triangles","patches_above_2px","max_projected_pixels","camera_x","camera_y","camera_z","seed"
+"ground-baseline","57","368640","49","31.16759","0","16.1805019","0","145678"
+"meadow-refined","57","1741930","3","3.815125","-0.238398835","16.195467","-0.122347556","145678"
+"hill-refined","64","926608","1","3.22072458","568.494934","146.365524","107.579971","145678"

@@ -34,6 +34,15 @@ coverage. Near foliage accepts the planned spruce on Snow surfaces. Coverage is
 carried into `TreeInstanceData` and reset on every pooled-instance rebuild.
 Impostor materials and rendering are unchanged and ignore this coverage.
 
+Taiga has a separate bare-spruce placement pass. Previously this cool, wet band
+between Snow and Forest was classified correctly but was excluded from every
+tree pass, leaving broad treeless areas. Taiga now shares the forest stand noise,
+18-tree chunk budget, slope limit (45 degrees), river exclusion (.64), and spruce
+spacing. Its terrain classification and Forest/Grassland groundcover ownership
+remain unchanged. Both near and distant planners run the same pass.
+`TaigaTreeValidation.RunBatch` checks suitable/excluded habitats, placement parity,
+the saved scene's Taiga chunks, and existing forest, transition and snow regressions.
+
 Restart Play Mode or use World Manager's Regenerate Terrain to see regenerated
 placements. `Tools > Terrain > Validate Snowy Spruce` checks habitat exclusions,
 dense/sparse agreement, near-instance creation, pool resets, shader compilation,

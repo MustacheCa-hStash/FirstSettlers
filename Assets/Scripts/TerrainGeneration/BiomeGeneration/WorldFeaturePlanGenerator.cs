@@ -128,6 +128,9 @@ public static class WorldFeaturePlanGenerator
             riverMaskMap,
             settings);
 
+        AddTaigaSpruceTrees(plan, chunkCoord, chunkSize, seed, biomeMap, surfaceTypeMap,
+            slopeMap, riverMaskMap, settings);
+
         AddSnowSpruceTrees(plan, chunkCoord, chunkSize, seed, biomeMap, surfaceTypeMap,
             moistureMap, temperatureMap, slopeMap, riverMaskMap, settings,
             sampleHeight: heightMap == null ? null : (x, z) => heightMap[x, z], waterLevel: waterLevel);
@@ -234,6 +237,7 @@ public static class WorldFeaturePlanGenerator
         AddGrasslandRocks(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
         AddForestTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, settings, PrepareTree);
         AddGrasslandTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, settings, PrepareTree);
+        AddTaigaSpruceTrees(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
         AddSnowSpruceTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature,
             slopes, rivers, settings, Prepare, sampleHeight, waterLevel);
         return plan;
@@ -327,23 +331,8 @@ public static class WorldFeaturePlanGenerator
                 float worldX = chunkCoord.x * chunkSize + (x - 1);
                 float worldZ = chunkCoord.z * chunkSize + (z - 1);
 
-                float canopyMacro = Sample01(worldX, worldZ, ForestCanopyMacroScale, seed + 6100);
-                float treeCluster = Sample01(worldX, worldZ, ForestTreeClusterScale, seed + 6101);
-                float clearingNoise = Sample01(worldX, worldZ, ForestClearingScale, seed + 6102);
-                float rockinessNoise = Sample01(worldX, worldZ, ForestRockinessScale, seed + 6103);
-                float fineBreakup = Sample01(worldX, worldZ, ForestFineBreakupScale, seed + 6104);
-
-                float slopeSuitability = Mathf.InverseLerp(TerrainSlopePolicy.ForestMaxDegrees, TerrainSlopePolicy.ForestFadeStartDegrees, slopeMap[x, z]);
-                float riverSuitability = 1f - SmoothStep(0.52f, 0.76f, riverMaskMap[x, z]);
-                float clearing = Mathf.Clamp01((clearingNoise - 0.62f) * 2.65f);
-
-                float canopyIntent = canopyMacro * 0.52f + treeCluster * 0.36f + fineBreakup * 0.12f;
-                canopyIntent = Mathf.Clamp01(canopyIntent * slopeSuitability * riverSuitability);
-                canopyIntent *= 1f - clearing * 0.72f;
-
-                float rockiness = Mathf.Clamp01((rockinessNoise - 0.55f) * 2.2f);
-                rockiness = Mathf.Clamp01(rockiness + Mathf.InverseLerp(30f, 60f, slopeMap[x, z]) * 0.42f);
-                rockiness *= riverSuitability;
+                SampleForestTreeStructure(worldX, worldZ, seed, slopeMap[x, z], riverMaskMap[x, z],
+                    out float canopyIntent, out float clearing, out float treeCluster, out float rockiness, out float fineBreakup);
 
                 float localMoisture = Mathf.Clamp01(moistureMap[x, z] + plan.LocalMoistureAdjustmentMap[x, z]);
                 float dampShade = Mathf.Clamp01(localMoisture * 0.5f + canopyIntent * 0.34f + riverMaskMap[x, z] * 0.16f);
@@ -777,6 +766,61 @@ public static class WorldFeaturePlanGenerator
                 exclusionRadius,
                 influenceRadius));
 
+            placed++;
+        }
+    }
+
+    private static void SampleForestTreeStructure(float worldX, float worldZ, int seed,
+        float slope, float river, out float canopy, out float clearing, out float cluster, out float rockiness, out float fine)
+    {
+        float macro = Sample01(worldX, worldZ, ForestCanopyMacroScale, seed + 6100);
+        cluster = Sample01(worldX, worldZ, ForestTreeClusterScale, seed + 6101);
+        clearing = Mathf.Clamp01((Sample01(worldX, worldZ, ForestClearingScale, seed + 6102) - 0.62f) * 2.65f);
+        float rockNoise = Sample01(worldX, worldZ, ForestRockinessScale, seed + 6103);
+        fine = Sample01(worldX, worldZ, ForestFineBreakupScale, seed + 6104);
+        float slopeSuitability = Mathf.InverseLerp(TerrainSlopePolicy.ForestMaxDegrees, TerrainSlopePolicy.ForestFadeStartDegrees, slope);
+        float riverSuitability = 1f - SmoothStep(0.52f, 0.76f, river);
+        canopy = Mathf.Clamp01((macro * 0.52f + cluster * 0.36f + fine * 0.12f) * slopeSuitability * riverSuitability);
+        canopy *= 1f - clearing * 0.72f;
+        rockiness = Mathf.Clamp01((rockNoise - 0.55f) * 2.2f);
+        rockiness = Mathf.Clamp01(rockiness + Mathf.InverseLerp(30f, 60f, slope) * 0.42f) * riverSuitability;
+    }
+
+    // Taiga is a conifer forest habitat, but has no Forest/Grassland transition ownership.
+    // Sample the same forest stand pattern directly without changing its groundcover policy.
+    private static void AddTaigaSpruceTrees(WorldFeaturePlan plan, ChunkCoord coord, int chunkSize,
+        int seed, BiomeType[,] biomes, SurfaceType[,] surfaces, float[,] slopes, float[,] rivers,
+        WorldFeatureGenerationSettings settings, System.Action<int, int> prepare = null)
+    {
+        int total = TreeCandidateCellsPerAxis * TreeCandidateCellsPerAxis;
+        // Reuse forest candidate coordinates so sparse sampling hits the prepared cache.
+        int offset = Mathf.Abs(Hash(seed, coord.x, coord.z, 6311)) % total;
+        float cellSize = chunkSize / (float)TreeCandidateCellsPerAxis;
+        int placed = 0;
+        for (int i = 0; i < total && placed < MaxForestTreesPerChunk; i++)
+        {
+            int cell = (i * 37 + offset) % total;
+            int hash = Hash(seed, coord.x, coord.z, cell % TreeCandidateCellsPerAxis, cell / TreeCandidateCellsPerAxis, 6301);
+            float x = Mathf.Clamp((cell % TreeCandidateCellsPerAxis + Hash01(hash + 17)) * cellSize, 5f, chunkSize - 5f);
+            float z = Mathf.Clamp((cell / TreeCandidateCellsPerAxis + Hash01(hash + 31)) * cellSize, 5f, chunkSize - 5f);
+            int px = Mathf.Clamp(Mathf.RoundToInt(x), 0, chunkSize) + 1;
+            int pz = Mathf.Clamp(Mathf.RoundToInt(z), 0, chunkSize) + 1;
+            prepare?.Invoke(px, pz);
+            if (biomes[px, pz] != BiomeType.Taiga || surfaces[px, pz] != SurfaceType.Grass ||
+                slopes[px, pz] >= TerrainSlopePolicy.ForestMaxDegrees || rivers[px, pz] >= 0.64f) continue;
+
+            SampleForestTreeStructure(coord.x * chunkSize + px - 1, coord.z * chunkSize + pz - 1,
+                seed, slopes[px, pz], rivers[px, pz], out float canopy, out float clearing,
+                out float cluster, out float rockiness, out _);
+            float chance = Mathf.Clamp01(Mathf.InverseLerp(0.30f, 0.84f, canopy) *
+                Mathf.Lerp(0.72f, 1.18f, cluster) * (1f - clearing * 0.82f) * (1f - rockiness * 0.28f));
+            if (Hash01(hash + 53) >= chance) continue;
+            float radius = GetForestTreeExclusionRadius(WorldFeatureVariant.SpruceTree, Hash01(hash + 131));
+            if (IntersectsExistingPlacement(plan, x, z, radius)) continue;
+            plan.Placements.Add(new WorldFeaturePlacement(WorldFeatureType.Tree, WorldFeatureVariant.SpruceTree,
+                x, z, Quaternion.Euler(0f, Hash01(hash + 79) * 360f, 0f),
+                Vector3.one * GetTreeScale(settings.treeUniformScaleRange, Hash01(hash + 97)), radius,
+                GetForestTreeInfluenceRadius(WorldFeatureVariant.SpruceTree, Hash01(hash + 149))));
             placed++;
         }
     }

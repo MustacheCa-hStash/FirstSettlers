@@ -1,0 +1,5 @@
+seed,patch,view,surface_triangles,max_projected_pixels,dense_sampling,target_pixels,budget_limited,estimated_unmet_regions
+145678,FarPatch_16_2_-1,ground-baseline,2048,31.16759,False,2,False,
+145678,FarPatch_16_2_-1,ground-adaptive,57082,2.379172,True,2,True,38
+145678,FarPatch_16_2_-1,elevated-baseline,2048,23.57152,False,2,False,
+145678,FarPatch_16_2_-1,elevated-adaptive,57082,1.99769592,True,2,True,21

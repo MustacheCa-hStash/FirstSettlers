@@ -36,7 +36,7 @@ public static class WorldManagerInspectorValidation
                 Check(iterator.propertyPath == "m_Script" || sectionPaths.Contains(iterator.propertyPath),
                     "Ungrouped world property: " + iterator.propertyPath);
             }
-            foreach (string path in new[] { "foliageParent", "treeSettings.treeCellSize", "treeSettings.treeSpawnChance",
+            foreach (string path in new[] { "farTerrainRefinement", "farTerrainComparison", "foliageParent", "treeSettings.treeCellSize", "treeSettings.treeSpawnChance",
                 "treeSettings.treeMinDistance", "grassSettings.grassInstanceDataPropertyName",
                 "grassSettings.enableBillboardRenderFade", "grassSettings.billboardRenderFadeDuration",
                 "grassSettings.billboardFadeDitherPixelSize", "grassSettings.billboardUniformScaleRange",

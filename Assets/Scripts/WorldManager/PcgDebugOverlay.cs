@@ -17,16 +17,25 @@ public class PcgDebugOverlay : MonoBehaviour
     private readonly StringBuilder builder = new StringBuilder(512);
     private bool isVisible;
     private float nextRefreshTime;
+    private TextMeshProUGUI performanceText;
+    private readonly FrameTimeStatistics frameTimes = new FrameTimeStatistics();
+    private readonly StringBuilder performanceBuilder = new StringBuilder(256);
+    private double previousFrameTime = double.NaN;
+    private float nextPerformanceRefreshTime;
+    private int generationRevision = -1;
 
     void Awake()
     {
         EnsureOverlay();
+        EnsurePerformanceOverlay();
         isVisible = visibleOnStart;
+        if (debugCanvas != null) debugCanvas.enabled = isVisible;
     }
 
     void Update()
     {
         HandleToggleInput();
+        if (Keyboard.current?.f7Key.wasPressedThisFrame == true) ResetPerformanceSample();
 
         if (!isVisible || Time.unscaledTime < nextRefreshTime)
             return;
@@ -34,6 +43,21 @@ public class PcgDebugOverlay : MonoBehaviour
         nextRefreshTime = Time.unscaledTime + refreshInterval;
         RefreshText();
     }
+
+    void LateUpdate()
+    {
+        int revision = worldManager != null ? worldManager.TerrainGenerationRevision : 0;
+        if (revision != generationRevision) { generationRevision = revision; ResetPerformanceSample(); }
+        double now = Time.realtimeSinceStartupAsDouble;
+        if (Application.isFocused && !double.IsNaN(previousFrameTime)) frameTimes.Add((float)(now - previousFrameTime));
+        previousFrameTime = Application.isFocused ? now : double.NaN;
+        if (isVisible && Time.unscaledTime >= nextPerformanceRefreshTime)
+        { nextPerformanceRefreshTime = Time.unscaledTime + 0.5f; RefreshPerformanceText(); }
+    }
+    void OnApplicationFocus(bool focused) { ResetPerformanceSample(); }
+    void OnEnable() { ResetPerformanceSample(); }
+    private void ResetPerformanceSample()
+    { frameTimes.Reset(); previousFrameTime = double.NaN; nextPerformanceRefreshTime = 0f; }
 
     private void EnsureOverlay()
     {
@@ -67,7 +91,7 @@ public class PcgDebugOverlay : MonoBehaviour
         panelRect.anchorMax = new Vector2(0f, 1f);
         panelRect.pivot = new Vector2(0f, 1f);
         panelRect.anchoredPosition = new Vector2(12f, -12f);
-        panelRect.sizeDelta = new Vector2(430f, 510f);
+        panelRect.sizeDelta = new Vector2(430f, 275f);
 
         Image panelImage = panelObject.AddComponent<Image>();
         panelImage.color = new Color(0f, 0f, 0f, 0.72f);
@@ -90,9 +114,37 @@ public class PcgDebugOverlay : MonoBehaviour
         debugText.text = string.Empty;
     }
 
+    private void EnsurePerformanceOverlay()
+    {
+        if (debugCanvas == null) return;
+        GameObject panel = new GameObject("Performance Panel", typeof(RectTransform), typeof(Image));
+        panel.transform.SetParent(debugCanvas.transform, false);
+        RectTransform rect = panel.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 1f);
+        rect.anchoredPosition = new Vector2(-12f, -12f); rect.sizeDelta = new Vector2(340f, 135f);
+        Image image = panel.GetComponent<Image>(); image.color = new Color(0f, 0f, 0f, 0.72f); image.raycastTarget = false;
+        GameObject text = new GameObject("Performance Text", typeof(RectTransform)); text.transform.SetParent(panel.transform, false);
+        RectTransform textRect = text.GetComponent<RectTransform>(); textRect.anchorMin = Vector2.zero; textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = new Vector2(10f, 10f); textRect.offsetMax = new Vector2(-10f, -10f);
+        performanceText = text.AddComponent<TextMeshProUGUI>(); performanceText.alignment = TextAlignmentOptions.TopLeft;
+        performanceText.font = debugText.font;
+        performanceText.fontSize = 17f; performanceText.color = Color.white; performanceText.raycastTarget = false;
+    }
+    private void RefreshPerformanceText()
+    {
+        if (performanceText == null) return;
+        frameTimes.Calculate(out double average, out double low);
+        performanceBuilder.Clear(); performanceBuilder.AppendLine("Performance (30 s window)");
+        performanceBuilder.Append("Average FPS: "); performanceBuilder.AppendLine(frameTimes.Count > 0 ? average.ToString("0.0") : "warming up");
+        performanceBuilder.Append("1% low FPS: "); performanceBuilder.AppendLine(frameTimes.Count >= 100 ? low.ToString("0.0") : "warming up");
+        performanceBuilder.Append("Sample: "); performanceBuilder.Append(frameTimes.SampleSeconds.ToString("0.0")); performanceBuilder.AppendLine(" s");
+        performanceBuilder.Append("F7 reset");
+        performanceText.text = performanceBuilder.ToString();
+    }
+
     private void HandleToggleInput()
     {
-        if (Keyboard.current[toggleKey].wasPressedThisFrame)
+        if (Keyboard.current != null && Keyboard.current[toggleKey].wasPressedThisFrame)
             SetVisible(!isVisible);
     }
 
@@ -106,6 +158,7 @@ public class PcgDebugOverlay : MonoBehaviour
         if (visible)
         {
             nextRefreshTime = 0f;
+            nextPerformanceRefreshTime = 0f;
             RefreshText();
         }
     }
@@ -172,8 +225,6 @@ public class PcgDebugOverlay : MonoBehaviour
         }
         builder.Append("Surface: ");
         builder.AppendLine(info.SurfaceType.ToString());
-        builder.Append("Ground Cover: ");
-        builder.AppendLine(info.GroundCoverType.ToString());
         builder.Append("World Height: ");
         builder.AppendLine(info.WorldHeight.ToString("0.00"));
         builder.Append("Slope (degrees): ");
@@ -184,29 +235,6 @@ public class PcgDebugOverlay : MonoBehaviour
         builder.AppendLine(info.Temperature.ToString("0.000"));
         builder.Append("River Mask: ");
         builder.AppendLine(info.RiverMask.ToString("0.000"));
-        builder.Append("Planned Trees: ");
-        builder.AppendLine(info.PlannedTreeCount.ToString());
-        builder.Append("Generated Trees: ");
-        builder.AppendLine(info.GeneratedTreeCount.ToString());
-        builder.Append("Tree GameObjects: ");
-        builder.AppendLine(info.TreeGameObjectCount.ToString());
-        builder.Append("GPU Grass: ");
-        builder.AppendLine(info.GpuGrassInstanceCount.ToString());
-        builder.Append("GPU Flowers: ");
-        builder.AppendLine(info.GpuFlowerInstanceCount.ToString());
-        builder.Append("GPU Lily Pads: ");
-        builder.AppendLine(info.GpuLilyPadInstanceCount.ToString());
-        builder.Append("GPU Cattails: ");
-        builder.AppendLine(info.GpuCattailInstanceCount.ToString());
-        builder.Append("GPU Clover: ");
-        builder.AppendLine(info.GpuCloverInstanceCount.ToString());
-        builder.Append("GPU Dandelions: ");
-        builder.AppendLine(info.GpuDandelionInstanceCount.ToString());
-        builder.Append("GPU Trees: ");
-        builder.AppendLine(info.GpuTreeInstanceCount.ToString());
-
-        if (!info.HasFoliageRuntime)
-            builder.AppendLine("Foliage Runtime: none");
 
         debugText.text = builder.ToString();
     }

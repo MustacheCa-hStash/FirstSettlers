@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -13,6 +14,7 @@ public sealed class DistantTreeManager : IDisposable
         public List<TreeInstanceData> NearSource;
         public Matrix4x4[] Matrices;
         public float[] Priority, Height;
+        public DistantTreeGrounding Grounding;
         public int[] ProtectionOrder;
         public int[] GpuSlots;
         public Bounds Bounds;
@@ -62,6 +64,7 @@ public sealed class DistantTreeManager : IDisposable
     private ChunkCoord lastViewer;
     private int lastRadius = -1;
     private bool disposed;
+    private static readonly ProfilerMarker UpdateMarker = new("FS.DistantTrees.Update");
     public RenderGeometryStats RenderStats { get; private set; }
 
     public DistantTreeManager(TreeSettings settings, int seed, int chunkSize, float sampleScale,
@@ -134,6 +137,7 @@ public sealed class DistantTreeManager : IDisposable
     public void Update(ChunkManager manager, Vector3 viewer, Camera camera, int terrainViewDistance)
     {
         if (disposed) return;
+        using var updateSample = UpdateMarker.Auto();
         RenderStats = default;
         ConfigureGpu();
         foreach (var batch in uniqueBatches) batch.Gpu?.BeginFrame();
@@ -187,6 +191,9 @@ public sealed class DistantTreeManager : IDisposable
         float outerWidth = Mathf.Clamp(settings.distantTreeFadeWidthChunks * chunkWorldSize, 1f, maxDistance);
         float protectionChunks = Mathf.Max(0, settings.gameObjectTreeChunkRingRadius) + 1f;
         float thinStart = Mathf.Max(protectionChunks, settings.distantTreeThinningStartChunks) * chunkWorldSize;
+        float heightScale = heightMultiplier * worldScale;
+        float conformity = Mathf.Clamp01(settings.distantTreeTerrainConform);
+        float heightStep = Mathf.Max(0f, settings.distantTreeHeightBlendSpeed) * Time.unscaledDeltaTime;
         foreach (var coord in wanted)
         {
             if (!manager.TryGetDistantTreeSurface(coord, out var runtime, out var heights, out var origin, out float surfaceSize)) continue;
@@ -240,21 +247,11 @@ public sealed class DistantTreeManager : IDisposable
 
             // Bounds include billboard rotation and tree heights. Coarse ground conformity can
             // shift the bases; expand vertically by the largest shift before frustum culling.
+            // Targets are invalidated by a terrain/support swap, not by camera movement.
+            manifest.Grounding.Update(heights, origin, surfaceSize, heightScale, conformity,
+                manifest.LoadFade <= fadeStep || settings.distantTreeHeightBlendSpeed <= 0f, heightStep);
             var bounds = manifest.Bounds;
-            float largestShift = 0f;
-            for (int i = 0; i < manifest.Trees.Length; i++)
-            {
-                var matrix = manifest.Matrices[i];
-                float trueY = manifest.Trees[i].localPosition.y;
-                float targetY = heights == null ? trueY : Mathf.Lerp(trueY,
-                    SampleSurface(heights, origin, surfaceSize, matrix.m03, matrix.m23) * heightMultiplier * worldScale,
-                    Mathf.Clamp01(settings.distantTreeTerrainConform));
-                // Start on displayed terrain before the initial load fade exposes the card.
-                manifest.Height[i] = manifest.LoadFade <= fadeStep || settings.distantTreeHeightBlendSpeed <= 0f ? targetY : Mathf.MoveTowards(manifest.Height[i], targetY,
-                    Mathf.Max(0f, settings.distantTreeHeightBlendSpeed) * Time.unscaledDeltaTime);
-                largestShift = Mathf.Max(largestShift, Mathf.Abs(manifest.Height[i] - trueY));
-            }
-            bounds.Expand(new Vector3(0f, largestShift * 2f, 0f));
+            bounds.Expand(new Vector3(0f, manifest.Grounding.LargestShift * 2f, 0f));
             if (camera != null && !GeometryUtility.TestPlanesAABB(planes, bounds)) continue;
             if (settings.distantTreeDensityAware && manifest.CrowdingDirty) RefreshCrowding(coord, manifest);
             for (int i = 0; i < manifest.Trees.Length; i++)
@@ -383,6 +380,7 @@ public sealed class DistantTreeManager : IDisposable
             }
             chosen[best] = true; m.ProtectionOrder[best] = rank;
         }
+        m.Grounding = new DistantTreeGrounding(m.Trees, m.Matrices, m.Height);
         return m;
     }
 
