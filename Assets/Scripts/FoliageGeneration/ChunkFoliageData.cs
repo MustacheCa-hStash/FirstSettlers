@@ -33,6 +33,7 @@ public class ChunkFoliageData
     public List<DandelionInstanceData> dandelionInstances = new List<DandelionInstanceData>();
 
     public bool treeCubesGenerated;
+    public int TreeRevision { get; private set; }
     public List<TreeInstanceData> treeCubeInstances = new List<TreeInstanceData>();
 
     public bool bushesGenerated;
@@ -202,6 +203,7 @@ public class ChunkFoliageData
 
     public void ClearTreeCubes()
     {
+        TreeRevision++;
         treeCubesGenerated = false;
         treeCubeInstances.Clear();
     }

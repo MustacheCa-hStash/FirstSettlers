@@ -83,6 +83,8 @@ public class WorldManager : MonoBehaviour
     private ChunkManager chunkManager;
     private PlanarWaterReflection planarWaterReflection;
     public Transform Viewer => viewer;
+    public TreeRegistry Trees => chunkManager?.Trees;
+    public TreeGameplayManager TreeGameplay => chunkManager?.TreeGameplay;
     public int TerrainGenerationRevision { get; private set; }
 
     void Awake()

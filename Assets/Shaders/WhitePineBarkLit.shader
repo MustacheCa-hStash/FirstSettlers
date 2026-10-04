@@ -186,6 +186,7 @@ Shader "Custom/WhitePineBarkLegacySimpleLit"
             #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Assets/Shaders/DistantTreeFade.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
 
             float3 _LightDirection;
@@ -227,6 +228,7 @@ Shader "Custom/WhitePineBarkLegacySimpleLit"
             half4 frag(Varyings IN) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
+                ApplyDistantTreeFade(IN.positionCS.xy);
                 return 0;
             }
             ENDHLSL

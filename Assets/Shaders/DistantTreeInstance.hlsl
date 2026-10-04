@@ -38,7 +38,11 @@ half4 GetDistantTreeTint(half4 fallbackTint)
 #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
     return _DistantTreeInstances[unity_InstanceID].tint;
 #else
-    return fallbackTint;
+    #if defined(STANDING_TREE_INSTANCE_INCLUDED)
+        return StandingTreeLeafTint(fallbackTint);
+    #else
+        return fallbackTint;
+    #endif
 #endif
 }
 #endif

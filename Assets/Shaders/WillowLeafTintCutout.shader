@@ -190,8 +190,8 @@ Shader "Custom/WillowLeafSimpleLitCutout"
                 half cardVariation = lerp(1.0h - _CardVariationStrength, 1.0h + _CardVariationStrength, cardNoise);
                 half3 detailedLeafColor = leafColor * leafDetail * cardVariation;
 
-                half directTintAmount = 1.0h - saturate(_TreeLeafTint.a);
-                leafColor = lerp(detailedLeafColor * _TreeLeafTint.rgb, _TreeLeafTint.rgb * leafDetail * cardVariation, directTintAmount);
+                half directTintAmount = 1.0h - saturate(StandingTreeLeafTint(_TreeLeafTint).a);
+                leafColor = lerp(detailedLeafColor * StandingTreeLeafTint(_TreeLeafTint).rgb, StandingTreeLeafTint(_TreeLeafTint).rgb * leafDetail * cardVariation, directTintAmount);
                 leafColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
 
                 InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);
@@ -316,7 +316,7 @@ Shader "Custom/WillowLeafSimpleLitCutout"
                 UNITY_SETUP_INSTANCE_ID(IN);
                 ApplyDistantTreeFade(IN.positionCS.xy);
 
-                if (_AlphaCutoutShadows > 0.5h)
+                if (StandingTreeAlphaShadows(_AlphaCutoutShadows) > 0.5h)
                 {
                     half4 atlas = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
                     half atlasLuma = dot(atlas.rgb, half3(0.299h, 0.587h, 0.114h));

@@ -203,6 +203,7 @@ Shader "Custom/BirchLeafSimpleLitCutout"
                 half cardNoise = Hash12(floor(IN.positionWS.xz * 0.70h) + floor(IN.uv * 5.0h));
                 half cardVariation = lerp(1.0h - _CardVariationStrength, 1.0h + _CardVariationStrength, cardNoise);
                 leafColor *= leafDetail * cardVariation;
+                leafColor *= StandingTreeLeafTint(half4(1, 1, 1, 1)).rgb;
                 leafColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
 
                 InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);
@@ -330,7 +331,7 @@ Shader "Custom/BirchLeafSimpleLitCutout"
                 UNITY_SETUP_INSTANCE_ID(IN);
                 ApplyDistantTreeFade(IN.positionCS.xy);
 
-                if (_AlphaCutoutShadows > 0.5h)
+                if (StandingTreeAlphaShadows(_AlphaCutoutShadows) > 0.5h)
                 {
                     half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
                     clip(alpha - _Cutoff);

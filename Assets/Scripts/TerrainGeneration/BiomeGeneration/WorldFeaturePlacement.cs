@@ -2,6 +2,7 @@ using UnityEngine;
 
 public struct WorldFeaturePlacement
 {
+    public TreeId treeId;
     public WorldFeatureType featureType;
     public WorldFeatureVariant variant;
     public float sampleX;
@@ -23,8 +24,10 @@ public struct WorldFeaturePlacement
         float exclusionRadius,
         float influenceRadius,
         int prefabIndex = 0,
-        float snowCoverage = 0f)
+        float snowCoverage = 0f,
+        TreeId treeId = default)
     {
+        this.treeId = treeId;
         this.featureType = featureType;
         this.variant = variant;
         this.sampleX = sampleX;

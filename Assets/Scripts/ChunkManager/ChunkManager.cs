@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class ChunkManager
 {
+    public TreeRegistry Trees { get; }
+    public TreeGameplayManager TreeGameplay { get; }
     private readonly TerrainHorizonShadowSystem terrainHorizonShadows;
     private const int FarTerrainLOD = 5;
     // The first leaf keeps the current 4x4 macro footprint. Larger leaves are
@@ -264,6 +266,8 @@ public class ChunkManager
             this.maxActiveMeshJobs,
             this.maxActiveColliderJobs,
             waterSettings, mountainHorizontalScale, mountainSnowRenderCoverageGamma, erosion);
+        Trees = new TreeRegistry(seed, chunkSize * worldScale);
+        if (treeSettings != null) TreeGameplay = new TreeGameplayManager(Trees, treeSettings, chunkSize * worldScale);
         foliageManager = new FoliageManager(
             foliageParent,
             grassSettings,
@@ -277,16 +281,17 @@ public class ChunkManager
             chunkSize,
             worldScale,
             meshHeightMultiplier,
-            waterSettings);
+            waterSettings,
+            Trees);
         butterflyManager = new AmbientLifeManager(butterflySettings, flowerSettings, seed, chunkSize, worldScale,
             meshHeightMultiplier, waterSettings.SurfaceY);
         if (beeSettings != null)
             beeManager = new AmbientLifeManager(beeSettings, flowerSettings, seed, chunkSize, worldScale,
                 meshHeightMultiplier, waterSettings.SurfaceY);
-        if (treeSettings != null && treeSettings.enableDistantTrees)
+        if (treeSettings != null)
             distantTrees = new DistantTreeManager(treeSettings, seed, chunkSize, sampleScale, octaves, persistence,
                 lacunarity, worldScale, meshHeightMultiplier, waterSettings.WaterLevel, mountainHorizontalScale,
-                worldFeatureGenerationSettings, erosion);
+                worldFeatureGenerationSettings, erosion, Trees);
     }
 
     public void Dispose()
@@ -297,6 +302,7 @@ public class ChunkManager
         butterflyManager?.Dispose();
         beeManager?.Dispose();
         distantTrees?.Dispose();
+        TreeGameplay?.Dispose();
         foliageManager?.Dispose();
         foreach (var runtime in loadedChunks.Values)
             runtime.DestroyRuntime();
@@ -317,6 +323,7 @@ public class ChunkManager
         terrainRequestManager?.Dispose();
         foreach (var record in chunkRecords.Values)
             record.Dispose();
+        Trees.Clear();
     }
 
     public bool TryGetDistantTreeSurface(ChunkCoord coord, out ChunkRuntime runtime,
@@ -425,7 +432,11 @@ public class ChunkManager
             viewerCoord,
             frustumVisibleCoords,
             ref stats);
-        if (distantTrees != null) stats.TreeBillboards = distantTrees.RenderStats;
+        if (distantTrees != null)
+        {
+            stats.TreeBillboards = distantTrees.RenderStats;
+            stats.TreeMeshes = distantTrees.MeshRenderStats;
+        }
 
         return stats;
     }
@@ -580,6 +591,7 @@ public class ChunkManager
         {
             distantTrees?.Update(this, viewer.position, viewerCamera, viewDistance);
         }
+        TreeGameplay?.Update(viewer.position);
         butterflyManager?.Update(this, viewerCoord, viewerCamera, Time.deltaTime);
         beeManager?.Update(this, viewerCoord, viewerCamera, Time.deltaTime);
         leafClusters.Update(this, orderedActiveCoords, viewer.position, viewerCamera);

@@ -1885,7 +1885,8 @@ public static class FoliageGenerator
                 placement.variant,
                 leafTint,
                 barkTint,
-                placement.snowCoverage));
+                placement.snowCoverage,
+                placement.treeId));
         }
 
         foliageData.treeCubesGenerated = true;

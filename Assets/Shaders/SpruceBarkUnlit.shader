@@ -185,6 +185,7 @@ Shader "Custom/SpruceBarkSimpleLit"
                 half barkDetail = lerp(0.72h, 1.22h, smoothstep(0.16h, 0.92h, barkLuma));
                 barkColor *= barkDetail;
                 barkColor = lerp(barkColor, _CreviceColor.rgb, saturate(crackMask * _CrackDarkness));
+                barkColor *= StandingTreeBarkTint(half4(1, 1, 1, 1)).rgb;
                 barkColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
 
                 InputData inputData = InitializeSpruceBarkInputData(IN);
@@ -222,6 +223,7 @@ Shader "Custom/SpruceBarkSimpleLit"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+            #include "Assets/Shaders/DistantTreeFade.hlsl"
 
             float3 _LightDirection;
             float3 _LightPosition;
@@ -269,6 +271,7 @@ Shader "Custom/SpruceBarkSimpleLit"
             half4 frag(Varyings IN) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
+                ApplyDistantTreeFade(IN.positionCS.xy);
                 return 0;
             }
             ENDHLSL

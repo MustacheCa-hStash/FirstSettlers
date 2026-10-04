@@ -261,7 +261,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 ApplyDistantTreeFade(IN.positionCS.xy);
 
                 half4 atlas = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
-                half coverage = saturate(_SnowCoverage);
+                half coverage = saturate(StandingTreeSnow(_SnowCoverage));
                 half4 snowyCard = 0.0h;
                 half snowAlpha = 0.0h;
                 UNITY_BRANCH if (coverage > 0.0h)
@@ -280,6 +280,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 #endif
 
                 half3 leafColor = EvaluateSpruceNeedleColor(IN.uv, IN.positionWS, IN.positionOS);
+                leafColor *= StandingTreeLeafTint(half4(1, 1, 1, 1)).rgb;
                 leafColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
                 leafColor = ApplySpruceNeedleDefinition(atlas, leafColor);
 
@@ -326,6 +327,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+            #include "Assets/Shaders/DistantTreeFade.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
 
             TEXTURE2D(_BaseMap);
@@ -448,15 +450,16 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
             half4 frag(Varyings IN) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
+                ApplyDistantTreeFade(IN.positionCS.xy);
 
-                if (_AlphaCutoutShadows > 0.5h || _SnowCoverage > 0.0h)
+                if (StandingTreeAlphaShadows(_AlphaCutoutShadows) > 0.5h || StandingTreeSnow(_SnowCoverage) > 0.0h)
                 {
                     half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
-                    UNITY_BRANCH if (_SnowCoverage > 0.0h)
+                    UNITY_BRANCH if (StandingTreeSnow(_SnowCoverage) > 0.0h)
                     {
                         half4 snowyCard = SAMPLE_TEXTURE2D(_SnowMap, sampler_SnowMap, IN.uv);
                         half snowMask = smoothstep(0.18h, 0.50h, min(snowyCard.r, min(snowyCard.g, snowyCard.b)));
-                        alpha = max(alpha, snowMask * snowyCard.a * saturate(_SnowCoverage));
+                        alpha = max(alpha, snowMask * snowyCard.a * saturate(StandingTreeSnow(_SnowCoverage)));
                     }
                     clip(alpha - _Cutoff);
                 }

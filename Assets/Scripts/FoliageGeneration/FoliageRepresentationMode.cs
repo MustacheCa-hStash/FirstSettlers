@@ -1,5 +1,6 @@
 public enum FoliageRepresentationMode
 {
     GameObjectWithCollision,
-    GPUInstancedBillboard
+    GPUInstancedBillboard,
+    GPUInstancedMesh
 }

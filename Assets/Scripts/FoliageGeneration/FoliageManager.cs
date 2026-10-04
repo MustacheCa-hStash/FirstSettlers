@@ -44,6 +44,7 @@ public class FoliageManager
     private readonly CloverSettings cloverSettings;
     private readonly DandelionSettings dandelionSettings;
     private readonly TreeSettings treeSettings;
+    private readonly TreeRegistry treeRegistry;
     private readonly bool useDistantTrees;
     private readonly int worldSeed;
     private readonly int chunkSize;
@@ -140,7 +141,8 @@ public class FoliageManager
     private int lastObservedNearGrassPrecomputeChunkPadding;
 
     public FoliageManager(Transform foliageParent, GrassSettings grassSettings, FlowerSettings flowerSettings, LilyPadSettings lilyPadSettings, CattailSettings cattailSettings, CloverSettings cloverSettings, DandelionSettings dandelionSettings, TreeSettings treeSettings, int worldSeed,
-        int chunkSize, float worldScale, float meshHeightMultiplier, TerrainWaterSettings waterSettings)
+        int chunkSize, float worldScale, float meshHeightMultiplier, TerrainWaterSettings waterSettings,
+        TreeRegistry treeRegistry = null)
     {
         this.grassSettings = grassSettings;
         this.flowerSettings = flowerSettings;
@@ -149,6 +151,7 @@ public class FoliageManager
         this.cloverSettings = cloverSettings;
         this.dandelionSettings = dandelionSettings;
         this.treeSettings = treeSettings;
+        this.treeRegistry = treeRegistry;
         useDistantTrees = treeSettings != null && treeSettings.enableDistantTrees;
         this.worldSeed = worldSeed;
         this.chunkSize = chunkSize;
@@ -951,6 +954,8 @@ public class FoliageManager
                 TerrainGenerationProfileStage.FoliageTreeGeneration,
                 stageStart);
         }
+        treeRegistry?.RegisterChunk(record.ChunkCoord, record.FoliageData.treeCubeInstances,
+            TreePlacementDetail.Detailed, record.FoliageData.TreeRevision);
     }
 
     private void EnsureFlowersGenerated(ChunkRecord record)
@@ -1087,29 +1092,9 @@ public class FoliageManager
         if (foliageRuntime.HasCurrentTreeRepresentation(mode))
             return;
 
+        // Tree placement generation belongs here; visual ownership belongs to DistantTreeManager.
         foliageRuntime.ClearTreeBillboardMatrices();
-
-        if (mode == FoliageRepresentationMode.GameObjectWithCollision)
-        {
-            long stageStart = TerrainGenerationProfiler.GetTimestamp();
-            foliageRuntime.RebuildTreeGameObjects(
-                record.FoliageData.treeCubeInstances,
-                runtime.RootTransform,
-                treeSettings.castTreeShadows,
-                treeSettings.receiveTreeShadows);
-            TerrainGenerationProfiler.Record(
-                TerrainGenerationProfileStage.FoliageTreeGameObjectRebuild,
-                stageStart);
-        }
-        else if (mode == FoliageRepresentationMode.GPUInstancedBillboard && !useDistantTrees)
-        {
-            if (ShouldRetainTreeGameObjectsForReuse(viewerCoord, record.ChunkCoord))
-                foliageRuntime.ReleaseTreeGameObjectsToPool();
-            else
-                foliageRuntime.ClearTreeGameObjects();
-
-            RebuildTreeBillboardMatrices(runtime, record);
-        }
+        foliageRuntime.ClearTreeGameObjects();
 
         foliageRuntime.SetCurrentTreeRepresentation(mode);
     }
@@ -3178,12 +3163,7 @@ public class FoliageManager
         ChunkCoord viewerCoord,
         ChunkCoord targetCoord)
     {
-        int ring = GetChunkRadialRing(viewerCoord, targetCoord);
-
-        if (ring <= treeSettings.gameObjectTreeChunkRingRadius)
-            return FoliageRepresentationMode.GameObjectWithCollision;
-
-        return FoliageRepresentationMode.GPUInstancedBillboard;
+        return FoliageRepresentationMode.GPUInstancedMesh;
     }
 
     private bool IsWithinTreeRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)

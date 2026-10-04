@@ -101,7 +101,7 @@ public static class DistantTreePlacement
                     p.sampleX, p.sampleZ, out Color32 leaf, out Color32 bark);
                 trees.Add(new TreeInstanceData(new Vector3((p.sampleX - chunkSize * 0.5f) * worldScale,
                     h * heightMultiplier * worldScale, (p.sampleZ - chunkSize * 0.5f) * worldScale),
-                    p.rotation, p.scale, p.variant, leaf, bark, p.snowCoverage));
+                    p.rotation, p.scale, p.variant, leaf, bark, p.snowCoverage, p.treeId));
             }
             return trees.ToArray();
         }

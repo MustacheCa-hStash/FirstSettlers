@@ -151,6 +151,7 @@ Shader "Custom/BirchBarkSimpleLit"
                 half heightShade = lerp(1.0h - _VerticalGradientStrength, 1.0h + _VerticalGradientStrength, saturate(IN.uv.y));
                 barkColor *= heightShade * _Brightness;
                 barkColor = lerp(barkColor, _ScarColor.rgb, saturate(scarMask * _ScarStrength));
+                barkColor *= StandingTreeBarkTint(half4(1, 1, 1, 1)).rgb;
                 barkColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
 
                 InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);
@@ -187,6 +188,7 @@ Shader "Custom/BirchBarkSimpleLit"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+            #include "Assets/Shaders/DistantTreeFade.hlsl"
 
             float3 _LightDirection;
             float3 _LightPosition;
@@ -232,6 +234,7 @@ Shader "Custom/BirchBarkSimpleLit"
             half4 frag(Varyings IN) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
+                ApplyDistantTreeFade(IN.positionCS.xy);
                 return 0;
             }
             ENDHLSL

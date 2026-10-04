@@ -208,7 +208,7 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
 
                 half3 autumnColor = EvaluateAutumnColor(IN.uv, IN.positionWS);
                 half3 leafColor = lerp(_SummerLeafColor.rgb, autumnColor, saturate(_SeasonAutumnAmount));
-                leafColor = lerp(leafColor, _TreeLeafTint.rgb, saturate(_TreeTintStrength * _SeasonAutumnAmount));
+                leafColor = lerp(leafColor, StandingTreeLeafTint(_TreeLeafTint).rgb, saturate(_TreeTintStrength * _SeasonAutumnAmount));
 
                 half bottomShade = saturate((1.0h - IN.uv.y) * _VerticalGradientStrength);
                 leafColor = lerp(leafColor, _LeafShadowColor.rgb, bottomShade);
@@ -348,7 +348,7 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
                 UNITY_SETUP_INSTANCE_ID(IN);
                 ApplyDistantTreeFade(IN.positionCS.xy);
 
-                if (_AlphaCutoutShadows > 0.5h)
+                if (StandingTreeAlphaShadows(_AlphaCutoutShadows) > 0.5h)
                 {
                     half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
                     clip(alpha - _Cutoff);

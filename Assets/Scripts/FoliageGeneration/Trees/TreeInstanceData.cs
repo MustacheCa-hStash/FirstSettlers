@@ -2,6 +2,7 @@ using UnityEngine;
 
 public struct TreeInstanceData
 {
+    public TreeId id;
     public Vector3 localPosition;
     public Quaternion localRotation;
     public Vector3 localScale;
@@ -32,8 +33,10 @@ public struct TreeInstanceData
         WorldFeatureVariant variant,
         Color32 leafTint,
         Color32 barkTint,
-        float snowCoverage = 0f)
+        float snowCoverage = 0f,
+        TreeId id = default)
     {
+        this.id = id;
         this.localPosition = localPosition;
         this.localRotation = localRotation;
         this.localScale = localScale;

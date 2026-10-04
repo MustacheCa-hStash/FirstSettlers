@@ -3,6 +3,8 @@ using UnityEngine;
 [System.Serializable]
 public class TreeSettings
 {
+    [Header("Nearby Tree Gameplay")]
+    public TreeGameplaySettings gameplay = new TreeGameplaySettings();
     [Header("Tree Prefabs")]
     [Tooltip("Generic maple / red maple near tree prefab.")]
     public GameObject mapleTreePrefab;
@@ -88,18 +90,18 @@ public class TreeSettings
     [InspectorName("Tree Color Seed Offset"), Tooltip("Varies tree leaf and bark colors. Tree locations come from the world seed and feature plan, not this offset.")]
     public int seedOffset = 12000;
 
-    [Header("Tree Representation Rings")]
-    [Tooltip("Circular chunk radius for real GameObject trees. Radius 1 includes the player chunk and its four cardinal neighbors.")]
+    [Header("Instanced Tree Detail Distance")]
+    [InspectorName("Mesh Detail Radius (chunk widths)"), Tooltip("Retained serialized setting: meshes remain fully visible through radius + 1 chunk widths and fade to billboards across the following chunk width. Distance is measured per tree in XZ.")]
     public int gameObjectTreeChunkRingRadius = 1;
 
-    [Tooltip("First chunk ring where billboard trees are allowed. Values inside the GameObject tree ring are clamped to the next ring.")]
+    [HideInInspector, Tooltip("Legacy billboard ring start; retained for serialized compatibility.")]
     public int billboardTreeChunkStartRingRadius = 2;
 
     [Tooltip("Maximum chunk-ring radius for billboard trees.")]
     public int billboardTreeChunkRingRadius = 8;
 
     [Header("Distant Tree Coverage (restart Play Mode after enabling/disabling)")]
-    [Tooltip("Use cached, deterministic tree billboards on near and far terrain. Replaces the legacy billboard rings; keeps existing 3D tree ring.")]
+    [Tooltip("Extend instanced tree coverage to distant terrain. Nearby trees always use instanced meshes; billboards handle the outer range.")]
     public bool enableDistantTrees = true;
     [Min(1f), Tooltip("Maximum tree distance in chunk widths, capped by loaded terrain. Clamped upward to surround the circular 3D tree region plus its fade band.")]
     public float distantTreeDistanceChunks = 18f;
@@ -142,13 +144,13 @@ public class TreeSettings
     public int distantTreeCacheChunks = 2048;
 
     [Header("Tree Streaming Budgets")]
-    [Tooltip("Maximum tree representation rebuilds applied per frame. This includes near GameObject trees and far tree billboard batches.")]
+    [Tooltip("Maximum detailed tree placement chunks prepared per frame for the registry and instanced renderer.")]
     public int maxTreeRepresentationRebuildsPerFrame = 1;
 
     [Tooltip("Approximate per-frame time budget for tree representation rebuilds. Set to 0 to use only the per-frame count cap.")]
     public float treeRepresentationRebuildBudgetMsPerFrame = 0.75f;
 
-    [Tooltip("Extra rings beyond the GameObject tree ring where inactive tree GameObjects are retained for reuse instead of destroyed.")]
+    [HideInInspector, Tooltip("Legacy visual GameObject pooling setting; retained for serialized compatibility.")]
     public int treeGameObjectWarmRetainExtraRings = 1;
 
     [Header("Berry Bush Rendering")]
@@ -184,4 +186,29 @@ public class TreeSettings
     [Header("Tree Rendering")]
     public bool castTreeShadows = true;
     public bool receiveTreeShadows = true;
+
+    public GameObject GetNearPrefab(WorldFeatureVariant variant)
+    {
+        GameObject prefab = variant switch
+        {
+            WorldFeatureVariant.MapleTree => mapleTreePrefab,
+            WorldFeatureVariant.SugarMapleTree => sugarMapleTreePrefab,
+            WorldFeatureVariant.BirchAspenTree => birchAspenTreePrefab,
+            WorldFeatureVariant.BeechTree => beechTreePrefab,
+            WorldFeatureVariant.SpruceTree => spruceTreePrefab,
+            WorldFeatureVariant.WhitePineTree => whitePineTreePrefab,
+            WorldFeatureVariant.OakTree => oakTreePrefab,
+            WorldFeatureVariant.GrasslandMapleTree => grasslandMapleTreePrefab,
+            WorldFeatureVariant.GrasslandBirchAspenTree => grasslandBirchAspenTreePrefab,
+            WorldFeatureVariant.GrasslandWhitePineTree => grasslandWhitePineTreePrefab,
+            WorldFeatureVariant.GrasslandOakTree => grasslandOakTreePrefab,
+            WorldFeatureVariant.GrasslandWillowTree => grasslandWillowTreePrefab,
+            _ => null
+        };
+        if (prefab != null) return prefab;
+        bool grassland = variant == WorldFeatureVariant.GrasslandMapleTree || variant == WorldFeatureVariant.GrasslandBirchAspenTree ||
+            variant == WorldFeatureVariant.GrasslandWhitePineTree || variant == WorldFeatureVariant.GrasslandOakTree ||
+            variant == WorldFeatureVariant.GrasslandWillowTree;
+        return grassland && grasslandTreeFallbackPrefab != null ? grasslandTreeFallbackPrefab : treeLOD0GameObjectPrefab;
+    }
 }

@@ -1,6 +1,7 @@
 #ifndef DISTANT_TREE_FADE_INCLUDED
 #define DISTANT_TREE_FADE_INCLUDED
 
+#include "Assets/Shaders/StandingTreeInstance.hlsl"
 #include "Assets/Shaders/DistantTreeInstance.hlsl"
 
 // Default zero leaves every existing material unchanged. Per-renderer near fade is
@@ -23,6 +24,7 @@ float4 GetDistantTreeFade()
 
 void ApplyDistantTreeFade(float2 pixel)
 {
+    ApplyStandingTreeFade(pixel);
     if (_DistantTreeEnabled < 0.5) return;
     float threshold = frac(52.9829189 * frac(dot(floor(pixel), float2(0.06711056, 0.00583715))));
     if (_DistantTreeBillboard > 0.5)

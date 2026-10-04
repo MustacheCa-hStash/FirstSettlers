@@ -12,6 +12,7 @@ public sealed class DistantTreeManager : IDisposable
     {
         public TreeInstanceData[] Trees;
         public List<TreeInstanceData> NearSource;
+        public int NearRevision;
         public Matrix4x4[] Matrices;
         public float[] Priority, Height;
         public DistantTreeGrounding Grounding;
@@ -47,6 +48,9 @@ public sealed class DistantTreeManager : IDisposable
         public float Depth;
     }
     private readonly TreeSettings settings;
+    private readonly TreeRegistry treeRegistry;
+    private readonly StandingTreeRenderer standingTrees;
+    private readonly HashSet<ChunkCoord> changedChunks = new();
     private readonly WorldErosionSettings erosion;
     private readonly int seed, chunkSize, octaves, tintSeed;
     private readonly float sampleScale, persistence, lacunarity, worldScale, heightMultiplier, waterLevel, mountainScale, chunkWorldSize;
@@ -66,11 +70,16 @@ public sealed class DistantTreeManager : IDisposable
     private bool disposed;
     private static readonly ProfilerMarker UpdateMarker = new("FS.DistantTrees.Update");
     public RenderGeometryStats RenderStats { get; private set; }
+    public RenderGeometryStats MeshRenderStats => standingTrees.RenderStats;
 
     public DistantTreeManager(TreeSettings settings, int seed, int chunkSize, float sampleScale,
         int octaves, float persistence, float lacunarity, float worldScale, float heightMultiplier,
-        float waterLevel, float mountainScale, WorldFeatureGenerationSettings placementSettings, WorldErosionSettings erosion = default)
+        float waterLevel, float mountainScale, WorldFeatureGenerationSettings placementSettings, WorldErosionSettings erosion = default,
+        TreeRegistry treeRegistry = null)
     {
+        this.treeRegistry = treeRegistry ?? new TreeRegistry(seed, chunkSize * worldScale);
+        this.treeRegistry.ChunkChanged += OnChunkChanged;
+        standingTrees = new StandingTreeRenderer(settings);
         this.erosion = erosion.Sanitized();
         this.settings = settings; this.seed = seed; this.chunkSize = chunkSize; this.sampleScale = sampleScale;
         this.octaves = octaves; this.persistence = persistence; this.lacunarity = lacunarity;
@@ -139,10 +148,12 @@ public sealed class DistantTreeManager : IDisposable
         if (disposed) return;
         using var updateSample = UpdateMarker.Auto();
         RenderStats = default;
+        standingTrees.BeginFrame(camera);
         ConfigureGpu();
         foreach (var batch in uniqueBatches) batch.Gpu?.BeginFrame();
         float handoffChunks = Mathf.Max(0, settings.gameObjectTreeChunkRingRadius) + 2f;
-        float rangeChunks = Mathf.Max(handoffChunks + Mathf.Max(0.1f, settings.distantTreeFadeWidthChunks), settings.distantTreeDistanceChunks);
+        float rangeChunks = Mathf.Max(handoffChunks + Mathf.Max(0.1f, settings.distantTreeFadeWidthChunks),
+            settings.enableDistantTrees ? settings.distantTreeDistanceChunks : settings.billboardTreeChunkRingRadius);
         int radius = Mathf.Min(Mathf.Max(1, terrainViewDistance), Mathf.CeilToInt(rangeChunks) + 1);
         var center = new ChunkCoord(Mathf.FloorToInt(viewer.x / chunkWorldSize), Mathf.FloorToInt(viewer.z / chunkWorldSize));
         if (radius != lastRadius || !center.Equals(lastViewer))
@@ -170,7 +181,7 @@ public sealed class DistantTreeManager : IDisposable
             {
                 Debug.LogError("Distant tree placement failed: " + task.Exception.GetBaseException());
                 // Cache an empty failure result to avoid retrying a broken request every frame.
-                cache[coord] = Build(coord, Array.Empty<TreeInstanceData>());
+                cache[coord] = Build(coord, Array.Empty<TreeInstanceData>(), register: false);
             }
             else if (!cache.ContainsKey(coord) && !task.IsCanceled && DistanceSquared(coord, center) <= (radius + 2) * (radius + 2))
                 cache[coord] = Build(coord, task.Result);
@@ -185,6 +196,8 @@ public sealed class DistantTreeManager : IDisposable
         float duration = Mathf.Max(0.05f, settings.distantTreeTransitionSeconds);
         float fadeStep = Time.unscaledDeltaTime / duration;
         float maxDistance = rangeChunks * chunkWorldSize;
+        float meshEnd = handoffChunks * chunkWorldSize;
+        float meshStart = Mathf.Max(0f, meshEnd - chunkWorldSize);
         bool orderByDepth = settings.distantTreeDepthOrdering && camera != null;
         Vector3 cameraPosition = camera != null ? camera.transform.position : viewer;
         Vector3 cameraForward = camera != null ? camera.transform.forward : Vector3.forward;
@@ -203,8 +216,15 @@ public sealed class DistantTreeManager : IDisposable
                 var nearData = runtime?.ChunkRecord.FoliageData;
                 if (nearData != null && nearData.treeCubesGenerated)
                 {
-                    manifest = Build(coord, nearData.treeCubeInstances.ToArray());
+                    treeRegistry.RegisterChunk(coord, nearData.treeCubeInstances, TreePlacementDetail.Detailed, nearData.TreeRevision);
+                    manifest = Build(coord, Array.Empty<TreeInstanceData>(), register: false);
                     manifest.NearSource = nearData.treeCubeInstances;
+                    manifest.NearRevision = nearData.TreeRevision;
+                    cache.Add(coord, manifest);
+                }
+                else if (treeRegistry.ContainsChunk(coord))
+                {
+                    manifest = Build(coord, Array.Empty<TreeInstanceData>(), register: false);
                     cache.Add(coord, manifest);
                 }
                 else
@@ -216,34 +236,34 @@ public sealed class DistantTreeManager : IDisposable
                             sampleScale, octaves, persistence, lacunarity, worldScale, heightMultiplier,
                             waterLevel, mountainScale, tintSeed, placementSettings, erosion)));
                     }
-                    // Keep existing GameObjects fully visible until we can draw their replacement.
-                    runtime?.FoliageRuntime?.SetDistantTreeNearFade(0f);
                     continue;
                 }
             }
             var source = runtime?.ChunkRecord.FoliageData;
-            if (source != null && source.treeCubesGenerated && manifest.NearSource != source.treeCubeInstances)
+            if (source != null && source.treeCubesGenerated &&
+                (manifest.NearSource != source.treeCubeInstances || manifest.NearRevision != source.TreeRevision))
             {
                 float previousFade = manifest.LoadFade;
                 ReleaseGpuSlots(manifest);
-                manifest = Build(coord, source.treeCubeInstances.ToArray());
+                treeRegistry.RegisterChunk(coord, source.treeCubeInstances, TreePlacementDetail.Detailed, source.TreeRevision);
+                manifest = Build(coord, Array.Empty<TreeInstanceData>(), register: false);
                 manifest.NearSource = source.treeCubeInstances;
+                manifest.NearRevision = source.TreeRevision;
                 manifest.LoadFade = previousFade;
+                cache[coord] = manifest;
+            }
+            if (changedChunks.Contains(coord))
+            {
+                var previous = manifest;
+                ReleaseGpuSlots(previous);
+                manifest = Build(coord, Array.Empty<TreeInstanceData>(), register: false);
+                manifest.NearSource = previous.NearSource;
+                manifest.NearRevision = previous.NearRevision;
+                manifest.LoadFade = previous.LoadFade;
                 cache[coord] = manifest;
             }
             manifest.LastUsed = Time.frameCount;
             manifest.LoadFade = Mathf.MoveTowards(manifest.LoadFade, 1f, fadeStep);
-            var foliage = runtime?.FoliageRuntime;
-            if (foliage != null && foliage.TreeGameObjectCount > 0) manifest.LoadFade = 1f;
-            bool nearReady = foliage != null && foliage.HasCurrentTreeRepresentation(FoliageRepresentationMode.GameObjectWithCollision);
-            float billboardTransition = 1f;
-            if (foliage != null && foliage.TreeGameObjectCount > 0)
-            {
-                billboardTransition = Mathf.MoveTowards(foliage.DistantTreeNearFade, nearReady ? 0f : 1f, fadeStep);
-                foliage.SetDistantTreeNearFade(billboardTransition);
-                if (!nearReady && billboardTransition >= 1f) foliage.ReleaseTreeGameObjectsToPool();
-            }
-            if (billboardTransition <= 0f) continue;
 
             // Bounds include billboard rotation and tree heights. Coarse ground conformity can
             // shift the bases; expand vertically by the largest shift before frustum culling.
@@ -252,24 +272,39 @@ public sealed class DistantTreeManager : IDisposable
                 manifest.LoadFade <= fadeStep || settings.distantTreeHeightBlendSpeed <= 0f, heightStep);
             var bounds = manifest.Bounds;
             bounds.Expand(new Vector3(0f, manifest.Grounding.LargestShift * 2f, 0f));
-            if (camera != null && !GeometryUtility.TestPlanesAABB(planes, bounds)) continue;
+            bool billboardVisible = camera == null || GeometryUtility.TestPlanesAABB(planes, bounds);
+            // Near instances are submitted off-screen too, so Unity can render their shadows.
+            float nearestX = Mathf.Max(0f, Mathf.Abs(bounds.center.x - viewer.x) - bounds.extents.x);
+            float nearestZ = Mathf.Max(0f, Mathf.Abs(bounds.center.z - viewer.z) - bounds.extents.z);
+            if (!billboardVisible && nearestX * nearestX + nearestZ * nearestZ > meshEnd * meshEnd) continue;
             if (settings.distantTreeDensityAware && manifest.CrowdingDirty) RefreshCrowding(coord, manifest);
             for (int i = 0; i < manifest.Trees.Length; i++)
             {
                 var tree = manifest.Trees[i];
-                if (!batches.TryGetValue(tree.variant, out var batch)) continue;
                 var matrix = manifest.Matrices[i];
+                float dx = matrix.m03 - viewer.x, dz = matrix.m23 - viewer.z;
+                float distance = Mathf.Sqrt(dx * dx + dz * dz);
+                bool hasBillboard = batches.TryGetValue(tree.variant, out var batch);
+                float billboardTransition = standingTrees.Supports(tree.variant)
+                    ? Mathf.InverseLerp(meshStart, meshEnd, distance) : 1f;
+                if (!hasBillboard) billboardTransition = 0f;
+                // Detailed meshes sit on their original terrain placement; the far conformity
+                // offset is blended in only as the billboard takes over.
+                float renderHeight = Mathf.Lerp(manifest.Matrices[i].m13, manifest.Height[i], billboardTransition);
+                matrix.m13 = renderHeight;
+                float meshCoverage = hasBillboard ? manifest.LoadFade :
+                    Mathf.Min(manifest.LoadFade, Mathf.Clamp01((maxDistance - distance) / outerWidth));
+                standingTrees.Submit(tree, matrix, billboardTransition, meshCoverage);
+                if (!hasBillboard || billboardTransition <= 0f || !billboardVisible) continue;
                 if (gpuEnabled && batch.Gpu != null)
                 {
                     var ecology = new Vector4(manifest.Priority[i], manifest.ProtectionOrder[i],
                         manifest.Crowding[i], manifest.EdgeExposure[i]);
                     if (manifest.GpuSlots[i] < 0)
-                        manifest.GpuSlots[i] = batch.Gpu.Register(matrix, (Color)tree.leafTint, ecology, manifest.Density[i]);
-                    batch.Gpu.Submit(manifest.GpuSlots[i], manifest.Height[i], manifest.LoadFade, billboardTransition, ecology);
+                        manifest.GpuSlots[i] = batch.Gpu.Register(manifest.Matrices[i], (Color)tree.leafTint, ecology, manifest.Density[i]);
+                    batch.Gpu.Submit(manifest.GpuSlots[i], renderHeight, manifest.LoadFade, billboardTransition, ecology);
                     continue;
                 }
-                float dx = matrix.m03 - viewer.x, dz = matrix.m23 - viewer.z;
-                float distance = Mathf.Sqrt(dx * dx + dz * dz);
                 float outer = Mathf.Clamp01((maxDistance - distance) / outerWidth);
                 if (outer <= 0f) continue;
                 float outerDensity = Mathf.Clamp01(settings.distantTreeDensity);
@@ -290,7 +325,6 @@ public sealed class DistantTreeManager : IDisposable
                     ? 1f : Mathf.Clamp01((density - manifest.Priority[i]) / 0.08f);
                 float coverage = Mathf.Min(manifest.LoadFade, Mathf.Min(outer, thinning));
                 if (coverage <= 0f) continue;
-                matrix.m13 = manifest.Height[i];
                 var instance = new OrderedInstance
                 {
                     Matrix = matrix,
@@ -310,6 +344,7 @@ public sealed class DistantTreeManager : IDisposable
                 }
                 else Append(batch, instance, camera);
             }
+            standingTrees.EndChunk();
         }
         foreach (var batch in uniqueBatches)
         {
@@ -326,8 +361,17 @@ public sealed class DistantTreeManager : IDisposable
         Evict();
     }
 
-    private Manifest Build(ChunkCoord coord, TreeInstanceData[] trees)
+    private Manifest Build(ChunkCoord coord, TreeInstanceData[] trees,
+        TreePlacementDetail detail = TreePlacementDetail.Distant, bool register = true)
     {
+        if (register) treeRegistry.RegisterChunk(coord, trees, detail);
+        var records = treeRegistry.GetChunk(coord);
+        int standingCount = 0;
+        foreach (var record in records) if (record.State == TreeState.Standing) standingCount++;
+        trees = new TreeInstanceData[standingCount];
+        int index = 0;
+        foreach (var record in records) if (record.State == TreeState.Standing) trees[index++] = record.Placement;
+        changedChunks.Remove(coord);
         InvalidateCrowding(coord);
         int count = trees.Length;
         var m = new Manifest { Trees = trees, Matrices = new Matrix4x4[count], Priority = new float[count],
@@ -345,6 +389,12 @@ public sealed class DistantTreeManager : IDisposable
             m.Height[i] = position.y;
             m.Priority[i] = StablePriority(coord, t);
             m.Density[i] = 1f;
+            if (standingTrees.Supports(t.variant))
+            {
+                var nearBounds = standingTrees.BoundsFor(t.variant, m.Matrices[i]);
+                if (!hasBounds) { m.Bounds = nearBounds; hasBounds = true; }
+                else m.Bounds.Encapsulate(nearBounds);
+            }
             int cellX = Mathf.Clamp(Mathf.FloorToInt((t.localPosition.x / chunkWorldSize + 0.5f) * 4f), 0, 3);
             int cellZ = Mathf.Clamp(Mathf.FloorToInt((t.localPosition.z / chunkWorldSize + 0.5f) * 4f), 0, 3);
             int cell = cellX + cellZ * 4;
@@ -391,6 +441,8 @@ public sealed class DistantTreeManager : IDisposable
                 if (cache.TryGetValue(new ChunkCoord(coord.x + x, coord.z + z), out var neighbor))
                     neighbor.CrowdingDirty = true;
     }
+
+    private void OnChunkChanged(ChunkCoord coord) => changedChunks.Add(coord);
 
     // Four cells per chunk, with a 3x3 cell neighborhood crossing chunk boundaries.
     // Missing neighbors count as open space: streaming never invents a dense stand.
@@ -550,6 +602,9 @@ public sealed class DistantTreeManager : IDisposable
     public void Dispose()
     {
         disposed = true;
+        treeRegistry.ChunkChanged -= OnChunkChanged;
+        changedChunks.Clear();
+        standingTrees.Dispose();
         // Running workers own their scratch memory and finish without touching Unity objects.
         foreach (var job in jobs.Values)
             job.ContinueWith(t => { var ignored = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);

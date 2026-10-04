@@ -43,6 +43,8 @@ public static class DistantTreeValidation
         catch (Exception ex) { Debug.LogException(ex); EditorApplication.Exit(1); }
     }
 
+    public static void ValidateStandingHandoff() => ValidateRenderedFade();
+
     private static void ValidateShaders()
     {
         foreach (string guid in AssetDatabase.FindAssets("t:Shader", new[] { "Assets/Shaders" }))
@@ -86,8 +88,10 @@ public static class DistantTreeValidation
         try
         {
             target.Create();
-            int Render(float coverage, float transition, bool enabled = true, bool near = false, bool combined = false)
+            int Render(float coverage, float transition, bool enabled = true, bool near = false, bool combined = false, bool standing = false)
             {
+                properties.SetFloat("_StandingTreeEnabled", standing && near ? 1f : 0f);
+                properties.SetVectorArray("_StandingTreeFade", new[] { new Vector4(transition, 1, 1, 0), new Vector4(transition, 1, 1, 0) });
                 properties.SetFloat("_DistantTreeEnabled", enabled ? 1f : 0f);
                 properties.SetFloat("_DistantTreeBillboard", near ? 0f : 1f);
                 properties.SetFloat("_DistantTreeNearFade", transition);
@@ -117,6 +121,8 @@ public static class DistantTreeValidation
             int combined = Render(1f, 0.5f, true, false, true);
             Require(half + nearHalf == visible && combined == visible, "Near and billboard dither masks left a hole or overlap.");
             Require(half > visible * 0.35f && half < visible * 0.65f, "Dither transition did not produce approximately half coverage.");
+            int standingHalf = Render(1f, .5f, true, true, standing: true);
+            Require(half + standingHalf == visible, "Instanced mesh and billboard handoff masks leave a hole or overlap.");
         }
         finally
         {
@@ -182,7 +188,7 @@ public static class DistantTreeValidation
             for (int i = 0; i < expected.Length; i++)
             {
                 var a = expected[i]; var c = sparse.Placements[i];
-                Require(a.featureType == c.featureType && a.variant == c.variant && a.sampleX == c.sampleX && a.sampleZ == c.sampleZ &&
+                Require(a.treeId == c.treeId && a.featureType == c.featureType && a.variant == c.variant && a.sampleX == c.sampleX && a.sampleZ == c.sampleZ &&
                     a.scale == c.scale && a.rotation == c.rotation, "Sparse/full placement mismatch at " + coord);
                 if (a.featureType == WorldFeatureType.Tree) treesChecked++;
             }
@@ -211,7 +217,7 @@ public static class DistantTreeValidation
             for (int i = 0; i < expected.Length; i++)
             {
                 var p = expected[i]; var tree = sparse[i];
-                Require(p.variant == tree.variant && Mathf.Abs(tree.localPosition.x - (p.sampleX - size * 0.5f)) < 0.0001f &&
+                Require(p.treeId.IsValid && p.treeId == tree.id && p.variant == tree.variant && Mathf.Abs(tree.localPosition.x - (p.sampleX - size * 0.5f)) < 0.0001f &&
                     Mathf.Abs(tree.localPosition.z - (p.sampleZ - size * 0.5f)) < 0.0001f, "Real terrain placement mismatch.");
                 int x = Mathf.FloorToInt(p.sampleX), z = Mathf.FloorToInt(p.sampleZ);
                 float expectedHeight = Mathf.Lerp(Mathf.Lerp(h.HeightMap[x + 1, z + 1], h.HeightMap[x + 2, z + 1], p.sampleX - x),

@@ -206,7 +206,7 @@ Shader "Custom/OakLeafSimpleLitCutout"
                 autumnColor = lerp(autumnColor, _LeafShadowColor.rgb * 1.65h, russetMix * variationStrength * 0.20h);
 
                 half3 leafColor = lerp(summerColor, autumnColor, saturate(_SeasonAutumnAmount));
-                leafColor = lerp(leafColor, leafColor * _TreeLeafTint.rgb, saturate(_TreeTintStrength));
+                leafColor = lerp(leafColor, leafColor * StandingTreeLeafTint(_TreeLeafTint).rgb, saturate(_TreeTintStrength));
                 return leafColor;
             }
 
@@ -260,6 +260,7 @@ Shader "Custom/OakLeafSimpleLitCutout"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+            #include "Assets/Shaders/DistantTreeFade.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -375,8 +376,9 @@ Shader "Custom/OakLeafSimpleLitCutout"
             half4 frag(Varyings IN) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
+                ApplyDistantTreeFade(IN.positionCS.xy);
 
-                if (_AlphaCutoutShadows > 0.5h)
+                if (StandingTreeAlphaShadows(_AlphaCutoutShadows) > 0.5h)
                 {
                     half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a;
                     clip(alpha - _Cutoff);

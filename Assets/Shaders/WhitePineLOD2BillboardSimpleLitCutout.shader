@@ -265,6 +265,7 @@ Shader "Custom/WhitePineLOD2BillboardSimpleLitCutout"
             #pragma multi_compile _ LOD_FADE_CROSSFADE
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Assets/Shaders/DistantTreeFade.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
 
             TEXTURE2D(_BaseMap);
@@ -363,8 +364,9 @@ Shader "Custom/WhitePineLOD2BillboardSimpleLitCutout"
             half4 frag(Varyings IN) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
+                ApplyDistantTreeFade(IN.positionCS.xy);
 
-                if (_AlphaCutoutShadows > 0.5h)
+                if (StandingTreeAlphaShadows(_AlphaCutoutShadows) > 0.5h)
                 {
                     half alpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv).a * _BaseColor.a;
                     clip(alpha - _Cutoff);

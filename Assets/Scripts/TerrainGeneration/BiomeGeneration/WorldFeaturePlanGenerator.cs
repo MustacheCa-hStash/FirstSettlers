@@ -764,7 +764,8 @@ public static class WorldFeaturePlanGenerator
                 Quaternion.Euler(0f, yaw, 0f),
                 Vector3.one * uniformScale,
                 exclusionRadius,
-                influenceRadius));
+                influenceRadius,
+                treeId: TreeId.Generated(seed, chunkCoord, TreePlacementSource.Forest, shuffledIndex)));
 
             placed++;
         }
@@ -820,7 +821,8 @@ public static class WorldFeaturePlanGenerator
             plan.Placements.Add(new WorldFeaturePlacement(WorldFeatureType.Tree, WorldFeatureVariant.SpruceTree,
                 x, z, Quaternion.Euler(0f, Hash01(hash + 79) * 360f, 0f),
                 Vector3.one * GetTreeScale(settings.treeUniformScaleRange, Hash01(hash + 97)), radius,
-                GetForestTreeInfluenceRadius(WorldFeatureVariant.SpruceTree, Hash01(hash + 149))));
+                GetForestTreeInfluenceRadius(WorldFeatureVariant.SpruceTree, Hash01(hash + 149)),
+                treeId: TreeId.Generated(seed, coord, TreePlacementSource.Forest, cell)));
             placed++;
         }
     }
@@ -866,7 +868,8 @@ public static class WorldFeaturePlanGenerator
                 x, z, Quaternion.Euler(0f, Hash01(hash + 79) * 360f, 0f),
                 Vector3.one * GetTreeScale(settings.treeUniformScaleRange, Hash01(hash + 97)), radius,
                 GetForestTreeInfluenceRadius(WorldFeatureVariant.SpruceTree, Hash01(hash + 149)),
-                snowCoverage: Mathf.Lerp(0.8f, 1f, Hash01(hash + 163))));
+                snowCoverage: Mathf.Lerp(0.8f, 1f, Hash01(hash + 163)),
+                treeId: TreeId.Generated(seed, coord, TreePlacementSource.Snow, cell)));
             placed++;
         }
     }
@@ -1060,7 +1063,8 @@ public static class WorldFeaturePlanGenerator
                 Quaternion.Euler(0f, yaw, 0f),
                 Vector3.one * uniformScale,
                 exclusionRadius,
-                influenceRadius));
+                influenceRadius,
+                treeId: TreeId.Generated(seed, chunkCoord, TreePlacementSource.Grassland, shuffledIndex)));
 
             if (plan.ForestMembershipMap[paddedX, paddedZ] != 0) pairTreeCount++;
             placed++;
