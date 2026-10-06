@@ -5,6 +5,42 @@ It is available after world initialization and is replaced on world regeneration
 All access and change notifications run on the main thread. Worker placement jobs return
 data with IDs; the main thread registers completed results.
 
+## Species datacards and placement spacing
+
+Tree cards live in `Assets/ScriptableObjects/WorldObjects`: MapleTree (red/generic
+maple), SugarMapleTree, BirchAspenTree, BeechTree, SpruceTree, WhitePineTree, OakTree,
+and WillowTree. `WorldManager.treeSettings` assigns one card per species under
+**Tree Datacards**; forest and grassland variants share the same identity card.
+The species card also supplies query name, icon and description, even when a
+different species' visual prefab is used as a fallback. Existing prefab
+`TreeGameplayAuthoring.queryDefinition` links remain a fallback when no species
+card is assigned.
+
+Edit **Forest Tree Exclusion Radius Range** or **Grassland Tree Exclusion Radius
+Range** on the card to tune spacing. Forest ranges also apply to Taiga and snow
+spruce. Grassland ranges apply only to maple, birch/aspen, white pine, oak and
+willow; other species' grassland fields are unused. Each tree deterministically
+samples its radius between the two endpoints. Values are terrain sample units;
+multiply by `worldScale` for world distance. Placement uses the sum of both
+objects' radii and retains existing rock/bush overlap handling. Radii do not
+follow visual tree scale and do not change grass clearance or canopy colliders.
+Zero radii are valid; reversed endpoints are sorted and negative endpoints
+clamped to zero.
+
+The current hardcoded spacing ranges have been copied to the cards. World
+initialization snapshots their values into plain worker settings shared by
+near and distant placement. Restart Play Mode or regenerate the world after
+editing a range. Unconfigured worlds and standalone generation retain legacy
+defaults in `WorldFeatureGenerationSettings`.
+
+In Play Mode, enable **Show Tree Exclusion Radius Gizmos** on WorldManager under
+**Trees, Bushes and Rocks**, with the view's **Gizmos** button enabled. A plain
+horizontal wire circle shows the actual applied radius at every registered
+standing tree, whether its placement came from nearby or distant generation.
+The radius is stored in world units in `TreeInstanceData.exclusionRadiusWorld`
+and exposed by `TreeRecord.ExclusionRadiusWorld`; the display does not resample
+the card or multiply by the visual tree scale. Toggling the display is immediate.
+
 ## Identity
 
 Generated `TreeId` format v1 contains the world seed, logical chunk coordinates,
@@ -90,13 +126,14 @@ keeps instanced meshes as a fallback with the outer distance fade.
 not measured frame times or exact GPU visibility.
 
 Standing visual prefab colliders are no longer instantiated. `TreeGameplayManager` now
-creates pooled physical-trunk proxies from explicit prefab authoring. Separate trunk/canopy
-queries, AI navigation, falling bodies and replication are future registry consumers.
+creates pooled trunk and canopy proxies from explicit prefab authoring. Physical trunks
+and query canopies have independent activation. AI navigation, falling bodies and
+replication are future registry consumers.
 Legacy visual GameObject methods remain for compatibility/old validation;
 the world runtime no longer calls them for standing trees. FoliageManager retains detailed
 placement scheduling and generation budgets, but does not own standing-tree visuals.
 
-## Nearby physical trunk gameplay
+## Nearby trunk and canopy gameplay
 
 `ChunkManager` owns a `TreeGameplayManager`, exposed as `WorldManager.TreeGameplay`.
 It runs after tree registration/render updates and is disposed before the registry is
@@ -113,8 +150,11 @@ Defaults under **WorldManager > Tree Settings > Gameplay**:
 
 | Setting | Default | SmearScene equivalent |
 | --- | --- | --- |
-| Activation radius | 0.65 chunk widths | 24.96 m |
-| Release radius | 0.85 chunk widths | 32.64 m |
+| Physical activation radius | 0.65 chunk widths | 24.96 m |
+| Physical release radius | 0.85 chunk widths | 32.64 m |
+| Enable canopy queries | true | requires assigned canopy templates |
+| Canopy activation radius | 0.65 chunk widths | 24.96 m |
+| Canopy release radius | 0.85 chunk widths | 32.64 m |
 | Scan interval | 0.1 s | unchanged |
 | Activations per frame | 8 | nearest first |
 | Activation budget | 0.5 ms | approximate; at least one candidate can progress |
@@ -123,14 +163,19 @@ Defaults under **WorldManager > Tree Settings > Gameplay**:
 Release distance is clamped above activation distance to ensure hysteresis. Trees already
 active between those distances remain active. Different distances can be tuned independently
 of visual LOD or terrain-collider distance. These distances test trunk origins, not canopy
-extents. The current focus is the world viewer/player; multiple players, AI interests and
+extents. Set canopy activation far enough out to cover player query reach plus the
+largest scaled canopy radius and movement/activation margin. The current focus is the
+world viewer/player; multiple players, AI interests and
 falling-tree simulation areas are future extensions of this consumer.
 
 Proxies are pooled per source prefab. They contain `TreeGameplayProxy`, required empty
-transform ancestors, and only explicitly assigned physical colliders. They contain no
-meshes, renderers, prefab behaviours or Rigidbody. The registry placement supplies root
+transform ancestors, and only explicitly assigned physical/query colliders. They contain
+no renderers, MeshFilters, arbitrary prefab behaviours or Rigidbody. A canopy MeshCollider
+references its source sharedMesh; it does not instantiate or duplicate that visual mesh.
+The registry placement supplies root
 position/rotation/scale, and the authoring supplies child transforms and collider dimensions.
-Layer, material, contact offset and layer overrides are copied. Duplicate references are
+Physical trunk bodies/collider children use WorldSolid; material, contact offset and
+layer overrides are copied. Duplicate references are
 ignored; source collider enabled state is ignored. Runtime collision is solid, not a trigger.
 Transform changes are synchronized with physics once per changed update, rather than on
 settled frames. [Unity Physics.SyncTransforms documentation](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/physics/synctransforms).
@@ -148,11 +193,43 @@ pooling. ActiveCount, PooledCount and LastActivationCount expose runtime diagnos
    to Physical Trunk, with direction **Y** and **Is Trigger off**. Fit its radius, height
    and center to the solid trunk in prefab-local coordinates. No mesh or Rigidbody is needed.
 4. Assign that CapsuleCollider to **Physical Trunk Colliders** on the authoring component.
-   Multiple Box/Capsule/Sphere colliders may be assigned for a compound trunk. This pass
-   deliberately does not copy MeshColliders or unassigned canopy/branch colliders.
+   Multiple Box/Capsule/Sphere colliders may be assigned for a compound trunk. Physical
+   trunk MeshColliders and all unassigned shapes are excluded.
 5. Save the prefab and restart Play Mode. The generated scale is already applied by the
    proxy, so do not manually double collider dimensions to match SmearScene's 2x instances.
-   Leave the source collider on Default, or use a layer that collides with the player's layer.
+   Runtime physical trunk colliders are assigned WorldSolid automatically; the source
+   collider can remain on Default.
+
+### Preparing a query canopy
+
+1. Under Gameplay, add a separate child named Query Canopy. Fit a low-poly closed cone
+   mesh to the spruce foliage (12 sides, about 22–24 triangles, is a suitable start).
+2. Assign that imported mesh to a MeshCollider on the child. Enable Convex and Is Trigger,
+   and set the child layer to QueryOnly. Remove its MeshRenderer/MeshFilter; the collider
+   retains its own mesh reference. No Rigidbody is needed for this view query.
+3. Assign the collider to **Query Canopy Colliders** on the root TreeGameplayAuthoring.
+   Box/Capsule/Sphere query shapes are also supported. Multiple shapes may share a target.
+4. Keep physical and query colliders on different GameObjects because a GameObject has
+   only one layer. Duplicate references are ignored; nonconvex/missing meshes, foreign
+   colliders and query shapes sharing a physical collider's GameObject are rejected.
+5. Save the prefab and restart Play Mode. Runtime copies assigned shape dimensions,
+   hierarchy and sharedMesh/cooking options, forces canopy copies to QueryOnly triggers,
+   and controls their enabled state independently of the physical trunk. Source enabled
+   and trigger states do not control the runtime canopy role; source authoring is unchanged.
+
+Canopy-only templates are supported. A proxy remains allocated while either role is
+active and returns to the shared pool when both are off. State changes and missing
+records release both roles. The manager scans to the larger enabled activation radius
+and checks role hysteresis per active tree each update. Settled proxies do not toggle
+colliders or call SyncTransforms.
+
+Readable convex query meshes are pre-baked once per mesh/cooking-options combination
+when a source template is first requested. This moves cooking out of repeated role
+toggles. Non-readable imported meshes use Unity's normal MeshCollider cooking path;
+enable Read/Write on a small collider asset to allow explicit runtime pre-baking. Use
+positive, unskewed transforms for cooked-mesh sharing. Existing pooled colliders retain
+their mesh reference and cooking options when enabled/disabled, without another explicit
+BakeMesh call. See [Unity Physics.BakeMesh](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Physics.BakeMesh.html).
 
 The manager does not invent trunk dimensions from leaf bounds. Missing/invalid authoring
 logs a warning once per requested prefab; those trees continue to render without physical
@@ -167,6 +244,20 @@ bodies are inactive, and each active root name contains its variant and stable T
 Walk beyond the release radius, then return, to observe pool reuse. For an easy visual
 activation test, temporarily reduce the two gameplay radii while keeping release larger.
 The tree's instanced appearance should remain unchanged throughout.
+
+## Player query identity
+
+TreeGameplayProxy is now a QueryTarget provider on the existing pooled gameplay root.
+Child physical colliders and assigned QueryOnly shapes resolve that provider through their
+ancestors. Its metadata contains a species name, optional icon, Breakable capability,
+and the actual registry TreeRecord with its stable TreeId. No extra target GameObject
+or per-tree Update is added. The source TreeGameplayAuthoring can override Query Display
+Name and Query Icon; those values are copied when the manager caches the source template.
+
+Target snapshots are invalidated when a proxy unbinds/rebinds, becomes inactive, or its
+record leaves Standing state. Consumers can use PlayerQuery.Current.HasTarget and
+Target.TryGetData<TreeRecord> rather than treating the pooled GameObject as persistent
+identity. See [PlayerQuery.md](PlayerQuery.md) for result fields and Play Mode inspection.
 
 ## Lifetime and scope
 
@@ -201,3 +292,10 @@ hysteresis, pool limits/reuse, negative-coordinate XZ selection, transformed col
 hierarchies, registry placement/state changes, disposal, settled allocation/sync checks
 and CharacterController collision/release against an authored trunk. Fixtures are temporary
 and do not modify source prefabs or scenes.
+
+Run **Tools > Terrain > Validate Tree Canopy Queries**, or batch mode with
+`-executeMethod TreeCanopyValidation.RunBatch`, for shared convex cone meshes, independent
+trunk/canopy activation and hysteresis, query identity/solid obstruction, character
+pass-through, query-only templates, invalid authoring, pool reuse and settled allocations.
+It also runs the existing tree gameplay and player query/target validations. The cone is
+an in-memory test fixture, not an asset or a modification to the spruce prefab.

@@ -51,6 +51,7 @@ public class ChunkRuntime
     private void CreateObjects(Material terrainMaterial, Material waterMaterial, bool terrainReceiveShadows)
     {
         root = new GameObject("Chunk_Runtime");
+        root.layer = GameplayLayers.WorldSolid;
         terrainMeshFilter = root.AddComponent<MeshFilter>();
         terrainMeshRenderer = root.AddComponent<MeshRenderer>();
 

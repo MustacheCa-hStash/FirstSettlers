@@ -32,6 +32,8 @@ public sealed class TreeRegistry
 
     public int Count => records.Count;
     public int ChunkCount => chunks.Count;
+    /// <summary>Live main-thread view of registered trees, including distant placements and all states.</summary>
+    public IEnumerable<TreeRecord> Records => records.Values;
     public event Action<ChunkCoord> ChunkChanged;
 
     public TreeRegistry(int worldSeed, float chunkWorldSize)

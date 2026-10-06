@@ -10,6 +10,8 @@ public struct TreeInstanceData
     public Color32 leafTint;
     public Color32 barkTint;
     public float snowCoverage;
+    // Applied placement radius in world units, independent of the visual instance scale.
+    public float exclusionRadiusWorld;
     
     public TreeInstanceData(
         Vector3 localPosition,
@@ -34,7 +36,8 @@ public struct TreeInstanceData
         Color32 leafTint,
         Color32 barkTint,
         float snowCoverage = 0f,
-        TreeId id = default)
+        TreeId id = default,
+        float exclusionRadiusWorld = 0f)
     {
         this.id = id;
         this.localPosition = localPosition;
@@ -44,5 +47,6 @@ public struct TreeInstanceData
         this.leafTint = leafTint;
         this.barkTint = barkTint;
         this.snowCoverage = snowCoverage;
+        this.exclusionRadiusWorld = exclusionRadiusWorld;
     }
 }

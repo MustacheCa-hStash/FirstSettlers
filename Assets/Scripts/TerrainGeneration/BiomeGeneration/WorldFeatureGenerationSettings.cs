@@ -3,6 +3,8 @@ using UnityEngine;
 public struct WorldFeatureGenerationSettings
 {
     public Vector2 treeUniformScaleRange;
+    // Main-thread datacard snapshot indexed by WorldFeatureVariant. Never mutated after dispatch.
+    public Vector2[] treeExclusionRadiusRanges;
     public int forestRockPrefabCount;
     public int maxForestRocksPerChunk;
     public Vector2 forestRockUniformScaleRange;
@@ -14,6 +16,40 @@ public struct WorldFeatureGenerationSettings
     public Vector2 grasslandLargeRockUniformScaleRange;
     public Vector2 grasslandRockPitchRange;
     public int maxGrasslandTreesPerChunk;
+
+    public static bool IsGrasslandTree(WorldFeatureVariant variant) => variant is
+        WorldFeatureVariant.GrasslandMapleTree or WorldFeatureVariant.GrasslandBirchAspenTree or
+        WorldFeatureVariant.GrasslandWhitePineTree or WorldFeatureVariant.GrasslandOakTree or
+        WorldFeatureVariant.GrasslandWillowTree;
+
+    public Vector2 GetTreeExclusionRadiusRange(WorldFeatureVariant variant)
+    {
+        int index = (int)variant;
+        if (treeExclusionRadiusRanges != null && index >= 0 && index < treeExclusionRadiusRanges.Length)
+            return treeExclusionRadiusRanges[index];
+        // Legacy defaults for unconfigured scenes and standalone generation/validation.
+        // Configured worlds use the species cards, including an explicitly authored zero radius.
+        return variant switch
+        {
+            WorldFeatureVariant.BirchAspenTree => new Vector2(6.2f, 7.8f),
+            WorldFeatureVariant.SpruceTree => new Vector2(6.4f, 8.2f),
+            WorldFeatureVariant.WhitePineTree => new Vector2(8f, 10.5f),
+            WorldFeatureVariant.OakTree => new Vector2(8.8f, 11.5f),
+            WorldFeatureVariant.MapleTree or WorldFeatureVariant.SugarMapleTree or WorldFeatureVariant.BeechTree => new Vector2(7.2f, 9.4f),
+            WorldFeatureVariant.GrasslandOakTree => new Vector2(11.5f, 15.5f),
+            WorldFeatureVariant.GrasslandWhitePineTree => new Vector2(8.5f, 11.5f),
+            WorldFeatureVariant.GrasslandWillowTree => new Vector2(9f, 12.4f),
+            WorldFeatureVariant.GrasslandBirchAspenTree => new Vector2(7.2f, 9.4f),
+            WorldFeatureVariant.GrasslandMapleTree => new Vector2(8f, 10.8f),
+            _ => Vector2.zero
+        };
+    }
+
+    public float GetTreeExclusionRadius(WorldFeatureVariant variant, float roll)
+    {
+        Vector2 range = GetTreeExclusionRadiusRange(variant);
+        return Mathf.Lerp(range.x, range.y, roll);
+    }
 
     public static WorldFeatureGenerationSettings Default => new WorldFeatureGenerationSettings
     {

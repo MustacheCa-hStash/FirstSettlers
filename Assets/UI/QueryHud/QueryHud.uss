@@ -1,0 +1,54 @@
+.query-hud {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.query-anchor {
+    position: absolute;
+    left: 50%;
+    top: 48%;
+}
+
+.query-card {
+    display: none;
+    margin-left: 32px;
+    min-width: 160px;
+    max-width: 260px;
+    padding-left: 14px;
+    padding-right: 14px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    flex-direction: column;
+    align-items: stretch;
+    background-color: rgba(38, 53, 48, 0.75);
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+}
+
+.query-words {
+    flex-shrink: 1;
+}
+
+.query-name {
+    margin: 0;
+    padding: 0;
+    white-space: normal;
+    font-size: 16.15px;
+    color: rgb(217, 191, 123);
+}
+
+.query-description {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 4px;
+    margin-bottom: 0;
+    padding: 0;
+    white-space: normal;
+    font-size: 12.35px;
+    color: rgb(198, 207, 190);
+}

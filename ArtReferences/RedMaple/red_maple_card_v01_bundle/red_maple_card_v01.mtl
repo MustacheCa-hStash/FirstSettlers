@@ -1,0 +1,7 @@
+newmtl red_maple_card_v01
+Ka 1 1 1
+Kd 1 1 1
+Ks 0 0 0
+d 1
+map_Kd red_maple_card_v01.png
+map_d red_maple_card_v01_opacity.png

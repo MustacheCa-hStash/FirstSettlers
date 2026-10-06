@@ -31,6 +31,8 @@ public class WorldManager : MonoBehaviour
     [SerializeField] LeafClusterSettings leafClusterSettings = new LeafClusterSettings();
     [SerializeField] FernSettings fernSettings = new FernSettings();
     [SerializeField] TreeSettings treeSettings;
+    [Tooltip("Draw each registered standing tree's applied exclusion radius in Play Mode. Enable Gizmos in the Scene or Game view. Uses the generation snapshot, including the habitat-specific range; no regeneration is needed to toggle this display.")]
+    [SerializeField] bool showTreeExclusionRadiusGizmos;
     [Tooltip("Scale of the base landforms. Erosion Wavelength has its own independent terrain-space scale.")]
     [SerializeField] float sampleScale = 10f;
     [Tooltip("Broadens the smooth mountain mask before global erosion. Higher values create more mountainous land; no duplicated or stretched mountain surfaces. Regenerate after changing.")]
@@ -84,6 +86,7 @@ public class WorldManager : MonoBehaviour
     private PlanarWaterReflection planarWaterReflection;
     public Transform Viewer => viewer;
     public TreeRegistry Trees => chunkManager?.Trees;
+    public bool ShowTreeExclusionRadiusGizmos => showTreeExclusionRadiusGizmos;
     public TreeGameplayManager TreeGameplay => chunkManager?.TreeGameplay;
     public int TerrainGenerationRevision { get; private set; }
 

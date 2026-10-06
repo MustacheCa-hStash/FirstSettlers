@@ -135,6 +135,12 @@ public static class TreeRegistryValidation
                 FoliageGenerator.GenerateTreeCubesForChunk(record, new TreeSettings(), Seed, Size, .3f, 10f);
                 Check(new HashSet<TreeId>(record.FoliageData.treeCubeInstances.Select(p => p.id)).SetEquals(trees.Select(p => p.treeId)),
                     "Near conversion or reordered placements changed IDs.");
+                var plannedRadii = trees.ToDictionary(p => p.treeId, p => p.exclusionRadius * .3f);
+                var registry = new TreeRegistry(Seed, Size * .3f);
+                registry.RegisterChunk(coord, record.FoliageData.treeCubeInstances, TreePlacementDetail.Detailed);
+                foreach (var registered in registry.Records)
+                    Check(registered.ExclusionRadiusWorld == plannedRadii[registered.Id],
+                        "Near conversion/registry lost or rescaled the applied exclusion radius.");
                 foreach (var tree in trees) sources.Add(tree.treeId.Source);
                 checkedTrees += trees.Length;
             }

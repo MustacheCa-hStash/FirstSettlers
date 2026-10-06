@@ -886,7 +886,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 145678
+  worldSeed: 1456
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -1241,15 +1241,34 @@ MonoBehaviour:
     minMoisture: 0.35
     sizeMultiplier: 2
   treeSettings:
-    mapleTreePrefab: {fileID: 0}
-    sugarMapleTreePrefab: {fileID: 0}
+    gameplay:
+      enabled: 1
+      activationRadiusChunks: 0.65
+      releaseRadiusChunks: 0.85
+      enableCanopyQueries: 1
+      queryCanopyActivationRadiusChunks: 0.65
+      queryCanopyReleaseRadiusChunks: 0.85
+      scanIntervalSeconds: 0.1
+      maxActivationsPerFrame: 8
+      activationBudgetMs: 0.5
+      maxPooledProxies: 128
+    mapleTreeDefinition: {fileID: 11400000, guid: 8ed7914582bf44269fe9ef862fe300e7, type: 2}
+    sugarMapleTreeDefinition: {fileID: 11400000, guid: ab3c9ca526894949af7cae15c3f04792, type: 2}
+    birchAspenTreeDefinition: {fileID: 11400000, guid: 8fc83a5cb2704e4f9e80211574f4432d, type: 2}
+    beechTreeDefinition: {fileID: 11400000, guid: 9f2cdd4834414359ae0daaedfb202a2d, type: 2}
+    spruceTreeDefinition: {fileID: 11400000, guid: f47ecdc4aa34ab5458532fbb39a52cb0, type: 2}
+    whitePineTreeDefinition: {fileID: 11400000, guid: 4f9049ed763a4e879326463ff3b4cac9, type: 2}
+    oakTreeDefinition: {fileID: 11400000, guid: 38f488f4b3b54476b57a80413f914d29, type: 2}
+    willowTreeDefinition: {fileID: 11400000, guid: 5fdc7bacacca4b369ee3428be4fa1296, type: 2}
+    mapleTreePrefab: {fileID: 9135894212181987985, guid: 1ba138f8da5932444b9a85ee27ac080a, type: 3}
+    sugarMapleTreePrefab: {fileID: 6998033675053506688, guid: f95515ae1e41e4f4ca1f236b133a32d2, type: 3}
     birchAspenTreePrefab: {fileID: 0}
     beechTreePrefab: {fileID: 0}
     spruceTreePrefab: {fileID: 8923281884864634577, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
     whitePineTreePrefab: {fileID: 0}
     oakTreePrefab: {fileID: 0}
     treeLOD0GameObjectPrefab: {fileID: 8923281884864634577, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-    grasslandMapleTreePrefab: {fileID: 0}
+    grasslandMapleTreePrefab: {fileID: 9135894212181987985, guid: 1ba138f8da5932444b9a85ee27ac080a, type: 3}
     grasslandBirchAspenTreePrefab: {fileID: 0}
     grasslandWhitePineTreePrefab: {fileID: 0}
     grasslandOakTreePrefab: {fileID: 0}
@@ -1342,6 +1361,7 @@ MonoBehaviour:
     gameObjectRockChunkRingRadius: 6
     castTreeShadows: 1
     receiveTreeShadows: 1
+  showTreeExclusionRadiusGizmos: 0
   sampleScale: 600
   mountainWidth: 1.3
   mountainSnowBlendGamma: 0.633
@@ -1493,7 +1513,7 @@ GameObject:
   - component: {fileID: 1578603182}
   - component: {fileID: 1578603184}
   - component: {fileID: 1578603183}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: PlayerCharacter
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1518,6 +1538,7 @@ Transform:
   - {fileID: 2001000031}
   - {fileID: 2001000061}
   - {fileID: 2001000071}
+  - {fileID: 2039337265}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1578603183
@@ -1532,6 +1553,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44a01c9881704c33ba3b6772e8462aab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  solidSurfaceMask:
+    serializedVersion: 2
+    m_Bits: 256
   walkSpeed: 5
   sprintSpeed: 8
   crouchSpeed: 2.25
@@ -1575,6 +1599,72 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!1001 &1761838753
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 2039337265}
+    m_Modifications:
+    - target: {fileID: 3282610769281638147, guid: 81128e57bec476b468b0e99fb8d86b85, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3282610769281638147, guid: 81128e57bec476b468b0e99fb8d86b85, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3282610769281638147, guid: 81128e57bec476b468b0e99fb8d86b85, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3282610769281638147, guid: 81128e57bec476b468b0e99fb8d86b85, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3282610769281638147, guid: 81128e57bec476b468b0e99fb8d86b85, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3282610769281638147, guid: 81128e57bec476b468b0e99fb8d86b85, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3282610769281638147, guid: 81128e57bec476b468b0e99fb8d86b85, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3282610769281638147, guid: 81128e57bec476b468b0e99fb8d86b85, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3282610769281638147, guid: 81128e57bec476b468b0e99fb8d86b85, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3282610769281638147, guid: 81128e57bec476b468b0e99fb8d86b85, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4653336749489223172, guid: 81128e57bec476b468b0e99fb8d86b85, type: 3}
+      propertyPath: query
+      value: 
+      objectReference: {fileID: 2001000072}
+    - target: {fileID: 4798013284886440103, guid: 81128e57bec476b468b0e99fb8d86b85, type: 3}
+      propertyPath: m_Name
+      value: QueryHud
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 81128e57bec476b468b0e99fb8d86b85, type: 3}
+--- !u!4 &1761838754 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3282610769281638147, guid: 81128e57bec476b468b0e99fb8d86b85, type: 3}
+  m_PrefabInstance: {fileID: 1761838753}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1799351263
 GameObject:
   m_ObjectHideFlags: 0
@@ -1983,6 +2073,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2001000071}
+  - component: {fileID: 2001000072}
   m_Layer: 0
   m_Name: Interaction
   m_TagString: Untagged
@@ -2003,6 +2094,52 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
+  m_Father: {fileID: 1578603182}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2001000072
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2001000070}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: afcb3d203a59488caff12878187853b8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  viewCamera: {fileID: 81284299}
+  maxDistance: 8
+--- !u!1 &2039337264
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2039337265}
+  m_Layer: 0
+  m_Name: UI
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2039337265
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2039337264}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1761838754}
   m_Father: {fileID: 1578603182}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807

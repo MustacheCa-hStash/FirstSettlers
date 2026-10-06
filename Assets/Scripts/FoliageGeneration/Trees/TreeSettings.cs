@@ -5,6 +5,16 @@ public class TreeSettings
 {
     [Header("Nearby Tree Gameplay")]
     public TreeGameplaySettings gameplay = new TreeGameplaySettings();
+    [Header("Tree Datacards")]
+    [Tooltip("Species datacards shared by tree placement and query identity. Forest and grassland variants use the same card. Placement changes require world regeneration.")]
+    public WorldObjectDefinition mapleTreeDefinition;
+    public WorldObjectDefinition sugarMapleTreeDefinition;
+    public WorldObjectDefinition birchAspenTreeDefinition;
+    public WorldObjectDefinition beechTreeDefinition;
+    public WorldObjectDefinition spruceTreeDefinition;
+    public WorldObjectDefinition whitePineTreeDefinition;
+    public WorldObjectDefinition oakTreeDefinition;
+    public WorldObjectDefinition willowTreeDefinition;
     [Header("Tree Prefabs")]
     [Tooltip("Generic maple / red maple near tree prefab.")]
     public GameObject mapleTreePrefab;
@@ -186,6 +196,29 @@ public class TreeSettings
     [Header("Tree Rendering")]
     public bool castTreeShadows = true;
     public bool receiveTreeShadows = true;
+
+    public WorldObjectDefinition GetDefinition(WorldFeatureVariant variant)
+    {
+        if (!(variant >= WorldFeatureVariant.MapleTree && variant <= WorldFeatureVariant.OakTree) &&
+            !WorldFeatureGenerationSettings.IsGrasslandTree(variant)) return null;
+        WorldObjectDefinition definition = variant switch
+        {
+            WorldFeatureVariant.MapleTree or WorldFeatureVariant.GrasslandMapleTree => mapleTreeDefinition,
+            WorldFeatureVariant.SugarMapleTree => sugarMapleTreeDefinition,
+            WorldFeatureVariant.BirchAspenTree or WorldFeatureVariant.GrasslandBirchAspenTree => birchAspenTreeDefinition,
+            WorldFeatureVariant.BeechTree => beechTreeDefinition,
+            WorldFeatureVariant.SpruceTree => spruceTreeDefinition,
+            WorldFeatureVariant.WhitePineTree or WorldFeatureVariant.GrasslandWhitePineTree => whitePineTreeDefinition,
+            WorldFeatureVariant.OakTree or WorldFeatureVariant.GrasslandOakTree => oakTreeDefinition,
+            WorldFeatureVariant.GrasslandWillowTree => willowTreeDefinition,
+            _ => null
+        };
+        if (definition != null) return definition;
+        // Compatibility for trees authored only through their existing prefab datacard.
+        GameObject prefab = GetNearPrefab(variant);
+        return prefab != null && prefab.TryGetComponent<TreeGameplayAuthoring>(out var authoring)
+            ? authoring.QueryDefinition : null;
+    }
 
     public GameObject GetNearPrefab(WorldFeatureVariant variant)
     {

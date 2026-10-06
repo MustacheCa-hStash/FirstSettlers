@@ -1732,6 +1732,18 @@ public class ChunkManager
             return settings;
 
         settings.treeUniformScaleRange = treeSettings.treeUniformScaleRange;
+        // Snapshot Unity assets on the main thread; near/distant workers receive plain values only.
+        var radiusRanges = new Vector2[(int)WorldFeatureVariant.GrasslandLargeBoulder + 1];
+        foreach (WorldFeatureVariant variant in System.Enum.GetValues(typeof(WorldFeatureVariant)))
+        {
+            Vector2 range = settings.GetTreeExclusionRadiusRange(variant);
+            WorldObjectDefinition definition = treeSettings.GetDefinition(variant);
+            if (definition != null)
+                range = WorldFeatureGenerationSettings.IsGrasslandTree(variant)
+                    ? definition.GrasslandTreeExclusionRadiusRange : definition.ForestTreeExclusionRadiusRange;
+            radiusRanges[(int)variant] = range;
+        }
+        settings.treeExclusionRadiusRanges = radiusRanges;
         settings.forestRockPrefabCount =
             treeSettings.forestRockPrefabs != null ? treeSettings.forestRockPrefabs.Length : 0;
         settings.maxForestRocksPerChunk = Mathf.Max(0, treeSettings.maxForestRocksPerChunk);

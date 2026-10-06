@@ -1,0 +1,226 @@
+{
+  "source": "C:\\Users\\samee\\OneDrive\\Desktop\\TreeModels\\krita\\leaf_SugarMaple.png",
+  "source_sha256": "8cfd1deb897bcf056612afc0ebf43802725f246011a86855df41c5ef294a5763",
+  "seed": 73129,
+  "dimensions": [
+    1024,
+    1024
+  ],
+  "leaf_copies": 23,
+  "coverage_at_alpha_0_5_percent": 66.668,
+  "coverage_inside_octagon_percent": 73.829,
+  "octagon_area_fraction": 0.9032,
+  "octagon_triangles": 6,
+  "square_triangles": 2,
+  "graded_leaf_rgb": "235 at tip to 198 at base, identical RGB channels; original alpha preserved",
+  "placements": [
+    {
+      "sprite": 24,
+      "x": 265,
+      "y": 568,
+      "source_leaf_width_px": 314,
+      "rotation_degrees": -62.28171,
+      "new_opaque_pixels": 48577,
+      "new_fraction": 1.0
+    },
+    {
+      "sprite": 24,
+      "x": 380,
+      "y": 102,
+      "source_leaf_width_px": 314,
+      "rotation_degrees": -62.28171,
+      "new_opaque_pixels": 48577,
+      "new_fraction": 1.0
+    },
+    {
+      "sprite": 24,
+      "x": 510,
+      "y": 348,
+      "source_leaf_width_px": 314,
+      "rotation_degrees": -62.28171,
+      "new_opaque_pixels": 47930,
+      "new_fraction": 0.98668
+    },
+    {
+      "sprite": 24,
+      "x": 46,
+      "y": 114,
+      "source_leaf_width_px": 314,
+      "rotation_degrees": -62.28171,
+      "new_opaque_pixels": 48577,
+      "new_fraction": 1.0
+    },
+    {
+      "sprite": 4,
+      "x": 17,
+      "y": 464,
+      "source_leaf_width_px": 308,
+      "rotation_degrees": 124.64326,
+      "new_opaque_pixels": 44030,
+      "new_fraction": 0.94442
+    },
+    {
+      "sprite": 40,
+      "x": 560,
+      "y": 556,
+      "source_leaf_width_px": 310,
+      "rotation_degrees": 53.56487,
+      "new_opaque_pixels": 46517,
+      "new_fraction": 0.98386
+    },
+    {
+      "sprite": 12,
+      "x": 600,
+      "y": 202,
+      "source_leaf_width_px": 308,
+      "rotation_degrees": -122.76256,
+      "new_opaque_pixels": 43242,
+      "new_fraction": 0.9271
+    },
+    {
+      "sprite": 37,
+      "x": 579,
+      "y": 37,
+      "source_leaf_width_px": 306,
+      "rotation_degrees": 179.37969,
+      "new_opaque_pixels": 43734,
+      "new_fraction": 0.95105
+    },
+    {
+      "sprite": 14,
+      "x": 269,
+      "y": 370,
+      "source_leaf_width_px": 313,
+      "rotation_degrees": 104.42841,
+      "new_opaque_pixels": 43096,
+      "new_fraction": 0.89359
+    },
+    {
+      "sprite": 28,
+      "x": 202,
+      "y": 126,
+      "source_leaf_width_px": 294,
+      "rotation_degrees": -169.36633,
+      "new_opaque_pixels": 28273,
+      "new_fraction": 0.6657
+    },
+    {
+      "sprite": 14,
+      "x": 59,
+      "y": 623,
+      "source_leaf_width_px": 313,
+      "rotation_degrees": 104.42841,
+      "new_opaque_pixels": 29545,
+      "new_fraction": 0.61261
+    },
+    {
+      "sprite": 37,
+      "x": 235,
+      "y": 21,
+      "source_leaf_width_px": 306,
+      "rotation_degrees": 179.37969,
+      "new_opaque_pixels": 31014,
+      "new_fraction": 0.67444
+    },
+    {
+      "sprite": 108,
+      "x": 475,
+      "y": 684,
+      "source_leaf_width_px": 275,
+      "rotation_degrees": 82.14456,
+      "new_opaque_pixels": 27850,
+      "new_fraction": 0.74878
+    },
+    {
+      "sprite": 52,
+      "x": 659,
+      "y": 462,
+      "source_leaf_width_px": 299,
+      "rotation_degrees": 104.02887,
+      "new_opaque_pixels": 29021,
+      "new_fraction": 0.65964
+    },
+    {
+      "sprite": 40,
+      "x": 40,
+      "y": 219,
+      "source_leaf_width_px": 310,
+      "rotation_degrees": 53.56487,
+      "new_opaque_pixels": 26501,
+      "new_fraction": 0.56051
+    },
+    {
+      "sprite": 83,
+      "x": 781,
+      "y": 256,
+      "source_leaf_width_px": 227,
+      "rotation_degrees": 89.11572,
+      "new_opaque_pixels": 16583,
+      "new_fraction": 0.65424
+    },
+    {
+      "sprite": 86,
+      "x": 18,
+      "y": 510,
+      "source_leaf_width_px": 265,
+      "rotation_degrees": -70.33192,
+      "new_opaque_pixels": 14901,
+      "new_fraction": 0.43103
+    },
+    {
+      "sprite": 37,
+      "x": 125,
+      "y": 35,
+      "source_leaf_width_px": 306,
+      "rotation_degrees": 179.37969,
+      "new_opaque_pixels": 17238,
+      "new_fraction": 0.37486
+    },
+    {
+      "sprite": 105,
+      "x": 322,
+      "y": 683,
+      "source_leaf_width_px": 310,
+      "rotation_degrees": 8.2585,
+      "new_opaque_pixels": 17779,
+      "new_fraction": 0.37612
+    },
+    {
+      "sprite": 117,
+      "x": 418,
+      "y": 40,
+      "source_leaf_width_px": 237,
+      "rotation_degrees": -144.74297,
+      "new_opaque_pixels": 10514,
+      "new_fraction": 0.38064
+    },
+    {
+      "sprite": 41,
+      "x": 589,
+      "y": 59,
+      "source_leaf_width_px": 304,
+      "rotation_degrees": 145.44505,
+      "new_opaque_pixels": 11379,
+      "new_fraction": 0.25075
+    },
+    {
+      "sprite": 128,
+      "x": 423,
+      "y": 531,
+      "source_leaf_width_px": 269,
+      "rotation_degrees": 94.16298,
+      "new_opaque_pixels": 10329,
+      "new_fraction": 0.29075
+    },
+    {
+      "sprite": 21,
+      "x": 42,
+      "y": 336,
+      "source_leaf_width_px": 289,
+      "rotation_degrees": -98.45475,
+      "new_opaque_pixels": 13844,
+      "new_fraction": 0.33669
+    }
+  ],
+  "species_label": "Stylized red maple (three dominant lobes)"
+}

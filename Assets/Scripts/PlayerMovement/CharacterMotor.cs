@@ -4,6 +4,10 @@ using UnityEngine;
 [RequireComponent(typeof(CharacterController))]
 public sealed class CharacterMotor : MonoBehaviour
 {
+    [Header("Collision Queries")]
+    [Tooltip("Solid surfaces considered by grounding and crouch headroom checks: terrain, rocks, trunks and solid props. Excludes Player and QueryOnly.")]
+    [SerializeField] private LayerMask solidSurfaceMask = GameplayLayers.SolidSurfaceMask;
+
     [Header("Ground Movement")]
     [SerializeField] private float walkSpeed = 5f;
     [SerializeField] private float sprintSpeed = 7f;
@@ -44,6 +48,8 @@ public sealed class CharacterMotor : MonoBehaviour
 
     private void Awake()
     {
+        gameObject.layer = GameplayLayers.Player;
+        GameplayLayers.AssignPhysicalColliders(gameObject, GameplayLayers.Player);
         controller = GetComponent<CharacterController>();
         SetStance(false);
     }
@@ -113,7 +119,7 @@ public sealed class CharacterMotor : MonoBehaviour
         float radius = controller.radius * 0.8f;
         Vector3 origin = transform.position + Vector3.up * (controller.radius + 0.25f);
         int count = Physics.SphereCastNonAlloc(origin, radius, Vector3.down, groundHits,
-            controller.radius + 0.55f, ~0, QueryTriggerInteraction.Ignore);
+            controller.radius + 0.55f, solidSurfaceMask, QueryTriggerInteraction.Ignore);
 
         float nearest = float.PositiveInfinity;
         Vector3 normal = Vector3.up;
@@ -140,7 +146,7 @@ public sealed class CharacterMotor : MonoBehaviour
         Vector3 center = transform.position + Vector3.up * (crouchingHeight + addedHeight * 0.5f);
         int count = Physics.OverlapBoxNonAlloc(center,
             new Vector3(radius, addedHeight * 0.5f, radius), headroomHits,
-            Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
+            Quaternion.identity, solidSurfaceMask, QueryTriggerInteraction.Ignore);
         if (count == headroomHits.Length)
             return false;
 

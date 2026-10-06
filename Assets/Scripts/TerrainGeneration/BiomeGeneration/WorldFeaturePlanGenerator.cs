@@ -749,7 +749,7 @@ public static class WorldFeaturePlanGenerator
 
             float yaw = Hash01(hash + 79) * 360f;
             float uniformScale = GetTreeScale(settings.treeUniformScaleRange, Hash01(hash + 97));
-            float exclusionRadius = GetForestTreeExclusionRadius(variant, Hash01(hash + 131));
+            float exclusionRadius = settings.GetTreeExclusionRadius(variant, Hash01(hash + 131));
 
             if (IntersectsExistingPlacement(plan, sampleX, sampleZ, exclusionRadius))
                 continue;
@@ -816,7 +816,7 @@ public static class WorldFeaturePlanGenerator
             float chance = Mathf.Clamp01(Mathf.InverseLerp(0.30f, 0.84f, canopy) *
                 Mathf.Lerp(0.72f, 1.18f, cluster) * (1f - clearing * 0.82f) * (1f - rockiness * 0.28f));
             if (Hash01(hash + 53) >= chance) continue;
-            float radius = GetForestTreeExclusionRadius(WorldFeatureVariant.SpruceTree, Hash01(hash + 131));
+            float radius = settings.GetTreeExclusionRadius(WorldFeatureVariant.SpruceTree, Hash01(hash + 131));
             if (IntersectsExistingPlacement(plan, x, z, radius)) continue;
             plan.Placements.Add(new WorldFeaturePlacement(WorldFeatureType.Tree, WorldFeatureVariant.SpruceTree,
                 x, z, Quaternion.Euler(0f, Hash01(hash + 79) * 360f, 0f),
@@ -862,7 +862,7 @@ public static class WorldFeaturePlanGenerator
             float stand = Sample01(coord.x * chunkSize + x, coord.z * chunkSize + z, 0.012f, seed + 6377);
             float chance = warmth * wetness * elevation * slope * Mathf.Lerp(0.06f, 0.42f, stand);
             if (Hash01(hash + 53) >= chance) continue;
-            float radius = GetForestTreeExclusionRadius(WorldFeatureVariant.SpruceTree, Hash01(hash + 131));
+            float radius = settings.GetTreeExclusionRadius(WorldFeatureVariant.SpruceTree, Hash01(hash + 131));
             if (IntersectsExistingPlacement(plan, x, z, radius)) continue;
             plan.Placements.Add(new WorldFeaturePlacement(WorldFeatureType.Tree, WorldFeatureVariant.SpruceTree,
                 x, z, Quaternion.Euler(0f, Hash01(hash + 79) * 360f, 0f),
@@ -1048,7 +1048,7 @@ public static class WorldFeaturePlanGenerator
 
             float yaw = Hash01(hash + 79) * 360f;
             float uniformScale = GetTreeScale(settings.treeUniformScaleRange, Hash01(hash + 97));
-            float exclusionRadius = GetGrasslandTreeExclusionRadius(variant, Hash01(hash + 131));
+            float exclusionRadius = settings.GetTreeExclusionRadius(variant, Hash01(hash + 131));
 
             if (IntersectsExistingPlacement(plan, sampleX, sampleZ, exclusionRadius))
                 continue;
@@ -1379,23 +1379,6 @@ public static class WorldFeaturePlanGenerator
         return Mathf.Lerp(min,max,roll);
     }
 
-    private static float GetForestTreeExclusionRadius(WorldFeatureVariant variant, float roll)
-    {
-        switch (variant)
-        {
-            case WorldFeatureVariant.BirchAspenTree:
-                return Mathf.Lerp(6.2f, 7.8f, roll);
-            case WorldFeatureVariant.SpruceTree:
-                return Mathf.Lerp(6.4f, 8.2f, roll);
-            case WorldFeatureVariant.WhitePineTree:
-                return Mathf.Lerp(8.0f, 10.5f, roll);
-            case WorldFeatureVariant.OakTree:
-                return Mathf.Lerp(8.8f, 11.5f, roll);
-            default:
-                return Mathf.Lerp(7.2f, 9.4f, roll);
-        }
-    }
-
     private static float GetForestTreeInfluenceRadius(WorldFeatureVariant variant, float roll)
     {
         switch (variant)
@@ -1410,23 +1393,6 @@ public static class WorldFeaturePlanGenerator
                 return Mathf.Lerp(22f, 30f, roll);
             default:
                 return Mathf.Lerp(18f, 25f, roll);
-        }
-    }
-
-    private static float GetGrasslandTreeExclusionRadius(WorldFeatureVariant variant, float roll)
-    {
-        switch (variant)
-        {
-            case WorldFeatureVariant.GrasslandOakTree:
-                return Mathf.Lerp(11.5f, 15.5f, roll);
-            case WorldFeatureVariant.GrasslandWhitePineTree:
-                return Mathf.Lerp(8.5f, 11.5f, roll);
-            case WorldFeatureVariant.GrasslandWillowTree:
-                return Mathf.Lerp(9.0f, 12.4f, roll);
-            case WorldFeatureVariant.GrasslandBirchAspenTree:
-                return Mathf.Lerp(7.2f, 9.4f, roll);
-            default:
-                return Mathf.Lerp(8.0f, 10.8f, roll);
         }
     }
 

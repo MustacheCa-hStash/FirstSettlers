@@ -15,6 +15,7 @@ public sealed class TreeRecord
     public ChunkCoord Chunk => Id.Chunk;
     public TreeInstanceData Placement { get; private set; }
     public Vector3 WorldPosition { get; private set; }
+    public float ExclusionRadiusWorld => Placement.exclusionRadiusWorld;
     public TreeState State { get; private set; }
 
     internal TreeRecord(TreeInstanceData placement, float chunkWorldSize, TreeState state)

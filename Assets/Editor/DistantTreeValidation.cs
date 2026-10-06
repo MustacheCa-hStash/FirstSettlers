@@ -217,12 +217,24 @@ public static class DistantTreeValidation
             for (int i = 0; i < expected.Length; i++)
             {
                 var p = expected[i]; var tree = sparse[i];
+                Require(tree.exclusionRadiusWorld == p.exclusionRadius, "Distant conversion lost the applied exclusion radius.");
                 Require(p.treeId.IsValid && p.treeId == tree.id && p.variant == tree.variant && Mathf.Abs(tree.localPosition.x - (p.sampleX - size * 0.5f)) < 0.0001f &&
                     Mathf.Abs(tree.localPosition.z - (p.sampleZ - size * 0.5f)) < 0.0001f, "Real terrain placement mismatch.");
                 int x = Mathf.FloorToInt(p.sampleX), z = Mathf.FloorToInt(p.sampleZ);
                 float expectedHeight = Mathf.Lerp(Mathf.Lerp(h.HeightMap[x + 1, z + 1], h.HeightMap[x + 2, z + 1], p.sampleX - x),
                     Mathf.Lerp(h.HeightMap[x + 1, z + 2], h.HeightMap[x + 2, z + 2], p.sampleX - x), p.sampleZ - z) * 10f;
                 Require(Mathf.Abs(expectedHeight - tree.localPosition.y) < 0.001f, "Real terrain tree height mismatch.");
+            }
+            var scaled = System.Threading.Tasks.Task.Run(() => DistantTreePlacement.Generate(coord, size, seed, scale,
+                5, .5f, 2f, .3f, 10f, water, 1.5f, 12000, WorldFeatureGenerationSettings.Default)).GetAwaiter().GetResult();
+            Require(scaled.Length == expected.Length, "World scale changed distant placement count.");
+            for (int i = 0; i < expected.Length; i++)
+            {
+                Require(scaled[i].id == expected[i].treeId, "World scale changed distant placement identity.");
+                float radiusWorld = expected[i].exclusionRadius * .3f;
+                Require(Mathf.Abs(scaled[i].exclusionRadiusWorld - radiusWorld) < .00001f,
+                    "Distant exclusion radius must be converted to world units exactly once: expected " +
+                    radiusWorld + ", got " + scaled[i].exclusionRadiusWorld);
             }
         }
     }

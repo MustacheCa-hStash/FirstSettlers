@@ -1243,6 +1243,7 @@ public class ChunkFoliageRuntime
                 continue;
 
             GameObject bushObject = Object.Instantiate(prefab, bushGameObjectRoot.transform);
+            GameplayLayers.AssignPhysicalColliders(bushObject, GameplayLayers.WorldSolid);
             bushObject.transform.localPosition = instance.localPosition;
             bushObject.transform.localRotation = instance.localRotation;
             bushObject.transform.localScale = instance.localScale;
@@ -1281,9 +1282,14 @@ public class ChunkFoliageRuntime
                 continue;
 
             GameObject rockObject = Object.Instantiate(prefab, rockGameObjectRoot.transform);
+            rockObject.layer = GameplayLayers.WorldSolid;
+            GameplayLayers.AssignPhysicalColliders(rockObject, GameplayLayers.WorldSolid);
             rockObject.transform.localPosition = instance.localPosition;
             rockObject.transform.localRotation = instance.localRotation;
             rockObject.transform.localScale = instance.localScale;
+            var queryTarget = rockObject.GetComponent<RockQueryTarget>();
+            if (queryTarget == null) queryTarget = rockObject.AddComponent<RockQueryTarget>();
+            queryTarget.Initialize(instance);
             ConfigureSpawnedRendererCulling(rockObject);
 
             rockGameObjects.Add(rockObject);

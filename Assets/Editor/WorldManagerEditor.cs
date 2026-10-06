@@ -14,13 +14,27 @@ public class WorldManagerEditor : Editor
         new[] { "Terrain Rendering and Lighting", "terrainMaterial", "mountainSnowBlendGamma", "terrainReceiveShadows", "terrainHorizonShadows" },
         new[] { "Terrain Streaming", "viewDistance", "colliderDistance", "enableFarTerrain", "farTerrainStartRing", "farTerrainMacroTileSize", "farTerrainHeightGridResolution", "farTerrainControlMapResolution", "farTerrainSkirtDepth" },
         new[] { "Grass and Forest Ground Cover", "grassSettings", "leafClusterSettings", "fernSettings" },
-        new[] { "Trees, Bushes and Rocks", "treeSettings" },
+        new[] { "Trees, Bushes and Rocks", "treeSettings", "showTreeExclusionRadiusGizmos" },
         new[] { "Flowers and Shore Plants", "flowerSettings", "cloverSettings", "dandelionSettings", "lilyPadSettings", "cattailSettings" },
         new[] { "Ambient Life", "butterflySettings", "beeSettings" },
         new[] { "Water", "waterMaterial", "globalWaterY", "waterReflectionResolution", "waterReflectionUpdatesPerSecond", "waterReflectionMovingUpdatesPerSecond", "waterReflectionDistance" },
         new[] { "Terrain Streaming Budgets", "maxActiveTerrainDataJobs", "maxActiveFarTerrainJobs", "maxActiveMeshJobs", "maxActiveColliderJobs", "maxTerrainDataResultsAppliedPerFrame", "maxFarTerrainResultsAppliedPerFrame", "maxLODMeshResultsAppliedPerFrame", "maxColliderResultsAppliedPerFrame", "urgentVisibleChunkRingRadius", "maxVisibleChunkContentUpdatesPerFrame", "maxRenderVisibilityChecksPerFrame", "foliageFrustumPaddingChunks", "visibleChunkContentBudgetMsPerFrame", "maxFarTerrainTileContentUpdatesPerFrame", "farTerrainTileContentBudgetMsPerFrame", "completedRequestApplyBudgetMsPerFrame", "terrainDataApplyBudgetMsPerFrame", "farTerrainApplyBudgetMsPerFrame", "lodMeshApplyBudgetMsPerFrame", "colliderApplyBudgetMsPerFrame" },
         new[] { "Generation Profiling", "logTerrainGenerationProfile", "terrainGenerationProfileLogInterval", "resetTerrainGenerationProfileAfterLog" }
     };
+
+    [DrawGizmo(GizmoType.Selected | GizmoType.NonSelected)]
+    private static void DrawTreeExclusionRadiusGizmos(WorldManager world, GizmoType gizmoType)
+    {
+        if (!Application.isPlaying || !world.ShowTreeExclusionRadiusGizmos || world.Trees == null) return;
+        using (new Handles.DrawingScope(Color.white, Matrix4x4.identity))
+            foreach (var tree in world.Trees.Records)
+            {
+                float radius = tree.ExclusionRadiusWorld;
+                if (tree.State != TreeState.Standing || radius <= 0f || float.IsNaN(radius) || float.IsInfinity(radius)) continue;
+                // XZ spacing is horizontal, regardless of slope or the visual tree's scale/rotation.
+                Handles.DrawWireDisc(tree.WorldPosition + Vector3.up * .05f, Vector3.up, radius);
+            }
+    }
 
     public override void OnInspectorGUI()
     {

@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="QueryHud.uss" />
+    <ui:VisualElement name="query-hud" class="query-hud">
+        <ui:VisualElement name="query-anchor" class="query-anchor">
+            <ui:VisualElement name="query-card" class="query-card">
+                <ui:VisualElement class="query-words">
+                    <ui:Label name="query-name" class="query-name" />
+                    <ui:Label name="query-description" class="query-description" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
