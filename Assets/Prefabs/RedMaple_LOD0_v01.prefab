@@ -59,7 +59,7 @@ PrefabInstance:
     - target: {fileID: -7511558181221131132, guid: ffe506426744b7a46a55c172c3385a4f, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 7efa87b7a32708c4baac28310395c2c6, type: 2}
+      objectReference: {fileID: 2100000, guid: 7b8816ebc50e7bf4280112e6e6ebbb5b, type: 2}
     - target: {fileID: 919132149155446097, guid: ffe506426744b7a46a55c172c3385a4f, type: 3}
       propertyPath: m_Name
       value: RedMaple_LOD0_v01
