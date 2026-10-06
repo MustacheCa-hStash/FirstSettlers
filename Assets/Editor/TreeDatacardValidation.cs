@@ -13,8 +13,7 @@ public static class TreeDatacardValidation
     { if (!value) throw new InvalidOperationException(message); }
 
     private static WorldFeatureGenerationSettings Snapshot(TreeSettings settings) =>
-        (WorldFeatureGenerationSettings)typeof(ChunkManager).GetMethod("BuildWorldFeatureGenerationSettings",
-            BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { settings });
+        TreeGenerationSnapshot.Create(settings);
 
     private static WorldObjectDefinition Card(string name) =>
         AssetDatabase.LoadAssetAtPath<WorldObjectDefinition>(Cards + name + "Tree.asset");

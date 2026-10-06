@@ -87,24 +87,12 @@ public sealed class DistantTreeManager : IDisposable
         this.mountainScale = mountainScale; this.placementSettings = placementSettings;
         tintSeed = settings.seedOffset;
         chunkWorldSize = chunkSize * worldScale;
-        Add(WorldFeatureVariant.MapleTree, settings.mapleTreeBillboardPrefab);
-        Add(WorldFeatureVariant.SugarMapleTree, settings.sugarMapleTreeBillboardPrefab);
-        Add(WorldFeatureVariant.BirchAspenTree, settings.birchAspenTreeBillboardPrefab);
-        Add(WorldFeatureVariant.BeechTree, settings.beechTreeBillboardPrefab);
-        Add(WorldFeatureVariant.SpruceTree, settings.spruceTreeBillboardPrefab);
-        Add(WorldFeatureVariant.WhitePineTree, settings.whitePineTreeBillboardPrefab);
-        Add(WorldFeatureVariant.OakTree, settings.oakTreeBillboardPrefab);
-        Add(WorldFeatureVariant.GrasslandMapleTree, settings.grasslandMapleTreeBillboardPrefab, true);
-        Add(WorldFeatureVariant.GrasslandBirchAspenTree, settings.grasslandBirchAspenTreeBillboardPrefab, true);
-        Add(WorldFeatureVariant.GrasslandWhitePineTree, settings.grasslandWhitePineTreeBillboardPrefab, true);
-        Add(WorldFeatureVariant.GrasslandOakTree, settings.grasslandOakTreeBillboardPrefab, true);
-        Add(WorldFeatureVariant.GrasslandWillowTree, settings.grasslandWillowTreeBillboardPrefab, true);
+        foreach (var species in TreeSpeciesCatalog.All)
+            Add(species.Variant, species.BillboardPrefab(settings));
     }
 
-    private void Add(WorldFeatureVariant variant, GameObject prefab, bool grassland = false)
+    private void Add(WorldFeatureVariant variant, GameObject prefab)
     {
-        if (prefab == null) prefab = grassland && settings.grasslandTreeBillboardFallbackPrefab != null
-            ? settings.grasslandTreeBillboardFallbackPrefab : settings.treeBillboardPrefab;
         if (prefab == null) return;
         var filter = prefab.GetComponentInChildren<MeshFilter>();
         var renderer = prefab.GetComponentInChildren<MeshRenderer>();

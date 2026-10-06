@@ -19,10 +19,7 @@ public struct WorldFeatureGenerationSettings
     public Vector2 grasslandRockPitchRange;
     public int maxGrasslandTreesPerChunk;
 
-    public static bool IsGrasslandTree(WorldFeatureVariant variant) => variant is
-        WorldFeatureVariant.GrasslandMapleTree or WorldFeatureVariant.GrasslandBirchAspenTree or
-        WorldFeatureVariant.GrasslandWhitePineTree or WorldFeatureVariant.GrasslandOakTree or
-        WorldFeatureVariant.GrasslandWillowTree;
+    public static bool IsGrasslandTree(WorldFeatureVariant variant) => TreeSpeciesCatalog.IsGrassland(variant);
 
     public Vector2 GetTreeUniformScaleRange(WorldFeatureVariant variant)
     {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -100,17 +101,23 @@ public static class SpruceSnowValidation
             Check(tree.snowCoverage == .9f && tree.localPosition.y == 5f, "Near instance lost snow or terrain seating.");
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
             Check(prefab != null, "Active spruce prefab missing.");
-            var runtime = new ChunkFoliageRuntime { root = root.transform, spruceTreePrefab = prefab };
-            runtime.RebuildTreeGameObjects(new List<TreeInstanceData> { tree }, root.transform, true, true);
-            var first = root.GetComponentsInChildren<Renderer>().First(r => r.sharedMaterial.HasProperty("_SnowMap"));
-            var block = new MaterialPropertyBlock(); first.GetPropertyBlock(block);
-            Check(block.GetFloat("_SnowCoverage") == .9f, "Snow did not reach the active spruce leaf renderer.");
-            Check(block.GetFloat("_AlphaCutoutShadows") == 1f, "Snow caps must cast alpha-clipped shadows.");
-            tree.snowCoverage = 0f;
-            runtime.RebuildTreeGameObjects(new List<TreeInstanceData> { tree }, root.transform, true, true);
-            var reused = root.GetComponentsInChildren<Renderer>().First(r => r.sharedMaterial.HasProperty("_SnowMap"));
-            reused.GetPropertyBlock(block);
-            Check(reused == first && block.GetFloat("_SnowCoverage") == 0f, "Pooled spruce retained snow in a warm biome.");
+            using var renderer = new StandingTreeRenderer(new TreeSettings { spruceTreePrefab = prefab });
+            renderer.BeginFrame(null); renderer.Submit(tree, Matrix4x4.identity, 0f, 1f);
+            var batches = (System.Collections.IEnumerable)typeof(StandingTreeRenderer).GetField("batches",
+                BindingFlags.Instance | BindingFlags.NonPublic).GetValue(renderer);
+            foreach (var batch in batches)
+            {
+                if ((int)batch.GetType().GetField("Count").GetValue(batch) == 0) continue;
+                var appearance = (Vector4[])batch.GetType().GetField("Appearance").GetValue(batch);
+                Check(appearance[0].x == .9f && appearance[0].y == 1f, "Standing tree lost snow or alpha shadows.");
+            }
+            tree.snowCoverage = 0f; renderer.Submit(tree, Matrix4x4.identity, 0f, 1f);
+            foreach (var batch in batches)
+            {
+                if ((int)batch.GetType().GetField("Count").GetValue(batch) == 0) continue;
+                var appearance = (Vector4[])batch.GetType().GetField("Appearance").GetValue(batch);
+                Check(appearance[1].x == 0f, "Standing tree retained snow on the next instance.");
+            }
         }
         finally { Object.DestroyImmediate(root); record.Dispose(); }
     }

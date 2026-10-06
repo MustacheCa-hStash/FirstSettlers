@@ -197,51 +197,9 @@ public class TreeSettings
     public bool castTreeShadows = true;
     public bool receiveTreeShadows = true;
 
-    public WorldObjectDefinition GetDefinition(WorldFeatureVariant variant)
-    {
-        if (!(variant >= WorldFeatureVariant.MapleTree && variant <= WorldFeatureVariant.OakTree) &&
-            !WorldFeatureGenerationSettings.IsGrasslandTree(variant)) return null;
-        WorldObjectDefinition definition = variant switch
-        {
-            WorldFeatureVariant.MapleTree or WorldFeatureVariant.GrasslandMapleTree => mapleTreeDefinition,
-            WorldFeatureVariant.SugarMapleTree => sugarMapleTreeDefinition,
-            WorldFeatureVariant.BirchAspenTree or WorldFeatureVariant.GrasslandBirchAspenTree => birchAspenTreeDefinition,
-            WorldFeatureVariant.BeechTree => beechTreeDefinition,
-            WorldFeatureVariant.SpruceTree => spruceTreeDefinition,
-            WorldFeatureVariant.WhitePineTree or WorldFeatureVariant.GrasslandWhitePineTree => whitePineTreeDefinition,
-            WorldFeatureVariant.OakTree or WorldFeatureVariant.GrasslandOakTree => oakTreeDefinition,
-            WorldFeatureVariant.GrasslandWillowTree => willowTreeDefinition,
-            _ => null
-        };
-        if (definition != null) return definition;
-        // Compatibility for trees authored only through their existing prefab datacard.
-        GameObject prefab = GetNearPrefab(variant);
-        return prefab != null && prefab.TryGetComponent<TreeGameplayAuthoring>(out var authoring)
-            ? authoring.QueryDefinition : null;
-    }
+    public WorldObjectDefinition GetDefinition(WorldFeatureVariant variant) =>
+        TreeSpeciesCatalog.TryGet(variant, out var species) ? species.Definition(this) : null;
 
-    public GameObject GetNearPrefab(WorldFeatureVariant variant)
-    {
-        GameObject prefab = variant switch
-        {
-            WorldFeatureVariant.MapleTree => mapleTreePrefab,
-            WorldFeatureVariant.SugarMapleTree => sugarMapleTreePrefab,
-            WorldFeatureVariant.BirchAspenTree => birchAspenTreePrefab,
-            WorldFeatureVariant.BeechTree => beechTreePrefab,
-            WorldFeatureVariant.SpruceTree => spruceTreePrefab,
-            WorldFeatureVariant.WhitePineTree => whitePineTreePrefab,
-            WorldFeatureVariant.OakTree => oakTreePrefab,
-            WorldFeatureVariant.GrasslandMapleTree => grasslandMapleTreePrefab,
-            WorldFeatureVariant.GrasslandBirchAspenTree => grasslandBirchAspenTreePrefab,
-            WorldFeatureVariant.GrasslandWhitePineTree => grasslandWhitePineTreePrefab,
-            WorldFeatureVariant.GrasslandOakTree => grasslandOakTreePrefab,
-            WorldFeatureVariant.GrasslandWillowTree => grasslandWillowTreePrefab,
-            _ => null
-        };
-        if (prefab != null) return prefab;
-        bool grassland = variant == WorldFeatureVariant.GrasslandMapleTree || variant == WorldFeatureVariant.GrasslandBirchAspenTree ||
-            variant == WorldFeatureVariant.GrasslandWhitePineTree || variant == WorldFeatureVariant.GrasslandOakTree ||
-            variant == WorldFeatureVariant.GrasslandWillowTree;
-        return grassland && grasslandTreeFallbackPrefab != null ? grasslandTreeFallbackPrefab : treeLOD0GameObjectPrefab;
-    }
+    public GameObject GetNearPrefab(WorldFeatureVariant variant) =>
+        TreeSpeciesCatalog.TryGet(variant, out var species) ? species.NearPrefab(this) : treeLOD0GameObjectPrefab;
 }

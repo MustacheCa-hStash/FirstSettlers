@@ -153,6 +153,15 @@ public class FarTerrainTileRuntime
         return meshFilter != null && meshFilter.sharedMesh == mesh;
     }
 
+    public bool TryGetVisibleWaterBounds(out Bounds bounds)
+    {
+        bounds = default;
+        if (waterMeshRenderer == null || !waterMeshRenderer.enabled || !waterMeshRenderer.gameObject.activeInHierarchy ||
+            waterMeshFilter.sharedMesh == null || waterMeshFilter.sharedMesh.vertexCount == 0) return false;
+        bounds = waterMeshRenderer.bounds;
+        return true;
+    }
+
     public void AccumulateRenderStats(ref WorldRenderStatsDebugInfo stats)
     {
         if (!visible || !renderVisible)

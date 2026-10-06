@@ -46,13 +46,35 @@ SurfaceData InitializeTreeSimpleLitSurfaceData(
     return surfaceData;
 }
 
+half3 EvaluateTreeLeafBacklighting(
+    InputData inputData,
+    half3 albedo,
+    half3 normalWS,
+    half strength,
+    half3 tint)
+{
+    if (strength <= 0.0h)
+        return half3(0.0h, 0.0h, 0.0h);
+
+    // Match the distant billboard path, which deliberately skips shadow sampling.
+    Light sun;
+    if (_DistantTreeEnabled > 0.5 && _DistantTreeBillboard > 0.5)
+        sun = GetMainLight();
+    else
+        sun = GetMainLight(inputData.shadowCoord);
+
+    half transmission = saturate(-dot(normalWS, sun.direction));
+    return albedo * tint * sun.color * transmission *
+        sun.distanceAttenuation * sun.shadowAttenuation * strength;
+}
+
 half4 ShadeDistantAwareTree(InputData inputData, SurfaceData surfaceData)
 {
     if (_DistantTreeEnabled > 0.5 && _DistantTreeBillboard > 0.5)
     {
         Light light = GetMainLight();
         half diffuse = saturate(dot(inputData.normalWS, light.direction));
-        half3 color = surfaceData.albedo * (inputData.bakedGI + light.color * diffuse);
+        half3 color = surfaceData.albedo * (inputData.bakedGI + light.color * diffuse) + surfaceData.emission;
         float fog = ComputeFogFactor(TransformWorldToHClip(inputData.positionWS).z);
         return half4(MixFog(color, fog), surfaceData.alpha);
     }

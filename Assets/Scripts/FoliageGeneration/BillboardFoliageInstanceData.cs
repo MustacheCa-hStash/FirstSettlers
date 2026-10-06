@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEngine;
 
 public struct BillboardFoliageInstanceData
@@ -22,3 +23,5 @@ public struct BillboardFoliageInstanceData
         this.forestBlend = forestBlend;
     }
 }
+
+#endif

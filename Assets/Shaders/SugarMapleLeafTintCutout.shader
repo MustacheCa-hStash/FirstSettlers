@@ -19,6 +19,9 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
         _CardVariationStrength("Card Variation Strength", Range(0, 1)) = 0.20
         _AmbientStrength("Ambient Strength", Range(0, 1)) = 0.42
         _LightWrap("Leaf Light Wrap", Range(0, 1)) = 0.62
+        [ToggleUI] _BacklightingEnabled("Leaf Backlighting", Float) = 0
+        _BacklightingStrength("Backlighting Strength", Range(0, 1)) = 0.12
+        _BacklightingColor("Backlighting Tint", Color) = (1, 1, 1, 1)
         _Smoothness("Smoothness", Range(0, 1)) = 0.08
         _SpecularStrength("Specular Strength", Range(0, 1)) = 0.03
         [Toggle] _UseVertexColor("Use Vertex Color", Float) = 0
@@ -58,6 +61,7 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
@@ -87,6 +91,9 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
                 half _CardVariationStrength;
                 half _AmbientStrength;
                 half _LightWrap;
+                half _BacklightingEnabled;
+                half _BacklightingStrength;
+                half4 _BacklightingColor;
                 half _Smoothness;
                 half _SpecularStrength;
                 half _UseVertexColor;
@@ -192,7 +199,7 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
                 return autumnColor;
             }
 
-            half4 frag(Varyings IN) : SV_Target
+            half4 frag(Varyings IN, FRONT_FACE_TYPE facing : FRONT_FACE_SEMANTIC) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
 
@@ -223,6 +230,10 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
                 inputData.normalWS = normalize(lerp(inputData.normalWS, half3(0.0h, 1.0h, 0.0h), _LightWrap * 0.22h));
 
                 SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(leafColor, atlas.a, _Smoothness, _SpecularStrength);
+                // Face the transmission normal toward the viewer on either side of the card.
+                half3 transmissionNormal = NormalizeNormalPerPixel(IN.normalWS) * IS_FRONT_VFACE(facing, 1, -1);
+                surfaceData.emission = EvaluateTreeLeafBacklighting(inputData, surfaceData.albedo, transmissionNormal,
+                    _BacklightingEnabled * _BacklightingStrength, _BacklightingColor.rgb);
                 half4 color = ShadeDistantAwareTree(inputData, surfaceData);
                 return half4(saturate(color.rgb), atlas.a);
             }
@@ -272,6 +283,9 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
                 half _CardVariationStrength;
                 half _AmbientStrength;
                 half _LightWrap;
+                half _BacklightingEnabled;
+                half _BacklightingStrength;
+                half4 _BacklightingColor;
                 half _Smoothness;
                 half _SpecularStrength;
                 half _UseVertexColor;

@@ -617,6 +617,12 @@ MonoBehaviour:
   dayFogColor: {r: 0.52, g: 0.66, b: 0.95, a: 1}
   dawnDuskFogColor: {r: 0.95, g: 0.55, b: 0.32, a: 1}
   nightFogColor: {r: 0.055, g: 0.065, b: 0.1, a: 1}
+  updateLinearFogDistances: 1
+  dayFogStartDistance: 500
+  dayFogEndDistance: 5000
+  nightFogStartDistance: 70
+  nightFogEndDistance: 400
+  fogTransitionHours: 1
   updateDynamicGI: 0
   dynamicGiUpdateIntervalSeconds: 8
 --- !u!1 &163551946
@@ -886,7 +892,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 1456
+  worldSeed: 14567
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -1261,7 +1267,7 @@ MonoBehaviour:
     oakTreeDefinition: {fileID: 11400000, guid: 38f488f4b3b54476b57a80413f914d29, type: 2}
     willowTreeDefinition: {fileID: 11400000, guid: 5fdc7bacacca4b369ee3428be4fa1296, type: 2}
     mapleTreePrefab: {fileID: 4933002158750481347, guid: f6cea1d4a50847d4e8b91feeccef6680, type: 3}
-    sugarMapleTreePrefab: {fileID: 7623245257818946110, guid: ccce0fc515ee52d40a299d2ebe23a1d2, type: 3}
+    sugarMapleTreePrefab: {fileID: 8969898117860906858, guid: 6377fe2b33afae54cafea770d5e136c6, type: 3}
     birchAspenTreePrefab: {fileID: 0}
     beechTreePrefab: {fileID: 0}
     spruceTreePrefab: {fileID: 8923281884864634577, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
@@ -1363,7 +1369,7 @@ MonoBehaviour:
     receiveTreeShadows: 1
   showTreeExclusionRadiusGizmos: 0
   simulateTreeSeason: 1
-  treeSeasonAutumnAmount: 0.94
+  treeSeasonAutumnAmount: 0
   sampleScale: 600
   mountainWidth: 1.3
   mountainSnowBlendGamma: 0.633
@@ -1784,7 +1790,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameTimeManager
   startAutomatically: 1
   useUnscaledDeltaTime: 0
-  realSecondsPerGameHour: 75
+  realSecondsPerGameHour: 5
   timeScale: 1
   daylightHours: 16
   nighttimeHours: 8

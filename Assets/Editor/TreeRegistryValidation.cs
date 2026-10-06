@@ -154,8 +154,8 @@ public static class TreeRegistryValidation
         var coord = new ChunkCoord(-2, 4);
         var tree = Instance(coord, 5, Vector3.zero);
         var registry = new TreeRegistry(Seed, Size);
-        var foliage = new FoliageManager(null, new GrassSettings(), new FlowerSettings { enableFlowers = false },
-            null, null, null, null, new TreeSettings(), Seed, Size, 1, 10, new TerrainWaterSettings(2.4f, 10, 1), registry);
+        var foliage = new FoliageManager(new WorldGenerationConfiguration { Seed = Seed, ChunkSize = Size, WorldScale = 1, MeshHeightMultiplier = 10, Water = new TerrainWaterSettings(2.4f, 10, 1) },
+            new WorldFoliageConfiguration { Grass = new GrassSettings(), Flowers = new FlowerSettings { enableFlowers = false }, LilyPads = null, Cattails = null, Clover = null, Dandelions = null, Trees = new TreeSettings() }, registry);
         using var record = new ChunkRecord(coord);
         record.FoliageData = new ChunkFoliageData { treeCubesGenerated = true };
         record.FoliageData.treeCubeInstances.Add(tree);

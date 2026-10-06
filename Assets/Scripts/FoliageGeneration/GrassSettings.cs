@@ -46,6 +46,7 @@ public class GrassSettings
     [Tooltip("Main-thread ground discovery setup/result collection budget. Results are collected in 256-candidate slices; one step always progresses. Does not limit worker execution time or render-batch building.")]
     public float groundFoliageGenerationBudgetMsPerFrame = 0.75f;
     public int maxRenderBatchRebuildsPerFrame = 1;
+    [Tooltip("Ground batch and bush/rock publication budget. Final arrays are built in bounded slices; one slice always progresses even when discovery exhausts the shared budget. A single prefab instantiation remains indivisible.")]
     public float renderBatchRebuildBudgetMsPerFrame = 0.35f;
     [HideInInspector] public int maxQueuedGrassSubChunkWork = 128;
     public int maxQueuedGroundFoliageGenerationWork = 48;

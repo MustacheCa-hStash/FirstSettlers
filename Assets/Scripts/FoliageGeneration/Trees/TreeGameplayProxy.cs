@@ -49,23 +49,10 @@ public sealed class TreeGameplayProxy : QueryTarget
     {
         info = default;
         if (!IsQueryAvailable) return false;
-        info = new QueryTargetInfo(this, string.IsNullOrWhiteSpace(displayNameOverride) ? TreeName(Variant) : displayNameOverride,
+        info = new QueryTargetInfo(this, string.IsNullOrWhiteSpace(displayNameOverride) ? TreeSpeciesCatalog.DisplayName(Variant) : displayNameOverride,
             queryIcon, QueryTargetCapabilities.Breakable, Record, queryDefinition);
         return true;
     }
-
-    private static string TreeName(WorldFeatureVariant variant) => variant switch
-    {
-        WorldFeatureVariant.MapleTree or WorldFeatureVariant.GrasslandMapleTree => "Maple Tree",
-        WorldFeatureVariant.SugarMapleTree => "Sugar Maple Tree",
-        WorldFeatureVariant.BirchAspenTree or WorldFeatureVariant.GrasslandBirchAspenTree => "Birch / Aspen Tree",
-        WorldFeatureVariant.BeechTree => "Beech Tree",
-        WorldFeatureVariant.SpruceTree => "Spruce Tree",
-        WorldFeatureVariant.WhitePineTree or WorldFeatureVariant.GrasslandWhitePineTree => "White Pine Tree",
-        WorldFeatureVariant.OakTree or WorldFeatureVariant.GrasslandOakTree => "Oak Tree",
-        WorldFeatureVariant.GrasslandWillowTree => "Willow Tree",
-        _ => "Tree"
-    };
 
     internal bool Bind(TreeRecord record)
     {

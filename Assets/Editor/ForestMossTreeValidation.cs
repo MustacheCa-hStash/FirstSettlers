@@ -20,8 +20,7 @@ public static class ForestMossTreeValidation
     private static void ValidateTrees()
     {
         var inspector=new TreeSettings {treeUniformScaleRange=new Vector2(4,5)};
-        var worker=(WorldFeatureGenerationSettings)typeof(ChunkManager).GetMethod("BuildWorldFeatureGenerationSettings",
-            BindingFlags.Static|BindingFlags.NonPublic).Invoke(null,new object[]{inspector});
+        var worker=TreeGenerationSnapshot.Create(inspector);
         Check(worker.treeUniformScaleRange==inspector.treeUniformScaleRange,"Inspector scale was lost before tree planning.");
         const int size=128,n=size+3;
         int count=0;
@@ -61,7 +60,7 @@ public static class ForestMossTreeValidation
             }
         }
         Check(count>20,"Tree scale fixture did not exercise enough trees.");
-        Debug.Log($"TREE SCALE PASS: {count} forest/meadow trees; 1x versus 4–5x, reversed endpoints, near and distant planner parity.");
+        Debug.Log($"TREE SCALE PASS: {count} forest/meadow trees; 1x versus 4â€“5x, reversed endpoints, near and distant planner parity.");
     }
     private static void ValidateMoss()
     {

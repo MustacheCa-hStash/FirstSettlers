@@ -206,6 +206,15 @@ public class ChunkRuntime
         return terrainMeshCollider != null && terrainMeshCollider.sharedMesh != null;
     }
 
+    public bool TryGetVisibleWaterBounds(out Bounds bounds)
+    {
+        bounds = default;
+        if (waterMeshRenderer == null || !waterMeshRenderer.enabled || !waterMeshRenderer.gameObject.activeInHierarchy ||
+            waterMeshFilter.sharedMesh == null || waterMeshFilter.sharedMesh.vertexCount == 0) return false;
+        bounds = waterMeshRenderer.bounds;
+        return true;
+    }
+
     public void ClearMeshes()
     {
         if (terrainMeshFilter)

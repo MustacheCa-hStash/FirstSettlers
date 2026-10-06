@@ -40,7 +40,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: ae040f892daf90346be8053e142a158b, type: 3}
+        m_Texture: {fileID: 2800000, guid: e95725d473a875c46b74648aa47d4f15, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
@@ -102,6 +102,8 @@ Material:
     - _AlphaCutoutShadows: 1
     - _AlphaToMask: 1
     - _AmbientStrength: 0.3
+    - _BacklightingEnabled: 1
+    - _BacklightingStrength: 0.907
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BlendOp: 0
@@ -154,6 +156,7 @@ Material:
     - _AutumnOrangeColor: {r: 0.95, g: 0.31999996, b: 0.059999965, a: 1}
     - _AutumnRedColor: {r: 0.72, g: 0.079999976, b: 0.054999977, a: 1}
     - _AutumnYellowColor: {r: 1, g: 0.62, b: 0.11999995, a: 1}
+    - _BacklightingColor: {r: 1, g: 1, b: 1, a: 1}
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}

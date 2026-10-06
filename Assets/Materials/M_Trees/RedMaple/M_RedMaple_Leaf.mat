@@ -102,6 +102,8 @@ Material:
     - _AlphaCutoutShadows: 1
     - _AlphaToMask: 1
     - _AmbientStrength: 0.3
+    - _BacklightingEnabled: 1
+    - _BacklightingStrength: 0.939
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BlendOp: 0
@@ -152,6 +154,7 @@ Material:
     - _AutumnCrimsonColor: {r: 0.48, g: 0.025, b: 0.04, a: 1}
     - _AutumnOrangeColor: {r: 1, g: 0.25, b: 0.055, a: 1}
     - _AutumnRedColor: {r: 0.88, g: 0.06, b: 0.035, a: 1}
+    - _BacklightingColor: {r: 1, g: 1, b: 1, a: 1}
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}

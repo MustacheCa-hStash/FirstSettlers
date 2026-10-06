@@ -40,24 +40,12 @@ public sealed class StandingTreeRenderer : IDisposable
     public StandingTreeRenderer(TreeSettings settings)
     {
         this.settings = settings;
-        Add(WorldFeatureVariant.MapleTree, settings.mapleTreePrefab);
-        Add(WorldFeatureVariant.SugarMapleTree, settings.sugarMapleTreePrefab);
-        Add(WorldFeatureVariant.BirchAspenTree, settings.birchAspenTreePrefab);
-        Add(WorldFeatureVariant.BeechTree, settings.beechTreePrefab);
-        Add(WorldFeatureVariant.SpruceTree, settings.spruceTreePrefab);
-        Add(WorldFeatureVariant.WhitePineTree, settings.whitePineTreePrefab);
-        Add(WorldFeatureVariant.OakTree, settings.oakTreePrefab);
-        Add(WorldFeatureVariant.GrasslandMapleTree, settings.grasslandMapleTreePrefab, true);
-        Add(WorldFeatureVariant.GrasslandBirchAspenTree, settings.grasslandBirchAspenTreePrefab, true);
-        Add(WorldFeatureVariant.GrasslandWhitePineTree, settings.grasslandWhitePineTreePrefab, true);
-        Add(WorldFeatureVariant.GrasslandOakTree, settings.grasslandOakTreePrefab, true);
-        Add(WorldFeatureVariant.GrasslandWillowTree, settings.grasslandWillowTreePrefab, true);
+        foreach (var species in TreeSpeciesCatalog.All)
+            Add(species.Variant, species.NearPrefab(settings));
     }
 
-    private void Add(WorldFeatureVariant variant, GameObject prefab, bool grassland = false)
+    private void Add(WorldFeatureVariant variant, GameObject prefab)
     {
-        if (prefab == null) prefab = grassland && settings.grasslandTreeFallbackPrefab != null
-            ? settings.grasslandTreeFallbackPrefab : settings.treeLOD0GameObjectPrefab;
         if (prefab == null) return;
         if (!definitions.TryGetValue(prefab, out var definition))
         {
@@ -186,9 +174,7 @@ public sealed class StandingTreeRenderer : IDisposable
 
     private void SubmitLevel(Part[] parts, TreeInstanceData tree, Matrix4x4 matrix, float handoff, float load, float lower, float upper)
     {
-        bool alphaShadows = tree.snowCoverage > 0f || tree.variant == WorldFeatureVariant.GrasslandMapleTree ||
-            tree.variant == WorldFeatureVariant.GrasslandBirchAspenTree || tree.variant == WorldFeatureVariant.GrasslandWhitePineTree ||
-            tree.variant == WorldFeatureVariant.GrasslandOakTree || tree.variant == WorldFeatureVariant.GrasslandWillowTree;
+        bool alphaShadows = tree.snowCoverage > 0f || TreeSpeciesCatalog.IsGrassland(tree.variant);
         foreach (var part in parts)
         {
             var b = part.Batch;

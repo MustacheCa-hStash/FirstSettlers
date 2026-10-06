@@ -17,6 +17,7 @@ public static class FoliageGenerator
             record.SurfaceTypeMap, record.GroundCoverMap, record.WorldFeaturePlan?.ForestStructure.FloorEcologyMap, record.WorldFeaturePlan?.ForestMembershipMap) ? data.AcquireLease() : null;
     }
 
+#if UNITY_EDITOR
     public static void GenerateGrassForChunk(
         ChunkRecord record,
         GrassSettings grassSettings,
@@ -81,6 +82,8 @@ public static class FoliageGenerator
             job.CompleteAndApply();
         }
     }
+
+#endif
 
     public static bool TryScheduleGrassForSubChunk(
         ChunkRecord record,
@@ -418,6 +421,8 @@ public static class FoliageGenerator
         }
     }
 
+#if UNITY_EDITOR
+    // Compatibility for isolated authoring fixtures; runtime has one resident grass path.
     public static void GenerateBillboardGrassForChunk(
         ChunkRecord record,
         GrassSettings grassSettings,
@@ -751,6 +756,8 @@ public static class FoliageGenerator
             disposed = true;
         }
     }
+
+#endif
 
     public static void GenerateFlowersForChunk(
         ChunkRecord record,
@@ -2783,6 +2790,7 @@ public static class FoliageGenerator
         public int prefabIndex;
     }
 
+#if UNITY_EDITOR
     [BurstCompile]
     private struct BillboardGrassDiscoveryJob : IJobParallelFor
     {
@@ -3026,6 +3034,7 @@ public static class FoliageGenerator
             return groundCoverMap[x * groundCoverMapHeight + z];
         }
     }
+#endif
 
     [BurstCompile]
     private struct FlowerDiscoveryJob : IJobParallelFor

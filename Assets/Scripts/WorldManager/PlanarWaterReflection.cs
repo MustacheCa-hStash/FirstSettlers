@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using Unity.Profiling;
 
 /// <summary>One reflection camera for every water mesh on the shared world-space plane.</summary>
 public sealed class PlanarWaterReflection : MonoBehaviour
@@ -26,6 +27,13 @@ public sealed class PlanarWaterReflection : MonoBehaviour
     private bool hasRendered;
     private bool requestChecked;
     private bool requestSupported;
+    private readonly Plane[] waterFrustum = new Plane[6];
+    private System.Func<Plane[], int, bool> visibleWater;
+    private static readonly ProfilerMarker RenderMarker = new("FS.Water.ReflectionRender");
+
+    // The streaming owner supplies visibility, including outgoing handoff meshes.
+    // Standalone users without an owner keep the original reflection behavior.
+    public void SetWaterVisibilityProvider(System.Func<Plane[], int, bool> provider) => visibleWater = provider;
 
     public void Configure(Camera source, float surfaceY, float textureScale = 0.7f,
         float stationaryUpdatesPerSecond = 30f, float movingUpdatesPerSecond = 120f,
@@ -75,6 +83,24 @@ public sealed class PlanarWaterReflection : MonoBehaviour
         if (sourceCamera == null || !sourceCamera.isActiveAndEnabled)
             return;
 
+        if (sourceCamera.transform.position.y <= waterY + 0.05f ||
+            (sourceCamera.cullingMask & (1 << WaterLayer)) == 0)
+        {
+            hasRendered = false; // Re-entry must render immediately, even at the same pose.
+            Shader.SetGlobalFloat(ReflectionValidId, 0f);
+            return;
+        }
+        if (visibleWater != null)
+        {
+            GeometryUtility.CalculateFrustumPlanes(sourceCamera, waterFrustum);
+            if (!visibleWater(waterFrustum, sourceCamera.cullingMask))
+            {
+                hasRendered = false;
+                Shader.SetGlobalFloat(ReflectionValidId, 0f);
+                return;
+            }
+        }
+
         if (!requestChecked)
         {
             requestSupported = RenderPipeline.SupportsRenderRequest(
@@ -85,14 +111,6 @@ public sealed class PlanarWaterReflection : MonoBehaviour
         }
         if (!requestSupported)
             return;
-
-        // Below the plane, this above-water reflection is not useful.
-        if (sourceCamera.transform.position.y <= waterY + 0.05f)
-        {
-            hasRendered = false;
-            Shader.SetGlobalFloat(ReflectionValidId, 0f);
-            return;
-        }
 
         // Compare with the last rendered pose so small movements accumulate.
         bool cameraMoved = !hasRendered ||
@@ -196,6 +214,7 @@ public sealed class PlanarWaterReflection : MonoBehaviour
 
     private void RenderReflection()
     {
+        using var sample = RenderMarker.Auto();
         reflectionCamera.CopyFrom(sourceCamera);
         reflectionCamera.enabled = false;
         reflectionCamera.targetTexture = null;
@@ -243,6 +262,7 @@ public sealed class PlanarWaterReflection : MonoBehaviour
 
     private void OnDisable()
     {
+        hasRendered = false;
         Shader.SetGlobalFloat(ReflectionValidId, 0f);
     }
 

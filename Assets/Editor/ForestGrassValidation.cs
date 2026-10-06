@@ -39,7 +39,7 @@ public static class ForestGrassValidation
                 Check(message.severity != UnityEditor.Rendering.ShaderCompilerMessageSeverity.Error, message.message);
         }
         // Resolve the same Resources defaults used by the actual manager, without constructing a world.
-        var resolve = typeof(FoliageManager).GetMethod("ResolveForestGrassAsset", BindingFlags.Static | BindingFlags.NonPublic);
+        var resolve = typeof(FoliageRenderAssets).GetMethod("ResolveForestGrassAsset", BindingFlags.Static | BindingFlags.Public);
         foreach (string lod in new[] { "LOD0", "LOD1" })
         {
             object[] args = { null, "Foliage/ForestGrassTuft_" + lod, null, null };
@@ -59,7 +59,7 @@ public static class ForestGrassValidation
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ForestGrassPrefabBuilder.NearPath);
         Mesh mesh = prefab.GetComponent<MeshFilter>().sharedMesh;
         Material material = prefab.GetComponent<MeshRenderer>().sharedMaterial;
-        Check(GrassIndirectRenderer.IsSupported(shader, material), "Forest material would force CPU fallback on this GPU.");
+        Check(GrassRenderUtility.IsSupported(shader, material), "Forest material would force CPU fallback on this GPU.");
         var settings = new GrassSettings { grassCompactShader = shader };
         var candidates = new List<FoliageInstanceData>();
         for (uint i = 0; i < 2048; i++)

@@ -42,8 +42,8 @@ public static class CloverRenderRangeValidation
     {
         var clover=new CloverSettings();var grass=new GrassSettings{activeRingRadius=1};
         var prefab=AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/CloverClump_v02_A.prefab");clover.cloverClumpPrefab=prefab;
-        var manager=new FoliageManager(null,grass,new FlowerSettings{enableFlowers=false},null,null,clover,null,
-            new TreeSettings(),1937,128,.3f,10,new TerrainWaterSettings(2.4f,10,1));
+        var manager=new FoliageManager(new WorldGenerationConfiguration { Seed = 1937, ChunkSize = 128, WorldScale = .3f, MeshHeightMultiplier = 10, Water = new TerrainWaterSettings(2.4f,10,1) },
+            new WorldFoliageConfiguration { Grass = grass, Flowers = new FlowerSettings{enableFlowers=false}, LilyPads = null, Cattails = null, Clover = clover, Dandelions = null, Trees = new TreeSettings() });
         try
         {
             float radius=CloverStreamingPolicy.RenderDistance(clover,128,.3f);
@@ -64,7 +64,7 @@ public static class CloverRenderRangeValidation
                 "Clover prewarm ring is missing or draws before the fade range.");
             using(var record=new ChunkRecord(prefetched))
             {
-                var type=typeof(FoliageManager).GetNestedType("FoliageBatchWorkType",BindingFlags.NonPublic);
+                var type=typeof(FoliagePublicationKind);
                 Require((bool)batch.Invoke(manager,new[]{(object)record,new ChunkCoord(0,0),Enum.Parse(type,"Clover")}),
                     "Prefetched clover placements cannot build batches before becoming visible.");
             }

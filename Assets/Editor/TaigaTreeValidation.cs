@@ -123,8 +123,7 @@ public static class TaigaTreeValidation
         var flags = BindingFlags.Instance | BindingFlags.NonPublic;
         var erosion = ((WorldErosionSettings)typeof(WorldManager).GetField("erosion", flags).GetValue(world)).Sanitized();
         var settings = (TreeSettings)typeof(WorldManager).GetField("treeSettings", flags).GetValue(world);
-        var placement = (WorldFeatureGenerationSettings)typeof(ChunkManager).GetMethod("BuildWorldFeatureGenerationSettings",
-            BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { settings });
+        var placement = TreeGenerationSnapshot.Create(settings);
         var viewer = (Transform)so.FindProperty("viewer").objectReferenceValue;
         var center = new ChunkCoord(Mathf.FloorToInt(viewer.position.x / (size * ws)), Mathf.FloorToInt(viewer.position.z / (size * ws)));
         Debug.Log($"TAIGA SCENE: seed={seed}, saved viewer={viewer.position}, center=({center.x},{center.z}), distant enabled={settings.enableDistantTrees}, instance radius={settings.gameObjectTreeChunkRingRadius}, distant radius={settings.distantTreeDistanceChunks}. Legacy billboard start={settings.billboardTreeChunkStartRingRadius} is ignored while distant trees are enabled.");

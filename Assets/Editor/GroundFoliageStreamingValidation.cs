@@ -123,13 +123,14 @@ public static class GroundFoliageStreamingValidation
             new Dictionary<ChunkCoord, ChunkRecord> { { record.ChunkCoord, record } });
         var mesh = new Mesh();
         var material = new Material(Shader.Find("Hidden/InternalErrorShader"));
-        var foliage = new FoliageManager(null, new GrassSettings { groundFoliageGenerationBudgetMsPerFrame = 0.05f },
-            new FlowerSettings { enableFlowers = false }, null, null, clover, null, new TreeSettings(), 1234, 16, 1, 10,
-            new TerrainWaterSettings(2.4f, 10f, 1f));
+        var prefab = new GameObject("Synthetic ground asset");
+        prefab.AddComponent<MeshFilter>().sharedMesh = mesh; prefab.AddComponent<MeshRenderer>().sharedMaterial = material;
+        clover.cloverClumpPrefabs = new[] { prefab };
+        var foliage = new FoliageManager(new WorldGenerationConfiguration { Seed = 1234, ChunkSize = 16, WorldScale = 1, MeshHeightMultiplier = 10, Water = new TerrainWaterSettings(2.4f, 10f, 1f) },
+            new WorldFoliageConfiguration { Grass = new GrassSettings { groundFoliageGenerationBudgetMsPerFrame = 0.05f,
+            grassPrefab = prefab, billboardGrassPrefab = prefab }, Flowers = new FlowerSettings { enableFlowers = false }, LilyPads = null, Cattails = null, Clover = clover, Dandelions = null, Trees = new TreeSettings() });
         try
         {
-            typeof(FoliageManager).GetField("cloverRenderData", flags).SetValue(foliage,
-                new[] { new CloverRenderData(mesh, material) });
             var prepare = typeof(FoliageManager).GetMethod("PrepareStreamingGrass", flags);
             var process = typeof(FoliageManager).GetMethod("ProcessPendingGroundFoliageGenerationWork", flags);
             prepare.Invoke(foliage, new object[] { record });
@@ -152,6 +153,7 @@ public static class GroundFoliageStreamingValidation
         finally
         {
             foliage.Dispose();
+            UnityEngine.Object.DestroyImmediate(prefab);
             UnityEngine.Object.DestroyImmediate(material);
             UnityEngine.Object.DestroyImmediate(mesh);
         }

@@ -163,23 +163,7 @@ public class WorldManager : MonoBehaviour
         beeSettings ??= new BeeSettings();
         beeSettings.prefab ??= butterflySettings.prefab;
 
-        chunkManager = new ChunkManager(viewDistance, colliderDistance, enableFarTerrain, farTerrainStartRing,
-            farTerrainMacroTileSize, farTerrainHeightGridResolution, farTerrainControlMapResolution, farTerrainSkirtDepth,
-            chunkSize, worldSeed, viewer, viewerCamera,
-            chunkParent, null, grassSettings, flowerSettings, lilyPadSettings, cattailSettings, cloverSettings, dandelionSettings, treeSettings, sampleScale, worldScale, octaves, persistence,
-            lacunarity, meshHeightMultiplier, terrainMaterial, waterMaterial,
-            terrainReceiveShadows, new TerrainWaterSettings(globalWaterY, meshHeightMultiplier, worldScale),
-            maxActiveTerrainDataJobs, maxActiveFarTerrainJobs, maxActiveMeshJobs,
-            maxActiveColliderJobs, maxTerrainDataResultsAppliedPerFrame,
-            maxFarTerrainResultsAppliedPerFrame, maxLODMeshResultsAppliedPerFrame,
-            maxColliderResultsAppliedPerFrame, urgentVisibleChunkRingRadius,
-            maxVisibleChunkContentUpdatesPerFrame, maxRenderVisibilityChecksPerFrame,
-            foliageFrustumPaddingChunks,
-            visibleChunkContentBudgetMsPerFrame, maxFarTerrainTileContentUpdatesPerFrame,
-            farTerrainTileContentBudgetMsPerFrame,
-            completedRequestApplyBudgetMsPerFrame,
-            terrainDataApplyBudgetMsPerFrame, farTerrainApplyBudgetMsPerFrame,
-            lodMeshApplyBudgetMsPerFrame, colliderApplyBudgetMsPerFrame, mountainWidth, mountainSnowBlendGamma, erosion.Sanitized(), butterflySettings, beeSettings, terrainHorizonShadows, leafClusterSettings, fernSettings);
+        chunkManager = new ChunkManager(BuildConfiguration());
 
         if (waterMaterial != null && waterMaterial.shader != null &&
             waterMaterial.shader.name == "FirstSettlers/Murky Planar Water")
@@ -190,8 +174,96 @@ public class WorldManager : MonoBehaviour
             planarWaterReflection.Configure(viewerCamera, globalWaterY, waterReflectionResolution,
                 waterReflectionUpdatesPerSecond, waterReflectionMovingUpdatesPerSecond,
                 waterReflectionDistance);
+            planarWaterReflection.SetWaterVisibilityProvider((planes, mask) =>
+                chunkManager != null && chunkManager.HasVisibleWater(planes, mask));
         }
     }
+
+    private WorldConfiguration BuildConfiguration() => new WorldConfiguration
+    {
+        Generation = new WorldGenerationConfiguration
+        {
+            Seed = worldSeed,
+            ChunkSize = chunkSize,
+            SampleScale = sampleScale,
+            WorldScale = worldScale,
+            Octaves = octaves,
+            Persistence = persistence,
+            Lacunarity = lacunarity,
+            MeshHeightMultiplier = meshHeightMultiplier,
+            MountainHorizontalScale = mountainWidth,
+            MountainSnowRenderCoverageGamma = mountainSnowBlendGamma,
+            Erosion = erosion.Sanitized(),
+            Water = new TerrainWaterSettings(globalWaterY, meshHeightMultiplier, worldScale)
+        },
+        Coverage = new TerrainCoverageConfiguration
+        {
+            ViewDistance = viewDistance,
+            ColliderDistance = colliderDistance,
+            EnableFarTerrain = enableFarTerrain,
+            FarTerrainStartRing = farTerrainStartRing,
+            FarTerrainMacroTileSize = farTerrainMacroTileSize,
+            FarTerrainHeightGridResolution = farTerrainHeightGridResolution,
+            FarTerrainControlMapResolution = farTerrainControlMapResolution,
+            FarTerrainSkirtDepth = farTerrainSkirtDepth
+        },
+        Workers = new TerrainWorkerLimits
+        {
+            TerrainData = maxActiveTerrainDataJobs,
+            FarTerrain = maxActiveFarTerrainJobs,
+            LodMesh = maxActiveMeshJobs,
+            Collider = maxActiveColliderJobs
+        },
+        Publication = new TerrainPublicationBudget
+        {
+            TerrainDataCount = maxTerrainDataResultsAppliedPerFrame,
+            FarTerrainCount = maxFarTerrainResultsAppliedPerFrame,
+            LodMeshCount = maxLODMeshResultsAppliedPerFrame,
+            ColliderCount = maxColliderResultsAppliedPerFrame,
+            TotalMs = completedRequestApplyBudgetMsPerFrame,
+            TerrainDataMs = terrainDataApplyBudgetMsPerFrame,
+            FarTerrainMs = farTerrainApplyBudgetMsPerFrame,
+            LodMeshMs = lodMeshApplyBudgetMsPerFrame,
+            ColliderMs = colliderApplyBudgetMsPerFrame
+        },
+        Content = new TerrainContentBudget
+        {
+            UrgentVisibleChunkRingRadius = urgentVisibleChunkRingRadius,
+            MaxVisibleChunkUpdates = maxVisibleChunkContentUpdatesPerFrame,
+            MaxRenderVisibilityChecks = maxRenderVisibilityChecksPerFrame,
+            FoliageFrustumPaddingChunks = foliageFrustumPaddingChunks,
+            VisibleChunkMs = visibleChunkContentBudgetMsPerFrame,
+            MaxFarTileUpdates = maxFarTerrainTileContentUpdatesPerFrame,
+            FarTileMs = farTerrainTileContentBudgetMsPerFrame
+        },
+        Rendering = new WorldRenderingConfiguration
+        {
+            TerrainMaterial = terrainMaterial,
+            WaterMaterial = waterMaterial,
+            TerrainReceiveShadows = terrainReceiveShadows,
+            HorizonShadows = terrainHorizonShadows
+        },
+        Scene = new WorldSceneReferences
+        {
+            Viewer = viewer,
+            ViewerCamera = viewerCamera,
+            ChunkParent = chunkParent
+        },
+        Foliage = new WorldFoliageConfiguration
+        {
+            Grass = grassSettings,
+            Flowers = flowerSettings,
+            LilyPads = lilyPadSettings,
+            Cattails = cattailSettings,
+            Clover = cloverSettings,
+            Dandelions = dandelionSettings,
+            Trees = treeSettings,
+            Butterflies = butterflySettings,
+            Bees = beeSettings,
+            Leaves = leafClusterSettings,
+            Ferns = fernSettings
+        },
+    };
 
     void OnValidate()
     {

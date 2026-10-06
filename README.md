@@ -1,5 +1,21 @@
 # FirstSettlers Work Notes
 
+## October 6: grouped world configuration and extracted coordinator services
+
+`ChunkManager` now takes one configuration with named generation, coverage, worker, publication, content, rendering, scene and foliage groups. Existing WorldManager/TreeSettings serialized fields and inspector paths remain. `TreeSpeciesCatalog` centralizes all current near/billboard/datacard/habitat/name bindings; rendering, gameplay, query identity and worker snapshots share it.
+
+Extracted terrain coverage/handoffs, completed-result publication and runtime pooling, plus foliage asset resolution, placement conversion, discovery and publication queues into state-owning services. Also corrected outgoing-runtime cleanup when no far replacement applies. See [WORLD_ARCHITECTURE.md](WORLD_ARCHITECTURE.md).
+
+Runtime/editor/player compilation and isolated synthetic architecture plus foliage regressions passed (`.utmp/foliage-optimization/architecture-validation-final.log`). Menu: **Tools > Terrain > Validate World Architecture (synthetic)**. No saved scene, camera audit, Play mode or FPS benchmark was used. Restart Play mode for the new composition.
+
+## October 6: shared grass culling, visible-water reflections and incremental foliage publication
+
+Resident grass now selects all meadow/forest near/far lists in one compute dispatch per rendered chunk, preserving density, transitions, per-mesh/wind bounds and CPU fallback. World-owned water reflections skip frames without water meshes in the camera frustum and refresh immediately on re-entry; existing resolution/update rates remain.
+
+Removed the bypassed grass queues/renderer/compute kernels and legacy tree billboard/GameObject rendering paths. Ground batches now build final arrays in bounded slices and publish by ownership transfer; bushes/rocks stage one object per step. Revision/ownership checks discard stale or cancelled work. Editor authoring adapters remain outside player builds. See [FOLIAGE_STREAMING.md](FOLIAGE_STREAMING.md) for ownership, budgets and remaining indivisible operations.
+
+Runtime/editor/player C# compilation, Direct3D compute compilation and the isolated synthetic Unity suite passed (`.utmp/foliage-optimization/validation-final.log`). Menu: **Tools > Terrain > Validate Foliage Optimizations (synthetic)**. No live scene/camera audit or FPS benchmark was run. Restart Play mode before inspecting/profile comparison.
+
 ## October 2: extended, continuous clover range
 
 Clover now renders independently of detailed grass. SmearScene and new settings use a three-chunk horizontal player radius (115.2 world units), with an outer half-chunk fade (96–115.2), replacing the grass-radius clamp and prefab material's 58-unit cutoff. Chunk gates use continuous player-to-chunk bounds with a mesh margin, so chunk crossings no longer toggle nearby diagonal colonies. A one-chunk prewarm prepares both placements and cached instanced batches ahead of visibility.

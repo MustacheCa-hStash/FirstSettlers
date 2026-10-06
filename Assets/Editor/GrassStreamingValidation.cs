@@ -85,9 +85,9 @@ public static class GrassStreamingValidation
         var material=new Material(Shader.Find("Custom/GrassInstancedTerrainTint")){enableInstancing=true};
         var mesh=new Mesh{vertices=new[]{Vector3.zero,Vector3.up,Vector3.right},triangles=new[]{0,1,2}}; mesh.RecalculateBounds();
         var settings=new GrassSettings{grassCompactShader=shader,billboardCoverage=1,densityRadius3=1,densityRadius6=1,densityRadius10=1,densityBeyond10=1};
-        Debug.Log($"GRASS GPU CAPABILITIES compute={SystemInfo.supportsComputeShaders} instancing={SystemInfo.supportsInstancing} indirect={SystemInfo.supportsIndirectArgumentsBuffer} level={SystemInfo.graphicsShaderLevel} tag={material.GetTag("GrassIndirect",false,"False")} resident={shader.HasKernel("CullResidentGrass")} old={shader.HasKernel("CullGrass")}/{shader.HasKernel("PrefixGrass")}/{shader.HasKernel("ScatterGrass")}");
+        Debug.Log($"GRASS GPU CAPABILITIES compute={SystemInfo.supportsComputeShaders} instancing={SystemInfo.supportsInstancing} indirect={SystemInfo.supportsIndirectArgumentsBuffer} level={SystemInfo.graphicsShaderLevel} tag={material.GetTag("GrassIndirect",false,"False")} resident={shader.HasKernel("CullResidentGrassAll")} old={shader.HasKernel("CullGrass")}/{shader.HasKernel("PrefixGrass")}/{shader.HasKernel("ScatterGrass")}");
         foreach (var message in ShaderUtil.GetComputeShaderMessages(shader)) Debug.Log($"GRASS COMPUTE MESSAGE {message.message}");
-        Check(GrassIndirectRenderer.IsSupported(shader,material) && shader.HasKernel("CullResidentGrass"), "Resident GPU path unavailable.");
+        Check(GrassRenderUtility.IsSupported(shader,material) && shader.HasKernel("CullResidentGrassAll"), "Resident GPU path unavailable.");
         var candidates=new List<FoliageInstanceData>();
         for(uint i=0;i<100;i++) candidates.Add(new FoliageInstanceData(new Vector3(i*.01f,0,10),Quaternion.identity,Vector3.one,i*42949672u,.25f));
         using(var renderer=new ResidentGrassRenderer(2,20,2))

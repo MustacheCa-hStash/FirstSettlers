@@ -59,6 +59,18 @@ public class SunCycleController : MonoBehaviour
     [SerializeField] private Color dayFogColor = new Color(0.52f, 0.66f, 0.95f, 1f);
     [SerializeField] private Color dawnDuskFogColor = new Color(0.95f, 0.55f, 0.32f, 1f);
     [SerializeField] private Color nightFogColor = new Color(0.055f, 0.065f, 0.10f, 1f);
+    [Tooltip("Adjust fog start/end distances with the clock and keep fog mode Linear. Fog enabled/disabled remains controlled by Lighting settings.")]
+    [SerializeField] private bool updateLinearFogDistances = true;
+    [Tooltip("Distance where linear daytime fog starts. Match the scene's existing fog start to preserve daytime visibility.")]
+    [Min(0f)] [SerializeField] private float dayFogStartDistance = 500f;
+    [Tooltip("Distance where linear daytime fog reaches full opacity.")]
+    [Min(1f)] [SerializeField] private float dayFogEndDistance = 5000f;
+    [Tooltip("Distance where linear nighttime fog starts. A smaller value brings fog closer to the camera.")]
+    [Min(0f)] [SerializeField] private float nightFogStartDistance = 100f;
+    [Tooltip("Distance where linear nighttime fog reaches full opacity. A smaller value makes nighttime fog thicker.")]
+    [Min(1f)] [SerializeField] private float nightFogEndDistance = 1000f;
+    [Tooltip("Game hours to blend into thicker fog after sunset and back to daytime distances before sunrise. Zero switches immediately. Daylight always uses the daytime distances.")]
+    [Min(0f)] [SerializeField] private float fogTransitionHours = 1f;
 
     [Header("Global Illumination")]
     [SerializeField] private bool updateDynamicGI;
@@ -99,6 +111,11 @@ public class SunCycleController : MonoBehaviour
         dayAmbientIntensity = Mathf.Max(0f, dayAmbientIntensity);
         nightAmbientIntensity = Mathf.Max(0f, nightAmbientIntensity);
         midnightTreeAmbientFloorScale = Mathf.Clamp01(midnightTreeAmbientFloorScale);
+        dayFogStartDistance = Mathf.Max(0f, dayFogStartDistance);
+        dayFogEndDistance = Mathf.Max(dayFogStartDistance + 1f, dayFogEndDistance);
+        nightFogStartDistance = Mathf.Max(0f, nightFogStartDistance);
+        nightFogEndDistance = Mathf.Max(nightFogStartDistance + 1f, nightFogEndDistance);
+        fogTransitionHours = Mathf.Max(0f, fogTransitionHours);
         dynamicGiUpdateIntervalSeconds = Mathf.Max(0.1f, dynamicGiUpdateIntervalSeconds);
     }
 
@@ -154,7 +171,7 @@ public class SunCycleController : MonoBehaviour
 
         ApplyTreeNightLighting(snapshot);
 
-        if (updateFogColor)
+        if (updateFogColor || updateLinearFogDistances)
             ApplyFog(snapshot, ambientBlend);
 
         if (updateDynamicGI && Application.isPlaying && Time.unscaledTime >= nextDynamicGiUpdateTime)
@@ -271,12 +288,36 @@ public class SunCycleController : MonoBehaviour
 
     private void ApplyFog(GameTimeSnapshot snapshot, float ambientBlend)
     {
-        Color baseFog = Color.Lerp(nightFogColor, dayFogColor, ambientBlend);
-        float horizonWarmth = snapshot.IsDaylight
-            ? 1f - Smooth01(Mathf.Sin(Mathf.Clamp01(snapshot.DaylightProgress) * Mathf.PI))
-            : 0f;
+        if (updateFogColor)
+        {
+            Color baseFog = Color.Lerp(nightFogColor, dayFogColor, ambientBlend);
+            float horizonWarmth = snapshot.IsDaylight
+                ? 1f - Smooth01(Mathf.Sin(Mathf.Clamp01(snapshot.DaylightProgress) * Mathf.PI))
+                : 0f;
 
-        RenderSettings.fogColor = Color.Lerp(baseFog, dawnDuskFogColor, horizonWarmth * ambientBlend);
+            RenderSettings.fogColor = Color.Lerp(baseFog, dawnDuskFogColor, horizonWarmth * ambientBlend);
+        }
+
+        if (updateLinearFogDistances)
+        {
+            float nightBlend = GetNightFogBlend(snapshot);
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogStartDistance = Mathf.Lerp(dayFogStartDistance, nightFogStartDistance, nightBlend);
+            RenderSettings.fogEndDistance = Mathf.Lerp(dayFogEndDistance, nightFogEndDistance, nightBlend);
+        }
+    }
+
+    private float GetNightFogBlend(GameTimeSnapshot snapshot)
+    {
+        if (snapshot.IsDaylight)
+            return 0f;
+        if (fogTransitionHours <= 0f)
+            return 1f;
+
+        float nightHours = timeManager.NighttimeHours;
+        float transitionHours = Mathf.Min(fogTransitionHours, nightHours * 0.5f);
+        float hoursFromBoundary = Mathf.Min(snapshot.NightProgress, 1f - snapshot.NightProgress) * nightHours;
+        return Smooth01(Mathf.InverseLerp(0f, transitionHours, hoursFromBoundary));
     }
 
     private void EnsureCurvesAndGradients()

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Unity.Profiling;
 using UnityEngine;
 
-public class ChunkManager
+public class ChunkManager : IChunkLookup
 {
     public TreeRegistry Trees { get; }
     public TreeGameplayManager TreeGameplay { get; }
@@ -10,7 +10,6 @@ public class ChunkManager
     private const int FarTerrainLOD = 5;
     // The first leaf keeps the current 4x4 macro footprint. Larger leaves are
     // selected only when their complete footprint is beyond the preceding band.
-    private const int FarTerrainMaxPatchSizeInChunks = 32;
     private const int MaxRuntimeCreationsPerFrame = 4;
     private const double RuntimeCreationBudgetMs = 0.35;
     private readonly Queue<ChunkCoord> pendingRuntimeCreations = new();
@@ -20,15 +19,6 @@ public class ChunkManager
     private static readonly ProfilerMarker ViewerSubChunkChangedMarker = new ProfilerMarker("FS.Streaming.Foliage.HandleViewerSubChunkChanged");
     private static readonly ProfilerMarker UpdateGrassStreamingMarker = new ProfilerMarker("FS.Streaming.Grass.UpdateStreaming");
     private static readonly ProfilerMarker UpdateDistantTreesMarker = new ProfilerMarker("FS.Streaming.DistantTrees.Update");
-    private static readonly ProfilerMarker ProcessCompletedRequestsMarker = new ProfilerMarker("FS.Streaming.ProcessCompletedRequests");
-    private static readonly ProfilerMarker ApplyTerrainDataResultsMarker = new ProfilerMarker("FS.Streaming.ApplyTerrainDataResults");
-    private static readonly ProfilerMarker ApplyTerrainDataResultMarker = new ProfilerMarker("FS.Streaming.ApplyTerrainDataResult");
-    private static readonly ProfilerMarker ApplyLodMeshResultsMarker = new ProfilerMarker("FS.Streaming.ApplyLODMeshResults");
-    private static readonly ProfilerMarker ApplyLodMeshResultMarker = new ProfilerMarker("FS.Streaming.ApplyLODMeshResult");
-    private static readonly ProfilerMarker ApplyColliderResultsMarker = new ProfilerMarker("FS.Streaming.ApplyColliderResults");
-    private static readonly ProfilerMarker ApplyColliderResultMarker = new ProfilerMarker("FS.Streaming.ApplyColliderResult");
-    private static readonly ProfilerMarker ApplyFarTerrainResultsMarker = new ProfilerMarker("FS.Streaming.ApplyFarTerrainResults");
-    private static readonly ProfilerMarker ApplyFarTerrainResultMarker = new ProfilerMarker("FS.Streaming.ApplyFarTerrainResult");
     private static readonly ProfilerMarker RebuildActiveChunkSetMarker = new ProfilerMarker("FS.Streaming.RebuildActiveChunkSet");
     private static readonly ProfilerMarker UpdateVisibleChunkContentMarker = new ProfilerMarker("FS.Streaming.UpdateVisibleChunkContent");
     private static readonly ProfilerMarker UpdateVisibleFarTerrainTilesMarker = new ProfilerMarker("FS.Streaming.UpdateVisibleFarTerrainTiles");
@@ -59,7 +49,6 @@ public class ChunkManager
     private readonly int viewDistance;
     private readonly int colliderDistance;
     private readonly bool enableFarTerrain;
-    private readonly int farTerrainStartRing;
     private readonly int farTerrainMacroTileSize;
     private readonly int farTerrainHeightGridResolution;
     private readonly int farTerrainControlMapResolution;
@@ -68,24 +57,12 @@ public class ChunkManager
     private readonly int seed;
     private readonly Transform viewer;
     private readonly Camera viewerCamera;
-    private readonly Transform chunkParent;
     private readonly float sampleScale;
     private readonly float worldScale;
     private readonly int octaves;
     private readonly float persistence;
     private readonly float lacunarity;
     private readonly float meshHeightMultiplier;
-    private readonly Material terrainMaterial;
-    private readonly Material waterMaterial;
-    private readonly bool terrainReceiveShadows;
-    private readonly int maxActiveTerrainDataJobs;
-    private readonly int maxActiveFarTerrainJobs;
-    private readonly int maxActiveMeshJobs;
-    private readonly int maxActiveColliderJobs;
-    private readonly int maxTerrainDataResultsAppliedPerFrame;
-    private readonly int maxFarTerrainResultsAppliedPerFrame;
-    private readonly int maxLODMeshResultsAppliedPerFrame;
-    private readonly int maxColliderResultsAppliedPerFrame;
     private readonly int urgentVisibleChunkRingRadius;
     private readonly int maxVisibleChunkContentUpdatesPerFrame;
     private readonly int maxRenderVisibilityChecksPerFrame;
@@ -93,19 +70,11 @@ public class ChunkManager
     private readonly float visibleChunkContentBudgetMsPerFrame;
     private readonly int maxFarTerrainTileContentUpdatesPerFrame;
     private readonly float farTerrainTileContentBudgetMsPerFrame;
-    private readonly float completedRequestApplyBudgetMsPerFrame;
-    private readonly float terrainDataApplyBudgetMsPerFrame;
-    private readonly float farTerrainApplyBudgetMsPerFrame;
-    private readonly float lodMeshApplyBudgetMsPerFrame;
-    private readonly float colliderApplyBudgetMsPerFrame;
 
     private readonly Dictionary<ChunkCoord, ChunkRecord> chunkRecords = new();
     private readonly Dictionary<ChunkCoord, ChunkRuntime> loadedChunks = new();
     private readonly Dictionary<FarTerrainPatchKey, FarTerrainTileRecord> farTerrainTileRecords = new();
     private readonly Dictionary<FarTerrainPatchKey, FarTerrainTileRuntime> loadedFarTerrainTiles = new();
-    private readonly Stack<ChunkRuntime> chunkRuntimePool = new();
-    private readonly Stack<FarTerrainTileRuntime> farTerrainTileRuntimePool = new();
-    private Transform runtimePoolParent;
 
     private HashSet<ChunkCoord> activeLastUpdate;
     private HashSet<ChunkCoord> activeThisUpdate;
@@ -127,6 +96,10 @@ public class ChunkManager
     private ChunkCoord lastUpdateViewerCoord = new ChunkCoord(int.MinValue, int.MinValue);
     private SubChunkCoord lastViewerGlobalSubChunk = new SubChunkCoord(int.MinValue, int.MinValue);
 
+    private readonly TerrainRuntimePool runtimePool;
+    private readonly TerrainCoveragePolicy coveragePolicy;
+    private readonly TerrainHandoffCoordinator handoffs;
+    private readonly TerrainResultPublisher resultPublisher;
     private readonly TerrainRequestManager terrainRequestManager;
     private readonly FoliageManager foliageManager;
     private readonly AmbientLifeManager butterflyManager;
@@ -136,113 +109,49 @@ public class ChunkManager
     private readonly LeafClusterSystem ferns;
     private readonly WorldFeatureGenerationSettings worldFeatureGenerationSettings;
 
-    public ChunkManager(
-        int viewDistance,
-        int colliderDistance,
-        bool enableFarTerrain,
-        int farTerrainStartRing,
-        int farTerrainMacroTileSize,
-        int farTerrainHeightGridResolution,
-        int farTerrainControlMapResolution,
-        float farTerrainSkirtDepth,
-        int chunkSize,
-        int seed,
-        Transform viewer,
-        Camera viewerCamera,
-        Transform chunkParent,
-        Transform foliageParent,
-        GrassSettings grassSettings,
-        FlowerSettings flowerSettings,
-        LilyPadSettings lilyPadSettings,
-        CattailSettings cattailSettings,
-        CloverSettings cloverSettings,
-        DandelionSettings dandelionSettings,
-        TreeSettings treeSettings,
-        float sampleScale,
-        float worldScale,
-        int octaves,
-        float persistence,
-        float lacunarity,
-        float meshHeightMultiplier,
-        Material terrainMaterial,
-        Material waterMaterial,
-        bool terrainReceiveShadows,
-        TerrainWaterSettings waterSettings,
-        int maxActiveTerrainDataJobs,
-        int maxActiveFarTerrainJobs,
-        int maxActiveMeshJobs,
-        int maxActiveColliderJobs,
-        int maxTerrainDataResultsAppliedPerFrame,
-        int maxFarTerrainResultsAppliedPerFrame,
-        int maxLODMeshResultsAppliedPerFrame,
-        int maxColliderResultsAppliedPerFrame,
-        int urgentVisibleChunkRingRadius,
-        int maxVisibleChunkContentUpdatesPerFrame,
-        int maxRenderVisibilityChecksPerFrame,
-        float foliageFrustumPaddingChunks,
-        float visibleChunkContentBudgetMsPerFrame,
-        int maxFarTerrainTileContentUpdatesPerFrame,
-        float farTerrainTileContentBudgetMsPerFrame,
-        float completedRequestApplyBudgetMsPerFrame,
-        float terrainDataApplyBudgetMsPerFrame,
-        float farTerrainApplyBudgetMsPerFrame,
-        float lodMeshApplyBudgetMsPerFrame,
-        float colliderApplyBudgetMsPerFrame,
-        float mountainHorizontalScale = 1f,
-        float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma, WorldErosionSettings erosion = default,
-        ButterflySettings butterflySettings = null,
-        BeeSettings beeSettings = null,
-        TerrainHorizonShadowSettings terrainHorizonShadowSettings = null,
-        LeafClusterSettings leafClusterSettings = null, FernSettings fernSettings = null)
+    public ChunkManager(WorldConfiguration configuration)
     {
-        this.viewDistance = viewDistance;
-        this.colliderDistance = colliderDistance;
-        this.enableFarTerrain = enableFarTerrain;
-        this.farTerrainStartRing = Mathf.Max(1, farTerrainStartRing);
-        this.farTerrainMacroTileSize = Mathf.Max(1, farTerrainMacroTileSize);
-        this.farTerrainHeightGridResolution = Mathf.Max(2, farTerrainHeightGridResolution);
-        this.farTerrainControlMapResolution = Mathf.Max(2, farTerrainControlMapResolution);
-        this.farTerrainSkirtDepth = Mathf.Max(0f, farTerrainSkirtDepth);
-        this.chunkSize = chunkSize;
-        this.seed = seed;
-        this.viewer = viewer;
-        this.viewerCamera = viewerCamera;
-        this.chunkParent = chunkParent;
-        this.sampleScale = sampleScale;
-        this.worldScale = worldScale;
-        this.octaves = octaves;
-        this.persistence = persistence;
-        this.lacunarity = lacunarity;
-        this.meshHeightMultiplier = meshHeightMultiplier;
-        this.terrainMaterial = terrainMaterial;
-        this.waterMaterial = waterMaterial;
-        this.terrainReceiveShadows = terrainReceiveShadows;
-        leafClusters = new LeafClusterSystem(leafClusterSettings, seed, chunkSize, worldScale, meshHeightMultiplier, grassSettings);
-        ferns = new LeafClusterSystem(fernSettings ?? new FernSettings(), seed, chunkSize, worldScale, meshHeightMultiplier, grassSettings);
-        terrainHorizonShadows = new TerrainHorizonShadowSystem(chunkSize, seed, sampleScale, worldScale,
-            meshHeightMultiplier, waterSettings, mountainHorizontalScale, erosion, terrainHorizonShadowSettings);
-        this.maxActiveTerrainDataJobs = Mathf.Max(1, maxActiveTerrainDataJobs);
-        this.maxActiveFarTerrainJobs = Mathf.Max(1, maxActiveFarTerrainJobs);
-        this.maxActiveMeshJobs = Mathf.Max(1, maxActiveMeshJobs);
-        this.maxActiveColliderJobs = Mathf.Max(1, maxActiveColliderJobs);
-        this.maxTerrainDataResultsAppliedPerFrame = Mathf.Max(1, maxTerrainDataResultsAppliedPerFrame);
-        this.maxFarTerrainResultsAppliedPerFrame = Mathf.Max(1, maxFarTerrainResultsAppliedPerFrame);
-        this.maxLODMeshResultsAppliedPerFrame = Mathf.Max(1, maxLODMeshResultsAppliedPerFrame);
-        this.maxColliderResultsAppliedPerFrame = Mathf.Max(1, maxColliderResultsAppliedPerFrame);
-        this.urgentVisibleChunkRingRadius = Mathf.Max(0, urgentVisibleChunkRingRadius);
-        this.maxVisibleChunkContentUpdatesPerFrame = Mathf.Max(1, maxVisibleChunkContentUpdatesPerFrame);
-        this.maxRenderVisibilityChecksPerFrame = Mathf.Max(1, maxRenderVisibilityChecksPerFrame);
-        this.foliageFrustumPaddingWorldUnits = Mathf.Max(0f, foliageFrustumPaddingChunks) * chunkSize * worldScale;
-        this.visibleChunkContentBudgetMsPerFrame = Mathf.Max(0f, visibleChunkContentBudgetMsPerFrame);
-        this.maxFarTerrainTileContentUpdatesPerFrame = Mathf.Max(1, maxFarTerrainTileContentUpdatesPerFrame);
-        this.farTerrainTileContentBudgetMsPerFrame = Mathf.Max(0f, farTerrainTileContentBudgetMsPerFrame);
-        this.completedRequestApplyBudgetMsPerFrame = Mathf.Max(0f, completedRequestApplyBudgetMsPerFrame);
-        this.terrainDataApplyBudgetMsPerFrame = Mathf.Max(0f, terrainDataApplyBudgetMsPerFrame);
-        this.farTerrainApplyBudgetMsPerFrame = Mathf.Max(0f, farTerrainApplyBudgetMsPerFrame);
-        this.lodMeshApplyBudgetMsPerFrame = Mathf.Max(0f, lodMeshApplyBudgetMsPerFrame);
-        this.colliderApplyBudgetMsPerFrame = Mathf.Max(0f, colliderApplyBudgetMsPerFrame);
+        if (configuration == null) throw new System.ArgumentNullException(nameof(configuration));
+        var content = configuration.Content;
+        var coverage = configuration.Coverage;
+        var foliage = configuration.Foliage;
+        var generation = configuration.Generation;
+        var rendering = configuration.Rendering;
+        var scene = configuration.Scene;
+        var workers = configuration.Workers;
+        runtimePool = new TerrainRuntimePool(generation, rendering, scene.ChunkParent);
+        coveragePolicy = new TerrainCoveragePolicy(coverage);
+        handoffs = new TerrainHandoffCoordinator(coveragePolicy, loadedChunks, loadedFarTerrainTiles, ReleaseChunkRuntime, ReleaseFarTerrainTileRuntime);
+        this.viewDistance = coverage.ViewDistance;
+        this.colliderDistance = coverage.ColliderDistance;
+        this.enableFarTerrain = coverage.EnableFarTerrain;
+        this.farTerrainMacroTileSize = Mathf.Max(1, coverage.FarTerrainMacroTileSize);
+        this.farTerrainHeightGridResolution = Mathf.Max(2, coverage.FarTerrainHeightGridResolution);
+        this.farTerrainControlMapResolution = Mathf.Max(2, coverage.FarTerrainControlMapResolution);
+        this.farTerrainSkirtDepth = Mathf.Max(0f, coverage.FarTerrainSkirtDepth);
+        this.chunkSize = generation.ChunkSize;
+        this.seed = generation.Seed;
+        this.viewer = scene.Viewer;
+        this.viewerCamera = scene.ViewerCamera;
+        this.sampleScale = generation.SampleScale;
+        this.worldScale = generation.WorldScale;
+        this.octaves = generation.Octaves;
+        this.persistence = generation.Persistence;
+        this.lacunarity = generation.Lacunarity;
+        this.meshHeightMultiplier = generation.MeshHeightMultiplier;
+        leafClusters = new LeafClusterSystem(foliage.Leaves, generation.Seed, generation.ChunkSize, generation.WorldScale, generation.MeshHeightMultiplier, foliage.Grass);
+        ferns = new LeafClusterSystem(foliage.Ferns ?? new FernSettings(), generation.Seed, generation.ChunkSize, generation.WorldScale, generation.MeshHeightMultiplier, foliage.Grass);
+        terrainHorizonShadows = new TerrainHorizonShadowSystem(generation.ChunkSize, generation.Seed, generation.SampleScale, generation.WorldScale,
+            generation.MeshHeightMultiplier, generation.Water, generation.MountainHorizontalScale, generation.Erosion, rendering.HorizonShadows);
+        this.urgentVisibleChunkRingRadius = Mathf.Max(0, content.UrgentVisibleChunkRingRadius);
+        this.maxVisibleChunkContentUpdatesPerFrame = Mathf.Max(1, content.MaxVisibleChunkUpdates);
+        this.maxRenderVisibilityChecksPerFrame = Mathf.Max(1, content.MaxRenderVisibilityChecks);
+        this.foliageFrustumPaddingWorldUnits = Mathf.Max(0f, content.FoliageFrustumPaddingChunks) * generation.ChunkSize * generation.WorldScale;
+        this.visibleChunkContentBudgetMsPerFrame = Mathf.Max(0f, content.VisibleChunkMs);
+        this.maxFarTerrainTileContentUpdatesPerFrame = Mathf.Max(1, content.MaxFarTileUpdates);
+        this.farTerrainTileContentBudgetMsPerFrame = Mathf.Max(0f, content.FarTileMs);
 
-        int maxChunks = ComputeMaxActiveChunkCount(viewDistance);
+        int maxChunks = ComputeMaxActiveChunkCount(coverage.ViewDistance);
 
         activeLastUpdate = new HashSet<ChunkCoord>(maxChunks);
         activeThisUpdate = new HashSet<ChunkCoord>(maxChunks);
@@ -259,39 +168,28 @@ public class ChunkManager
         deferredFarTerrainTileContentRetries = new List<FarTerrainPatchKey>(maxChunks);
         frustumVisibleCoordSet = new HashSet<ChunkCoord>(maxChunks);
 
-        worldFeatureGenerationSettings = BuildWorldFeatureGenerationSettings(treeSettings);
+        worldFeatureGenerationSettings = TreeGenerationSnapshot.Create(foliage.Trees);
         terrainRequestManager = new TerrainRequestManager(
-            this.maxActiveTerrainDataJobs,
-            this.maxActiveFarTerrainJobs,
-            this.maxActiveMeshJobs,
-            this.maxActiveColliderJobs,
-            waterSettings, mountainHorizontalScale, mountainSnowRenderCoverageGamma, erosion);
-        Trees = new TreeRegistry(seed, chunkSize * worldScale);
-        if (treeSettings != null) TreeGameplay = new TreeGameplayManager(Trees, treeSettings, chunkSize * worldScale);
-        foliageManager = new FoliageManager(
-            foliageParent,
-            grassSettings,
-            flowerSettings,
-            lilyPadSettings,
-            cattailSettings,
-            cloverSettings,
-            dandelionSettings,
-            treeSettings,
-            seed,
-            chunkSize,
-            worldScale,
-            meshHeightMultiplier,
-            waterSettings,
-            Trees);
-        butterflyManager = new AmbientLifeManager(butterflySettings, flowerSettings, seed, chunkSize, worldScale,
-            meshHeightMultiplier, waterSettings.SurfaceY);
-        if (beeSettings != null)
-            beeManager = new AmbientLifeManager(beeSettings, flowerSettings, seed, chunkSize, worldScale,
-                meshHeightMultiplier, waterSettings.SurfaceY);
-        if (treeSettings != null)
-            distantTrees = new DistantTreeManager(treeSettings, seed, chunkSize, sampleScale, octaves, persistence,
-                lacunarity, worldScale, meshHeightMultiplier, waterSettings.WaterLevel, mountainHorizontalScale,
-                worldFeatureGenerationSettings, erosion, Trees);
+            workers.TerrainData,
+            workers.FarTerrain,
+            workers.LodMesh,
+            workers.Collider,
+            generation.Water, generation.MountainHorizontalScale, generation.MountainSnowRenderCoverageGamma, generation.Erosion);
+        resultPublisher = new TerrainResultPublisher(terrainRequestManager, configuration.Publication,
+            GetChunkRecord, FindFarTerrainRecord, result => IsFarTerrainResultStillWanted(result, GetViewerChunkCoord()),
+            QueueVisibleChunkContentWork, QueueFarTerrainTileContentWork);
+        Trees = new TreeRegistry(generation.Seed, generation.ChunkSize * generation.WorldScale);
+        if (foliage.Trees != null) TreeGameplay = new TreeGameplayManager(Trees, foliage.Trees, generation.ChunkSize * generation.WorldScale);
+        foliageManager = new FoliageManager(configuration.Generation, configuration.Foliage, Trees);
+        butterflyManager = new AmbientLifeManager(foliage.Butterflies, foliage.Flowers, generation.Seed, generation.ChunkSize, generation.WorldScale,
+            generation.MeshHeightMultiplier, generation.Water.SurfaceY);
+        if (foliage.Bees != null)
+            beeManager = new AmbientLifeManager(foliage.Bees, foliage.Flowers, generation.Seed, generation.ChunkSize, generation.WorldScale,
+                generation.MeshHeightMultiplier, generation.Water.SurfaceY);
+        if (foliage.Trees != null)
+            distantTrees = new DistantTreeManager(foliage.Trees, generation.Seed, generation.ChunkSize, generation.SampleScale, generation.Octaves, generation.Persistence,
+                generation.Lacunarity, generation.WorldScale, generation.MeshHeightMultiplier, generation.Water.WaterLevel, generation.MountainHorizontalScale,
+                worldFeatureGenerationSettings, generation.Erosion, Trees);
     }
 
     public void Dispose()
@@ -307,18 +205,10 @@ public class ChunkManager
         foreach (var runtime in loadedChunks.Values)
             runtime.DestroyRuntime();
         loadedChunks.Clear();
-        while (chunkRuntimePool.Count > 0)
-            chunkRuntimePool.Pop().DestroyRuntime();
         foreach (var runtime in loadedFarTerrainTiles.Values)
             runtime.DestroyRuntime();
         loadedFarTerrainTiles.Clear();
-        while (farTerrainTileRuntimePool.Count > 0)
-            farTerrainTileRuntimePool.Pop().DestroyRuntime();
-        if (runtimePoolParent != null)
-        {
-            Object.Destroy(runtimePoolParent.gameObject);
-            runtimePoolParent = null;
-        }
+        runtimePool.Dispose();
         terrainRequestManager?.WaitForActiveRequestsToFinish();
         terrainRequestManager?.Dispose();
         foreach (var record in chunkRecords.Values)
@@ -340,7 +230,7 @@ public class ChunkManager
                 heights = runtime.ChunkRecord.FarTreeHeightGrid;
             return true;
         }
-        if (TryGetFarTerrainPatch(GetViewerChunkCoord(), coord, out FarTerrainPatchKey patch) &&
+        if (coveragePolicy.TryGetFarTerrainPatch(GetViewerChunkCoord(), coord, out FarTerrainPatchKey patch) &&
             loadedFarTerrainTiles.TryGetValue(patch, out var far) && far.IsVisible &&
             farTerrainTileRecords.TryGetValue(patch, out var record) && record.HasTerrain)
         {
@@ -388,7 +278,6 @@ public class ChunkManager
             temperature = record.TemperatureMap[sampleX, sampleZ];
             riverMask = record.RiverMaskMap[sampleX, sampleZ];
         }
-
 
         return new WorldDebugInfo(
             worldPosition,
@@ -535,7 +424,7 @@ public class ChunkManager
     {
         using (UpdateActiveChunksMarker.Auto())
         {
-        ProcessCompletedRequests();
+        resultPublisher.Update();
 
         ChunkCoord viewerCoord = GetViewerChunkCoord();
         SubChunkCoord viewerGlobalSubChunk = GetViewerGlobalSubChunkCoord();
@@ -627,7 +516,7 @@ public class ChunkManager
 
                 ChunkCoord targetCoord = new ChunkCoord(viewerCoord.x + x, viewerCoord.z + z);
 
-                if (TryGetFarTerrainPatch(viewerCoord, targetCoord, out FarTerrainPatchKey farPatch))
+                if (coveragePolicy.TryGetFarTerrainPatch(viewerCoord, targetCoord, out FarTerrainPatchKey farPatch))
                 {
                     if (activeFarTilesThisUpdate.Add(farPatch))
                         orderedActiveFarTileCoords.Add(farPatch);
@@ -697,10 +586,7 @@ public class ChunkManager
         activeFarTilesThisUpdate = farTemp;
         // Reconcile from loaded runtimes on each active-set change. This includes
         // older handoffs still waiting and excludes chunks that have re-entered.
-        outgoingNormalChunks.Clear();
-        foreach (var entry in loadedChunks)
-            if (!activeLastUpdate.Contains(entry.Key))
-                outgoingNormalChunks.Add(entry.Key);
+        handoffs.Reconcile(activeLastUpdate);
         renderVisibilityCursor = 0;
         }
     }
@@ -757,127 +643,7 @@ public class ChunkManager
         }
     }
 
-    private readonly List<FarTerrainPatchKey> completedTerrainHandoffs = new();
-    private readonly List<ChunkCoord> outgoingNormalChunks = new();
-    private readonly Dictionary<FarTerrainPatchKey, bool> normalReplacementReadiness = new();
-    private readonly HashSet<ChunkCoord> terrainHandoffHiddenCoords = new();
-    private static readonly ProfilerMarker TerrainHandoffsMarker = new ProfilerMarker("FS.Streaming.TerrainHandoffs");
-    private static readonly ProfilerMarker NormalHandoffsMarker = new ProfilerMarker("FS.Streaming.TerrainHandoffs.NormalCleanup");
-    private static readonly ProfilerMarker FarHandoffsMarker = new ProfilerMarker("FS.Streaming.TerrainHandoffs.FarReadinessAndCleanup");
-    private static readonly ProfilerMarker ReleaseNormalHandoffMarker = new ProfilerMarker("FS.Streaming.TerrainHandoffs.ReleaseNormalRuntime");
-    private static readonly ProfilerMarker ReleaseFarHandoffMarker = new ProfilerMarker("FS.Streaming.TerrainHandoffs.ReleaseFarRuntime");
-    private static readonly ProfilerMarker HandoffVisibilityMarker = new ProfilerMarker("FS.Streaming.TerrainHandoffs.ApplyVisibility");
-
-    private void CompleteTerrainHandoffs()
-    {
-        using (TerrainHandoffsMarker.Auto())
-        {
-        // Resolve the final hidden set before changing renderers, so waiting handoffs
-        // do not reveal and re-hide the same terrain and water every frame.
-        terrainHandoffHiddenCoords.Clear();
-        // Generated data alone is insufficient: budgeted queues must attach it first.
-        using (NormalHandoffsMarker.Auto())
-        {
-        normalReplacementReadiness.Clear();
-        int retainedCount = 0;
-        for (int i = 0; i < outgoingNormalChunks.Count; i++)
-        {
-            ChunkCoord coord = outgoingNormalChunks[i];
-            if (!loadedChunks.TryGetValue(coord, out var runtime))
-                continue;
-            if (!TryGetFarTerrainPatch(GetViewerChunkCoord(), coord, out FarTerrainPatchKey patch))
-                continue;
-            if (!normalReplacementReadiness.TryGetValue(patch, out bool ready))
-            {
-                ready = !activeFarTilesLastUpdate.Contains(patch) ||
-                    (loadedFarTerrainTiles.TryGetValue(patch, out var replacement) && replacement.HasTerrainMesh);
-                normalReplacementReadiness.Add(patch, ready);
-            }
-            if (!ready)
-            {
-                outgoingNormalChunks[retainedCount++] = coord;
-                continue;
-            }
-            using (ReleaseNormalHandoffMarker.Auto()) ReleaseChunkRuntime(coord, runtime);
-            loadedChunks.Remove(coord);
-        }
-        if (retainedCount < outgoingNormalChunks.Count)
-            outgoingNormalChunks.RemoveRange(retainedCount, outgoingNormalChunks.Count - retainedCount);
-        }
-
-        using (FarHandoffsMarker.Auto())
-        {
-        completedTerrainHandoffs.Clear();
-        foreach (var entry in loadedFarTerrainTiles)
-        {
-            if (activeFarTilesLastUpdate.Contains(entry.Key))
-                continue;
-
-            // A moving viewer can replace one far leaf with several finer leaves
-            // (or vice versa). Retain the outgoing mesh until every overlapping
-            // incoming leaf has attached its mesh, just as normal/far handoffs
-            // retain their outgoing representation.
-            bool farReplacementReady = true;
-            foreach (FarTerrainPatchKey candidate in activeFarTilesLastUpdate)
-            {
-                if (!FarTerrainPatchesOverlap(entry.Key, candidate))
-                    continue;
-
-                if (!loadedFarTerrainTiles.TryGetValue(candidate, out var replacement) || !replacement.HasTerrainMesh)
-                {
-                    farReplacementReady = false;
-                    break;
-                }
-            }
-            if (!farReplacementReady)
-                continue;
-
-            bool ready = true;
-            int patchSize = entry.Key.SizeInChunks;
-            int originX = entry.Key.Origin.x * patchSize;
-            int originZ = entry.Key.Origin.z * patchSize;
-            for (int x = 0; x < patchSize && ready; x++)
-                for (int z = 0; z < patchSize; z++)
-                {
-                    ChunkCoord coord = new ChunkCoord(originX + x, originZ + z);
-                    if (activeLastUpdate.Contains(coord) &&
-                        (!loadedChunks.TryGetValue(coord, out var replacement) || !replacement.HasTerrainMesh))
-                    {
-                        ready = false;
-                        break;
-                    }
-                }
-            if (!ready)
-            {
-                if (entry.Value.HasTerrainMesh)
-                    for (int x = 0; x < patchSize; x++)
-                        for (int z = 0; z < patchSize; z++)
-                            terrainHandoffHiddenCoords.Add(new ChunkCoord(originX + x, originZ + z));
-                continue;
-            }
-            using (ReleaseFarHandoffMarker.Auto()) ReleaseFarTerrainTileRuntime(entry.Value);
-            completedTerrainHandoffs.Add(entry.Key);
-        }
-        foreach (FarTerrainPatchKey patch in completedTerrainHandoffs)
-            loadedFarTerrainTiles.Remove(patch);
-        }
-        using (HandoffVisibilityMarker.Auto())
-        {
-            foreach (var entry in loadedChunks)
-                entry.Value.SetTerrainHandoffHidden(terrainHandoffHiddenCoords.Contains(entry.Key));
-        }
-        }
-    }
-
-    private static bool FarTerrainPatchesOverlap(FarTerrainPatchKey a, FarTerrainPatchKey b)
-    {
-        int aMinX = a.Origin.x * a.SizeInChunks;
-        int aMinZ = a.Origin.z * a.SizeInChunks;
-        int bMinX = b.Origin.x * b.SizeInChunks;
-        int bMinZ = b.Origin.z * b.SizeInChunks;
-        return aMinX < bMinX + b.SizeInChunks && bMinX < aMinX + a.SizeInChunks &&
-               aMinZ < bMinZ + b.SizeInChunks && bMinZ < aMinZ + a.SizeInChunks;
-    }
+    private void CompleteTerrainHandoffs() => handoffs.Update(GetViewerChunkCoord(), activeLastUpdate, activeFarTilesLastUpdate);
 
     private void RefreshUrgentVisibleChunks(
         ChunkCoord viewerCoord,
@@ -956,7 +722,7 @@ public class ChunkManager
             int dx = coord.x - viewerCoord.x;
             int dz = coord.z - viewerCoord.z;
             int sqrDistance = dx * dx + dz * dz;
-            bool useFarTerrain = ShouldUseFarTerrain(viewerCoord, coord);
+            bool useFarTerrain = coveragePolicy.ShouldUseFarTerrain(viewerCoord, coord);
 
             if (useFarTerrain)
             {
@@ -1028,7 +794,7 @@ public class ChunkManager
             int dx = coord.x - viewerCoord.x;
             int dz = coord.z - viewerCoord.z;
             int sqrDistance = dx * dx + dz * dz;
-            bool useFarTerrain = ShouldUseFarTerrain(viewerCoord, coord);
+            bool useFarTerrain = coveragePolicy.ShouldUseFarTerrain(viewerCoord, coord);
 
             if (useFarTerrain)
             {
@@ -1172,7 +938,7 @@ public class ChunkManager
         if (!chunkRecords.TryGetValue(coord, out ChunkRecord record))
             return false;
 
-        bool useFarTerrain = ShouldUseFarTerrain(viewerCoord, coord);
+        bool useFarTerrain = coveragePolicy.ShouldUseFarTerrain(viewerCoord, coord);
         if (useFarTerrain)
         {
             if (record.HasFarTerrain)
@@ -1222,7 +988,7 @@ public class ChunkManager
 
     private bool IsUrgentVisibleChunk(ChunkCoord viewerCoord, ChunkCoord coord)
     {
-        return GetChunkRingDistance(viewerCoord, coord) <= urgentVisibleChunkRingRadius;
+        return TerrainCoveragePolicy.GetChunkRingDistance(viewerCoord, coord) <= urgentVisibleChunkRingRadius;
     }
 
     private bool HasVisibleChunkContentBudgetRemaining(long budgetStart)
@@ -1376,10 +1142,26 @@ public class ChunkManager
         return new Bounds(center, size);
     }
 
+    private FarTerrainTileRecord FindFarTerrainRecord(FarTerrainPatchKey key)
+    {
+        farTerrainTileRecords.TryGetValue(key, out var record); return record;
+    }
+
     public ChunkRecord GetChunkRecord(ChunkCoord coord)
     {
         chunkRecords.TryGetValue(coord, out ChunkRecord record);
         return record;
+    }
+
+    public bool HasVisibleWater(Plane[] frustum, int cameraMask)
+    {
+        int waterLayer = LayerMask.NameToLayer("Water");
+        if (waterLayer < 0 || (cameraMask & (1 << waterLayer)) == 0) return false;
+        foreach (var runtime in loadedChunks.Values)
+            if (runtime.TryGetVisibleWaterBounds(out Bounds bounds) && GeometryUtility.TestPlanesAABB(frustum, bounds)) return true;
+        foreach (var runtime in loadedFarTerrainTiles.Values)
+            if (runtime.TryGetVisibleWaterBounds(out Bounds bounds) && GeometryUtility.TestPlanesAABB(frustum, bounds)) return true;
+        return false;
     }
 
     public ChunkRuntime GetChunkRuntime(ChunkRecord record)
@@ -1408,22 +1190,7 @@ public class ChunkManager
 
         if (!loadedChunks.TryGetValue(coord, out ChunkRuntime runtime))
         {
-            if (chunkRuntimePool.Count > 0)
-            {
-                runtime = chunkRuntimePool.Pop();
-                runtime.Reinitialize(record, chunkSize, worldScale, chunkParent, terrainReceiveShadows);
-            }
-            else
-            {
-                runtime = new ChunkRuntime(
-                    record,
-                    chunkSize,
-                    worldScale,
-                    chunkParent,
-                    terrainMaterial,
-                    waterMaterial,
-                    terrainReceiveShadows);
-            }
+            runtime = runtimePool.Acquire(record);
 
             loadedChunks.Add(coord, runtime);
         }
@@ -1432,11 +1199,7 @@ public class ChunkManager
     }
 
     private void ReleaseChunkRuntime(ChunkCoord coord, ChunkRuntime runtime)
-    {
-        runtime.ReleaseToPool(GetRuntimePoolParent());
-        chunkRuntimePool.Push(runtime);
-        RemoveFrustumVisibleCoord(coord);
-    }
+    { runtimePool.Release(runtime); RemoveFrustumVisibleCoord(coord); }
 
     private FarTerrainTileRecord GetOrCreateFarTerrainTileRecord(FarTerrainPatchKey farPatch)
     {
@@ -1455,27 +1218,7 @@ public class ChunkManager
 
         if (!loadedFarTerrainTiles.TryGetValue(patch, out FarTerrainTileRuntime runtime))
         {
-            if (farTerrainTileRuntimePool.Count > 0)
-            {
-                runtime = farTerrainTileRuntimePool.Pop();
-                runtime.Reinitialize(
-                    record,
-                    chunkSize * patch.SizeInChunks,
-                    worldScale,
-                    chunkParent,
-                    terrainReceiveShadows);
-            }
-            else
-            {
-                runtime = new FarTerrainTileRuntime(
-                    record,
-                    chunkSize * patch.SizeInChunks,
-                    worldScale,
-                    chunkParent,
-                    terrainMaterial,
-                    terrainReceiveShadows,
-                    waterMaterial);
-            }
+            runtime = runtimePool.Acquire(record);
 
             loadedFarTerrainTiles.Add(patch, runtime);
         }
@@ -1483,28 +1226,11 @@ public class ChunkManager
         return runtime;
     }
 
-    private void ReleaseFarTerrainTileRuntime(FarTerrainTileRuntime runtime)
-    {
-        runtime.ReleaseToPool(GetRuntimePoolParent());
-        farTerrainTileRuntimePool.Push(runtime);
-    }
-
-    private Transform GetRuntimePoolParent()
-    {
-        if (runtimePoolParent != null)
-            return runtimePoolParent;
-
-        GameObject poolRoot = new GameObject("Terrain_Runtime_Pool");
-        poolRoot.SetActive(false);
-        runtimePoolParent = poolRoot.transform;
-        if (chunkParent != null)
-            runtimePoolParent.SetParent(chunkParent, false);
-        return runtimePoolParent;
-    }
+    private void ReleaseFarTerrainTileRuntime(FarTerrainTileRuntime runtime) => runtimePool.Release(runtime);
 
     private void EnsureTerrainVisualRequested(ChunkRecord record, ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
-        if (ShouldUseFarTerrain(viewerCoord, targetCoord))
+        if (coveragePolicy.ShouldUseFarTerrain(viewerCoord, targetCoord))
         {
             EnsureFarTerrainRequested(record);
         }
@@ -1512,93 +1238,6 @@ public class ChunkManager
         {
             EnsureTerrainDataRequested(record);
         }
-    }
-
-    private bool ShouldUseFarTerrain(ChunkCoord viewerCoord, ChunkCoord targetCoord)
-    {
-        if (!enableFarTerrain)
-            return false;
-
-        int ring = GetChunkRingDistance(viewerCoord, targetCoord);
-        return ring >= farTerrainStartRing;
-    }
-
-    private bool TryGetFarTerrainPatch(
-        ChunkCoord viewerCoord,
-        ChunkCoord targetCoord,
-        out FarTerrainPatchKey patch)
-    {
-        patch = default;
-        if (!ShouldUseFarTerrain(viewerCoord, targetCoord))
-            return false;
-
-        // Try the largest valid leaf first. A leaf may only begin once its whole
-        // footprint is outside the preceding LOD band; otherwise descend to a
-        // smaller leaf. This leaves a narrow normal-chunk strip at the seam when
-        // a world-aligned leaf would cross it.
-        int desiredSize = GetDesiredFarPatchSize(GetChunkRingDistance(viewerCoord, targetCoord));
-        for (int size = desiredSize; size >= farTerrainMacroTileSize; size >>= 1)
-        {
-            ChunkCoord origin = new ChunkCoord(FloorDiv(targetCoord.x, size),
-                FloorDiv(targetCoord.z, size));
-            int minRing = GetPatchMinimumRingDistance(viewerCoord, origin, size);
-            if (minRing >= GetFarPatchStartRing(size))
-            {
-                patch = new FarTerrainPatchKey(origin, size);
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private int GetDesiredFarPatchSize(int ring)
-    {
-        int size = farTerrainMacroTileSize;
-        while (size < FarTerrainMaxPatchSizeInChunks && ring >= GetFarPatchStartRing(size << 1))
-            size <<= 1;
-        return size;
-    }
-
-    private int GetFarPatchStartRing(int size)
-    {
-        int start = farTerrainStartRing;
-        int current = farTerrainMacroTileSize;
-        while (current < size)
-        {
-            start += current * 2;
-            current <<= 1;
-        }
-        return start;
-    }
-
-    private static int GetPatchMinimumRingDistance(ChunkCoord viewer, ChunkCoord origin, int size)
-    {
-        int minX = origin.x * size;
-        int minZ = origin.z * size;
-        int maxX = minX + size - 1;
-        int maxZ = minZ + size - 1;
-        int closestX = Mathf.Clamp(viewer.x, minX, maxX);
-        int closestZ = Mathf.Clamp(viewer.z, minZ, maxZ);
-        return Mathf.Max(Mathf.Abs(closestX - viewer.x), Mathf.Abs(closestZ - viewer.z));
-    }
-
-    private static int FloorDiv(int value, int divisor)
-    {
-        int quotient = value / divisor;
-        int remainder = value % divisor;
-
-        if (remainder != 0 && ((remainder > 0) != (divisor > 0)))
-            quotient--;
-
-        return quotient;
-    }
-
-    private int GetChunkRingDistance(ChunkCoord viewerCoord, ChunkCoord targetCoord)
-    {
-        int dx = Mathf.Abs(targetCoord.x - viewerCoord.x);
-        int dz = Mathf.Abs(targetCoord.z - viewerCoord.z);
-        return Mathf.Max(dx, dz);
     }
 
     private void EnsureFarTerrainRequested(ChunkRecord record)
@@ -1682,7 +1321,7 @@ public class ChunkManager
         // Give the nearest two far patch sizes more geometry where mountain
         // ridges are still prominent. Keep the remaining grids unchanged.
         return patchSizeInChunks <= farTerrainMacroTileSize * 2 ||
-               patchSizeInChunks >= FarTerrainMaxPatchSizeInChunks ? 65 : 33;
+               patchSizeInChunks >= TerrainCoveragePolicy.FarTerrainMaxPatchSizeInChunks ? 65 : 33;
     }
 
     private int GetFarPatchControlMapResolution()
@@ -1722,51 +1361,6 @@ public class ChunkManager
         {
             record.CancelTerrainDataRequest(requestVersion);
         }
-    }
-
-    private static WorldFeatureGenerationSettings BuildWorldFeatureGenerationSettings(TreeSettings treeSettings)
-    {
-        WorldFeatureGenerationSettings settings = WorldFeatureGenerationSettings.Default;
-
-        if (treeSettings == null)
-            return settings;
-
-        settings.treeUniformScaleRange = treeSettings.treeUniformScaleRange;
-        // Snapshot Unity assets on the main thread; near/distant workers receive plain values only.
-        var radiusRanges = new Vector2[(int)WorldFeatureVariant.GrasslandLargeBoulder + 1];
-        var scaleRanges = new Vector2[radiusRanges.Length];
-        foreach (WorldFeatureVariant variant in System.Enum.GetValues(typeof(WorldFeatureVariant)))
-        {
-            Vector2 range = settings.GetTreeExclusionRadiusRange(variant);
-            WorldObjectDefinition definition = treeSettings.GetDefinition(variant);
-            if (definition != null)
-            {
-                range = WorldFeatureGenerationSettings.IsGrasslandTree(variant)
-                    ? definition.GrasslandTreeExclusionRadiusRange : definition.ForestTreeExclusionRadiusRange;
-                scaleRanges[(int)variant] = definition.TreeUniformScaleRange;
-            }
-            radiusRanges[(int)variant] = range;
-        }
-        settings.treeExclusionRadiusRanges = radiusRanges;
-        settings.treeUniformScaleRanges = scaleRanges;
-        settings.forestRockPrefabCount =
-            treeSettings.forestRockPrefabs != null ? treeSettings.forestRockPrefabs.Length : 0;
-        settings.maxForestRocksPerChunk = Mathf.Max(0, treeSettings.maxForestRocksPerChunk);
-        settings.forestRockUniformScaleRange = treeSettings.forestRockUniformScaleRange;
-        settings.forestRockPitchRange = treeSettings.forestRockPitchRange;
-        settings.grasslandRockPrefabCount =
-            treeSettings.grasslandRockPrefabs != null ? treeSettings.grasslandRockPrefabs.Length : 0;
-        settings.grasslandLargeRockPrefabCount =
-            treeSettings.grasslandLargeRockPrefabs != null ? treeSettings.grasslandLargeRockPrefabs.Length : 0;
-        if (settings.grasslandLargeRockPrefabCount == 0 && treeSettings.grasslandLargeRockFallbackPrefab != null)
-            settings.grasslandLargeRockPrefabCount = 1;
-        settings.maxGrasslandRocksPerChunk = Mathf.Max(0, treeSettings.maxGrasslandRocksPerChunk);
-        settings.grasslandRockUniformScaleRange = treeSettings.grasslandRockUniformScaleRange;
-        settings.grasslandLargeRockUniformScaleRange = treeSettings.grasslandLargeRockUniformScaleRange;
-        settings.grasslandRockPitchRange = treeSettings.grasslandRockPitchRange;
-        settings.maxGrasslandTreesPerChunk = Mathf.Max(0, treeSettings.maxGrasslandTreesPerChunk);
-
-        return settings;
     }
 
     private void TryApplyFarTerrain(ChunkRecord record, ChunkRuntime runtime)
@@ -1892,228 +1486,12 @@ public class ChunkManager
         }
     }
 
-    private void ProcessCompletedRequests()
-    {
-        using var processCompletedRequestsScope = ProcessCompletedRequestsMarker.Auto();
-        long totalStart = TerrainGenerationProfiler.GetTimestamp();
-        long categoryStart = totalStart;
-        bool processedAnyRequest = false;
-
-        TerrainGenerationProfiler.RecordQueueSnapshot(
-            terrainRequestManager.ActiveTerrainDataJobCount,
-            terrainRequestManager.ActiveFarTerrainJobCount,
-            terrainRequestManager.ActiveMeshJobCount,
-            terrainRequestManager.ActiveColliderJobCount,
-            terrainRequestManager.CompletedTerrainDataResultCount,
-            terrainRequestManager.CompletedFarTerrainResultCount,
-            terrainRequestManager.CompletedMeshResultCount,
-            terrainRequestManager.CompletedColliderResultCount);
-
-        using (ApplyTerrainDataResultsMarker.Auto())
-        {
-            int terrainDataResultsApplied = 0;
-            while (CanApplyMoreResults(
-                       terrainDataResultsApplied,
-                       maxTerrainDataResultsAppliedPerFrame,
-                       totalStart,
-                       completedRequestApplyBudgetMsPerFrame,
-                       categoryStart,
-                       terrainDataApplyBudgetMsPerFrame) &&
-                   terrainRequestManager.TryDequeueTerrainDataResult(out TerrainDataRequestResult terrainResult))
-            {
-                using (terrainResult)
-                {
-                    if (!chunkRecords.TryGetValue(terrainResult.ChunkCoord, out ChunkRecord record))
-                        continue;
-
-                    using (ApplyTerrainDataResultMarker.Auto())
-                    {
-                        processedAnyRequest = true;
-                        terrainDataResultsApplied++;
-                        long stageStart = TerrainGenerationProfiler.GetTimestamp();
-                        Texture2D[] controlMaps = CreateControlMapTextures(terrainResult.ControlMapsRawData);
-                        TerrainGenerationProfiler.Record(
-                            TerrainGenerationProfileStage.MainTerrainControlMapTextureCreate,
-                            stageStart);
-
-                        bool completed = record.TryCompleteTerrainDataRequest(
-                            terrainResult.RequestVersion,
-                            terrainResult.HeightMap,
-                            terrainResult.SlopeMap,
-                            terrainResult.MoistureMap,
-                            terrainResult.TemperatureMap,
-                            terrainResult.BiomeMap,
-                            terrainResult.SurfaceTypeMap,
-                            terrainResult.WaterStateMap,
-                            terrainResult.GroundCoverMap,
-                            terrainResult.WorldFeaturePlan,
-                            terrainResult.RiverMaskMap,
-                            controlMaps,
-                            terrainResult.NativeData);
-
-                        if (completed)
-                        {
-                            terrainResult.TransferNativeOwnership();
-                            QueueVisibleChunkContentWork(record.ChunkCoord);
-                        }
-                    }
-                }
-            }
-        }
-
-        categoryStart = TerrainGenerationProfiler.GetTimestamp();
-        using (ApplyLodMeshResultsMarker.Auto())
-        {
-            int lodMeshResultsApplied = 0;
-            while (CanApplyMoreResults(
-                       lodMeshResultsApplied,
-                       maxLODMeshResultsAppliedPerFrame,
-                       totalStart,
-                       completedRequestApplyBudgetMsPerFrame,
-                       categoryStart,
-                       lodMeshApplyBudgetMsPerFrame) &&
-                   terrainRequestManager.TryDequeueMeshResult(out MeshRequestResult meshResult))
-            {
-                if (!chunkRecords.TryGetValue(meshResult.ChunkCoord, out ChunkRecord record))
-                    continue;
-
-                using (ApplyLodMeshResultMarker.Auto())
-                {
-                    processedAnyRequest = true;
-                    lodMeshResultsApplied++;
-                    long stageStart = TerrainGenerationProfiler.GetTimestamp();
-                    Mesh terrainMesh = meshResult.TerrainMeshData.CreateMesh();
-                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainLODTerrainMeshCreate, stageStart);
-
-                    stageStart = TerrainGenerationProfiler.GetTimestamp();
-                    Mesh waterMesh = meshResult.WaterMeshData.CreateMesh();
-                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainWaterMeshCreate, stageStart);
-
-                    bool completed = record.TryCompleteMeshRequest(
-                        meshResult.LOD,
-                        meshResult.RequestVersion,
-                        terrainMesh,
-                        waterMesh
-                    );
-
-                    if (completed)
-                        QueueVisibleChunkContentWork(record.ChunkCoord);
-                    else
-                    {
-                        DestroyLODMeshAssets(terrainMesh, waterMesh);
-                    }
-                }
-            }
-        }
-
-        categoryStart = TerrainGenerationProfiler.GetTimestamp();
-        using (ApplyColliderResultsMarker.Auto())
-        {
-            int colliderResultsApplied = 0;
-            while (CanApplyMoreResults(
-                       colliderResultsApplied,
-                       maxColliderResultsAppliedPerFrame,
-                       totalStart,
-                       completedRequestApplyBudgetMsPerFrame,
-                       categoryStart,
-                       colliderApplyBudgetMsPerFrame) &&
-                   terrainRequestManager.TryDequeueColliderResult(out ColliderRequestResult colliderResult))
-            {
-                if (!chunkRecords.TryGetValue(colliderResult.ChunkCoord, out ChunkRecord record))
-                    continue;
-
-                using (ApplyColliderResultMarker.Auto())
-                {
-                    processedAnyRequest = true;
-                    colliderResultsApplied++;
-                    long stageStart = TerrainGenerationProfiler.GetTimestamp();
-                    Mesh colliderMesh = colliderResult.ColliderMeshData.CreateMesh();
-                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainColliderMeshCreate, stageStart);
-
-                    bool completed = record.TryCompleteColliderRequest(
-                        colliderResult.RequestVersion,
-                        colliderMesh
-                    );
-
-                    if (completed)
-                        QueueVisibleChunkContentWork(record.ChunkCoord);
-                }
-            }
-        }
-
-        categoryStart = TerrainGenerationProfiler.GetTimestamp();
-        ChunkCoord viewerCoord = GetViewerChunkCoord();
-        using (ApplyFarTerrainResultsMarker.Auto())
-        {
-            int farTerrainResultsApplied = 0;
-            while (!HasHigherPriorityCompletedTerrainResults() &&
-                   CanApplyMoreResults(
-                       farTerrainResultsApplied,
-                       maxFarTerrainResultsAppliedPerFrame,
-                       totalStart,
-                       completedRequestApplyBudgetMsPerFrame,
-                       categoryStart,
-                       farTerrainApplyBudgetMsPerFrame) &&
-                   terrainRequestManager.TryDequeueFarTerrainResult(out FarTerrainRequestResult farTerrainResult))
-            {
-                if (!IsFarTerrainResultStillWanted(farTerrainResult, viewerCoord))
-                    continue;
-
-                using (ApplyFarTerrainResultMarker.Auto())
-                {
-                    processedAnyRequest = true;
-                    farTerrainResultsApplied++;
-                    long stageStart = TerrainGenerationProfiler.GetTimestamp();
-                    Texture2D[] controlMaps = CreateControlMapTextures(farTerrainResult.ControlMapsRawData);
-                    TerrainGenerationProfiler.Record(
-                        TerrainGenerationProfileStage.MainFarControlMapTextureCreate,
-                        stageStart);
-
-                    stageStart = TerrainGenerationProfiler.GetTimestamp();
-                    Mesh terrainMesh = farTerrainResult.TerrainMeshData.CreateMesh();
-                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainFarTerrainMeshCreate, stageStart);
-
-                    Mesh waterMesh = farTerrainResult.WaterMeshData != null && farTerrainResult.WaterMeshData.VertexCount > 0
-                        ? farTerrainResult.WaterMeshData.CreateMesh() : null;
-                    bool accepted = TryCompleteFarTerrainResult(farTerrainResult, terrainMesh, controlMaps, waterMesh);
-                    if (!accepted)
-                    {
-                        DestroyFarTerrainAssets(terrainMesh, controlMaps, waterMesh);
-                    }
-                    else if (farTerrainResult.IsMacroTile)
-                    {
-                        QueueFarTerrainTileContentWork(new FarTerrainPatchKey(
-                            farTerrainResult.ChunkCoord, farTerrainResult.PatchSizeInChunks));
-                    }
-                    else
-                    {
-                        QueueVisibleChunkContentWork(farTerrainResult.ChunkCoord);
-                    }
-                }
-            }
-        }
-
-        if (processedAnyRequest)
-        {
-            TerrainGenerationProfiler.Record(
-                TerrainGenerationProfileStage.MainProcessCompletedRequestsTotal,
-                totalStart);
-        }
-    }
-
-    private bool HasHigherPriorityCompletedTerrainResults()
-    {
-        return terrainRequestManager.CompletedTerrainDataResultCount > 0 ||
-               terrainRequestManager.CompletedMeshResultCount > 0 ||
-               terrainRequestManager.CompletedColliderResultCount > 0;
-    }
-
     private bool ShouldDeferFarTerrainWork()
     {
         return terrainRequestManager.ActiveTerrainDataJobCount > 0 ||
                terrainRequestManager.ActiveMeshJobCount > 0 ||
                terrainRequestManager.ActiveColliderJobCount > 0 ||
-               HasHigherPriorityCompletedTerrainResults();
+               resultPublisher.HasHigherPriorityCompletedTerrainResults();
     }
 
     private bool IsFarTerrainResultStillWanted(
@@ -2145,69 +1523,13 @@ public class ChunkManager
             return false;
 
         if (!IsChunkWithinViewDistance(viewerCoord, result.ChunkCoord) ||
-            !ShouldUseFarTerrain(viewerCoord, result.ChunkCoord))
+            !coveragePolicy.ShouldUseFarTerrain(viewerCoord, result.ChunkCoord))
         {
             record.CancelFarTerrainRequest(result.RequestVersion);
             return false;
         }
 
         return true;
-    }
-
-    private bool TryCompleteFarTerrainResult(
-        FarTerrainRequestResult result,
-        Mesh terrainMesh,
-        Texture2D[] controlMaps,
-        Mesh waterMesh)
-    {
-        if (result.IsMacroTile &&
-            farTerrainTileRecords.TryGetValue(new FarTerrainPatchKey(result.ChunkCoord, result.PatchSizeInChunks), out FarTerrainTileRecord tileRecord))
-        {
-            return tileRecord.TryCompleteRequest(
-                result.RequestVersion,
-                terrainMesh,
-                controlMaps,
-                waterMesh,
-                result.HeightGrid);
-        }
-
-        if (chunkRecords.TryGetValue(result.ChunkCoord, out ChunkRecord record))
-        {
-            return record.TryCompleteFarTerrainRequest(
-                result.RequestVersion,
-                terrainMesh,
-                controlMaps,
-                waterMesh,
-                result.HeightGrid);
-        }
-
-        return false;
-    }
-
-    private static void DestroyLODMeshAssets(Mesh terrainMesh, Mesh waterMesh)
-    {
-        if (terrainMesh != null)
-            UnityEngine.Object.Destroy(terrainMesh);
-
-        if (waterMesh != null)
-            UnityEngine.Object.Destroy(waterMesh);
-    }
-    private static void DestroyFarTerrainAssets(Mesh terrainMesh, Texture2D[] controlMaps, Mesh waterMesh)
-    {
-        if (terrainMesh != null)
-            UnityEngine.Object.Destroy(terrainMesh);
-
-        if (waterMesh != null)
-            UnityEngine.Object.Destroy(waterMesh);
-
-        if (controlMaps == null)
-            return;
-
-        for (int i = 0; i < controlMaps.Length; i++)
-        {
-            if (controlMaps[i] != null)
-                UnityEngine.Object.Destroy(controlMaps[i]);
-        }
     }
 
     private bool IsChunkWithinViewDistance(ChunkCoord viewerCoord, ChunkCoord targetCoord)
@@ -2240,26 +1562,6 @@ public class ChunkManager
         }
 
         return false;
-    }
-
-    private static bool CanApplyMoreResults(
-        int appliedCount,
-        int maxCount,
-        long frameStart,
-        float frameBudgetMs,
-        long categoryStart,
-        float categoryBudgetMs)
-    {
-        if (appliedCount >= maxCount)
-            return false;
-
-        if (frameBudgetMs > 0f && TerrainGenerationProfiler.GetElapsedMilliseconds(frameStart) >= frameBudgetMs)
-            return false;
-
-        if (categoryBudgetMs > 0f && TerrainGenerationProfiler.GetElapsedMilliseconds(categoryStart) >= categoryBudgetMs)
-            return false;
-
-        return true;
     }
 
     private void SortOrderedActiveCoords(ChunkCoord viewerCoord)
@@ -2332,23 +1634,4 @@ public class ChunkManager
         return count;
     }
 
-    private Texture2D[] CreateControlMapTextures(ControlMapPixelData rawData)
-    {
-        if (rawData == null || rawData.Maps == null || rawData.Maps.Length == 0)
-            return null;
-
-        Texture2D[] textures = new Texture2D[rawData.Maps.Length];
-
-        for (int i = 0; i < rawData.Maps.Length; i++)
-        {
-            Texture2D tex = new Texture2D(rawData.Width, rawData.Height, TextureFormat.RGBA32, false, true);
-            tex.filterMode = FilterMode.Bilinear;
-            tex.wrapMode = TextureWrapMode.Clamp;
-            tex.SetPixels32(rawData.Maps[i]);
-            tex.Apply(false, false);
-            textures[i] = tex;
-        }
-
-        return textures;
-    }
 }

@@ -13,9 +13,12 @@ public class ChunkFoliageData
     public List<FoliageInstanceData>[,] nearGrassInstancesBySubChunk;
     public bool[,] nearGrassSubChunkGenerated;
 
+#if UNITY_EDITOR
+    // Authoring fixtures only. Runtime billboards use resident near-grass candidates.
     public bool billboardGenerated;
     public int billboardRevision { get; private set; }
     public List<BillboardFoliageInstanceData> billboardGrassInstances = new List<BillboardFoliageInstanceData>();
+#endif
 
     public bool flowersGenerated;
     public List<FlowerInstanceData> flowerInstances = new List<FlowerInstanceData>();
@@ -37,9 +40,11 @@ public class ChunkFoliageData
     public List<TreeInstanceData> treeCubeInstances = new List<TreeInstanceData>();
 
     public bool bushesGenerated;
+    public int BushesRevision { get; private set; }
     public List<BerryBushInstanceData> bushInstances = new List<BerryBushInstanceData>();
 
     public bool rocksGenerated;
+    public int RocksRevision { get; private set; }
     public List<RockInstanceData> rockInstances = new List<RockInstanceData>();
 
     public void InitializeNearGrass(int subChunksPerChunk)
@@ -149,12 +154,14 @@ public class ChunkFoliageData
         return true;
     }
 
+#if UNITY_EDITOR
     public void ClearBillboards()
     {
         billboardRevision++;
         billboardGenerated = false;
         billboardGrassInstances.Clear();
     }
+#endif
 
     public int FlowersRevision { get; private set; }
 
@@ -210,12 +217,14 @@ public class ChunkFoliageData
 
     public void ClearBushes()
     {
+        BushesRevision++;
         bushesGenerated = false;
         bushInstances.Clear();
     }
 
     public void ClearRocks()
     {
+        RocksRevision++;
         rocksGenerated = false;
         rockInstances.Clear();
     }
@@ -223,7 +232,9 @@ public class ChunkFoliageData
     public void ClearAll()
     {
         ClearNearGrass();
+#if UNITY_EDITOR
         ClearBillboards();
+#endif
         ClearFlowers();
         ClearLilyPads();
         ClearCattails();
@@ -252,10 +263,7 @@ public class ChunkFoliageData
         return total;
     }
 
-    public int GetTotalBillboardInstanceCount()
-    {
-        return billboardGrassInstances != null ? billboardGrassInstances.Count : 0;
-    }
+
 
     public int GetTotalFlowerInstanceCount()
     {
