@@ -16,5 +16,6 @@ MonoBehaviour:
   displayName: Birch / Aspen tree
   icon: {fileID: 0}
   shortDescription: Wood source
+  treeUniformScaleRange: {x: 1.3, y: 1.5}
   forestTreeExclusionRadiusRange: {x: 6.2, y: 7.8}
   grasslandTreeExclusionRadiusRange: {x: 7.2, y: 9.4}

@@ -159,9 +159,9 @@ Shader "Custom/BirchBillboardSimpleLitCutout"
                 half branchNoise = ValueNoise(uv * 7.5h + instanceOriginWS.xz * 0.18h);
                 half fineNoise = ValueNoise(uv * 22.0h + instanceOriginWS.xz * 0.47h);
 
-                half youngMix = smoothstep(0.58h, 0.96h, branchNoise + treeNoise * 0.10h) * _ColorVariationStrength * (1.0h - _SeasonAutumnAmount);
-                half goldMix = smoothstep(0.18h, 0.90h, branchNoise + fineNoise * 0.20h) * _SeasonAutumnAmount;
-                half ochreMix = smoothstep(0.74h, 0.98h, fineNoise + branchNoise * 0.16h) * _SeasonAutumnAmount * _ColorVariationStrength;
+                half youngMix = smoothstep(0.58h, 0.96h, branchNoise + treeNoise * 0.10h) * _ColorVariationStrength * (1.0h - TreeSeasonAutumnAmount(_SeasonAutumnAmount));
+                half goldMix = smoothstep(0.18h, 0.90h, branchNoise + fineNoise * 0.20h) * TreeSeasonAutumnAmount(_SeasonAutumnAmount);
+                half ochreMix = smoothstep(0.74h, 0.98h, fineNoise + branchNoise * 0.16h) * TreeSeasonAutumnAmount(_SeasonAutumnAmount) * _ColorVariationStrength;
 
                 half3 leafColor = lerp(_SummerLeafColor.rgb, _YoungLeafColor.rgb, youngMix);
                 leafColor = lerp(leafColor, _AutumnGoldColor.rgb, goldMix);
@@ -267,7 +267,7 @@ Shader "Custom/BirchBillboardSimpleLitCutout"
 
                 half leafMask = saturate(whiteMask * canopyMask * (1.0h - trunkProtect));
                 half3 leafColor = EvaluateBirchLeafColor(IN.uv, IN.instanceOriginWS);
-                half3 averageLeafColor = lerp(_SummerLeafColor.rgb, _AutumnGoldColor.rgb, saturate(_SeasonAutumnAmount));
+                half3 averageLeafColor = lerp(_SummerLeafColor.rgb, _AutumnGoldColor.rgb, TreeSeasonAutumnAmount(_SeasonAutumnAmount));
                 leafColor = lerp(leafColor, averageLeafColor, saturate(_BillboardTintCompression));
 
                 half2 centeredUv = IN.uv * 2.0h - 1.0h;

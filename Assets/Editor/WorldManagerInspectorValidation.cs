@@ -55,6 +55,9 @@ public static class WorldManagerInspectorValidation
                     "Unexpected active state: " + path);
             }
             Set("enableFarTerrain", false); Active("farTerrainHeightGridResolution", false);
+            Set("simulateTreeSeason", false); Active("treeSeasonAutumnAmount", false);
+            Set("simulateTreeSeason", true); Active("treeSeasonAutumnAmount", true);
+            Set("simulateTreeSeason", false);
             Active("farTerrainApplyBudgetMsPerFrame", false); Active("viewDistance", true);
             Set("enableFarTerrain", true); Active("farTerrainHeightGridResolution", true);
             Set("treeSettings.enableDistantTrees", true);

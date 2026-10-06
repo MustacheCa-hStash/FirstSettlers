@@ -16,5 +16,6 @@ MonoBehaviour:
   displayName: White pine tree
   icon: {fileID: 0}
   shortDescription: Wood source
+  treeUniformScaleRange: {x: 1.3, y: 1.5}
   forestTreeExclusionRadiusRange: {x: 8, y: 10.5}
   grasslandTreeExclusionRadiusRange: {x: 8.5, y: 11.5}

@@ -5,7 +5,7 @@ It is available after world initialization and is replaced on world regeneration
 All access and change notifications run on the main thread. Worker placement jobs return
 data with IDs; the main thread registers completed results.
 
-## Species datacards and placement spacing
+## Species datacards, scale and placement spacing
 
 Tree cards live in `Assets/ScriptableObjects/WorldObjects`: MapleTree (red/generic
 maple), SugarMapleTree, BirchAspenTree, BeechTree, SpruceTree, WhitePineTree, OakTree,
@@ -15,6 +15,19 @@ The species card also supplies query name, icon and description, even when a
 different species' visual prefab is used as a fallback. Existing prefab
 `TreeGameplayAuthoring.queryDefinition` links remain a fallback when no species
 card is assigned.
+
+Edit **Tree Uniform Scale Range** under **Tree Scale** on each card to control
+that species' size. X is the minimum multiplier and Y is the maximum; for example,
+1.3–1.5 generates trees at 130–150% of the authored prefab size. Forest and
+grassland variants share the range. Near meshes, distant billboards and pooled
+physical/query colliders all use the same deterministically sampled scale.
+Scale edits preserve placement IDs, positions and exclusion radii. Reversed
+endpoints are sorted, nonpositive values clamp to 0.01, and nonfinite values
+fall back to 2–2. Restart Play Mode or regenerate the world to rebuild placements.
+
+Existing cards start at 1.3–1.5, matching SmearScene's prior global range.
+**Fallback Tree Uniform Scale Range** in World Manager applies only when neither
+an assigned species card nor the near prefab's query definition is available.
 
 Edit **Forest Tree Exclusion Radius Range** or **Grassland Tree Exclusion Radius
 Range** on the card to tune spacing. Forest ranges also apply to Taiga and snow

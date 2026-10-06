@@ -5,6 +5,8 @@ public struct WorldFeatureGenerationSettings
     public Vector2 treeUniformScaleRange;
     // Main-thread datacard snapshot indexed by WorldFeatureVariant. Never mutated after dispatch.
     public Vector2[] treeExclusionRadiusRanges;
+    // Zero entries mean no species definition: use the global compatibility fallback.
+    public Vector2[] treeUniformScaleRanges;
     public int forestRockPrefabCount;
     public int maxForestRocksPerChunk;
     public Vector2 forestRockUniformScaleRange;
@@ -21,6 +23,15 @@ public struct WorldFeatureGenerationSettings
         WorldFeatureVariant.GrasslandMapleTree or WorldFeatureVariant.GrasslandBirchAspenTree or
         WorldFeatureVariant.GrasslandWhitePineTree or WorldFeatureVariant.GrasslandOakTree or
         WorldFeatureVariant.GrasslandWillowTree;
+
+    public Vector2 GetTreeUniformScaleRange(WorldFeatureVariant variant)
+    {
+        int index = (int)variant;
+        if (treeUniformScaleRanges != null && index >= 0 && index < treeUniformScaleRanges.Length &&
+            treeUniformScaleRanges[index] != Vector2.zero)
+            return treeUniformScaleRanges[index];
+        return treeUniformScaleRange;
+    }
 
     public Vector2 GetTreeExclusionRadiusRange(WorldFeatureVariant variant)
     {

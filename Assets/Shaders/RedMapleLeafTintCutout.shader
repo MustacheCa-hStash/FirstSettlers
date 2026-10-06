@@ -199,7 +199,7 @@ Shader "Custom/RedMapleLeafSimpleLitCutout"
                 half atlasLuma = dot(atlas.rgb, half3(0.299h, 0.587h, 0.114h));
 
                 half3 autumnColor = EvaluateAutumnColor(IN.uv, IN.positionWS);
-                half3 leafColor = lerp(_SummerLeafColor.rgb, autumnColor, saturate(_SeasonAutumnAmount));
+                half3 leafColor = lerp(_SummerLeafColor.rgb, autumnColor, TreeSeasonAutumnAmount(_SeasonAutumnAmount));
 
                 half bottomShade = saturate((1.0h - IN.uv.y) * _VerticalGradientStrength);
                 leafColor = lerp(leafColor, _LeafShadowColor.rgb, bottomShade);
@@ -208,7 +208,7 @@ Shader "Custom/RedMapleLeafSimpleLitCutout"
                 half cardNoise = Hash12(floor(IN.positionWS.xz * 0.72h) + floor(IN.uv * 5.0h));
                 half cardVariation = lerp(1.0h - _CardVariationStrength, 1.0h + _CardVariationStrength, cardNoise);
                 leafColor *= leafDetail * cardVariation;
-                half directTintAmount = 1.0h - saturate(StandingTreeLeafTint(_TreeLeafTint).a);
+                half directTintAmount = TreeSeasonDirectTintAmount(1.0h - saturate(StandingTreeLeafTint(_TreeLeafTint).a));
                 leafColor = lerp(leafColor * StandingTreeLeafTint(_TreeLeafTint).rgb, StandingTreeLeafTint(_TreeLeafTint).rgb * leafDetail * cardVariation, directTintAmount);
                 leafColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
 

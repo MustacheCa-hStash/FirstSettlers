@@ -6,6 +6,23 @@ using UnityEngine;
 [CustomEditor(typeof(WorldManager)), CanEditMultipleObjects]
 public class WorldManagerEditor : Editor
 {
+    [InitializeOnLoadMethod]
+    private static void InitializeTreeSeasonPreview()
+    {
+        WorldManager.ResetTreeSeasonSimulation();
+        EditorApplication.update -= RefreshTreeSeasonPreview;
+        EditorApplication.update += RefreshTreeSeasonPreview;
+        AssemblyReloadEvents.beforeAssemblyReload -= WorldManager.ResetTreeSeasonSimulation;
+        AssemblyReloadEvents.beforeAssemblyReload += WorldManager.ResetTreeSeasonSimulation;
+        EditorApplication.quitting -= WorldManager.ResetTreeSeasonSimulation;
+        EditorApplication.quitting += WorldManager.ResetTreeSeasonSimulation;
+    }
+
+    private static void RefreshTreeSeasonPreview()
+    {
+        if (!EditorApplication.isPlayingOrWillChangePlaymode) WorldManager.RefreshTreeSeasonSimulation();
+    }
+
     // New fields fall through to the inspector instead of silently disappearing.
     internal static readonly string[][] Sections =
     {
@@ -15,6 +32,7 @@ public class WorldManagerEditor : Editor
         new[] { "Terrain Streaming", "viewDistance", "colliderDistance", "enableFarTerrain", "farTerrainStartRing", "farTerrainMacroTileSize", "farTerrainHeightGridResolution", "farTerrainControlMapResolution", "farTerrainSkirtDepth" },
         new[] { "Grass and Forest Ground Cover", "grassSettings", "leafClusterSettings", "fernSettings" },
         new[] { "Trees, Bushes and Rocks", "treeSettings", "showTreeExclusionRadiusGizmos" },
+        new[] { "Tree Season Preview", "simulateTreeSeason", "treeSeasonAutumnAmount" },
         new[] { "Flowers and Shore Plants", "flowerSettings", "cloverSettings", "dandelionSettings", "lilyPadSettings", "cattailSettings" },
         new[] { "Ambient Life", "butterflySettings", "beeSettings" },
         new[] { "Water", "waterMaterial", "globalWaterY", "waterReflectionResolution", "waterReflectionUpdatesPerSecond", "waterReflectionMovingUpdatesPerSecond", "waterReflectionDistance" },
@@ -36,11 +54,16 @@ public class WorldManagerEditor : Editor
             }
     }
 
+    private void OnEnable()
+    {
+        foreach (UnityEngine.Object o in targets) ((WorldManager)o).ApplyTreeSeasonSimulation();
+    }
+
     public override void OnInspectorGUI()
     {
         serializedObject.Update();
         using (new EditorGUI.DisabledScope(true)) EditorGUILayout.PropertyField(serializedObject.FindProperty("m_Script"));
-        EditorGUILayout.HelpBox("World creation and cached placement settings apply on regeneration. During Play mode, use Regenerate Terrain after editing. Greyed controls are inactive under the selected options; hover for the reason.", MessageType.Info);
+        EditorGUILayout.HelpBox("Terrain and cached placement settings apply on regeneration. During Play mode, use Regenerate Terrain after editing those settings. Tree Season Preview updates live. Greyed controls are inactive under the selected options; hover for the reason.", MessageType.Info);
         var drawn = new HashSet<string> { "m_Script" };
         foreach (var section in Sections)
         {
@@ -56,6 +79,7 @@ public class WorldManagerEditor : Editor
                 if (property != null) DrawProperty(property);
             }
             if (section[0] == "Terrain Shape and Climate") DrawErosionSummary();
+            if (section[0] == "Tree Season Preview") DrawTreeSeasonPresets();
             EditorGUI.indentLevel--;
         }
         var iterator = serializedObject.GetIterator();
@@ -65,13 +89,34 @@ public class WorldManagerEditor : Editor
             enter = false;
             if (!drawn.Contains(iterator.propertyPath)) DrawProperty(iterator.Copy());
         }
-        serializedObject.ApplyModifiedProperties();
+        if (serializedObject.ApplyModifiedProperties())
+        {
+            foreach (UnityEngine.Object o in targets) ((WorldManager)o).ApplyTreeSeasonSimulation();
+            SceneView.RepaintAll();
+            EditorApplication.QueuePlayerLoopUpdate();
+        }
         EditorGUILayout.Space();
         bool canRegenerate = Application.isPlaying;
         foreach (UnityEngine.Object o in targets) canRegenerate &= ((WorldManager)o).isActiveAndEnabled;
         using (new EditorGUI.DisabledScope(!canRegenerate))
             if (GUILayout.Button("Regenerate Terrain"))
                 foreach (UnityEngine.Object o in targets) ((WorldManager)o).RegenerateTerrain();
+    }
+
+    private void DrawTreeSeasonPresets()
+    {
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("Summer")) SetTreeSeasonPreset(0f);
+            if (GUILayout.Button("Autumn")) SetTreeSeasonPreset(1f);
+        }
+        EditorGUILayout.HelpBox("Leaf colors update immediately in Scene and Game views. Use the slider for intermediate colors.", MessageType.Info);
+    }
+
+    private void SetTreeSeasonPreset(float amount)
+    {
+        serializedObject.FindProperty("simulateTreeSeason").boolValue = true;
+        serializedObject.FindProperty("treeSeasonAutumnAmount").floatValue = amount;
     }
 
     private void DrawProperty(SerializedProperty property)

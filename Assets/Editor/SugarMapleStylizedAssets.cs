@@ -192,6 +192,8 @@ public static class SugarMapleStylizedAssets
                 .Average(p=>channel==0?p.r:channel==1?p.g:p.b);
             int Changed(Color32[] a, Color32[] b) => a.Where((p,i)=>!p.Equals(b[i])).Count();
             var summer = Render(leaf,"summer");
+            int visible = summer.Count(p=>p.a>127);
+            var warm = new Color(1,.5f,.1f,1);
             redLeaf.SetFloat("_WindStrength",0); redLeaf.SetFloat("_WindFlutterStrength",0);
             redLeaf.SetFloat("_SeasonAutumnAmount",0);
             var redSummer = Render(redLeaf,"red-maple-summer");
@@ -205,10 +207,66 @@ public static class SugarMapleStylizedAssets
                 "Red maple autumn palette was washed out by the generator's neutral white tint.");
             Check(redSummer.Where((p,i)=>p.a!=redNeutralAutumn[i].a).Count()==0,
                 "Red maple autumn tint changed alpha coverage.");
-            int visible = summer.Count(p=>p.a>127);
+            // A material cached before the world override must react immediately,
+            // without mutating its authored season, colors, opacity or placement.
+            var previewRoot = new GameObject("Tree season preview validation");
+            previewRoot.SetActive(false);
+            var previewWorld = previewRoot.AddComponent<WorldManager>();
+            previewRoot.SetActive(true);
+            try
+            {
+                int revision = previewWorld.TerrainGenerationRevision;
+                leaf.SetFloat("_SeasonAutumnAmount", .25f);
+                var authoredBaseline = Render(leaf,null,true,warm);
+                previewWorld.SetTreeSeasonSimulation(true, 0);
+                var previewSummer = Render(leaf,"season-preview-summer",true,warm);
+                previewWorld.SetTreeSeasonSimulation(true, .5f);
+                var previewMidpoint = Render(leaf,"season-preview-midpoint",true,warm);
+                previewWorld.SetTreeSeasonSimulation(true, 1);
+                var previewAutumn = Render(leaf,"season-preview-autumn",true,warm);
+                Check(MeanChannel(previewSummer,1)>MeanChannel(previewSummer,0)*1.3f &&
+                    MeanChannel(previewAutumn,0)>MeanChannel(previewAutumn,1), "World season override did not update cached instanced leaves.");
+                Check(Changed(previewSummer,previewMidpoint)>visible*.8f && Changed(previewMidpoint,previewAutumn)>visible*.8f,
+                    "Season midpoint is not a live intermediate color.");
+                Check(previewSummer.Where((p,i)=>p.a!=previewAutumn[i].a).Count()==0, "Season preview changed alpha coverage.");
+                Check(leaf.GetFloat("_SeasonAutumnAmount")==.25f && previewWorld.TerrainGenerationRevision==revision,
+                    "Preview changed the authored material season or regenerated the world.");
+                previewWorld.SetTreeSeasonSimulation(false, 1);
+                var restored = Render(leaf,null,true,warm);
+                Check(Changed(restored,authoredBaseline)==0, "Disabling preview did not restore authored shading.");
+                previewWorld.SetTreeSeasonSimulation(true, 2);
+                Check(previewWorld.TreeSeasonAutumnAmount==1 && Shader.GetGlobalFloat("_TreeSeasonSimulationAutumnAmount")==1,
+                    "Season preview did not clamp its upper endpoint.");
+                previewWorld.SetTreeSeasonSimulation(true, -1);
+                Check(previewWorld.TreeSeasonAutumnAmount==0, "Season preview did not clamp its lower endpoint.");
+                previewWorld.enabled = false;
+                WorldManager.RefreshTreeSeasonSimulation();
+                Check(Shader.GetGlobalFloat("_TreeSeasonSimulationEnabled")==0, "Disabling World Manager leaked its season override.");
+                previewWorld.enabled = true;
+                previewWorld.SetTreeSeasonSimulation(true, .5f);
+            }
+            finally { Object.DestroyImmediate(previewRoot); }
+            WorldManager.RefreshTreeSeasonSimulation();
+            Check(Shader.GetGlobalFloat("_TreeSeasonSimulationEnabled")==0, "Destroying World Manager leaked the season override.");
+            leaf.SetFloat("_SeasonAutumnAmount",0);
+
+            foreach (string shaderPath in new[] {
+                "SugarMapleLeafTintCutout", "RedMapleLeafTintCutout", "BirchLeafTintCutout", "OakLeafTintCutout",
+                "SugarMapleBillboardTintCutout", "RedMapleBillboardTintCutout", "BirchBillboardTintCutout",
+                "SugarMapleLOD2BillboardSimpleLitCutout", "RedMapleLOD2BillboardSimpleLitCutout" })
+            {
+                var shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/Shaders/"+shaderPath+".shader");
+                var material = new Material(shader) { enableInstancing = true };
+                try
+                {
+                    for (int pass=0;pass<material.passCount;pass++) ShaderUtil.CompilePass(material,pass,true);
+                    Check(!ShaderUtil.ShaderHasError(shader), "Season-enabled legacy shader failed: "+shader.name);
+                }
+                finally { Object.DestroyImmediate(material); }
+            }
+            WorldManagerInspectorValidation.Run();
             Check(visible>30000 && visible<110000, "Leaf alpha clipping rendered an empty/full rectangle: " + visible);
             Check(MeanChannel(summer,1)>MeanChannel(summer,0)*1.3f, "Summer leaves are not green.");
-            var warm = new Color(1,.5f,.1f,1);
             var red = new Color(.8f,.08f,.04f,1);
             var instancedSummer = Render(leaf,"summer-instanced",true,warm);
             Check(MeanChannel(instancedSummer,1)>MeanChannel(instancedSummer,0)*1.3f,
@@ -237,7 +295,7 @@ public static class SugarMapleStylizedAssets
             Check(Changed(barkWarm,barkRed)>100000,"Per-tree bark tint is not used.");
             Debug.Log("SUGAR MAPLE STYLIZED PASS: all four shader passes/variants compile; texture imports, cutout coverage, " +
                 "green summer, warm autumn, unchanged seasonal opacity, per-tree tints, backfaces and wind validated on GPU. " +
-                "Red maple references, neutral-tint autumn rendering and cooler shared-texture bark also validated. Preview images: " + Output);
+                "Red maple bark, live world season override/midpoint/cleanup and legacy shaders also validated. Preview images: " + Output);
         }
         finally
         {

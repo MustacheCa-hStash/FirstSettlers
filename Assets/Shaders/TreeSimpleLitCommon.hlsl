@@ -2,6 +2,7 @@
 #define TREE_SIMPLE_LIT_COMMON_INCLUDED
 
 #include "Assets/Shaders/DistantTreeFade.hlsl"
+#include "Assets/Shaders/TreeSeasonSimulation.hlsl"
 
 half _TreeNightAmbientFloorDimAmount;
 half _TreeNightAmbientFloorScaleAtMidnight;

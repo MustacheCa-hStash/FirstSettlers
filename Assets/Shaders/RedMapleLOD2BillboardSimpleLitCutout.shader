@@ -265,12 +265,12 @@ Shader "Custom/RedMapleLOD2BillboardSimpleLitCutout"
                 half shadeMask = saturate(lowerMask * _LowerShadeStrength + interiorMask * _InteriorShadeStrength);
 
                 half3 autumnColor = EvaluateAutumnColor(IN.viewUv, IN.instanceOriginWS);
-                half3 leafColor = lerp(_SummerLeafColor.rgb, autumnColor, saturate(_SeasonAutumnAmount));
+                half3 leafColor = lerp(_SummerLeafColor.rgb, autumnColor, TreeSeasonAutumnAmount(_SeasonAutumnAmount));
 
                 half4 instanceTintProp = GetDistantTreeTint(UNITY_ACCESS_INSTANCED_PROP(TreeInstanceProperties, _TreeLeafTint));
-                half directTintAmount = 1.0h - saturate(instanceTintProp.a);
+                half directTintAmount = TreeSeasonDirectTintAmount(1.0h - saturate(instanceTintProp.a));
                 half3 instanceLeafTint = lerp(leafColor * instanceTintProp.rgb, instanceTintProp.rgb, directTintAmount);
-                instanceLeafTint = lerp(instanceLeafTint, _BillboardTintAverageColor.rgb, saturate(_BillboardTintCompression));
+                instanceLeafTint = lerp(instanceLeafTint, _BillboardTintAverageColor.rgb, saturate(TreeSeasonAutumnTintStrength(_BillboardTintCompression)));
                 leafColor = lerp(leafColor, instanceLeafTint, saturate(_TreeTintStrength));
                 leafColor = lerp(leafColor, _LeafShadowColor.rgb, shadeMask * leafMask);
                 leafColor *= leafDetail;

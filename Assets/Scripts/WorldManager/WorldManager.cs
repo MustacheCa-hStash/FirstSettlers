@@ -33,6 +33,10 @@ public class WorldManager : MonoBehaviour
     [SerializeField] TreeSettings treeSettings;
     [Tooltip("Draw each registered standing tree's applied exclusion radius in Play Mode. Enable Gizmos in the Scene or Game view. Uses the generation snapshot, including the habitat-specific range; no regeneration is needed to toggle this display.")]
     [SerializeField] bool showTreeExclusionRadiusGizmos;
+    [Tooltip("Live preview of summer-to-autumn colors on season-capable tree leaf shaders. Turn off to restore each material's authored season. Does not regenerate the world.")]
+    [SerializeField] bool simulateTreeSeason;
+    [Tooltip("0 is summer, 1 is autumn. Updates existing leaf materials, including cached instanced copies, immediately.")]
+    [SerializeField, Range(0f, 1f), InspectorName("Summer to Autumn")] float treeSeasonAutumnAmount;
     [Tooltip("Scale of the base landforms. Erosion Wavelength has its own independent terrain-space scale.")]
     [SerializeField] float sampleScale = 10f;
     [Tooltip("Broadens the smooth mountain mask before global erosion. Higher values create more mountainous land; no duplicated or stretched mountain surfaces. Regenerate after changing.")]
@@ -84,11 +88,72 @@ public class WorldManager : MonoBehaviour
 
     private ChunkManager chunkManager;
     private PlanarWaterReflection planarWaterReflection;
+    private static readonly int TreeSeasonEnabledId = Shader.PropertyToID("_TreeSeasonSimulationEnabled");
+    private static readonly int TreeSeasonAutumnId = Shader.PropertyToID("_TreeSeasonSimulationAutumnAmount");
+    private static WorldManager treeSeasonOwner;
+    private float appliedTreeAutumnAmount = -1f;
     public Transform Viewer => viewer;
     public TreeRegistry Trees => chunkManager?.Trees;
     public bool ShowTreeExclusionRadiusGizmos => showTreeExclusionRadiusGizmos;
     public TreeGameplayManager TreeGameplay => chunkManager?.TreeGameplay;
     public int TerrainGenerationRevision { get; private set; }
+    public bool SimulateTreeSeason => simulateTreeSeason;
+    public float TreeSeasonAutumnAmount => treeSeasonAutumnAmount;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    public static void ResetTreeSeasonSimulation()
+    {
+        treeSeasonOwner = null;
+        Shader.SetGlobalFloat(TreeSeasonEnabledId, 0f);
+        Shader.SetGlobalFloat(TreeSeasonAutumnId, 0f);
+    }
+
+    public static void RefreshTreeSeasonSimulation()
+    {
+        // Normal MonoBehaviours do not run destruction/disable callbacks in every
+        // Edit-mode path. The editor polls the owner without executing generation.
+        if (object.ReferenceEquals(treeSeasonOwner, null)) return;
+        if (treeSeasonOwner == null)
+        {
+            ResetTreeSeasonSimulation();
+            return;
+        }
+        treeSeasonOwner.ApplyTreeSeasonSimulation();
+    }
+
+    public void SetTreeSeasonSimulation(bool enabled, float autumnAmount)
+    {
+        simulateTreeSeason = enabled;
+        treeSeasonAutumnAmount = Mathf.Clamp01(autumnAmount);
+        ApplyTreeSeasonSimulation();
+    }
+
+    public void ApplyTreeSeasonSimulation()
+    {
+        if (!simulateTreeSeason || !isActiveAndEnabled)
+        {
+            ReleaseTreeSeasonSimulation();
+            return;
+        }
+        float amount = Mathf.Clamp01(treeSeasonAutumnAmount);
+        if (treeSeasonOwner == this && appliedTreeAutumnAmount == amount) return;
+        treeSeasonOwner = this;
+        appliedTreeAutumnAmount = amount;
+        Shader.SetGlobalFloat(TreeSeasonAutumnId, amount);
+        Shader.SetGlobalFloat(TreeSeasonEnabledId, 1f);
+    }
+
+    private void ReleaseTreeSeasonSimulation()
+    {
+        appliedTreeAutumnAmount = -1f;
+        if (treeSeasonOwner != this) return;
+        treeSeasonOwner = null;
+        Shader.SetGlobalFloat(TreeSeasonEnabledId, 0f);
+        Shader.SetGlobalFloat(TreeSeasonAutumnId, 0f);
+    }
+
+    void OnEnable() { ApplyTreeSeasonSimulation(); }
+    void OnDisable() { ReleaseTreeSeasonSimulation(); }
 
     void Awake()
     {
@@ -128,7 +193,13 @@ public class WorldManager : MonoBehaviour
         }
     }
 
-    void OnValidate() { erosion = erosion.Sanitized(); }
+    void OnValidate()
+    {
+        erosion = erosion.Sanitized();
+        treeSeasonAutumnAmount = Mathf.Clamp01(treeSeasonAutumnAmount);
+        // Shader globals are applied by Update or the custom Inspector on the
+        // main thread, not by this potentially import-thread validation callback.
+    }
 
     [ContextMenu("Regenerate Terrain")]
     public void RegenerateTerrain()
@@ -149,6 +220,7 @@ public class WorldManager : MonoBehaviour
     {
         using (UpdateMarker.Auto())
         {
+        ApplyTreeSeasonSimulation();
         chunkManager.UpdateActiveChunks();
         TerrainGenerationProfiler.LogSummaryIfDue(
             Time.unscaledTime,
@@ -159,6 +231,7 @@ public class WorldManager : MonoBehaviour
 
     void OnDestroy()
     {
+        ReleaseTreeSeasonSimulation();
         chunkManager?.Dispose();
     }
 

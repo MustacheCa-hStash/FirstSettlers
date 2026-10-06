@@ -112,7 +112,7 @@ half4 SugarMapleLeafFragment(SugarMapleLeafVaryings input, FRONT_FACE_TYPE facin
     half hue = saturate(.5h + (noise - .5h) * _AutumnVariationStrength * 2);
     half3 autumn = lerp(_AutumnYellowColor.rgb, _AutumnOrangeColor.rgb, saturate(hue * 2));
     autumn = lerp(autumn, _AutumnRedColor.rgb, saturate(hue * 2 - 1));
-    half season = saturate(_SeasonAutumnAmount);
+    half season = TreeSeasonAutumnAmount(_SeasonAutumnAmount);
     half3 leaf = lerp(_SummerLeafColor.rgb, autumn, season);
     // Existing terrain/standing-tree tints are autumn colors; never apply them in summer.
     leaf = lerp(leaf, StandingTreeLeafTint(_TreeLeafTint).rgb, season * _TreeTintStrength);

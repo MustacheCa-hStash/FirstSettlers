@@ -748,7 +748,7 @@ public static class WorldFeaturePlanGenerator
                 hash);
 
             float yaw = Hash01(hash + 79) * 360f;
-            float uniformScale = GetTreeScale(settings.treeUniformScaleRange, Hash01(hash + 97));
+            float uniformScale = GetTreeScale(settings.GetTreeUniformScaleRange(variant), Hash01(hash + 97));
             float exclusionRadius = settings.GetTreeExclusionRadius(variant, Hash01(hash + 131));
 
             if (IntersectsExistingPlacement(plan, sampleX, sampleZ, exclusionRadius))
@@ -820,7 +820,7 @@ public static class WorldFeaturePlanGenerator
             if (IntersectsExistingPlacement(plan, x, z, radius)) continue;
             plan.Placements.Add(new WorldFeaturePlacement(WorldFeatureType.Tree, WorldFeatureVariant.SpruceTree,
                 x, z, Quaternion.Euler(0f, Hash01(hash + 79) * 360f, 0f),
-                Vector3.one * GetTreeScale(settings.treeUniformScaleRange, Hash01(hash + 97)), radius,
+                Vector3.one * GetTreeScale(settings.GetTreeUniformScaleRange(WorldFeatureVariant.SpruceTree), Hash01(hash + 97)), radius,
                 GetForestTreeInfluenceRadius(WorldFeatureVariant.SpruceTree, Hash01(hash + 149)),
                 treeId: TreeId.Generated(seed, coord, TreePlacementSource.Forest, cell)));
             placed++;
@@ -866,7 +866,7 @@ public static class WorldFeaturePlanGenerator
             if (IntersectsExistingPlacement(plan, x, z, radius)) continue;
             plan.Placements.Add(new WorldFeaturePlacement(WorldFeatureType.Tree, WorldFeatureVariant.SpruceTree,
                 x, z, Quaternion.Euler(0f, Hash01(hash + 79) * 360f, 0f),
-                Vector3.one * GetTreeScale(settings.treeUniformScaleRange, Hash01(hash + 97)), radius,
+                Vector3.one * GetTreeScale(settings.GetTreeUniformScaleRange(WorldFeatureVariant.SpruceTree), Hash01(hash + 97)), radius,
                 GetForestTreeInfluenceRadius(WorldFeatureVariant.SpruceTree, Hash01(hash + 149)),
                 snowCoverage: Mathf.Lerp(0.8f, 1f, Hash01(hash + 163)),
                 treeId: TreeId.Generated(seed, coord, TreePlacementSource.Snow, cell)));
@@ -1047,7 +1047,7 @@ public static class WorldFeaturePlanGenerator
                 hash);
 
             float yaw = Hash01(hash + 79) * 360f;
-            float uniformScale = GetTreeScale(settings.treeUniformScaleRange, Hash01(hash + 97));
+            float uniformScale = GetTreeScale(settings.GetTreeUniformScaleRange(variant), Hash01(hash + 97));
             float exclusionRadius = settings.GetTreeExclusionRadius(variant, Hash01(hash + 131));
 
             if (IntersectsExistingPlacement(plan, sampleX, sampleZ, exclusionRadius))

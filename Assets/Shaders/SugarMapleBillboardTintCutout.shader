@@ -250,10 +250,10 @@ Shader "Custom/SugarMapleBillboardSimpleLitCutout"
                 leafMask = max(leafMask, paleArtifactMask);
 
                 half3 autumnColor = EvaluateAutumnColor(IN.uv, IN.positionWS);
-                half3 leafColor = lerp(_SummerLeafColor.rgb, autumnColor, saturate(_SeasonAutumnAmount));
+                half3 leafColor = lerp(_SummerLeafColor.rgb, autumnColor, TreeSeasonAutumnAmount(_SeasonAutumnAmount));
                 half3 treeLeafTint = GetDistantTreeTint(UNITY_ACCESS_INSTANCED_PROP(TreeBillboardInstanceProperties, _TreeLeafTint)).rgb;
                 treeLeafTint = lerp(treeLeafTint, _BillboardTintAverageColor.rgb, saturate(_BillboardTintCompression));
-                leafColor = lerp(leafColor, treeLeafTint, saturate(_TreeTintStrength * _SeasonAutumnAmount));
+                leafColor = lerp(leafColor, treeLeafTint, saturate(_TreeTintStrength * TreeSeasonAutumnAmount(_SeasonAutumnAmount)));
                 half3 color = lerp(baseSample.rgb, leafColor, leafMask * _LeafTintStrength);
                 half alpha = baseSample.a * _BaseColor.a;
                 InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);

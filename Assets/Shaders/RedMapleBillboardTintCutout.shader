@@ -5,6 +5,7 @@ Shader "Custom/RedMapleBillboardSimpleLitCutout"
         [MainTexture] _BaseMap("Red Maple Billboard Texture", 2D) = "white" {}
         [MainColor] _BaseColor("Base Tint", Color) = (1, 1, 1, 1)
         _BillboardLeafTint("Billboard Leaf Tint", Color) = (0.88, 0.06, 0.035, 1)
+        _SummerLeafColor("Summer Leaf Color", Color) = (0.29, 0.58, 0.22, 1)
         [PerRendererData] _TreeLeafTint("Tree Leaf Tint Multiplier", Color) = (1, 1, 1, 1)
         _BillboardTintAverageColor("Billboard Average Leaf Tint", Color) = (0.88, 0.06, 0.035, 1)
         _BillboardTintCompression("Billboard Tint Compression", Range(0, 1)) = 0.35
@@ -74,6 +75,7 @@ Shader "Custom/RedMapleBillboardSimpleLitCutout"
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
                 half4 _BillboardLeafTint;
+                half4 _SummerLeafColor;
                 half4 _BillboardTintAverageColor;
                 half _BillboardTintCompression;
                 half _Cutoff;
@@ -220,9 +222,12 @@ Shader "Custom/RedMapleBillboardSimpleLitCutout"
                 leafMask = max(leafMask, paleArtifactMask);
 
                 half4 instanceLeafTint = GetDistantTreeTint(UNITY_ACCESS_INSTANCED_PROP(TreeBillboardInstanceProperties, _TreeLeafTint));
-                half directTintAmount = 1.0h - saturate(instanceLeafTint.a);
-                half3 treeLeafTint = lerp(_BillboardLeafTint.rgb * instanceLeafTint.rgb, instanceLeafTint.rgb, directTintAmount);
-                half3 compressionTarget = lerp(_BillboardTintAverageColor.rgb, instanceLeafTint.rgb, directTintAmount);
+                half directTintAmount = TreeSeasonDirectTintAmount(1.0h - saturate(instanceLeafTint.a));
+                half season = TreeSeasonAutumnAmount(1.0h);
+                half3 seasonalTint = lerp(_SummerLeafColor.rgb, _BillboardLeafTint.rgb, season);
+                half3 seasonalAverage = lerp(_SummerLeafColor.rgb, _BillboardTintAverageColor.rgb, season);
+                half3 treeLeafTint = lerp(seasonalTint * instanceLeafTint.rgb, instanceLeafTint.rgb, directTintAmount);
+                half3 compressionTarget = lerp(seasonalAverage, instanceLeafTint.rgb, directTintAmount);
                 treeLeafTint = lerp(treeLeafTint, compressionTarget, saturate(_BillboardTintCompression));
                 half3 color = lerp(baseSample.rgb, treeLeafTint, leafMask * _LeafTintStrength);
                 half alpha = baseSample.a * _BaseColor.a;
@@ -262,6 +267,7 @@ Shader "Custom/RedMapleBillboardSimpleLitCutout"
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
                 half4 _BillboardLeafTint;
+                half4 _SummerLeafColor;
                 half4 _BillboardTintAverageColor;
                 half _BillboardTintCompression;
                 half _Cutoff;

@@ -113,7 +113,7 @@ half4 RedMapleLeafFragment(RedMapleLeafVaryings input, FRONT_FACE_TYPE facing : 
     // Red maple favors scarlet, with orange and occasional yellow accents.
     half3 autumn = lerp(_AutumnRedColor.rgb, _AutumnOrangeColor.rgb, saturate((hue - .38h) * 2) * .75h);
     autumn = lerp(autumn, _AutumnYellowColor.rgb, smoothstep(.8h, .98h, hue) * .45h);
-    half season = saturate(_SeasonAutumnAmount);
+    half season = TreeSeasonAutumnAmount(_SeasonAutumnAmount);
     half3 leaf = lerp(_SummerLeafColor.rgb, autumn, season);
     // Generic/red maple generation currently supplies white as a neutral tint.
     // Ignore that sentinel (and summer-only alpha-zero tints), preserving autumn

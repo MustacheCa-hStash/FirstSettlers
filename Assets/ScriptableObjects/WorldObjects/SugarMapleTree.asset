@@ -16,5 +16,6 @@ MonoBehaviour:
   displayName: Sugar maple tree
   icon: {fileID: 0}
   shortDescription: Wood source
+  treeUniformScaleRange: {x: 3, y: 4}
   forestTreeExclusionRadiusRange: {x: 23, y: 25}
   grasslandTreeExclusionRadiusRange: {x: 16, y: 18}

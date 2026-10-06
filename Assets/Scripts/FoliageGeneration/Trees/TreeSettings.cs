@@ -6,7 +6,7 @@ public class TreeSettings
     [Header("Nearby Tree Gameplay")]
     public TreeGameplaySettings gameplay = new TreeGameplaySettings();
     [Header("Tree Datacards")]
-    [Tooltip("Species datacards shared by tree placement and query identity. Forest and grassland variants use the same card. Placement changes require world regeneration.")]
+    [Tooltip("Species datacards shared by tree scale, placement and query identity. Forest and grassland variants use the same card. Scale and placement changes require world regeneration.")]
     public WorldObjectDefinition mapleTreeDefinition;
     public WorldObjectDefinition sugarMapleTreeDefinition;
     public WorldObjectDefinition birchAspenTreeDefinition;
@@ -91,7 +91,7 @@ public class TreeSettings
     public GameObject grasslandTreeBillboardFallbackPrefab;
 
     [Header("Tree Scale and Ground Clearance")]
-    [Tooltip("Uniform instance scale for forest and grassland trees, including distant billboards. Restart Play Mode after changing this range to regenerate cached placements.")]
+    [InspectorName("Fallback Tree Uniform Scale Range"), Tooltip("Uniform instance scale used only for tree species without a datacard. Configured trees use Tree Scale on their World Object Definition. Regenerate the world or restart Play Mode after changing scale ranges.")]
     public Vector2 treeUniformScaleRange = new Vector2(2f, 2f);
 
     public float grassExclusionRadius = 1.5f;

@@ -175,9 +175,9 @@ Shader "Custom/BirchLeafSimpleLitCutout"
                 half leafNoise = Hash12(floor(positionWS.xz * 0.44h) + floor(uv * 8.0h));
                 half fineNoise = Hash12(floor(positionWS.xz * 1.30h) + floor(uv * 21.0h));
 
-                half youngMix = smoothstep(0.60h, 0.96h, leafNoise) * _ColorVariationStrength * (1.0h - _SeasonAutumnAmount);
-                half goldMix = smoothstep(0.20h, 0.90h, leafNoise + fineNoise * 0.22h) * _SeasonAutumnAmount;
-                half ochreMix = smoothstep(0.72h, 0.98h, fineNoise + leafNoise * 0.18h) * _SeasonAutumnAmount * _ColorVariationStrength;
+                half youngMix = smoothstep(0.60h, 0.96h, leafNoise) * _ColorVariationStrength * (1.0h - TreeSeasonAutumnAmount(_SeasonAutumnAmount));
+                half goldMix = smoothstep(0.20h, 0.90h, leafNoise + fineNoise * 0.22h) * TreeSeasonAutumnAmount(_SeasonAutumnAmount);
+                half ochreMix = smoothstep(0.72h, 0.98h, fineNoise + leafNoise * 0.18h) * TreeSeasonAutumnAmount(_SeasonAutumnAmount) * _ColorVariationStrength;
 
                 half3 leafColor = lerp(_SummerLeafColor.rgb, _YoungLeafColor.rgb, youngMix);
                 leafColor = lerp(leafColor, _AutumnGoldColor.rgb, goldMix);

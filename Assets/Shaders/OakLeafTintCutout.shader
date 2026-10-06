@@ -195,7 +195,7 @@ Shader "Custom/OakLeafSimpleLitCutout"
                 leafNoise = saturate(leafNoise * 0.62h + fineNoise * 0.38h);
 
                 half variationStrength = saturate(_ColorVariationStrength * 1.25h);
-                half youngMix = smoothstep(0.54h, 0.96h, leafNoise) * variationStrength * (1.0h - _SeasonAutumnAmount);
+                half youngMix = smoothstep(0.54h, 0.96h, leafNoise) * variationStrength * (1.0h - TreeSeasonAutumnAmount(_SeasonAutumnAmount));
                 half ochreMix = smoothstep(0.16h, 0.84h, leafNoise + fineNoise * 0.28h);
                 half goldMix = smoothstep(0.58h, 0.98h, fineNoise) * variationStrength;
                 half russetMix = smoothstep(0.46h, 0.98h, leafNoise) * (1.0h - goldMix * 0.40h);
@@ -205,7 +205,7 @@ Shader "Custom/OakLeafSimpleLitCutout"
                 autumnColor = lerp(autumnColor, _AutumnGoldColor.rgb, goldMix);
                 autumnColor = lerp(autumnColor, _LeafShadowColor.rgb * 1.65h, russetMix * variationStrength * 0.20h);
 
-                half3 leafColor = lerp(summerColor, autumnColor, saturate(_SeasonAutumnAmount));
+                half3 leafColor = lerp(summerColor, autumnColor, TreeSeasonAutumnAmount(_SeasonAutumnAmount));
                 leafColor = lerp(leafColor, leafColor * StandingTreeLeafTint(_TreeLeafTint).rgb, saturate(_TreeTintStrength));
                 return leafColor;
             }

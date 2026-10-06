@@ -15,7 +15,7 @@ The leaf material starts green with **Season Autumn Amount** (`_SeasonAutumnAmou
 
 `_TreeLeafTint` and `_TreeBarkTint` retain the existing property names used by tree property blocks. `StandingTreeLeafTint`/`StandingTreeBarkTint` read the project's `_StandingTreeLeaves`/`_StandingTreeBark` instance data. Existing generated sugar maple leaf tints are warm colors, so the new shader applies them only in proportion to `_SeasonAutumnAmount`; they do not turn summer trees orange. `_TreeTintStrength` controls their contribution. Bark tints remain multipliers.
 
-Set the season on the material before the standing-tree renderer creates its cached material copies. This adds shader support for seasons; it does not create a calendar/season manager. If integrating a new tree into the existing distant renderer, recapture or supply matching impostors rather than assuming the old baked atlas matches the new leaves.
+For live testing, World Manager > **Tree Season Preview** overrides the authored season on existing cached material copies: `0` is summer and `1` is autumn. Turn it off to restore each material's own `_SeasonAutumnAmount`. This is a color preview, not a calendar/season manager. If integrating a new tree into the existing distant renderer, recapture or supply matching impostors rather than assuming the old baked atlas matches the new leaves.
 
 ## Rendering and import
 

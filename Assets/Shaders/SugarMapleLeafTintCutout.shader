@@ -207,8 +207,8 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
                 half atlasLuma = dot(atlas.rgb, half3(0.299h, 0.587h, 0.114h));
 
                 half3 autumnColor = EvaluateAutumnColor(IN.uv, IN.positionWS);
-                half3 leafColor = lerp(_SummerLeafColor.rgb, autumnColor, saturate(_SeasonAutumnAmount));
-                leafColor = lerp(leafColor, StandingTreeLeafTint(_TreeLeafTint).rgb, saturate(_TreeTintStrength * _SeasonAutumnAmount));
+                half3 leafColor = lerp(_SummerLeafColor.rgb, autumnColor, TreeSeasonAutumnAmount(_SeasonAutumnAmount));
+                leafColor = lerp(leafColor, StandingTreeLeafTint(_TreeLeafTint).rgb, saturate(_TreeTintStrength * TreeSeasonAutumnAmount(_SeasonAutumnAmount)));
 
                 half bottomShade = saturate((1.0h - IN.uv.y) * _VerticalGradientStrength);
                 leafColor = lerp(leafColor, _LeafShadowColor.rgb, bottomShade);

@@ -16,5 +16,6 @@ MonoBehaviour:
   displayName: Spruce tree
   icon: {fileID: 21300000, guid: e36c1aaf4dd889e43bb1c083aa6156c8, type: 3}
   shortDescription: Wood source
+  treeUniformScaleRange: {x: 1.3, y: 1.5}
   forestTreeExclusionRadiusRange: {x: 8, y: 10}
   grasslandTreeExclusionRadiusRange: {x: 8, y: 10}

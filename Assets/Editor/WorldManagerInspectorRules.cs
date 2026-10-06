@@ -27,6 +27,8 @@ internal static class WorldManagerInspectorRules
 
     internal static string InactiveReason(SerializedObject so, string path)
     {
+        if (path == "treeSeasonAutumnAmount" && Off(so, "simulateTreeSeason"))
+            return "Enable Simulate Tree Season, or select the Summer/Autumn preset.";
         if ((path.StartsWith("farTerrain", StringComparison.Ordinal) || path == "maxActiveFarTerrainJobs" || path == "maxFarTerrainResultsAppliedPerFrame" || path == "maxFarTerrainTileContentUpdatesPerFrame") && Off(so, "enableFarTerrain"))
             return "Enable Far Terrain is off.";
         if ((path == "terrainGenerationProfileLogInterval" || path == "resetTerrainGenerationProfileAfterLog") && Off(so, "logTerrainGenerationProfile")) return "Generation profiling is off.";
