@@ -1790,7 +1790,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameTimeManager
   startAutomatically: 1
   useUnscaledDeltaTime: 0
-  realSecondsPerGameHour: 5
+  realSecondsPerGameHour: 75
   timeScale: 1
   daylightHours: 16
   nighttimeHours: 8
@@ -1861,6 +1861,8 @@ GameObject:
   m_Component:
   - component: {fileID: 2001000011}
   - component: {fileID: 2001000012}
+  - component: {fileID: 2002000001}
+  - component: {fileID: 2002000002}
   m_Layer: 0
   m_Name: LocalControl
   m_TagString: Untagged
@@ -1897,6 +1899,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   motor: {fileID: 1578603183}
   look: {fileID: 2001000022}
+  building: {fileID: 2002000002}
 --- !u!1 &2001000020
 GameObject:
   m_ObjectHideFlags: 0
@@ -2118,6 +2121,41 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   viewCamera: {fileID: 81284299}
   maxDistance: 8
+--- !u!114 &2002000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2001000010}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 719a9e2dda594c309bc17a0676c3e925, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  catalog: {fileID: 11400000, guid: c0e96e2a4dbe1ed44b14df4b75be41c1, type: 2}
+  renderRange: 3000
+  shadowRange: 140
+  colliderRange: 32
+  colliderReleaseRange: 40
+  activationsPerFrame: 8
+  unsupportedGraceSeconds: 3
+--- !u!114 &2002000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2001000010}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f080f1b1f6204460b8a606f40bfb5ae8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  viewCamera: {fileID: 81284299}
+  reach: 8
+  acquireMargin: 0.1
+  releaseMargin: 0.15
 --- !u!1 &2039337264
 GameObject:
   m_ObjectHideFlags: 0

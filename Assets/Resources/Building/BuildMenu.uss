@@ -1,0 +1,20 @@
+.build-menu {
+    position: absolute; left: 50%; top: 22%; width: 380px; margin-left: -190px;
+    padding: 24px; background-color: rgba(24, 29, 25, 0.96);
+    border-radius: 12px; color: rgb(239, 232, 213);
+}
+.build-title { font-size: 20px; -unity-font-style: bold; margin-bottom: 8px; color: rgb(225, 207, 157); }
+.build-subtitle { font-size: 16px; margin-bottom: 18px; }
+.build-preset {
+    height: 76px; margin-bottom: 8px; padding: 10px; -unity-text-align: middle-left; white-space: normal;
+    background-color: rgb(48, 57, 47); color: rgb(244, 239, 226); border-radius: 6px;
+    border-width: 1px; border-color: rgb(87, 101, 80); font-size: 17px;
+}
+.build-preset:hover { background-color: rgb(67, 79, 60); border-color: rgb(225, 207, 157); }
+.build-note { font-size: 13px; color: rgb(202, 207, 196); margin-top: 7px; white-space: normal; }
+.build-hud {
+    position: absolute; left: 18%; right: 18%; bottom: 24px; padding: 15px;
+    background-color: rgba(24, 29, 25, 0.88); border-radius: 9px; align-items: center;
+}
+.build-status { color: rgb(159, 211, 156); font-size: 15px; }
+.build-error { color: rgb(244, 157, 138); }

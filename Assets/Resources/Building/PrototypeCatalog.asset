@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5516cf16a7e14c38ad2168889d2c43ea, type: 3}
+  m_Name: PrototypeCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::BuildCatalog
+  presets:
+  - {fileID: 11400000, guid: db71e8db6b73fed419828555da987f24, type: 2}
+  - {fileID: 11400000, guid: a05af56607c4dc6418e444332690680e, type: 2}
+  - {fileID: 11400000, guid: 2b9ea840ebe30694f9b31c202ffd595d, type: 2}
+  validPreview: {fileID: 2100000, guid: c3dba284489e3eb409443ade468101df, type: 2}
+  invalidPreview: {fileID: 2100000, guid: b56ebe5995f0c8c4b95d0a75173ff3cd, type: 2}
+  panel: {fileID: 11400000, guid: 84a64891247762442a90e81ca1d35870, type: 2}
+  layout: {fileID: 9197481963319205126, guid: b72f6299d89242318dd0354f0642a325, type: 3}

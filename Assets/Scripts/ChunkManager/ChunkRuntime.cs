@@ -52,6 +52,7 @@ public class ChunkRuntime
     {
         root = new GameObject("Chunk_Runtime");
         root.layer = GameplayLayers.WorldSolid;
+        root.AddComponent<WorldGroundSurface>();
         terrainMeshFilter = root.AddComponent<MeshFilter>();
         terrainMeshRenderer = root.AddComponent<MeshRenderer>();
 

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: wall
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.prototype.wall
+  displayName: Plain wall
+  kind: 0
+  sizeUnits: {x: 16, y: 11, z: 1}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  mesh: {fileID: 4300000, guid: 08dd462bb92259d4795d2a9253c9311b, type: 2}
+  material: {fileID: 2100000, guid: ff33398568284e542b49fbe621db0b8e, type: 2}
+  authoringPrefab: {fileID: 68295084002125233, guid: 2f4b1039852a3634b9fa8428910f72b8, type: 3}
+  maxHealth: 100

@@ -1,5 +1,11 @@
 # FirstSettlers Work Notes
 
+## October 7: building prototype
+
+SmearScene now has a B-toggle component picker and build preview. Start with a foundation, then use Tab to select the plain wall or floor. Placement uses 0.25-unit grid increments, eight 45-degree headings, and contextual local frames with a small oriented-bound acquisition margin. Q/E or the wheel turns; arrows nudge; Page Up/Down changes height; left click places and right click removes.
+
+The wall is 4 × 2.75 × 0.25 units with exact mesh and box-collider bounds. Pieces remain session records with instanced visuals to 3,000 units and pooled collision/query bodies at 32/40-unit activation/release ranges. Foundation-connected support has a three-second reconnection grace period. No disk saves or resource costs yet. See [building prototype guide](Documentation/BUILDING_PROTOTYPE.md) for asset locations, architecture, controls, validation, and limits.
+
 ## October 6: grouped world configuration and extracted coordinator services
 
 `ChunkManager` now takes one configuration with named generation, coverage, worker, publication, content, rendering, scene and foliage groups. Existing WorldManager/TreeSettings serialized fields and inspector paths remain. `TreeSpeciesCatalog` centralizes all current near/billboard/datacard/habitat/name bindings; rendering, gameplay, query identity and worker snapshots share it.

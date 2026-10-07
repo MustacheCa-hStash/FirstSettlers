@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: floor
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.prototype.floor
+  displayName: Timber floor
+  kind: 1
+  sizeUnits: {x: 16, y: 1, z: 16}
+  minimumUnits: {x: 0, y: -1, z: 0}
+  mesh: {fileID: 4300000, guid: c3b655d483a4b124ea8cd44f549a5df0, type: 2}
+  material: {fileID: 2100000, guid: 8aa4227086c6e494088ae61c96b53215, type: 2}
+  authoringPrefab: {fileID: 5417352161981259766, guid: 35889484402f5d34eb4f7c6e2f395888, type: 3}
+  maxHealth: 100
