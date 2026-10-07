@@ -10,13 +10,16 @@ Shader "Custom/SpruceOctaImpostor"
         _LeafSeasonTint("Leaf Season Tint", Color) = (1,1,1,1)
         [PerRendererData] _TreeLeafTint("Per Instance Leaf Tint", Color) = (1,1,1,1)
         _SeasonStrength("Season Strength", Range(0,1)) = 1
-        [Toggle] _UseSeasonPalette("Use Red Maple Season Palette", Float) = 0
+        [Toggle] _UseSeasonPalette("Use Maple Season Palette", Float) = 0
+        _TreeTintStrength("Per Tree Autumn Tint Strength", Range(0,1)) = 0.65
         _SeasonAutumnAmount("Season Autumn Amount", Range(0,1)) = 1
         _SummerLeafColor("Summer Leaf Color", Color) = (0.18,0.42,0.12,1)
         _AutumnRedColor("Autumn Scarlet Color", Color) = (0.88,0.06,0.035,1)
         _AutumnCrimsonColor("Autumn Crimson Color", Color) = (0.48,0.025,0.04,1)
         _AutumnOrangeColor("Autumn Orange Color", Color) = (1,0.25,0.055,1)
+        _AutumnYellowColor("Autumn Yellow Color", Color) = (0.88,0.61,0.12,1)
         _AutumnVariationStrength("Autumn Palette Variation", Range(0,1)) = 0.62
+        [Enum(Red Maple,0,Sugar Maple,1)] _SeasonPaletteMode("Season Palette Mode", Float) = 0
         _Cutoff("Coverage Cutoff", Range(0,1)) = 0.008
         _CaptureCenterLS("Capture Center Local", Vector) = (0,3,0,0)
         _CaptureRadius("Capture Radius", Float) = 4.3
@@ -65,6 +68,7 @@ Shader "Custom/SpruceOctaImpostor"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Fog.hlsl"
             #pragma instancing_options procedural:SetupDistantTree
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
@@ -72,6 +76,8 @@ Shader "Custom/SpruceOctaImpostor"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Assets/Shaders/TreeSeasonSimulation.hlsl"
+            #include "Assets/Shaders/MapleLeafSeasonPalette.hlsl"
+            #include "Assets/Shaders/TreeNightLighting.hlsl"
 
             TEXTURE2D(_AlbedoCoverage); SAMPLER(sampler_AlbedoCoverage);
             TEXTURE2D(_SurfaceAtlas); SAMPLER(sampler_SurfaceAtlas);
@@ -81,9 +87,9 @@ Shader "Custom/SpruceOctaImpostor"
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _AlbedoCoverage_TexelSize, _SurfaceAtlas_TexelSize, _DepthAtlas_TexelSize, _MaterialIdAtlas_TexelSize, _AmbientAtlas_TexelSize;
-                half4 _LeafSeasonTint, _SummerLeafColor, _AutumnRedColor, _AutumnCrimsonColor, _AutumnOrangeColor, _BarkShadowColor, _BarkHighlightColor;
+                half4 _LeafSeasonTint, _SummerLeafColor, _AutumnRedColor, _AutumnCrimsonColor, _AutumnOrangeColor, _AutumnYellowColor, _BarkShadowColor, _BarkHighlightColor;
                 float4 _CaptureCenterLS;
-                half _SeasonStrength, _UseSeasonPalette, _SeasonAutumnAmount, _AutumnVariationStrength, _Cutoff, _CaptureRadius, _FramesPerAxis, _AtlasTileResolution, _AmbientTileResolution, _AtlasPadding;
+                half _SeasonStrength, _UseSeasonPalette, _TreeTintStrength, _SeasonAutumnAmount, _AutumnVariationStrength, _SeasonPaletteMode, _Cutoff, _CaptureRadius, _FramesPerAxis, _AtlasTileResolution, _AmbientTileResolution, _AtlasPadding;
                 half _DepthParallax, _AOStrength, _SkyStrength, _AmbientFloor, _LeafLightWrap, _FoliageBrightness, _BarkBrightness, _BarkColorRemap, _BarkRemapBlackPoint, _BarkRemapWhitePoint, _TransmissionStrength, _WindStrength, _WindSpeed, _DebugView, _DebugFrameX, _DebugFrameY;
             CBUFFER_END
 
@@ -98,7 +104,7 @@ Shader "Custom/SpruceOctaImpostor"
             {
                 float4 positionCS : SV_POSITION;
                 float3 positionWS : TEXCOORD0;
-                float3 viewDirectionLS : TEXCOORD1;
+                nointerpolation float2 atlasFrame : TEXCOORD1;
                 float2 proxyUV : TEXCOORD2;
                 float3 rightWS : TEXCOORD3;
                 float3 upWS : TEXCOORD4;
@@ -128,9 +134,16 @@ Shader "Custom/SpruceOctaImpostor"
                 return normalize(n);
             }
 
-            half4 SampleAtlas(TEXTURE2D_PARAM(textureToSample, samplerToSample), float2 octaUV, float2 proxyUV, float2 textureSize)
+            float2 SelectAtlasFrame(float3 viewDirectionLS)
             {
-                float2 grid = octaUV * _FramesPerAxis - 0.5;
+                float2 frame = clamp(floor(OctEncode(viewDirectionLS) * _FramesPerAxis), 0.0, _FramesPerAxis - 1.0);
+                if (_DebugView > 3.5h)
+                    frame = clamp(floor(float2(_DebugFrameX, _DebugFrameY) + 0.5), 0.0, _FramesPerAxis - 1.0);
+                return frame;
+            }
+
+            half4 SampleAtlas(TEXTURE2D_PARAM(textureToSample, samplerToSample), float2 frame, float2 proxyUV, float2 textureSize)
+            {
                 float2 stride = textureSize / _FramesPerAxis;
                 // Derive the tile size from the imported texture, rather than assuming
                 // its original PNG size survived Unity's Max Size import setting.
@@ -138,9 +151,10 @@ Shader "Custom/SpruceOctaImpostor"
                 // A single full-tree frame is deliberate for this validation pass. Naively
                 // blending four image captures produces four visible ghost trees; seam-aware
                 // directional interpolation will be added after the proxy is validated.
-                float2 cell = clamp(floor(grid + 0.5), 0.0, _FramesPerAxis - 1.0);
-                float2 pixel = cell * stride + _AtlasPadding + saturate(proxyUV) * tileResolution;
-                return SAMPLE_TEXTURE2D(textureToSample, samplerToSample, (pixel + 0.5) / textureSize);
+                float2 pixel = frame * stride + _AtlasPadding + saturate(proxyUV) * tileResolution;
+                // UVs describe the capture rectangle's edges. Pixel centers
+                // are already at (index + 0.5) / resolution in the baked image.
+                return SAMPLE_TEXTURE2D(textureToSample, samplerToSample, pixel / textureSize);
             }
 
             half4 SampleAtlasFrameLod0(TEXTURE2D_PARAM(textureToSample, samplerToSample), float2 frame, float2 proxyUV, float2 textureSize)
@@ -149,17 +163,15 @@ Shader "Custom/SpruceOctaImpostor"
                 float2 tileResolution = stride - _AtlasPadding * 2.0;
                 float2 cell = clamp(floor(frame + 0.5), 0.0, _FramesPerAxis - 1.0);
                 float2 pixel = cell * stride + _AtlasPadding + saturate(proxyUV) * tileResolution;
-                return SAMPLE_TEXTURE2D_LOD(textureToSample, samplerToSample, (pixel + 0.5) / textureSize, 0.0);
+                return SAMPLE_TEXTURE2D_LOD(textureToSample, samplerToSample, pixel / textureSize, 0.0);
             }
 
-            half4 SampleMaterialIdAtlasPoint(float2 octaUV, float2 proxyUV)
+            half4 SampleMaterialIdAtlasPoint(float2 frame, float2 proxyUV)
             {
                 float2 textureSize = _MaterialIdAtlas_TexelSize.zw;
-                float2 grid = octaUV * _FramesPerAxis - 0.5;
                 float2 stride = textureSize / _FramesPerAxis;
                 float2 tileResolution = stride - _AtlasPadding * 2.0;
-                float2 cell = clamp(floor(grid + 0.5), 0.0, _FramesPerAxis - 1.0);
-                float2 pixel = cell * stride + _AtlasPadding + saturate(proxyUV) * tileResolution;
+                float2 pixel = frame * stride + _AtlasPadding + saturate(proxyUV) * tileResolution;
                 int2 texel = int2(clamp(floor(pixel), 0.0, textureSize - 1.0));
                 return LOAD_TEXTURE2D(_MaterialIdAtlas, texel);
             }
@@ -176,14 +188,32 @@ Shader "Custom/SpruceOctaImpostor"
                 float3 centerWS = mul(objectToWorld, float4(_CaptureCenterLS.xyz, 1.0)).xyz;
                 float3 cameraDirectionWS = normalize(_WorldSpaceCameraPos.xyz - centerWS);
                 float3 upReference = abs(dot(cameraDirectionWS, float3(0,1,0))) > 0.98 ? normalize(float3(objectToWorld._m02, objectToWorld._m12, objectToWorld._m22)) : float3(0,1,0);
-                float3 rightWS = normalize(cross(upReference, cameraDirectionWS));
-                float3 upWS = normalize(cross(cameraDirectionWS, rightWS));
+                // Camera forward points toward the tree (-cameraDirectionWS).
+                // Match LookRotation(-direction, up) used during capture;
+                // reversing this cross product mirrors the captured image.
+                float3 rightWS = normalize(cross(cameraDirectionWS, upReference));
+                float3 upWS = normalize(cross(rightWS, cameraDirectionWS));
+                float3 viewDirectionLS = normalize(mul((float3x3)worldToObject, cameraDirectionWS));
+                float2 frame = SelectAtlasFrame(viewDirectionLS);
+                // Match PositionCameraForFrame in the atlas baker. The root is
+                // not at the bottom of the padded image, and its projected
+                // position changes with each captured direction.
+                float3 frameDirectionLS = OctDecode((frame + 0.5) / _FramesPerAxis);
+                float3 frameUpReferenceLS = abs(frameDirectionLS.y) > 0.98 ? float3(0,0,1) : float3(0,1,0);
+                float3 frameRightLS = normalize(cross(frameDirectionLS, frameUpReferenceLS));
+                float3 frameUpLS = normalize(cross(frameRightLS, frameDirectionLS));
+                float2 rootInFrame = float2(dot(-_CaptureCenterLS.xyz, frameRightLS), dot(-_CaptureCenterLS.xyz, frameUpLS));
+                float3 rootWS = mul(objectToWorld, float4(0,0,0,1)).xyz;
                 float2 billboard = input.uv * 2.0 - 1.0;
-                float wind = sin(_Time.y * _WindSpeed + dot(centerWS.xz, float2(0.19, 0.37))) * _WindStrength * saturate(input.uv.y);
-                float3 positionWS = centerWS + rightWS * billboard.x * _CaptureRadius * scale + upWS * billboard.y * _CaptureRadius * scale + float3(wind, 0, wind * 0.35);
+                float2 rootedBillboard = billboard * _CaptureRadius - rootInFrame;
+                // Keep this affine across the quad so interpolated movement is
+                // exactly zero at the root, including roots inside the image.
+                float windWeight = rootedBillboard.y / (2.0 * _CaptureRadius);
+                float wind = sin(_Time.y * _WindSpeed + dot(centerWS.xz, float2(0.19, 0.37))) * _WindStrength * windWeight;
+                float3 positionWS = rootWS + (rightWS * rootedBillboard.x + upWS * rootedBillboard.y) * scale + float3(wind, 0, wind * 0.35);
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.positionWS = positionWS;
-                output.viewDirectionLS = normalize(mul((float3x3)worldToObject, cameraDirectionWS));
+                output.atlasFrame = frame;
                 output.proxyUV = input.uv;
                 output.rightWS = rightWS;
                 output.upWS = upWS;
@@ -195,8 +225,8 @@ Shader "Custom/SpruceOctaImpostor"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 ApplyDistantTreeFade(input.positionCS.xy);
-                float2 octaUV = OctEncode(input.viewDirectionLS);
-                half4 albedo = SampleAtlas(TEXTURE2D_ARGS(_AlbedoCoverage, sampler_AlbedoCoverage), octaUV, input.proxyUV, _AlbedoCoverage_TexelSize.zw);
+                float2 frame = input.atlasFrame;
+                half4 albedo = SampleAtlas(TEXTURE2D_ARGS(_AlbedoCoverage, sampler_AlbedoCoverage), frame, input.proxyUV, _AlbedoCoverage_TexelSize.zw);
                 if (_DebugView > 3.5h)
                 {
                     half4 fixedAlbedo = SampleAtlasFrameLod0(TEXTURE2D_ARGS(_AlbedoCoverage, sampler_AlbedoCoverage), float2(_DebugFrameX, _DebugFrameY), input.proxyUV, _AlbedoCoverage_TexelSize.zw);
@@ -204,13 +234,13 @@ Shader "Custom/SpruceOctaImpostor"
                     return half4(fixedAlbedo.rgb, fixedAlbedo.a);
                 }
                 clip(albedo.a - _Cutoff);
-                half4 surface = SampleAtlas(TEXTURE2D_ARGS(_SurfaceAtlas, sampler_SurfaceAtlas), octaUV, input.proxyUV, _SurfaceAtlas_TexelSize.zw);
-                half4 depth = SampleAtlas(TEXTURE2D_ARGS(_DepthAtlas, sampler_DepthAtlas), octaUV, input.proxyUV, _DepthAtlas_TexelSize.zw);
+                half4 surface = SampleAtlas(TEXTURE2D_ARGS(_SurfaceAtlas, sampler_SurfaceAtlas), frame, input.proxyUV, _SurfaceAtlas_TexelSize.zw);
+                half4 depth = SampleAtlas(TEXTURE2D_ARGS(_DepthAtlas, sampler_DepthAtlas), frame, input.proxyUV, _DepthAtlas_TexelSize.zw);
                 // Material identity is categorical. Bilinear filtering creates
                 // invalid half-leaf/half-bark pixels that show up as pale branch
                 // outlines in a tinted neutral-leaf atlas.
-                half4 materialId = SampleMaterialIdAtlasPoint(octaUV, input.proxyUV);
-                half4 ambient = SampleAtlas(TEXTURE2D_ARGS(_AmbientAtlas, sampler_AmbientAtlas), octaUV, input.proxyUV, _AmbientAtlas_TexelSize.zw);
+                half4 materialId = SampleMaterialIdAtlasPoint(frame, input.proxyUV);
+                half4 ambient = SampleAtlas(TEXTURE2D_ARGS(_AmbientAtlas, sampler_AmbientAtlas), frame, input.proxyUV, _AmbientAtlas_TexelSize.zw);
 
                 // Diagnostic views expose the exact captured frame and coverage
                 // before normals, AO, lighting, tint, and parallax can affect it.
@@ -227,15 +257,12 @@ Shader "Custom/SpruceOctaImpostor"
                 half3 normalWS = normalize(mul(objectToWorld, normalLS));
                 half3 bentNormalWS = normalize(mul(objectToWorld, bentNormalLS));
                 half leafWeight = materialId.r > materialId.g ? 1.0h : 0.0h;
-                half3 perInstanceTint = GetDistantTreeTint(UNITY_ACCESS_INSTANCED_PROP(SpruceOctaInstance, _TreeLeafTint)).rgb;
-                half3 legacyLeafTint = lerp(half3(1,1,1), _LeafSeasonTint.rgb * perInstanceTint, _SeasonStrength);
-                half paletteCoordinate = materialId.b;
-                half crimsonMix = smoothstep(0.22h, 0.80h, paletteCoordinate) * _AutumnVariationStrength;
-                half orangeMix = smoothstep(0.68h, 0.96h, paletteCoordinate) * _AutumnVariationStrength;
-                half3 autumnLeaf = lerp(_AutumnRedColor.rgb, _AutumnCrimsonColor.rgb, crimsonMix);
-                autumnLeaf = lerp(autumnLeaf, _AutumnOrangeColor.rgb, orangeMix * 0.55h);
+                half4 treeTint = GetDistantTreeTint(UNITY_ACCESS_INSTANCED_PROP(SpruceOctaInstance, _TreeLeafTint));
+                half3 legacyLeafTint = lerp(half3(1,1,1), _LeafSeasonTint.rgb * treeTint.rgb, _SeasonStrength);
                 half season = TreeSeasonAutumnAmount(_SeasonAutumnAmount);
-                half3 seasonalLeafTint = lerp(_SummerLeafColor.rgb, autumnLeaf, season) * perInstanceTint;
+                half3 seasonalLeafTint = MapleSeasonLeafColor(materialId.b, _AutumnVariationStrength, season,
+                    _SummerLeafColor.rgb, _AutumnYellowColor.rgb, _AutumnOrangeColor.rgb, _AutumnRedColor.rgb,
+                    treeTint, _TreeTintStrength, _SeasonPaletteMode);
                 half3 leafTint = lerp(legacyLeafTint, seasonalLeafTint, _UseSeasonPalette);
                 // Maple's stylized bark atlas spans nearly black trunk texels to
                 // near-white twig texels. Remapping it into a bounded grey range
@@ -258,14 +285,19 @@ Shader "Custom/SpruceOctaImpostor"
                 // diffuse ambient contribution collapse below _AmbientStrength
                 // (0.429 on the source material).  Sky visibility still dims
                 // open-sky lighting above that conservative foliage floor.
-                half3 sky = max(SampleSH(bentNormalWS) * ambient.b, _AmbientFloor.xxx) * _SkyStrength;
+                half ambientFloor = TreeNightAmbientFloor(_AmbientFloor);
+                half3 sky = max(SampleSH(bentNormalWS) * ambient.b, ambientFloor.xxx) * _SkyStrength;
                 half occlusion = 1.0h - ambient.a * _AOStrength;
                 half roughness = surface.b;
                 half surfaceBrightness = lerp(_BarkBrightness, _FoliageBrightness, leafWeight);
                 half3 diffuse = baseColor * (sky * occlusion + mainLight.color * direct) * surfaceBrightness;
                 half backlight = pow(saturate(dot(-normalWS, mainLight.direction)), 3.0h) * surface.a * leafWeight * _TransmissionStrength;
                 diffuse += baseColor * mainLight.color * backlight * mainLight.shadowAttenuation;
-                return half4(saturate(diffuse), albedo.a);
+                // Use the same scene fog color and distances as terrain/3D
+                // trees. Keep coverage intact so fully fogged trees blend into
+                // the fog rather than revealing unfogged objects behind them.
+                float fogFactor = InitializeInputDataFog(float4(input.positionWS, 1.0), 0.0);
+                return half4(MixFog(saturate(diffuse), fogFactor), albedo.a);
             }
             ENDHLSL
         }

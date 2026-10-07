@@ -107,20 +107,31 @@ public static class SpruceImpostorGpuValidation
         {
             var transform = Matrix4x4.TRS(new Vector3(5, -2, 11), Quaternion.Euler(13, 67, -8), scale);
             var envelope = DistantTreeGpuBatch.CalculateBounds(local, transform, material);
-            Vector3 origin = transform.GetColumn(3);
-            Vector3 center = transform.MultiplyPoint3x4(captureCenter);
             float size = ((Vector3)transform.GetColumn(0)).magnitude;
             foreach (var direction in new[] { Vector3.forward, new Vector3(1, 1, 1).normalized, Vector3.up })
             {
                 Vector3 upReference = Mathf.Abs(Vector3.Dot(direction, Vector3.up)) > .98f
                     ? ((Vector3)transform.GetColumn(2)).normalized : Vector3.up;
-                Vector3 right = Vector3.Cross(upReference, direction).normalized;
-                Vector3 up = Vector3.Cross(direction, right).normalized;
-                for (int x = -1; x <= 1; x += 2) for (int y = -1; y <= 1; y += 2)
+                Quaternion viewRotation = Quaternion.LookRotation(-direction, upReference);
+                Vector3 right = viewRotation * Vector3.right;
+                Vector3 up = viewRotation * Vector3.up;
+                // Exercise every baked frame's root displacement, including
+                // captures near the poles and each side of an atlas seam.
+                for (int frameY = 0; frameY < 8; frameY++) for (int frameX = 0; frameX < 8; frameX++)
                 {
-                    Vector3 p = center + (right * x + up * y) * radius * size - origin;
-                    Require(Mathf.Abs(p.x) <= envelope.x + .001f && Mathf.Abs(p.z) <= envelope.x + .001f &&
-                        p.y >= envelope.y - .001f && p.y <= envelope.z + .001f, "Angled/scaled impostor escaped the compute bounds.");
+                    Vector3 frameDirection = TreeImpostorGroundingValidation.DecodeFrame(frameX, frameY, 8);
+                    Vector3 frameReference = Mathf.Abs(frameDirection.y) > .98f ? Vector3.forward : Vector3.up;
+                    Quaternion captureRotation = Quaternion.LookRotation(-frameDirection, frameReference);
+                    Vector3 frameRight = captureRotation * Vector3.right;
+                    Vector3 frameUp = captureRotation * Vector3.up;
+                    Vector2 root = new Vector2(Vector3.Dot(-captureCenter, frameRight), Vector3.Dot(-captureCenter, frameUp));
+                    for (int x = -1; x <= 1; x += 2) for (int y = -1; y <= 1; y += 2)
+                    {
+                        Vector3 p = (right * (x * radius - root.x) + up * (y * radius - root.y)) * size;
+                        Require(Mathf.Abs(p.x) <= envelope.x + .001f && Mathf.Abs(p.z) <= envelope.x + .001f &&
+                            p.y >= envelope.y - .001f && p.y <= envelope.z + .001f, "Root-anchored impostor escaped the compute bounds.");
+                        Require(local.Contains(p / size), "Root-anchored impostor escaped the CPU draw bounds.");
+                    }
                 }
             }
         }

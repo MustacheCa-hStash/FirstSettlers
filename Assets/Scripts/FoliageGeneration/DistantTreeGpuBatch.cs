@@ -108,11 +108,12 @@ public sealed class DistantTreeGpuBatch : IDisposable
     {
         if (material.shader.name == "Custom/SpruceOctaImpostor")
         {
-            // The octa proxy faces the camera on both axes. Its square corners
-            // can rotate beyond the authored axis-aligned capture-radius box.
+            // The selected capture's projected root is anchored to the tree
+            // origin. Include both the rotating square and its root-to-center
+            // displacement, rather than bounding the old center-pivot quad.
             Vector3 center = material.GetVector("_CaptureCenterLS");
-            float radius = Mathf.Abs(material.GetFloat("_CaptureRadius")) * Mathf.Sqrt(2f);
-            return new Bounds(center, Vector3.one * (radius * 2f));
+            float radius = Mathf.Abs(material.GetFloat("_CaptureRadius")) * Mathf.Sqrt(2f) + center.magnitude;
+            return new Bounds(Vector3.zero, Vector3.one * (radius * 2f));
         }
         float horizontal = Mathf.Max(Mathf.Abs(local.min.x), Mathf.Abs(local.max.x),
             Mathf.Abs(local.min.z), Mathf.Abs(local.max.z));
@@ -127,12 +128,16 @@ public sealed class DistantTreeGpuBatch : IDisposable
         if (material != null && material.shader.name == "Custom/SpruceOctaImpostor")
         {
             Vector3 captureCenter = material.GetVector("_CaptureCenterLS");
-            Vector3 c = transform.MultiplyVector(captureCenter);
             // Match the shader: its billboard uses the X-column length as a
             // uniform radius, even if an override supplies non-uniform TRS.
-            float r = Mathf.Abs(material.GetFloat("_CaptureRadius")) * Mathf.Sqrt(2f) *
+            float r = (Mathf.Abs(material.GetFloat("_CaptureRadius")) * Mathf.Sqrt(2f) + captureCenter.magnitude) *
                 ((Vector3)transform.GetColumn(0)).magnitude;
-            return new Vector4(Mathf.Max(Mathf.Abs(c.x), Mathf.Abs(c.z)) + r, c.y - r, c.y + r, 0);
+            // Wind is disabled by the distant manager. Include its world-space
+            // displacement when this helper is used with a standalone material.
+            float captureRadius = Mathf.Max(Mathf.Abs(material.GetFloat("_CaptureRadius")), 0.0001f);
+            float windWeight = 0.5f + captureCenter.magnitude / (2f * captureRadius);
+            r += Mathf.Abs(material.GetFloat("_WindStrength")) * windWeight * new Vector3(1f, 0f, 0.35f).magnitude;
+            return new Vector4(r, -r, r, 0);
         }
         Vector3 center = transform.MultiplyVector(local.center);
         Vector3 e = local.extents;

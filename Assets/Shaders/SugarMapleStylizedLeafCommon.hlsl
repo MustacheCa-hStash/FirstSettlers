@@ -4,6 +4,7 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
 #include "Assets/Shaders/TreeSimpleLitCommon.hlsl"
+#include "Assets/Shaders/MapleLeafSeasonPalette.hlsl"
 
 TEXTURE2D(_BaseMap);
 SAMPLER(sampler_BaseMap);
@@ -109,13 +110,10 @@ half4 SugarMapleLeafFragment(SugarMapleLeafVaryings input, FRONT_FACE_TYPE facin
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
     half4 atlas = SugarMapleLeafSample(input);
     half noise = SugarMapleLeafNoise(input.positionOS.xz * .7 + input.uv * 4.7);
-    half hue = saturate(.5h + (noise - .5h) * _AutumnVariationStrength * 2);
-    half3 autumn = lerp(_AutumnYellowColor.rgb, _AutumnOrangeColor.rgb, saturate(hue * 2));
-    autumn = lerp(autumn, _AutumnRedColor.rgb, saturate(hue * 2 - 1));
     half season = TreeSeasonAutumnAmount(_SeasonAutumnAmount);
-    half3 leaf = lerp(_SummerLeafColor.rgb, autumn, season);
-    // Existing terrain/standing-tree tints are autumn colors; never apply them in summer.
-    leaf = lerp(leaf, StandingTreeLeafTint(_TreeLeafTint).rgb, season * _TreeTintStrength);
+    half3 leaf = MapleSeasonLeafColor(noise, _AutumnVariationStrength, season,
+        _SummerLeafColor.rgb, _AutumnYellowColor.rgb, _AutumnOrangeColor.rgb, _AutumnRedColor.rgb,
+        StandingTreeLeafTint(_TreeLeafTint), _TreeTintStrength, 1.0h);
     // Center the subtle source gradient around neutral brightness, then amplify
     // its range. Directly multiplying by this pale grayscale atlas darkened every
     // leaf and compressed its shading into a narrow, uniformly green band.

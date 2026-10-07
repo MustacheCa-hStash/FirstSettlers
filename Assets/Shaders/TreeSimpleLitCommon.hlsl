@@ -3,9 +3,7 @@
 
 #include "Assets/Shaders/DistantTreeFade.hlsl"
 #include "Assets/Shaders/TreeSeasonSimulation.hlsl"
-
-half _TreeNightAmbientFloorDimAmount;
-half _TreeNightAmbientFloorScaleAtMidnight;
+#include "Assets/Shaders/TreeNightLighting.hlsl"
 
 InputData InitializeTreeSimpleLitInputData(
     float3 positionWS,
@@ -20,9 +18,7 @@ InputData InitializeTreeSimpleLitInputData(
     inputData.normalWS = NormalizeNormalPerPixel(normalWS);
     inputData.viewDirectionWS = GetWorldSpaceNormalizeViewDir(positionWS);
     inputData.shadowCoord = shadowCoord;
-    half floorScaleAtMidnight = saturate(_TreeNightAmbientFloorScaleAtMidnight);
-    half nightDimAmount = saturate(_TreeNightAmbientFloorDimAmount);
-    half scaledAmbientStrength = ambientStrength * lerp(1.0h, floorScaleAtMidnight, nightDimAmount);
+    half scaledAmbientStrength = TreeNightAmbientFloor(ambientStrength);
     inputData.bakedGI = max(SampleSH(inputData.normalWS), scaledAmbientStrength.xxx);
     inputData.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(positionCS);
     inputData.shadowMask = half4(1.0h, 1.0h, 1.0h, 1.0h);

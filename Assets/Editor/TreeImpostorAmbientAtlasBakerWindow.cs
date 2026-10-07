@@ -46,6 +46,19 @@ public sealed class TreeImpostorAmbientAtlasBakerWindow : EditorWindow
         window.Repaint();
     }
 
+    [MenuItem("Tools/Impostors/Bake Sugar Maple Ambient Atlas")]
+    private static void OpenSugarMaple()
+    {
+        TreeImpostorAmbientAtlasBakerWindow window = GetWindow<TreeImpostorAmbientAtlasBakerWindow>("Sugar Maple Ambient Bake");
+        window.speciesName = "Sugar Maple";
+        window.atlasPrefix = "SugarMaple_Octa";
+        window.outputFolder = "Assets/Textures/Trees/Impostors/SugarMaple";
+        window.sourceFramesPerAxis = 8;
+        window.sourceTilePadding = 2;
+        window.paddingPixels = 2;
+        window.Repaint();
+    }
+
     private void OnGUI()
     {
         EditorGUILayout.LabelField(speciesName + " AO / Sky Visibility / Bent Normal", EditorStyles.boldLabel);

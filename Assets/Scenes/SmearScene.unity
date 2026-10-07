@@ -892,7 +892,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 14567
+  worldSeed: 1456
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -1312,14 +1312,14 @@ MonoBehaviour:
     - {fileID: 8050534036156293782, guid: fcff478c2eedf3b4ca05fa36f505f20b, type: 3}
     grasslandLargeRockFallbackPrefab: {fileID: 0}
     mapleTreeBillboardPrefab: {fileID: 5258689384055247090, guid: f94da246162a5e540b5f14769fba84c6, type: 3}
-    sugarMapleTreeBillboardPrefab: {fileID: 3842789560270380040, guid: 2765c206081e4df4db5876c1fb94f5cf, type: 3}
+    sugarMapleTreeBillboardPrefab: {fileID: 945252319243332136, guid: fcba833031280554cb9faba4505d52b7, type: 3}
     birchAspenTreeBillboardPrefab: {fileID: 0}
     beechTreeBillboardPrefab: {fileID: 0}
     spruceTreeBillboardPrefab: {fileID: 0}
     whitePineTreeBillboardPrefab: {fileID: 0}
     oakTreeBillboardPrefab: {fileID: 0}
     treeBillboardPrefab: {fileID: 3135895389733779445, guid: faeeaaccb2fb5794a94e5782faafcd7c, type: 3}
-    grasslandMapleTreeBillboardPrefab: {fileID: 3403621320543128518, guid: d96f60ca326eadc41ae355f1226e17f0, type: 3}
+    grasslandMapleTreeBillboardPrefab: {fileID: 5258689384055247090, guid: f94da246162a5e540b5f14769fba84c6, type: 3}
     grasslandBirchAspenTreeBillboardPrefab: {fileID: 0}
     grasslandWhitePineTreeBillboardPrefab: {fileID: 0}
     grasslandOakTreeBillboardPrefab: {fileID: 0}
@@ -1369,7 +1369,7 @@ MonoBehaviour:
     receiveTreeShadows: 1
   showTreeExclusionRadiusGizmos: 0
   simulateTreeSeason: 1
-  treeSeasonAutumnAmount: 0
+  treeSeasonAutumnAmount: 1
   sampleScale: 600
   mountainWidth: 1.3
   mountainSnowBlendGamma: 0.633
@@ -1790,7 +1790,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameTimeManager
   startAutomatically: 1
   useUnscaledDeltaTime: 0
-  realSecondsPerGameHour: 75
+  realSecondsPerGameHour: 5
   timeScale: 1
   daylightHours: 16
   nighttimeHours: 8

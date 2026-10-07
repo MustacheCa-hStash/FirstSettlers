@@ -50,6 +50,24 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
         window.Repaint();
     }
 
+    [MenuItem("Tools/Impostors/Capture Sugar Maple Octa Atlases")]
+    private static void OpenSugarMaple()
+    {
+        TreeImpostorAtlasCaptureWindow window = GetWindow<TreeImpostorAtlasCaptureWindow>("Sugar Maple Octa Capture");
+        window.speciesName = "Sugar Maple";
+        window.atlasPrefix = "SugarMaple_Octa";
+        window.outputFolder = "Assets/Textures/Trees/Impostors/SugarMaple";
+        window.runtimeMaterialPath = "Assets/Materials/M_Trees/SugarMaple/SugarMaple_OctaImpostor_M.mat";
+        window.semanticShaderName = "Hidden/TreeImpostor/SugarMapleSemanticCapture";
+        window.framesPerAxis = 8;
+        window.tileResolution = 504;
+        window.paddingPixels = 2;
+        window.captureSupersample = 2;
+        window.coverageExpansionPixels = 1;
+        window.coverageExpansionStrength = 0.75f;
+        window.Repaint();
+    }
+
     private void OnGUI()
     {
         EditorGUILayout.LabelField("Full-Sphere Octahedral Semantic Capture", EditorStyles.boldLabel);
@@ -456,6 +474,8 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
         Texture2D depthAtlas = AssetDatabase.LoadAssetAtPath<Texture2D>(Path.Combine(outputFolder, atlasPrefix + "_Depth.png").Replace('\\', '/'));
         if (depthAtlas != null)
             material.SetTexture("_DepthAtlas", depthAtlas);
+        if (atlasPrefix == "SugarMaple_Octa" || atlasPrefix == "RedMaple_Octa")
+            MapleImpostorMaterialSettings.Apply(material, setup.LeafMaterial, atlasPrefix == "SugarMaple_Octa" ? 1f : 0f);
         EditorUtility.SetDirty(material);
         AssetDatabase.SaveAssets();
     }
