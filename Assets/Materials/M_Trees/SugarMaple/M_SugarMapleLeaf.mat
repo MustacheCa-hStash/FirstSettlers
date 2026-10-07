@@ -103,6 +103,7 @@ Material:
     - _AlphaToMask: 1
     - _AmbientStrength: 0.3
     - _BacklightingEnabled: 1
+    - _StableBacklighting: 1
     - _BacklightingStrength: 0.907
     - _Blend: 0
     - _BlendModePreserveSpecular: 1

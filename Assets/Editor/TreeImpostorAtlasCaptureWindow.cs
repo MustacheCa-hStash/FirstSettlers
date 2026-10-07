@@ -14,8 +14,12 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
     [SerializeField, Range(1, 4)] private int captureSupersample = 2;
     [SerializeField, Range(0, 3)] private int coverageExpansionPixels = 1;
     [SerializeField, Range(0.01f, 1f)] private float coverageExpansionStrength = 0.75f;
+    [Header("Species output")]
+    [SerializeField] private string speciesName = "Spruce";
+    [SerializeField] private string atlasPrefix = "Spruce_Octa";
     [SerializeField] private string outputFolder = "Assets/Textures/Trees/Impostors/Spruce";
-    private const string RuntimeMaterialPath = "Assets/Materials/M_Trees/Spruce/Spruce_OctaImpostor_M.mat";
+    [SerializeField] private string runtimeMaterialPath = "Assets/Materials/M_Trees/Spruce/Spruce_OctaImpostor_M.mat";
+    [SerializeField] private string semanticShaderName = "Hidden/TreeImpostor/SemanticCapture";
 
     private Material semanticLeaf;
     private Material semanticBark;
@@ -28,6 +32,24 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
     [MenuItem("Tools/Impostors/Capture Spruce Octa Atlases")]
     private static void Open() => GetWindow<TreeImpostorAtlasCaptureWindow>("Octa Atlas Capture");
 
+    [MenuItem("Tools/Impostors/Capture Red Maple Octa Atlases")]
+    private static void OpenRedMaple()
+    {
+        TreeImpostorAtlasCaptureWindow window = GetWindow<TreeImpostorAtlasCaptureWindow>("Red Maple Octa Capture");
+        window.speciesName = "Red Maple";
+        window.atlasPrefix = "RedMaple_Octa";
+        window.outputFolder = "Assets/Textures/Trees/Impostors/RedMaple";
+        window.runtimeMaterialPath = "Assets/Materials/M_Trees/RedMaple/RedMaple_OctaImpostor_M.mat";
+        window.semanticShaderName = "Hidden/TreeImpostor/RedMapleSemanticCapture";
+        window.framesPerAxis = 8;
+        window.tileResolution = 504;
+        window.paddingPixels = 2;
+        window.captureSupersample = 2;
+        window.coverageExpansionPixels = 1;
+        window.coverageExpansionStrength = 0.75f;
+        window.Repaint();
+    }
+
     private void OnGUI()
     {
         EditorGUILayout.LabelField("Full-Sphere Octahedral Semantic Capture", EditorStyles.boldLabel);
@@ -38,14 +60,18 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
         captureSupersample = EditorGUILayout.IntSlider("Capture Supersample", captureSupersample, 1, 4);
         coverageExpansionPixels = EditorGUILayout.IntSlider("Coverage Expansion Pixels", coverageExpansionPixels, 0, 3);
         coverageExpansionStrength = EditorGUILayout.Slider("Coverage Expansion Strength", coverageExpansionStrength, 0.01f, 1f);
+        speciesName = EditorGUILayout.TextField("Species Name", speciesName);
+        atlasPrefix = EditorGUILayout.TextField("Atlas Prefix", atlasPrefix);
         outputFolder = EditorGUILayout.TextField("Output Folder", outputFolder);
+        runtimeMaterialPath = EditorGUILayout.TextField("Runtime Material", runtimeMaterialPath);
+        semanticShaderName = EditorGUILayout.TextField("Semantic Shader", semanticShaderName);
 
         int atlasSize = framesPerAxis * (tileResolution + paddingPixels * 2);
         EditorGUILayout.LabelField("Primary Atlas Size", atlasSize + " x " + atlasSize);
         if (atlasSize > 4096)
-            EditorGUILayout.HelpBox("This layout exceeds the 4096 import cap and will be resampled. For high-detail spruce use 8 frames and 504-pixel tiles (4064px atlas).", MessageType.Warning);
+            EditorGUILayout.HelpBox("This layout exceeds the 4096 import cap and will be resampled. Use 8 frames and 504-pixel tiles for a 4064px atlas.", MessageType.Warning);
 
-        EditorGUILayout.HelpBox("Albedo/coverage uses the spruce's semantic material color path. Every frame is supersampled before alpha-aware downsampling; use 2x for this thin-needle spruce. Surface, depth, and material ID use matching semantic captures. Coverage expansion carries sub-pixel needle coverage into adjacent texels and copies matching semantic data; use one pixel for spruce. AO, bent normal, and sky visibility are deliberately a later bake step.", MessageType.Info);
+        EditorGUILayout.HelpBox("Albedo/coverage comes from the selected species semantic material path, not scene lighting. Every frame is supersampled before alpha-aware downsampling. Surface, depth, and material ID use matching semantic captures. AO, bent normal, and sky visibility are deliberately a later bake step.", MessageType.Info);
         using (new EditorGUI.DisabledScope(setup == null))
         {
             if (GUILayout.Button("Capture All Four Atlases"))
@@ -70,10 +96,10 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
             return;
         }
 
-        Shader shader = Shader.Find("Hidden/TreeImpostor/SemanticCapture");
+        Shader shader = Shader.Find(semanticShaderName);
         if (shader == null)
         {
-            Debug.LogError("Semantic capture shader was not found. Wait for Unity to import TreeImpostorSemanticCapture.shader.");
+            Debug.LogError("Semantic capture shader was not found: " + semanticShaderName);
             return;
         }
 
@@ -90,18 +116,18 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
         try
         {
             Directory.CreateDirectory(Path.GetFullPath(outputFolder));
-            Capture(Output.AlbedoCoverage, "Spruce_Octa_AlbedoCoverage.png", false);
-            Capture(Output.Surface, "Spruce_Octa_Surface.png", false);
+            Capture(Output.AlbedoCoverage, atlasPrefix + "_AlbedoCoverage.png", false);
+            Capture(Output.Surface, atlasPrefix + "_Surface.png", false);
             // Depth is normalized over the capture range and consumers use
             // only R plus alpha validity. RGBA8 PNG avoids storing four full
             // float channels for every atlas pixel.
-            Capture(Output.Depth, "Spruce_Octa_Depth.png", false);
-            Capture(Output.MaterialId, "Spruce_Octa_MaterialId.png", false);
+            Capture(Output.Depth, atlasPrefix + "_Depth.png", false);
+            Capture(Output.MaterialId, atlasPrefix + "_MaterialId.png", false);
             WriteMetadata();
             AssetDatabase.Refresh();
             ConfigureImporters();
             UpdateRuntimeMaterialLayout();
-            Debug.Log("Spruce octahedral semantic atlases captured successfully.", setup);
+            Debug.Log(speciesName + " octahedral semantic atlases captured successfully.", setup);
         }
         catch (Exception exception)
         {
@@ -164,7 +190,7 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
             for (int y = 0; y < framesPerAxis; y++)
             for (int x = 0; x < framesPerAxis; x++)
             {
-                EditorUtility.DisplayProgressBar("Capturing Spruce Octa Atlas", output + " " + (y * framesPerAxis + x + 1) + "/" + (framesPerAxis * framesPerAxis), (y * framesPerAxis + x) / (float)(framesPerAxis * framesPerAxis));
+                EditorUtility.DisplayProgressBar("Capturing " + speciesName + " Octa Atlas", output + " " + (y * framesPerAxis + x + 1) + "/" + (framesPerAxis * framesPerAxis), (y * framesPerAxis + x) / (float)(framesPerAxis * framesPerAxis));
                 PositionCameraForFrame(x, y);
                 camera.Render();
                 RenderTexture.active = rt;
@@ -404,30 +430,30 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
             "  \"viewDirectionConvention\": \"tree local center to camera\",\n" +
             "  \"surfaceEncoding\": \"RG octahedral local normal; B roughness; A leaf transmission\",\n" +
             "  \"materialIdEncoding\": \"R leaf; G bark\"\n}";
-        File.WriteAllText(Path.GetFullPath(Path.Combine(outputFolder, "Spruce_Octa_Metadata.json")), json);
+        File.WriteAllText(Path.GetFullPath(Path.Combine(outputFolder, atlasPrefix + "_Metadata.json")), json);
     }
 
     private void ConfigureImporters()
     {
-        ConfigureImporter("Spruce_Octa_AlbedoCoverage.png", true);
-        ConfigureImporter("Spruce_Octa_Surface.png", false);
-        ConfigureImporter("Spruce_Octa_Depth.png", false);
-        ConfigureImporter("Spruce_Octa_MaterialId.png", false);
+        ConfigureImporter(atlasPrefix + "_AlbedoCoverage.png", true);
+        ConfigureImporter(atlasPrefix + "_Surface.png", false);
+        ConfigureImporter(atlasPrefix + "_Depth.png", false);
+        ConfigureImporter(atlasPrefix + "_MaterialId.png", false);
     }
 
     private void UpdateRuntimeMaterialLayout()
     {
-        Material material = AssetDatabase.LoadAssetAtPath<Material>(RuntimeMaterialPath);
+        Material material = AssetDatabase.LoadAssetAtPath<Material>(runtimeMaterialPath);
         if (material == null)
         {
-            Debug.LogWarning("Spruce octa runtime material was not found; assign the new atlas layout manually.");
+            Debug.LogWarning(speciesName + " octa runtime material was not found; assign the new atlas layout manually.");
             return;
         }
 
         material.SetFloat("_FramesPerAxis", framesPerAxis);
         material.SetFloat("_AtlasTileResolution", tileResolution);
         material.SetFloat("_AtlasPadding", paddingPixels);
-        Texture2D depthAtlas = AssetDatabase.LoadAssetAtPath<Texture2D>(Path.Combine(outputFolder, "Spruce_Octa_Depth.png").Replace('\\', '/'));
+        Texture2D depthAtlas = AssetDatabase.LoadAssetAtPath<Texture2D>(Path.Combine(outputFolder, atlasPrefix + "_Depth.png").Replace('\\', '/'));
         if (depthAtlas != null)
             material.SetTexture("_DepthAtlas", depthAtlas);
         EditorUtility.SetDirty(material);

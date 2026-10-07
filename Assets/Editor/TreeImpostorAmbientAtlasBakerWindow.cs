@@ -19,6 +19,9 @@ public sealed class TreeImpostorAmbientAtlasBakerWindow : EditorWindow
     [SerializeField, Range(0.05f, 0.35f)] private float aoRadiusFraction = 0.15f;
     [SerializeField, Range(0.01f, 0.25f)] private float leafVoxelDensity = 0.08f;
     [SerializeField, Range(1, 8)] private int paddingPixels = 2;
+    [Header("Species output")]
+    [SerializeField] private string speciesName = "Spruce";
+    [SerializeField] private string atlasPrefix = "Spruce_Octa";
     [SerializeField] private string outputFolder = "Assets/Textures/Trees/Impostors/Spruce";
 
     private float[] volume;
@@ -30,9 +33,22 @@ public sealed class TreeImpostorAmbientAtlasBakerWindow : EditorWindow
     [MenuItem("Tools/Impostors/Bake Spruce Ambient Atlas")]
     private static void Open() => GetWindow<TreeImpostorAmbientAtlasBakerWindow>("Ambient Atlas Bake");
 
+    [MenuItem("Tools/Impostors/Bake Red Maple Ambient Atlas")]
+    private static void OpenRedMaple()
+    {
+        TreeImpostorAmbientAtlasBakerWindow window = GetWindow<TreeImpostorAmbientAtlasBakerWindow>("Red Maple Ambient Bake");
+        window.speciesName = "Red Maple";
+        window.atlasPrefix = "RedMaple_Octa";
+        window.outputFolder = "Assets/Textures/Trees/Impostors/RedMaple";
+        window.sourceFramesPerAxis = 8;
+        window.sourceTilePadding = 2;
+        window.paddingPixels = 2;
+        window.Repaint();
+    }
+
     private void OnGUI()
     {
-        EditorGUILayout.LabelField("Spruce AO / Sky Visibility / Bent Normal", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField(speciesName + " AO / Sky Visibility / Bent Normal", EditorStyles.boldLabel);
         setup = (TreeImpostorCaptureSetup)EditorGUILayout.ObjectField("Capture Setup", setup, typeof(TreeImpostorCaptureSetup), true);
         surfaceAtlas = (Texture2D)EditorGUILayout.ObjectField("Surface Atlas", surfaceAtlas, typeof(Texture2D), false);
         depthAtlas = (Texture2D)EditorGUILayout.ObjectField("Depth Atlas", depthAtlas, typeof(Texture2D), false);
@@ -46,6 +62,8 @@ public sealed class TreeImpostorAmbientAtlasBakerWindow : EditorWindow
         aoRadiusFraction = EditorGUILayout.Slider("AO Radius / Tree Height", aoRadiusFraction, 0.05f, 0.35f);
         leafVoxelDensity = EditorGUILayout.Slider("Leaf Voxel Density", leafVoxelDensity, 0.01f, 0.25f);
         paddingPixels = EditorGUILayout.IntSlider("Tile Padding", paddingPixels, 1, 8);
+        speciesName = EditorGUILayout.TextField("Species Name", speciesName);
+        atlasPrefix = EditorGUILayout.TextField("Atlas Prefix", atlasPrefix);
         outputFolder = EditorGUILayout.TextField("Output Folder", outputFolder);
         EditorGUILayout.HelpBox("This is an offline CPU bake. Start at 128³ voxels and 128-pixel ambient tiles. The output is low-frequency by design and may take several minutes.", MessageType.Info);
 
@@ -73,7 +91,7 @@ public sealed class TreeImpostorAmbientAtlasBakerWindow : EditorWindow
             BakeAtlas();
             AssetDatabase.Refresh();
             ConfigureOutputImporter();
-            Debug.Log("Spruce ambient atlas bake completed.", setup);
+            Debug.Log(speciesName + " ambient atlas bake completed.", setup);
         }
         catch (Exception exception)
         {
@@ -128,7 +146,7 @@ public sealed class TreeImpostorAmbientAtlasBakerWindow : EditorWindow
 
     private void BuildDensityVolume()
     {
-        EditorUtility.DisplayProgressBar("Spruce Ambient Bake", "Preparing alpha-aware leaf texture", 0f);
+        EditorUtility.DisplayProgressBar(speciesName + " Ambient Bake", "Preparing alpha-aware leaf texture", 0f);
         readableLeafTexture = GetReadableTexture(setup.LeafMaterial.GetTexture("_BaseMap") as Texture2D, out ownsReadableLeafTexture);
         volume = new float[voxelResolution * voxelResolution * voxelResolution];
 
@@ -164,7 +182,7 @@ public sealed class TreeImpostorAmbientAtlasBakerWindow : EditorWindow
                     VoxelizeTriangle(a, b, c, uvA, uvB, uvC, isLeaf);
                 }
             }
-            EditorUtility.DisplayProgressBar("Spruce Ambient Bake", "Voxelizing spruce geometry", (filterIndex + 1f) / Mathf.Max(1, filters.Length) * 0.2f);
+            EditorUtility.DisplayProgressBar(speciesName + " Ambient Bake", "Voxelizing tree geometry", (filterIndex + 1f) / Mathf.Max(1, filters.Length) * 0.2f);
         }
     }
 
@@ -255,18 +273,18 @@ public sealed class TreeImpostorAmbientAtlasBakerWindow : EditorWindow
                 output.SetPixel(tileX * outputStride + paddingPixels + x, tileY * outputStride + paddingPixels + y, result);
             }
             CopyPadding(output, tileX * outputStride + paddingPixels, tileY * outputStride + paddingPixels, ambientTileResolution, paddingPixels);
-            EditorUtility.DisplayProgressBar("Spruce Ambient Bake", "Tracing ambient visibility", 0.2f + 0.8f * ((tileY * frames + tileX + 1f) / total));
+            EditorUtility.DisplayProgressBar(speciesName + " Ambient Bake", "Tracing ambient visibility", 0.2f + 0.8f * ((tileY * frames + tileX + 1f) / total));
         }
 
         output.Apply(false, false);
         Directory.CreateDirectory(Path.GetFullPath(outputFolder));
-        File.WriteAllBytes(Path.GetFullPath(Path.Combine(outputFolder, "Spruce_Octa_Ambient.png")), output.EncodeToPNG());
+        File.WriteAllBytes(Path.GetFullPath(Path.Combine(outputFolder, atlasPrefix + "_Ambient.png")), output.EncodeToPNG());
         string metadata = "{\n" +
             $"  \"framesPerAxis\": {frames},\n" +
             $"  \"tileResolution\": {ambientTileResolution},\n" +
             $"  \"paddingPixels\": {paddingPixels},\n" +
             "  \"encoding\": \"RG octahedral local bent normal; B sky visibility; A ambient occlusion\"\n}";
-        File.WriteAllText(Path.GetFullPath(Path.Combine(outputFolder, "Spruce_Octa_Ambient_Metadata.json")), metadata);
+        File.WriteAllText(Path.GetFullPath(Path.Combine(outputFolder, atlasPrefix + "_Ambient_Metadata.json")), metadata);
         DestroyImmediate(output);
     }
 
@@ -408,15 +426,18 @@ public sealed class TreeImpostorAmbientAtlasBakerWindow : EditorWindow
 
     private void ConfigureOutputImporter()
     {
-        string path = Path.Combine(outputFolder, "Spruce_Octa_Ambient.png").Replace('\\', '/');
+        string path = Path.Combine(outputFolder, atlasPrefix + "_Ambient.png").Replace('\\', '/');
         AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
         if (AssetImporter.GetAtPath(path) is TextureImporter importer)
         {
             importer.sRGBTexture = false;
+            importer.maxTextureSize = 4096;
+            importer.npotScale = TextureImporterNPOTScale.None;
             importer.mipmapEnabled = true;
             importer.wrapMode = TextureWrapMode.Clamp;
             importer.isReadable = false;
             importer.alphaIsTransparency = false;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
             importer.SaveAndReimport();
         }
     }

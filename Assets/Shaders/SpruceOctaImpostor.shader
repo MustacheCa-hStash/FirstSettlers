@@ -10,6 +10,13 @@ Shader "Custom/SpruceOctaImpostor"
         _LeafSeasonTint("Leaf Season Tint", Color) = (1,1,1,1)
         [PerRendererData] _TreeLeafTint("Per Instance Leaf Tint", Color) = (1,1,1,1)
         _SeasonStrength("Season Strength", Range(0,1)) = 1
+        [Toggle] _UseSeasonPalette("Use Red Maple Season Palette", Float) = 0
+        _SeasonAutumnAmount("Season Autumn Amount", Range(0,1)) = 1
+        _SummerLeafColor("Summer Leaf Color", Color) = (0.18,0.42,0.12,1)
+        _AutumnRedColor("Autumn Scarlet Color", Color) = (0.88,0.06,0.035,1)
+        _AutumnCrimsonColor("Autumn Crimson Color", Color) = (0.48,0.025,0.04,1)
+        _AutumnOrangeColor("Autumn Orange Color", Color) = (1,0.25,0.055,1)
+        _AutumnVariationStrength("Autumn Palette Variation", Range(0,1)) = 0.62
         _Cutoff("Coverage Cutoff", Range(0,1)) = 0.008
         _CaptureCenterLS("Capture Center Local", Vector) = (0,3,0,0)
         _CaptureRadius("Capture Radius", Float) = 4.3
@@ -23,6 +30,12 @@ Shader "Custom/SpruceOctaImpostor"
         _AmbientFloor("Minimum Ambient Light", Range(0,1)) = 0.429
         _LeafLightWrap("Leaf Sun Wrap", Range(0,1)) = 0.55
         _FoliageBrightness("Foliage Brightness", Range(0.25,2)) = 1.25
+        _BarkBrightness("Bark Brightness", Range(0.25,3)) = 1
+        _BarkShadowColor("Bark Shadow Color", Color) = (0.15,0.15,0.15,1)
+        _BarkHighlightColor("Bark Highlight Color", Color) = (0.6,0.6,0.6,1)
+        _BarkColorRemap("Bark Color Remap", Range(0,1)) = 0
+        _BarkRemapBlackPoint("Bark Remap Black Point", Range(0,1)) = 0.08
+        _BarkRemapWhitePoint("Bark Remap White Point", Range(0,1)) = 0.9
         _TransmissionStrength("Leaf Transmission Strength", Range(0,2)) = 0.6
         _WindStrength("Canopy Wind Strength", Range(0,0.5)) = 0.035
         _WindSpeed("Canopy Wind Speed", Range(0,8)) = 1.2
@@ -58,6 +71,7 @@ Shader "Custom/SpruceOctaImpostor"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Shaders/TreeSeasonSimulation.hlsl"
 
             TEXTURE2D(_AlbedoCoverage); SAMPLER(sampler_AlbedoCoverage);
             TEXTURE2D(_SurfaceAtlas); SAMPLER(sampler_SurfaceAtlas);
@@ -67,10 +81,10 @@ Shader "Custom/SpruceOctaImpostor"
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _AlbedoCoverage_TexelSize, _SurfaceAtlas_TexelSize, _DepthAtlas_TexelSize, _MaterialIdAtlas_TexelSize, _AmbientAtlas_TexelSize;
-                half4 _LeafSeasonTint;
+                half4 _LeafSeasonTint, _SummerLeafColor, _AutumnRedColor, _AutumnCrimsonColor, _AutumnOrangeColor, _BarkShadowColor, _BarkHighlightColor;
                 float4 _CaptureCenterLS;
-                half _SeasonStrength, _Cutoff, _CaptureRadius, _FramesPerAxis, _AtlasTileResolution, _AmbientTileResolution, _AtlasPadding;
-                half _DepthParallax, _AOStrength, _SkyStrength, _AmbientFloor, _LeafLightWrap, _FoliageBrightness, _TransmissionStrength, _WindStrength, _WindSpeed, _DebugView, _DebugFrameX, _DebugFrameY;
+                half _SeasonStrength, _UseSeasonPalette, _SeasonAutumnAmount, _AutumnVariationStrength, _Cutoff, _CaptureRadius, _FramesPerAxis, _AtlasTileResolution, _AmbientTileResolution, _AtlasPadding;
+                half _DepthParallax, _AOStrength, _SkyStrength, _AmbientFloor, _LeafLightWrap, _FoliageBrightness, _BarkBrightness, _BarkColorRemap, _BarkRemapBlackPoint, _BarkRemapWhitePoint, _TransmissionStrength, _WindStrength, _WindSpeed, _DebugView, _DebugFrameX, _DebugFrameY;
             CBUFFER_END
 
             UNITY_INSTANCING_BUFFER_START(SpruceOctaInstance)
@@ -138,6 +152,18 @@ Shader "Custom/SpruceOctaImpostor"
                 return SAMPLE_TEXTURE2D_LOD(textureToSample, samplerToSample, (pixel + 0.5) / textureSize, 0.0);
             }
 
+            half4 SampleMaterialIdAtlasPoint(float2 octaUV, float2 proxyUV)
+            {
+                float2 textureSize = _MaterialIdAtlas_TexelSize.zw;
+                float2 grid = octaUV * _FramesPerAxis - 0.5;
+                float2 stride = textureSize / _FramesPerAxis;
+                float2 tileResolution = stride - _AtlasPadding * 2.0;
+                float2 cell = clamp(floor(grid + 0.5), 0.0, _FramesPerAxis - 1.0);
+                float2 pixel = cell * stride + _AtlasPadding + saturate(proxyUV) * tileResolution;
+                int2 texel = int2(clamp(floor(pixel), 0.0, textureSize - 1.0));
+                return LOAD_TEXTURE2D(_MaterialIdAtlas, texel);
+            }
+
             Varyings vert(Attributes input)
             {
                 Varyings output;
@@ -180,7 +206,10 @@ Shader "Custom/SpruceOctaImpostor"
                 clip(albedo.a - _Cutoff);
                 half4 surface = SampleAtlas(TEXTURE2D_ARGS(_SurfaceAtlas, sampler_SurfaceAtlas), octaUV, input.proxyUV, _SurfaceAtlas_TexelSize.zw);
                 half4 depth = SampleAtlas(TEXTURE2D_ARGS(_DepthAtlas, sampler_DepthAtlas), octaUV, input.proxyUV, _DepthAtlas_TexelSize.zw);
-                half4 materialId = SampleAtlas(TEXTURE2D_ARGS(_MaterialIdAtlas, sampler_MaterialIdAtlas), octaUV, input.proxyUV, _MaterialIdAtlas_TexelSize.zw);
+                // Material identity is categorical. Bilinear filtering creates
+                // invalid half-leaf/half-bark pixels that show up as pale branch
+                // outlines in a tinted neutral-leaf atlas.
+                half4 materialId = SampleMaterialIdAtlasPoint(octaUV, input.proxyUV);
                 half4 ambient = SampleAtlas(TEXTURE2D_ARGS(_AmbientAtlas, sampler_AmbientAtlas), octaUV, input.proxyUV, _AmbientAtlas_TexelSize.zw);
 
                 // Diagnostic views expose the exact captured frame and coverage
@@ -197,10 +226,26 @@ Shader "Custom/SpruceOctaImpostor"
                 float3x3 objectToWorld = (float3x3)GetObjectToWorldMatrix();
                 half3 normalWS = normalize(mul(objectToWorld, normalLS));
                 half3 bentNormalWS = normalize(mul(objectToWorld, bentNormalLS));
-                half leafWeight = materialId.r / max(materialId.r + materialId.g, 0.0001h);
+                half leafWeight = materialId.r > materialId.g ? 1.0h : 0.0h;
                 half3 perInstanceTint = GetDistantTreeTint(UNITY_ACCESS_INSTANCED_PROP(SpruceOctaInstance, _TreeLeafTint)).rgb;
-                half3 leafTint = lerp(half3(1,1,1), _LeafSeasonTint.rgb * perInstanceTint, _SeasonStrength);
-                half3 baseColor = albedo.rgb * lerp(half3(1,1,1), leafTint, leafWeight);
+                half3 legacyLeafTint = lerp(half3(1,1,1), _LeafSeasonTint.rgb * perInstanceTint, _SeasonStrength);
+                half paletteCoordinate = materialId.b;
+                half crimsonMix = smoothstep(0.22h, 0.80h, paletteCoordinate) * _AutumnVariationStrength;
+                half orangeMix = smoothstep(0.68h, 0.96h, paletteCoordinate) * _AutumnVariationStrength;
+                half3 autumnLeaf = lerp(_AutumnRedColor.rgb, _AutumnCrimsonColor.rgb, crimsonMix);
+                autumnLeaf = lerp(autumnLeaf, _AutumnOrangeColor.rgb, orangeMix * 0.55h);
+                half season = TreeSeasonAutumnAmount(_SeasonAutumnAmount);
+                half3 seasonalLeafTint = lerp(_SummerLeafColor.rgb, autumnLeaf, season) * perInstanceTint;
+                half3 leafTint = lerp(legacyLeafTint, seasonalLeafTint, _UseSeasonPalette);
+                // Maple's stylized bark atlas spans nearly black trunk texels to
+                // near-white twig texels. Remapping it into a bounded grey range
+                // preserves the pattern without producing black trunks and white
+                // interior branch speckles. Spruce leaves this disabled.
+                half barkValue = saturate(dot(albedo.rgb, half3(0.299h, 0.587h, 0.114h)));
+                half remappedBarkValue = smoothstep(_BarkRemapBlackPoint, max(_BarkRemapWhitePoint, _BarkRemapBlackPoint + 0.001h), barkValue);
+                half3 remappedBark = lerp(_BarkShadowColor.rgb, _BarkHighlightColor.rgb, remappedBarkValue);
+                half3 barkColor = lerp(albedo.rgb, remappedBark, _BarkColorRemap);
+                half3 baseColor = lerp(barkColor, albedo.rgb * leafTint, leafWeight);
 
                 float capturedDepth = lerp(_CaptureRadius * 1.25, _CaptureRadius * 3.75, depth.r);
                 float parallaxOffset = (_CaptureRadius * 2.5 - capturedDepth) * _DepthParallax * input.scale;
@@ -216,7 +261,8 @@ Shader "Custom/SpruceOctaImpostor"
                 half3 sky = max(SampleSH(bentNormalWS) * ambient.b, _AmbientFloor.xxx) * _SkyStrength;
                 half occlusion = 1.0h - ambient.a * _AOStrength;
                 half roughness = surface.b;
-                half3 diffuse = baseColor * (sky * occlusion + mainLight.color * direct) * lerp(1.0h, _FoliageBrightness, leafWeight);
+                half surfaceBrightness = lerp(_BarkBrightness, _FoliageBrightness, leafWeight);
+                half3 diffuse = baseColor * (sky * occlusion + mainLight.color * direct) * surfaceBrightness;
                 half backlight = pow(saturate(dot(-normalWS, mainLight.direction)), 3.0h) * surface.a * leafWeight * _TransmissionStrength;
                 diffuse += baseColor * mainLight.color * backlight * mainLight.shadowAttenuation;
                 return half4(saturate(diffuse), albedo.a);

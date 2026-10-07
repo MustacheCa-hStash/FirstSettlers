@@ -51,19 +51,26 @@ half3 EvaluateTreeLeafBacklighting(
     half3 albedo,
     half3 normalWS,
     half strength,
-    half3 tint)
+    half3 tint,
+    half stableBacklighting)
 {
     if (strength <= 0.0h)
         return half3(0.0h, 0.0h, 0.0h);
 
-    // Match the distant billboard path, which deliberately skips shadow sampling.
+    // Stable foliage lighting skips camera-relative shadow maps. Cast shadows and
+    // ordinary surface lighting still use their existing shadow behavior.
     Light sun;
-    if (_DistantTreeEnabled > 0.5 && _DistantTreeBillboard > 0.5)
+    if (stableBacklighting > 0.5h || (_DistantTreeEnabled > 0.5 && _DistantTreeBillboard > 0.5))
         sun = GetMainLight();
     else
         sun = GetMainLight(inputData.shadowCoord);
 
-    half transmission = saturate(-dot(normalWS, sun.direction));
+    // Equal illumination on both sides avoids the discontinuity when the viewer
+    // crosses a flat card's plane and its front/back facing normal flips.
+    half normalDotLight = dot(normalWS, sun.direction);
+    half transmission = stableBacklighting > 0.5h
+        ? saturate(abs(normalDotLight))
+        : saturate(-normalDotLight);
     return albedo * tint * sun.color * transmission *
         sun.distanceAttenuation * sun.shadowAttenuation * strength;
 }

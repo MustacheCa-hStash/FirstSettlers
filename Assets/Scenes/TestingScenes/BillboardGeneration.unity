@@ -257,7 +257,7 @@ GameObject:
   - component: {fileID: 821455722}
   - component: {fileID: 821455721}
   m_Layer: 0
-  m_Name: Spruce Impostor Capture Setup
+  m_Name: Tree Impostor Capture Setup
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -275,15 +275,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b521f350b3c1f654b912f5949d72149b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TreeImpostorCaptureSetup
-  treeRoot: {fileID: 866683934}
+  treeRoot: {fileID: 1164573895}
   captureCamera: {fileID: 1059649014}
-  leafMaterial: {fileID: 2100000, guid: 4ac6e1a01d16fbf44b6f5f890f922459, type: 2}
-  barkMaterial: {fileID: 2100000, guid: 53b60d7f9ef660d44bd364cc6fdbfe86, type: 2}
+  leafMaterial: {fileID: 2100000, guid: d97fc3f101bcd08459970251086aad10, type: 2}
+  barkMaterial: {fileID: 2100000, guid: 7b8816ebc50e7bf4280112e6e6ebbb5b, type: 2}
   radiusPaddingFraction: 0.02
-  localBoundsMin: {x: -1.9797031, y: -0.00017976761, z: -2.1362524}
-  localBoundsMax: {x: 2.1618605, y: 6.0843725, z: 1.9763651}
-  captureCenterLocal: {x: 0.0910787, y: 3.0420964, z: -0.07994366}
-  captureRadius: 4.2999973
+  localBoundsMin: {x: -6.8344007, y: -0.0002450943, z: -6.3179846}
+  localBoundsMax: {x: 5.6328406, y: 16.117365, z: 6.121217}
+  captureCenterLocal: {x: -0.60078, y: 8.058559, z: -0.0983839}
+  captureRadius: 12.175477
 --- !u!4 &821455722
 Transform:
   m_ObjectHideFlags: 0
@@ -299,72 +299,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1001 &866683933
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 8114938097046160491, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8114938097046160491, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8114938097046160491, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8114938097046160491, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8114938097046160491, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8114938097046160491, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8114938097046160491, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8114938097046160491, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8114938097046160491, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8114938097046160491, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8923281884864634577, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-      propertyPath: m_Name
-      value: Spruce_LOD0_v06
-      objectReference: {fileID: 0}
-    - target: {fileID: 8923281884864634577, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
---- !u!4 &866683934 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 8114938097046160491, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-  m_PrefabInstance: {fileID: 866683933}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1023759508
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -484,11 +418,11 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 5.3749967
-  far clip plane: 16.12499
+  near clip plane: 15.219346
+  far clip plane: 45.65804
   field of view: 60
   orthographic: 1
-  orthographic size: 4.2999973
+  orthographic size: 12.175477
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -512,8 +446,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1059649012}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.04950676, y: -0.049752492, z: 0.0024691815, w: 0.9975308}
-  m_LocalPosition: {x: 1.1554871, y: 4.106504, z: -10.724023}
+  m_LocalRotation: {x: 0.0495068, y: -0.049752522, z: 0.0024691848, w: 0.9975308}
+  m_LocalPosition: {x: 2.4131024, y: 11.07244, z: -30.237179}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -563,6 +497,68 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!1001 &1164573894
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 7061684082089613672, guid: 6ab64d9769b56e9499c1190271e4079b, type: 3}
+      propertyPath: m_Name
+      value: RedMaple_LOD0_v03
+      objectReference: {fileID: 0}
+    - target: {fileID: 7587427302528189394, guid: 6ab64d9769b56e9499c1190271e4079b, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7587427302528189394, guid: 6ab64d9769b56e9499c1190271e4079b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7587427302528189394, guid: 6ab64d9769b56e9499c1190271e4079b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7587427302528189394, guid: 6ab64d9769b56e9499c1190271e4079b, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7587427302528189394, guid: 6ab64d9769b56e9499c1190271e4079b, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7587427302528189394, guid: 6ab64d9769b56e9499c1190271e4079b, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7587427302528189394, guid: 6ab64d9769b56e9499c1190271e4079b, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7587427302528189394, guid: 6ab64d9769b56e9499c1190271e4079b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7587427302528189394, guid: 6ab64d9769b56e9499c1190271e4079b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7587427302528189394, guid: 6ab64d9769b56e9499c1190271e4079b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 6ab64d9769b56e9499c1190271e4079b, type: 3}
+--- !u!4 &1164573895 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7587427302528189394, guid: 6ab64d9769b56e9499c1190271e4079b, type: 3}
+  m_PrefabInstance: {fileID: 1164573894}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1844255263
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -634,7 +630,7 @@ SceneRoots:
   m_Roots:
   - {fileID: 1059649015}
   - {fileID: 754211142}
-  - {fileID: 866683933}
   - {fileID: 821455722}
+  - {fileID: 1164573894}
   - {fileID: 1844255263}
   - {fileID: 1023759508}

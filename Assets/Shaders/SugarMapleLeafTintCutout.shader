@@ -20,6 +20,7 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
         _AmbientStrength("Ambient Strength", Range(0, 1)) = 0.42
         _LightWrap("Leaf Light Wrap", Range(0, 1)) = 0.62
         [ToggleUI] _BacklightingEnabled("Leaf Backlighting", Float) = 0
+        [ToggleUI] _StableBacklighting("Stable Backlighting", Float) = 1
         _BacklightingStrength("Backlighting Strength", Range(0, 1)) = 0.12
         _BacklightingColor("Backlighting Tint", Color) = (1, 1, 1, 1)
         _Smoothness("Smoothness", Range(0, 1)) = 0.08
@@ -92,6 +93,7 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
                 half _AmbientStrength;
                 half _LightWrap;
                 half _BacklightingEnabled;
+                half _StableBacklighting;
                 half _BacklightingStrength;
                 half4 _BacklightingColor;
                 half _Smoothness;
@@ -233,7 +235,7 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
                 // Face the transmission normal toward the viewer on either side of the card.
                 half3 transmissionNormal = NormalizeNormalPerPixel(IN.normalWS) * IS_FRONT_VFACE(facing, 1, -1);
                 surfaceData.emission = EvaluateTreeLeafBacklighting(inputData, surfaceData.albedo, transmissionNormal,
-                    _BacklightingEnabled * _BacklightingStrength, _BacklightingColor.rgb);
+                    _BacklightingEnabled * _BacklightingStrength, _BacklightingColor.rgb, _StableBacklighting);
                 half4 color = ShadeDistantAwareTree(inputData, surfaceData);
                 return half4(saturate(color.rgb), atlas.a);
             }
@@ -284,6 +286,7 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
                 half _AmbientStrength;
                 half _LightWrap;
                 half _BacklightingEnabled;
+                half _StableBacklighting;
                 half _BacklightingStrength;
                 half4 _BacklightingColor;
                 half _Smoothness;
