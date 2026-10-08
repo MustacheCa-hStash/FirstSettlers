@@ -1,5 +1,11 @@
 # FirstSettlers Work Notes
 
+## October 8: split-plank wood building wall
+
+The building picker now uses the authored split-plank FBX in place of the plain wall, retaining the existing wall asset/content ID and 3.5 x 2.75 x 0.25 m logical box. The wood trim atlas is assigned through `SplitPlankWood.mat` and the new `Custom/BuildingWoodMatte` shader: diffuse sun/ambient lighting, shadows, additional lights, fog and the existing nighttime ambient-floor dimming, with no specular or reflection contribution.
+
+The import is already aligned to the build mesh coordinates, with one submesh, 2,040 vertices and 944 triangles. Runtime/editor compilation, 2,072 synthetic placement/collider checks, all four shader passes, front/back captures and actual instanced pixels passed. The nine-piece room now has 3,836 triangles per geometry pass and retains three grouped submissions. No live-world FPS measurement was made. See [split-plank wall guide](Documentation/SPLIT_PLANK_WALL.md). Restart Play mode after Unity imports the changes.
+
 ## October 7: bounded sky guidance and precise wall attachments
 
 Floor/roof previews now follow every quarter-metre height across a wall's full face. Aim above a previously hit wall to suggest a seated ceiling through a bounded sky guide; walls retain their end-extension and upper-half stacking directions, including stacking through sky guidance. Actual solid hits take priority, and leaving the guide region or changing context releases it. Wall extensions now touch directly without a forced two-plug gap; foundation corner slots remain.

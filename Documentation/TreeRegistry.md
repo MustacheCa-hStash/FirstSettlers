@@ -153,6 +153,12 @@ It runs after tree registration/render updates and is disposed before the regist
 cleared. No manager component needs to be added to the scene. Its **Tree Gameplay (Pooled)**
 root lives independently of chunk roots and render visibility.
 
+Disposal also handles scene teardown destroying that root before `WorldManager.OnDestroy`:
+it touches the GameObject only while Unity reports it alive, and still unsubscribes registry
+events and clears active/pool state when the native root is already gone. Repeated disposal
+and subsequent updates remain harmless. The tree gameplay validation covers this order
+with both an active proxy and a pooled proxy present.
+
 The manager looks up tree origins in nearby registry chunks, then selects individual
 standing trees by XZ distance. Scans run every 0.1 s, after one metre of focus movement,
 or after a nearby chunk changes. Active proxies are checked every update for state,

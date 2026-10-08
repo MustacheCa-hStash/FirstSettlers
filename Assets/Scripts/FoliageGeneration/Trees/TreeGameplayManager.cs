@@ -318,7 +318,13 @@ public sealed class TreeGameplayManager : IDisposable
     {
         if (disposed) return;
         disposed = true; registry.ChunkChanged -= OnChunkChanged;
-        root.SetActive(false); DestroyOwned(root);
+        // Scene teardown may destroy this independent GameObject before WorldManager.OnDestroy.
+        // Unity's null comparison also detects a managed reference whose native object is gone.
+        if (root != null)
+        {
+            root.SetActive(false);
+            DestroyOwned(root);
+        }
         active.Clear(); templates.Clear(); bakedQueryMeshes.Clear(); nearby.Clear(); candidates.Clear(); releases.Clear(); PooledCount = 0;
     }
 }

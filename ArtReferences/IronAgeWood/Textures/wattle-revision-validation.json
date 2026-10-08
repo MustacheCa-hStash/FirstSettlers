@@ -1,0 +1,11 @@
+{
+  "wood_and_utility_pixels_unchanged": true,
+  "before": {
+    "components_up_to_16_pixels": 92,
+    "total_pixels_in_tiny_components": 722
+  },
+  "after": {
+    "components_up_to_16_pixels": 1,
+    "total_pixels_in_tiny_components": 12
+  }
+}

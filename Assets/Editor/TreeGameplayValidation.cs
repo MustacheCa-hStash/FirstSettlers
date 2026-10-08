@@ -50,9 +50,10 @@ public static class TreeGameplayValidation
         checks = 0;
         ValidateActivationAndPool();
         ValidatePlacementAndState();
+        ValidateDestroyedRootDisposal();
         ValidateCharacterCollision();
         Debug.Log("TREE GAMEPLAY PASS: " + checks + " checks; nearest activation budgets, hysteresis, bounded pool reuse, " +
-            "registry changes, negative coordinates, hierarchy/scale, render-free proxies, physical character blocking and settled updates.");
+            "registry changes, negative coordinates, hierarchy/scale, render-free proxies, physical character blocking, settled updates and already-destroyed root disposal.");
     }
     public static void RunBatch()
     {
@@ -135,6 +136,34 @@ public static class TreeGameplayValidation
         Check(f.Manager.ActiveCount == 0, "Cleared registry retains collision.");
         var root = f.Manager.Root; f.Manager.Dispose(); f.Manager.Dispose();
         Check(root == null, "Disposal left gameplay bodies in the scene.");
+    }
+
+    private static void ValidateDestroyedRootDisposal()
+    {
+        using var f = new Fixture();
+        var trees = new[] { Tree(0, Vector3.right * 2), Tree(1, Vector3.right * 4) };
+        f.Registry.RegisterChunk(default, trees, TreePlacementDetail.Detailed);
+        f.Manager.Update(Vector3.zero, 0);
+        f.Registry.TrySetState(trees[0].id, TreeState.Cut);
+        f.Manager.Update(Vector3.zero, .01);
+        Check(f.Manager.ActiveCount == 1 && f.Manager.PooledCount == 1,
+            "Destroyed-root fixture must exercise active and pooled proxy cleanup.");
+
+        // Scene teardown / leaving Play mode can destroy this independent root before WorldManager.OnDestroy.
+        Object.DestroyImmediate(f.Manager.Root.gameObject);
+        Check(f.Manager.Root == null, "Externally destroyed gameplay root still reports a live Transform.");
+        f.Manager.Dispose();
+        f.Manager.Dispose();
+        Check(f.Manager.ActiveCount == 0 && f.Manager.PooledCount == 0 && f.Manager.BakedQueryMeshCount == 0,
+            "Destroyed-root disposal retained manager-owned state.");
+        var changed = typeof(TreeRegistry).GetField("ChunkChanged", BindingFlags.Instance | BindingFlags.NonPublic);
+        Check(changed != null && changed.GetValue(f.Registry) == null,
+            "Destroyed-root disposal retained the registry subscription.");
+        f.Manager.Update(Vector3.zero, 1);
+        f.Registry.RegisterChunk(default, trees, TreePlacementDetail.Detailed);
+        f.Manager.Update(Vector3.zero, 2);
+        Check(f.Manager.ActiveCount == 0 && f.Manager.Root == null,
+            "A disposed tree manager resumed spawning bodies after scene teardown.");
     }
 
     private static void ValidateCharacterCollision()

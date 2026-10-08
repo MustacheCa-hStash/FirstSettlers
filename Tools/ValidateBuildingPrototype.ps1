@@ -39,6 +39,7 @@ try {
     $buildingOwned += @(Get-ChildItem 'Assets/Resources/Building' -File -Recurse | Where-Object { $_.Extension -ne '.meta' })
     $buildingOwned += @(Get-Item 'Assets/Scripts/WorldManager/WorldGroundSurface.cs','Assets/Editor/BuildingPrototypeSetup.cs','Assets/Editor/BuildingPrototypeValidation.cs','Assets/Editor/BuildingPrototypeRenderValidation.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/BuildingPrototypeInputValidation.cs')
+    $buildingOwned += @(Get-Item 'Assets/Editor/SplitPlankWallSetup.cs','Assets/Shaders/BuildingWoodMatte.shader')
     foreach ($buildingFile in $buildingOwned) {
         if (-not (Test-Path -LiteralPath ($buildingFile.FullName + '.meta'))) {
             "fileFormatVersion: 2`nguid: $([guid]::NewGuid().ToString('N'))" | Set-Content -LiteralPath ($buildingFile.FullName + '.meta')
@@ -55,10 +56,24 @@ try {
     Copy-Item -LiteralPath 'Assets/Scripts.meta' -Destination "$buildingProject/Assets" -ErrorAction SilentlyContinue
     Copy-Item -LiteralPath 'Assets/Resources/Building' -Destination "$buildingProject/Assets/Resources" -Recurse -Force
     Copy-Item -LiteralPath 'Assets/Resources/Building.meta' -Destination "$buildingProject/Assets/Resources" -Force
-    foreach ($buildingName in 'BuildingPrototypeSetup','BuildingPrototypeValidation','BuildingPrototypeRenderValidation','BuildingPrototypeInputValidation') {
+    # Authored wall dependencies must be present for both logical and render checks.
+    foreach ($buildingAssetRoot in 'Models','Textures','Materials') {
+        New-Item -ItemType Directory -Path "$buildingProject/Assets/$buildingAssetRoot" -Force | Out-Null
+        if (Test-Path -LiteralPath "Assets/$buildingAssetRoot/Buildings") {
+            Copy-Item -LiteralPath "Assets/$buildingAssetRoot/Buildings" -Destination "$buildingProject/Assets/$buildingAssetRoot" -Recurse -Force
+        }
+        if (Test-Path -LiteralPath "Assets/$buildingAssetRoot/Buildings.meta") {
+            Copy-Item -LiteralPath "Assets/$buildingAssetRoot/Buildings.meta" -Destination "$buildingProject/Assets/$buildingAssetRoot" -Force
+        }
+    }
+    New-Item -ItemType Directory -Path "$buildingProject/Assets/Shaders" -Force | Out-Null
+    foreach ($buildingShaderFile in 'BuildingWoodMatte.shader','TreeNightLighting.hlsl') {
+        Copy-Item -LiteralPath "Assets/Shaders/$buildingShaderFile","Assets/Shaders/$buildingShaderFile.meta" -Destination "$buildingProject/Assets/Shaders" -Force
+    }
+    foreach ($buildingName in 'BuildingPrototypeSetup','BuildingPrototypeValidation','BuildingPrototypeRenderValidation','BuildingPrototypeInputValidation','SplitPlankWallSetup') {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
     }
-    foreach ($buildingName in 'ProjectVersion.txt','TagManager.asset') {
+    foreach ($buildingName in 'ProjectVersion.txt','TagManager.asset','ProjectSettings.asset') {
         Copy-Item -LiteralPath "ProjectSettings/$buildingName" -Destination "$buildingProject/ProjectSettings" -Force
     }
     $buildingManifest = Get-Content 'Packages/manifest.json' -Raw | ConvertFrom-Json

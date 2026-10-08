@@ -18,7 +18,7 @@ public static class BuildingPrototypeRenderValidation
         Directory.CreateDirectory(".utmp/building-prototype");
         var catalog = AssetDatabase.LoadAssetAtPath<BuildCatalog>(BuildingPrototypeSetup.CatalogPath);
         RenderWall(catalog.presets[0]); RenderRoom(catalog); RenderMenu(catalog, 1280, 720); RenderMenu(catalog, 1920, 1080);
-        Debug.Log("BUILDING RENDER PASS: plain wall authoring pixels, near/far instanced submissions and removal, actual picker at 720p/1080p, contained controls. No live-scene audit or FPS benchmark.");
+        Debug.Log("BUILDING RENDER PASS: textured matte wall authoring pixels, near/far instanced submissions and removal, actual picker at 720p/1080p, contained controls. No live-scene audit or FPS benchmark.");
     }
     private static void RenderRoom(BuildCatalog catalog)
     {
@@ -60,9 +60,11 @@ public static class BuildingPrototypeRenderValidation
             SavePixels(texture, ".utmp/building-prototype/room.png");
             int objectsBefore = Object.FindObjectsByType<Transform>().Length;
             var renderer = new BuildRenderer(session); renderer.Draw(camera,3000,140);
-            if (triangles != 108 || renderer.DrawCalls != 3 || Object.FindObjectsByType<Transform>().Length != objectsBefore)
+            int expectedTriangles = (catalog.presets[2].mesh.triangles.Length +
+                4 * catalog.presets[0].mesh.triangles.Length + 4 * catalog.presets[3].mesh.triangles.Length) / 3;
+            if (triangles != expectedTriangles || renderer.DrawCalls != 3 || Object.FindObjectsByType<Transform>().Length != objectsBefore)
                 throw new InvalidOperationException("Nine-piece room geometry/batching changed unexpectedly.");
-            Debug.Log("BUILDING ROOM COST: 9 pieces, 108 triangles per geometry pass, 3 spatially grouped instance submissions; no renderer-created objects.");
+            Debug.Log($"BUILDING ROOM COST: 9 pieces, {triangles} triangles per geometry pass, 3 spatially grouped instance submissions; no renderer-created objects.");
         }
         finally
         {
@@ -85,6 +87,7 @@ public static class BuildingPrototypeRenderValidation
         var command = new CommandBuffer(); var previous = RenderTexture.active; bool async = ShaderUtil.allowAsyncCompilation;
         var oldPipeline = GraphicsSettings.defaultRenderPipeline; var oldQuality = QualitySettings.renderPipeline;
         var authoring = Object.Instantiate(wall.authoringPrefab); authoring.layer = 31;
+        Action<ScriptableRenderContext, Camera> submitInstances = null;
         var lightObject = new GameObject("Building authoring light"); var light = lightObject.AddComponent<Light>();
         light.type = LightType.Directional; light.intensity = 1.5f; light.shadows = LightShadows.None;
         light.cullingMask = 1 << 31; lightObject.transform.rotation = Quaternion.Euler(35, -35, 0);
@@ -98,17 +101,33 @@ public static class BuildingPrototypeRenderValidation
             RenderPipeline.SubmitRenderRequest(camera, new UniversalRenderPipeline.SingleCameraRequest { destination = target });
             int pass = wall.material.FindPass("ForwardLit");
             if (pass < 0) throw new InvalidOperationException("Wall shader has no forward pass.");
-            ShaderUtil.CompilePass(wall.material, pass, true);
+            for (int shaderPass = 0; shaderPass < wall.material.passCount; ++shaderPass)
+                ShaderUtil.CompilePass(wall.material, shaderPass, true);
             if (ShaderUtil.ShaderHasError(wall.material.shader)) throw new InvalidOperationException("Wall shader failed.");
             RenderPipeline.SubmitRenderRequest(camera, new UniversalRenderPipeline.SingleCameraRequest { destination = target });
             SavePixels(target, ".utmp/building-prototype/wall.png");
+            camera.transform.position = new Vector3(-6, 3.5f, 6);
+            camera.transform.LookAt(wall.LocalBounds.center);
+            RenderPipeline.SubmitRenderRequest(camera, new UniversalRenderPipeline.SingleCameraRequest { destination = target });
+            SavePixels(target, ".utmp/building-prototype/wall-back.png");
             authoring.GetComponent<MeshRenderer>().enabled = false;
             camera.cullingMask = ~0;
             var session = new BuildSession(); var frame = session.CreateFrame(Vector3.zero, 1);
             session.Add(wall, frame, default, 0, false);
+            camera.transform.position = BuildGeometry.Rotation(1) * new Vector3(6, 3.5f, -6);
+            camera.transform.LookAt(BuildGeometry.Rotation(1) * wall.LocalBounds.center);
             int before = Object.FindObjectsByType<Transform>().Length;
             var renderer = new BuildRenderer(session); renderer.Draw(camera, 3000, 140);
             if (renderer.DrawCalls != 1 || Object.FindObjectsByType<Transform>().Length != before) throw new InvalidOperationException("Instanced submission created objects or lost visibility.");
+            // Submit through the real building path before this camera culls/draws, then inspect its pixels.
+            submitInstances = (_, renderingCamera) => { if (renderingCamera == camera) renderer.Draw(camera, 3000, 140); };
+            RenderPipelineManager.beginCameraRendering += submitInstances;
+            RenderPipeline.SubmitRenderRequest(camera, new UniversalRenderPipeline.SingleCameraRequest { destination = target });
+            RenderPipeline.SubmitRenderRequest(camera, new UniversalRenderPipeline.SingleCameraRequest { destination = target });
+            SavePixels(target, ".utmp/building-prototype/wall-instanced.png");
+            RenderPipelineManager.beginCameraRendering -= submitInstances;
+            submitInstances = null;
+            if (ShaderUtil.ShaderHasError(wall.material.shader)) throw new InvalidOperationException("Instanced matte wall shader failed.");
             camera.orthographicSize = 1200;
             camera.transform.position = new Vector3(2, 1.375f, -2000); camera.transform.LookAt(new Vector3(2, 1.375f, 0));
             renderer.Draw(camera, 3000, 140);
@@ -116,7 +135,7 @@ public static class BuildingPrototypeRenderValidation
             session.Remove(1); renderer.Draw(camera, 3000, 140);
             if (renderer.DrawCalls != 0) throw new InvalidOperationException("Deleted wall remained in distant rendering.");
         }
-        finally { GraphicsSettings.defaultRenderPipeline = oldPipeline; QualitySettings.renderPipeline = oldQuality; ShaderUtil.allowAsyncCompilation = async; RenderTexture.active = previous; command.Dispose(); target.Release(); Object.DestroyImmediate(target); Object.DestroyImmediate(cameraObject); Object.DestroyImmediate(authoring); Object.DestroyImmediate(lightObject); }
+        finally { if (submitInstances != null) RenderPipelineManager.beginCameraRendering -= submitInstances; GraphicsSettings.defaultRenderPipeline = oldPipeline; QualitySettings.renderPipeline = oldQuality; ShaderUtil.allowAsyncCompilation = async; RenderTexture.active = previous; command.Dispose(); target.Release(); Object.DestroyImmediate(target); Object.DestroyImmediate(cameraObject); Object.DestroyImmediate(authoring); Object.DestroyImmediate(lightObject); }
     }
     private static void RenderMenu(BuildCatalog catalog, int width, int height)
     {

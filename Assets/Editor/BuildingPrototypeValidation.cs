@@ -41,7 +41,15 @@ public static class BuildingPrototypeValidation
             var collider = definition.authoringPrefab.GetComponent<BoxCollider>();
             Near(collider.center, definition.LocalBounds.center, "Collider centre is wrong."); Near(collider.size, definition.LocalBounds.size, "Collider size is wrong.");
             Check(!collider.isTrigger && definition.material.enableInstancing, "Collision or instancing is disabled.");
-            Check(definition.material.GetTexture("_BaseMap") == null, "The prototype material is not plain.");
+            if (definition.kind == BuildPartKind.Wall)
+            {
+                Check(definition.displayName == "Split-plank wood wall", "The authored wall did not replace the picker option.");
+                Check(definition.material.shader.name == SplitPlankWallSetup.ShaderName, "The wall does not use matte wood lighting.");
+                Check(definition.material.GetTexture("_BaseMap") == AssetDatabase.LoadAssetAtPath<Texture2D>(SplitPlankWallSetup.TexturePath), "The wood atlas is missing.");
+                Check(definition.mesh.subMeshCount == 1 && definition.mesh.vertexCount > 24, "The imported wall geometry is missing.");
+                Check(definition.authoringPrefab.GetComponent<MeshFilter>().sharedMesh == definition.mesh, "The authoring and runtime wall meshes differ.");
+            }
+            else Check(definition.material.GetTexture("_BaseMap") == null, "An unrelated prototype material changed.");
         }
         Near(catalog.presets[0].LocalBounds.size, new Vector3(3.5f, 2.75f, .25f), "Wall contract changed.");
         Near(catalog.presets[3].LocalBounds.size, new Vector3(.25f, 2.75f, .25f), "Flush corner contract changed.");

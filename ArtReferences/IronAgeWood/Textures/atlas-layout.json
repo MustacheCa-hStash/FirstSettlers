@@ -1,0 +1,195 @@
+{
+  "source_size": [
+    1254,
+    1254
+  ],
+  "atlas_size": [
+    2048,
+    2048
+  ],
+  "upscaled": true,
+  "padding_pixels": 16,
+  "wood_alpha_min": 255,
+  "utility_alpha_min": 255,
+  "weave_source": "ordinary-wood-trim-original.png",
+  "source_background_pixels_excluded": 81329,
+  "revision": 2,
+  "wattle_content_holes_below_half_alpha_fraction": 0.20302744536940687,
+  "wood_U_edge_max_differences_RGBA": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "wattle_content_edge_max_differences_RGBA": {
+    "U": 0,
+    "V": 0
+  },
+  "standalone_wattle_edge_max_differences_RGBA": {
+    "U": 0,
+    "V": 0
+  },
+  "regions": {
+    "A": {
+      "content_pixels_top_left": [
+        0,
+        16,
+        2048,
+        240
+      ],
+      "repeat": "U",
+      "nominal_metres": [
+        4,
+        0.5
+      ],
+      "uv_texel_centres": [
+        0.000244140625,
+        0.883056640625,
+        0.999755859375,
+        0.991943359375
+      ]
+    },
+    "B": {
+      "content_pixels_top_left": [
+        0,
+        272,
+        2048,
+        496
+      ],
+      "repeat": "U",
+      "nominal_metres": [
+        4,
+        0.5
+      ],
+      "uv_texel_centres": [
+        0.000244140625,
+        0.758056640625,
+        0.999755859375,
+        0.866943359375
+      ]
+    },
+    "C": {
+      "content_pixels_top_left": [
+        0,
+        528,
+        2048,
+        752
+      ],
+      "repeat": "U",
+      "nominal_metres": [
+        4,
+        0.5
+      ],
+      "uv_texel_centres": [
+        0.000244140625,
+        0.633056640625,
+        0.999755859375,
+        0.741943359375
+      ]
+    },
+    "D": {
+      "content_pixels_top_left": [
+        0,
+        784,
+        2048,
+        1008
+      ],
+      "repeat": "U",
+      "nominal_metres": [
+        4,
+        0.5
+      ],
+      "uv_texel_centres": [
+        0.000244140625,
+        0.508056640625,
+        0.999755859375,
+        0.616943359375
+      ]
+    },
+    "E": {
+      "content_pixels_top_left": [
+        16,
+        1040,
+        496,
+        1520
+      ],
+      "repeat": "none",
+      "uv_texel_centres": [
+        0.008056640625,
+        0.258056640625,
+        0.241943359375,
+        0.491943359375
+      ]
+    },
+    "F": {
+      "content_pixels_top_left": [
+        528,
+        1040,
+        1008,
+        1520
+      ],
+      "repeat": "none",
+      "uv_texel_centres": [
+        0.258056640625,
+        0.258056640625,
+        0.491943359375,
+        0.491943359375
+      ]
+    },
+    "G": {
+      "content_pixels_top_left": [
+        16,
+        1552,
+        1008,
+        1776
+      ],
+      "repeat": "local U",
+      "uv_texel_centres": [
+        0.008056640625,
+        0.133056640625,
+        0.491943359375,
+        0.241943359375
+      ]
+    },
+    "H": {
+      "content_pixels_top_left": [
+        16,
+        1808,
+        1008,
+        2032
+      ],
+      "repeat": "local U",
+      "uv_texel_centres": [
+        0.008056640625,
+        0.008056640625,
+        0.491943359375,
+        0.116943359375
+      ]
+    },
+    "I": {
+      "content_pixels_top_left": [
+        1040,
+        1040,
+        2032,
+        2032
+      ],
+      "repeat": "local U and V",
+      "nominal_metres": [
+        2,
+        2
+      ],
+      "uv_texel_centres": [
+        0.508056640625,
+        0.008056640625,
+        0.991943359375,
+        0.491943359375
+      ]
+    }
+  },
+  "limits": [
+    "Paired pixel edges are continuous; natural repetition remains visible.",
+    "Source detail is upscaled rather than newly captured.",
+    "Atlas gutters do not prevent all low-mip cross-region mixing.",
+    "No Unity in-game import or performance validation was run."
+  ]
+}

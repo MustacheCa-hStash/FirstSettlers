@@ -46,6 +46,7 @@ public static class BuildingPrototypeSetup
         var floor = Part("floor", "Timber floor", BuildPartKind.Floor, new Vector3Int(16, 1, 16), new Vector3Int(0, -1, 0), floorMaterial);
         var foundation = Part("foundation", "Stone foundation", BuildPartKind.Foundation, new Vector3Int(16, 2, 16), new Vector3Int(0, -2, 0), foundationMaterial);
         var corner = Part("corner", "Corner piece", BuildPartKind.Corner, new Vector3Int(1, 11, 1), Vector3Int.zero, wallMaterial);
+        SplitPlankWallSetup.Apply(wall);
         var panel = Asset<PanelSettings>(Folder + "/BuildPanel.asset");
         panel.scaleMode = PanelScaleMode.ScaleWithScreenSize; panel.referenceResolution = new Vector2Int(1920, 1080);
         panel.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight; panel.match = .5f; panel.sortingOrder = 30;

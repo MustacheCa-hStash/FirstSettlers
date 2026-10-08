@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: wall
   m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
   contentId: build.prototype.wall
-  displayName: Plain wall
+  displayName: Split-plank wood wall
   kind: 0
   sizeUnits: {x: 14, y: 11, z: 1}
   minimumUnits: {x: 0, y: 0, z: 0}
   wallEndInsetUnits: 1
-  mesh: {fileID: 4300000, guid: 08dd462bb92259d4795d2a9253c9311b, type: 2}
-  material: {fileID: 2100000, guid: ff33398568284e542b49fbe621db0b8e, type: 2}
+  mesh: {fileID: 1744005865678228203, guid: 07ef57cc5eb515243b9fa852e35f3afb, type: 3}
+  material: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
   authoringPrefab: {fileID: 68295084002125233, guid: 2f4b1039852a3634b9fa8428910f72b8, type: 3}
   maxHealth: 100
