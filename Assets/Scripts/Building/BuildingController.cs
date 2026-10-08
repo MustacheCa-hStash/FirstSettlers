@@ -10,10 +10,13 @@ public sealed class BuildingController : MonoBehaviour
     [SerializeField, Min(1)] private float reach = 8;
     [SerializeField, Min(0)] private float acquireMargin = .1f;
     [SerializeField, Min(0)] private float releaseMargin = .15f;
+    [SerializeField, Min(0)] private float skyRoofHeight = 1;
+    [SerializeField, Min(0)] private float skySideMargin = .15f;
     private BuildWorld world;
     private BuildMenuView view;
     private BuildDefinition selected;
     private BuildPieceRecord target;
+    private BuildWallAimGuide skyGuide;
     private readonly List<BuildPieceRecord> candidates = new();
     private int worldHeading, contextTurn, suppressPlaceUntil;
     private Vector3Int nudge;
@@ -52,6 +55,7 @@ public sealed class BuildingController : MonoBehaviour
     {
         if (!Active) return;
         MenuOpen = true; pending = default;
+        skyGuide = default;
         GameplayCursorRequested = false; cursorCaptureFrames = 0;
         Cursor.lockState = CursorLockMode.None; Cursor.visible = true; view?.SetState(true, true);
     }
@@ -59,6 +63,7 @@ public sealed class BuildingController : MonoBehaviour
     {
         if (!Active || definition == null) return;
         selected = definition; MenuOpen = false; nudge = default; contextTurn = 0; target = null; pending = default;
+        skyGuide = default; Preview = default;
         suppressPlaceUntil = Time.frameCount + 1;
         RequestGameplayCursor(); view?.SetState(true, false);
     }
@@ -67,6 +72,7 @@ public sealed class BuildingController : MonoBehaviour
     {
         bool wasActive = Active;
         Active = false; MenuOpen = false; pending = default; target = null; Preview = default; view?.SetState(false, false);
+        skyGuide = default;
         if (capture && wasActive) RequestGameplayCursor();
         else if (!capture) { GameplayCursorRequested = false; cursorCaptureFrames = 0; }
     }
@@ -98,20 +104,19 @@ public sealed class BuildingController : MonoBehaviour
         var command = pending; pending = default;
         if (!Active || MenuOpen || selected == null || viewCamera == null) return;
         var ray = viewCamera.ViewportPointToRay(new Vector3(.5f, .5f, 0));
-        if (!Physics.Raycast(ray, out var hit, reach, GameplayLayers.SolidSurfaceMask, QueryTriggerInteraction.Ignore))
+        if (!TryResolveAim(ray, out var aimPoint, out var aimNormal, out var direct, out var nextTarget, out bool guided))
         {
-            Preview = default; target = null; nudge = default;
+            Preview = default; target = null; nudge = default; skyGuide = default;
             view.Show(selected.displayName, "Aim at ground or a building within reach", false); return;
         }
-        BuildPieceRecord direct = hit.collider.GetComponent<BuildGameplayProxy>()?.Record;
-        if (direct != null && !world.Session.TryGet(direct.Id, out direct)) direct = null;
-        var nextTarget = direct ?? (BuildWorld.IsGround(hit.collider) ? NearbyTarget(hit.point) : null);
+        bool preferTop = nextTarget == target && Preview.TopAttachment;
         if (nextTarget != target) { target = nextTarget; contextTurn = 0; nudge = default; }
         if (target == null) worldHeading = BuildGeometry.Turn(worldHeading + command.Turn);
         else contextTurn = BuildGeometry.Turn(contextTurn + command.Turn);
         nudge += command.Nudge;
-        var preview = BuildPlacement.Solve(selected, hit.point, hit.normal, target,
-            target != null ? world.Session.Frame(target.OwnFrameId) : null, worldHeading, contextTurn, nudge);
+        var preview = BuildPlacement.Solve(selected, aimPoint, aimNormal, target,
+            target != null ? world.Session.Frame(target.OwnFrameId) : null, worldHeading, contextTurn, nudge, ray.origin, preferTop);
+        if (guided) preview.Hint = "Sky guide · " + preview.Hint;
         world.Validate(ref preview);
         // Nudges cannot extend an interaction into arbitrary distant construction.
         if (BuildGeometry.Distance(selected.LocalBounds, preview.Origin, preview.WorldYaw, ray.origin) > reach)
@@ -119,6 +124,7 @@ public sealed class BuildingController : MonoBehaviour
         if (command.Remove && direct != null)
         {
             world.Remove(direct.Id); target = null; nudge = default; Preview = default;
+            skyGuide = default;
             view.Show(selected.displayName, "Piece removed · detached pieces have 3 seconds to regain support", true); return;
         }
         if (command.Place && Time.frameCount > suppressPlaceUntil && preview.Valid)
@@ -126,11 +132,36 @@ public sealed class BuildingController : MonoBehaviour
             world.Commit(preview); suppressPlaceUntil = Time.frameCount;
         }
         Preview = preview;
-        view.Show(selected.displayName + " · " + (preview.WorldYaw * 45) + "°", preview.Message, preview.Valid);
+        view.Show(selected.displayName + " · " + (preview.WorldYaw * 45) + "°",
+            preview.Valid ? preview.Message + " · " + preview.Hint : preview.Message, preview.Valid);
         var parameters = new RenderParams(preview.Valid ? world.Catalog.validPreview : world.Catalog.invalidPreview)
         { camera = viewCamera, worldBounds = BuildGeometry.WorldBounds(selected.LocalBounds, preview.Origin, preview.WorldYaw),
             shadowCastingMode = ShadowCastingMode.Off, receiveShadows = false };
         Graphics.RenderMesh(parameters, selected.mesh, 0, Matrix4x4.TRS(preview.Origin, BuildGeometry.Rotation(preview.WorldYaw), Vector3.one));
+    }
+    private bool TryResolveAim(Ray ray, out Vector3 point, out Vector3 normal, out BuildPieceRecord direct,
+        out BuildPieceRecord nextTarget, out bool guided)
+    {
+        direct = nextTarget = null; guided = false;
+        if (Physics.Raycast(ray, out var hit, reach, GameplayLayers.SolidSurfaceMask, QueryTriggerInteraction.Ignore))
+        {
+            point = hit.point; normal = hit.normal;
+            direct = hit.collider.GetComponent<BuildGameplayProxy>()?.Record;
+            if (direct != null && !world.Session.TryGet(direct.Id, out direct)) direct = null;
+            nextTarget = direct ?? (BuildWorld.IsGround(hit.collider) ? NearbyTarget(hit.point) : null);
+            skyGuide = default;
+            if (direct != null && direct.Definition.kind == BuildPartKind.Wall &&
+                (selected.kind == BuildPartKind.Wall || selected.kind == BuildPartKind.Floor))
+                skyGuide.Capture(direct, world.Session.Frame(direct.OwnFrameId), hit.normal, ray.origin);
+            return true;
+        }
+        if (target != null && world.Session.TryGet(target.Id, out _) &&
+            skyGuide.TryContinue(ray, reach, selected.kind == BuildPartKind.Wall ? selected.LocalBounds.size.y : skyRoofHeight,
+                skySideMargin, out point, out normal))
+        {
+            nextTarget = target; guided = true; return true;
+        }
+        point = normal = default; skyGuide = default; return false;
     }
     private BuildPieceRecord NearbyTarget(Vector3 hit)
     {

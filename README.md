@@ -1,5 +1,17 @@
 # FirstSettlers Work Notes
 
+## October 7: bounded sky guidance and precise wall attachments
+
+Floor/roof previews now follow every quarter-metre height across a wall's full face. Aim above a previously hit wall to suggest a seated ceiling through a bounded sky guide; walls retain their end-extension and upper-half stacking directions, including stacking through sky guidance. Actual solid hits take priority, and leaving the guide region or changing context releases it. Wall extensions now touch directly without a forced two-plug gap; foundation corner slots remain.
+
+Direct wall stacks advance 2.75 m; floors between wall courses add their 0.25 m thickness for 3 m storeys. A seated floor overlapping an existing upper wall is rejected with a specific explanation. No interior floor panel or relative-45-degree junction change was added. See [building prototype guide](Documentation/BUILDING_PROTOTYPE.md). Restart Play mode after compilation.
+
+## October 7: aim-aware building placement and interior pillars
+
+Upper-half wall hits now stack walls or centre a flat ceiling on the wall's full span, extending toward the viewed face with the whole quarter-metre edge seated on the wall. Top-face ceiling hits use the viewer's side; lower hits retain wall extensions or side platforms. The four inward faces of a closed room select the same ceiling footprint.
+
+Corner pieces now follow the ordinary quarter-metre grid across floors/foundations for interior pillars. Lower wall ends retain a small corner snap; wall middles allow side pillars, and upper hits allow stacking. The HUD names the inferred placement action. See [building prototype guide](Documentation/BUILDING_PROTOTYPE.md). Restart Play mode after compilation.
+
 ## October 7: flush building corners and gameplay cursor capture
 
 The wall now spans 3.5 units inside a four-unit bay, reserving quarter-unit corners. Added a plain 0.25 × 2.75 × 0.25 corner mesh/prefab with exact collision and a fourth picker option. Four walls plus four plugs close a foundation without overlaps or protrusions, including rotated local grids. Corners snap to foundation vertices and wall ends; paired plugs fill straight junctions. Returning from the picker or exiting building explicitly recaptures the hidden gameplay cursor and suppresses centering mouse deltas.

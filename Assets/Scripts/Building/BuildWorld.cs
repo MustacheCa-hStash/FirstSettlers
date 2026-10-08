@@ -68,7 +68,12 @@ public sealed class BuildWorld : MonoBehaviour
         foreach (var piece in nearby)
         {
             if (BuildGeometry.Overlaps(local, preview.Origin, preview.WorldYaw, piece.Definition.LocalBounds, piece.Origin, piece.WorldYawStep))
-            { preview.Message = "Overlaps an existing piece"; return; }
+            {
+                preview.Message = preview.TopAttachment && piece.Definition.kind == BuildPartKind.Wall
+                    ? "Wall occupies the floor edge · place the floor before the upper wall"
+                    : "Overlaps an existing piece";
+                return;
+            }
             if (piece.Supported && BuildGeometry.Connects(local, preview.Origin, preview.WorldYaw, piece.Definition.LocalBounds, piece.Origin, piece.WorldYawStep)) supported = true;
         }
         preview.Grounded = preview.Definition.kind == BuildPartKind.Foundation && Grounded(preview);

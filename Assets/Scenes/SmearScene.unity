@@ -892,7 +892,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 1456
+  worldSeed: 14567
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -2156,6 +2156,8 @@ MonoBehaviour:
   reach: 8
   acquireMargin: 0.1
   releaseMargin: 0.15
+  skyRoofHeight: 1
+  skySideMargin: 0.15
 --- !u!1 &2039337264
 GameObject:
   m_ObjectHideFlags: 0
