@@ -4,7 +4,7 @@
     <ui:Label text="BUILD" class="build-title" />
     <ui:Label text="Choose a component" class="build-subtitle" />
     <ui:VisualElement name="build-presets" />
-    <ui:Label text="Start with a foundation, then add floors and walls." class="build-note" />
+    <ui:Label text="Start with a foundation. Add walls, then fill their corners." class="build-note" />
     <ui:Label text="B / Esc · Close" class="build-note" />
   </ui:VisualElement>
   <ui:VisualElement name="build-hud" class="build-hud">

@@ -17,6 +17,7 @@ MonoBehaviour:
   kind: 2
   sizeUnits: {x: 16, y: 2, z: 16}
   minimumUnits: {x: 0, y: -2, z: 0}
+  wallEndInsetUnits: 0
   mesh: {fileID: 4300000, guid: 0b64ed3234521e04cab94edf40d1b51e, type: 2}
   material: {fileID: 2100000, guid: 1a4b9bce6f5c21749957765a7c2c3d16, type: 2}
   authoringPrefab: {fileID: 8052939415426145771, guid: 4cf76d0d97dda0f41a3e0bb245dbbf08, type: 3}

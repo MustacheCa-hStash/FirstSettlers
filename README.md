@@ -1,5 +1,11 @@
 # FirstSettlers Work Notes
 
+## October 7: flush building corners and gameplay cursor capture
+
+The wall now spans 3.5 units inside a four-unit bay, reserving quarter-unit corners. Added a plain 0.25 × 2.75 × 0.25 corner mesh/prefab with exact collision and a fourth picker option. Four walls plus four plugs close a foundation without overlaps or protrusions, including rotated local grids. Corners snap to foundation vertices and wall ends; paired plugs fill straight junctions. Returning from the picker or exiting building explicitly recaptures the hidden gameplay cursor and suppresses centering mouse deltas.
+
+Added named building Profiler samples and documented CPU/GPU costs in [the guide](Documentation/BUILDING_PROTOTYPE.md). Synthetic room fixture: nine components, 108 triangles per geometry pass, three grouped instance submissions. Live-world FPS remains unmeasured. Restart Play mode after import for the new component dimensions and menu.
+
 ## October 7: building prototype
 
 SmearScene now has a B-toggle component picker and build preview. Start with a foundation, then use Tab to select the plain wall or floor. Placement uses 0.25-unit grid increments, eight 45-degree headings, and contextual local frames with a small oriented-bound acquisition margin. Q/E or the wheel turns; arrows nudge; Page Up/Down changes height; left click places and right click removes.

@@ -42,15 +42,16 @@ public static class BuildingPrototypeSetup
         var foundationMaterial = Material("PlainFoundation", shader, new Color(.43f, .43f, .39f));
         var valid = Material("PreviewValid", shader, new Color(.3f, .85f, .55f, .45f), true);
         var invalid = Material("PreviewInvalid", shader, new Color(.95f, .3f, .2f, .45f), true);
-        var wall = Part("wall", "Plain wall", BuildPartKind.Wall, new Vector3Int(16, 11, 1), Vector3Int.zero, wallMaterial);
+        var wall = Part("wall", "Plain wall", BuildPartKind.Wall, new Vector3Int(14, 11, 1), Vector3Int.zero, wallMaterial);
         var floor = Part("floor", "Timber floor", BuildPartKind.Floor, new Vector3Int(16, 1, 16), new Vector3Int(0, -1, 0), floorMaterial);
         var foundation = Part("foundation", "Stone foundation", BuildPartKind.Foundation, new Vector3Int(16, 2, 16), new Vector3Int(0, -2, 0), foundationMaterial);
+        var corner = Part("corner", "Corner piece", BuildPartKind.Corner, new Vector3Int(1, 11, 1), Vector3Int.zero, wallMaterial);
         var panel = Asset<PanelSettings>(Folder + "/BuildPanel.asset");
         panel.scaleMode = PanelScaleMode.ScaleWithScreenSize; panel.referenceResolution = new Vector2Int(1920, 1080);
         panel.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight; panel.match = .5f; panel.sortingOrder = 30;
         panel.themeStyleSheet = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(Folder + "/BuildTheme.tss");
         var catalog = Asset<BuildCatalog>(CatalogPath);
-        catalog.presets = new[] { wall, floor, foundation }; catalog.validPreview = valid; catalog.invalidPreview = invalid;
+        catalog.presets = new[] { wall, floor, foundation, corner }; catalog.validPreview = valid; catalog.invalidPreview = invalid;
         catalog.panel = panel; catalog.layout = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(Folder + "/BuildMenu.uxml");
         if (catalog.layout == null || panel.themeStyleSheet == null) throw new InvalidOperationException("Building UI failed to import.");
         EditorUtility.SetDirty(panel); EditorUtility.SetDirty(catalog); AssetDatabase.SaveAssets();
@@ -81,20 +82,21 @@ public static class BuildingPrototypeSetup
         var definition = Asset<BuildDefinition>(Folder + "/" + id + ".asset");
         definition.contentId = "build.prototype." + id; definition.displayName = name; definition.kind = kind;
         definition.sizeUnits = size; definition.minimumUnits = minimum; definition.material = material;
+        definition.wallEndInsetUnits = kind == BuildPartKind.Wall ? 1 : 0;
         string meshPath = Folder + "/" + id + "-mesh.asset";
         var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
-        if (mesh == null)
+        // Reauthor generated geometry in place when the dimensional contract changes; preserve asset GUIDs.
+        var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        try
         {
-            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            try
-            {
-                mesh = Object.Instantiate(cube.GetComponent<MeshFilter>().sharedMesh); mesh.name = name + " (exact bounds)";
-                var vertices = mesh.vertices;
-                for (int i = 0; i < vertices.Length; i++) vertices[i] = Vector3.Scale(vertices[i] + Vector3.one * .5f, definition.LocalBounds.size) + definition.LocalBounds.min;
-                mesh.vertices = vertices; mesh.RecalculateBounds(); AssetDatabase.CreateAsset(mesh, meshPath);
-            }
-            finally { Object.DestroyImmediate(cube); }
+            var generated = Object.Instantiate(cube.GetComponent<MeshFilter>().sharedMesh); generated.name = name + " (exact bounds)";
+            var vertices = generated.vertices;
+            for (int i = 0; i < vertices.Length; i++) vertices[i] = Vector3.Scale(vertices[i] + Vector3.one * .5f, definition.LocalBounds.size) + definition.LocalBounds.min;
+            generated.vertices = vertices; generated.RecalculateBounds();
+            if (mesh == null) { mesh = generated; AssetDatabase.CreateAsset(mesh, meshPath); }
+            else { EditorUtility.CopySerialized(generated, mesh); Object.DestroyImmediate(generated); EditorUtility.SetDirty(mesh); }
         }
+        finally { Object.DestroyImmediate(cube); }
         definition.mesh = mesh;
         var obj = new GameObject(name) { layer = GameplayLayers.WorldSolid };
         try

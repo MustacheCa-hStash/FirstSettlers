@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public enum BuildPartKind { Wall, Floor, Foundation }
+public enum BuildPartKind { Wall, Floor, Foundation, Corner }
 
 /// <summary>Authored placement geometry is independent of mesh detail and runtime proxies.</summary>
 [CreateAssetMenu(menuName = "First Settlers/Building/Component")]
@@ -9,8 +9,12 @@ public sealed class BuildDefinition : ScriptableObject
     public string contentId;
     public string displayName;
     public BuildPartKind kind;
-    public Vector3Int sizeUnits = new(16, 11, 1);
+    public Vector3Int sizeUnits = new(14, 11, 1);
     public Vector3Int minimumUnits;
+    [Min(0), Tooltip("Reserved space at each wall end within its placement bay, in quarter-metre units.")]
+    public int wallEndInsetUnits = 1;
+    public float WallEndInset => Mathf.Max(0, wallEndInsetUnits) * BuildGeometry.Unit;
+    public float WallBaySpan => LocalBounds.size.x + 2 * WallEndInset;
     public Mesh mesh;
     public Material material;
     public GameObject authoringPrefab;

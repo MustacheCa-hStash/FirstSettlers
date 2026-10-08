@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Profiling;
 
 /// <summary>Owns one play-session registry and independent visible/physical representations.</summary>
 public sealed class BuildWorld : MonoBehaviour
 {
+    private static readonly ProfilerMarker PlacementMarker = new("FS.Building.PlacementValidation");
     [SerializeField] private BuildCatalog catalog;
     [SerializeField, Min(1)] private float renderRange = 3000;
     [SerializeField, Min(0)] private float shadowRange = 140;
@@ -57,6 +59,7 @@ public sealed class BuildWorld : MonoBehaviour
     }
     public void Validate(ref BuildPreview preview)
     {
+        using var scope = PlacementMarker.Auto();
         preview.Valid = false;
         Bounds local = preview.Definition.LocalBounds;
         Bounds world = BuildGeometry.WorldBounds(local, preview.Origin, preview.WorldYaw);

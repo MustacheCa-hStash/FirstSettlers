@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Profiling;
 using Object = UnityEngine.Object;
 
 public sealed class BuildGameplay : IDisposable
 {
+    private static readonly ProfilerMarker UpdateMarker = new("FS.Building.CollisionStreaming");
     private readonly BuildSession session;
     private readonly GameObject root = new("Building Collision (Pooled)");
     private readonly Dictionary<ulong, BuildGameplayProxy> active = new();
@@ -25,6 +27,7 @@ public sealed class BuildGameplay : IDisposable
     }
     public void Update(Vector3 focus, float radius, float releaseRadius, int activationLimit)
     {
+        using var scope = UpdateMarker.Auto();
         release.Clear();
         foreach (var pair in active)
             if (!session.TryGet(pair.Key, out var piece) || BuildGeometry.Distance(piece.Definition.LocalBounds, piece.Origin, piece.WorldYawStep, focus) > releaseRadius) release.Add(pair.Key);

@@ -1,10 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Unity.Profiling;
 
 /// <summary>Cached, spatially bounded instanced submissions. No placed-piece renderer GameObjects.</summary>
 public sealed class BuildRenderer
 {
+    private static readonly ProfilerMarker DrawMarker = new("FS.Building.Rendering");
+    private static readonly ProfilerMarker RebuildMarker = new("FS.Building.RenderBatchRebuild");
     private const int Capacity = 500;
     private sealed class Batch
     {
@@ -22,6 +25,7 @@ public sealed class BuildRenderer
     public BuildRenderer(BuildSession session) { this.session = session; }
     public void Draw(Camera camera, float range, float shadowRange)
     {
+        using var scope = DrawMarker.Auto();
         DrawCalls = 0;
         if (camera == null) return;
         if (revision != session.Revision) Rebuild();
@@ -37,6 +41,7 @@ public sealed class BuildRenderer
     }
     private void Rebuild()
     {
+        using var scope = RebuildMarker.Auto();
         batches.Clear(); current.Clear();
         foreach (var piece in session.Pieces.Values)
         {

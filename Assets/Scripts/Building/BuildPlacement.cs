@@ -41,14 +41,52 @@ public static class BuildPlacement
             if (definition.kind == BuildPartKind.Foundation && target.Definition.kind != BuildPartKind.Foundation)
             {
                 // Aiming at an existing wall/floor can replace its missing footing, preserving its frame.
-                origin = new Vector3(bounds.min.x, bounds.min.y - definition.LocalBounds.max.y, bounds.min.z);
+                origin = new Vector3(bounds.min.x - (target.Definition.kind == BuildPartKind.Wall ? target.Definition.WallEndInset : 0),
+                    bounds.min.y - definition.LocalBounds.max.y, bounds.min.z);
                 preview.YawStep = BuildGeometry.Turn(contextTurn);
+            }
+            else if (definition.kind == BuildPartKind.Corner)
+            {
+                if (target.Definition.kind == BuildPartKind.Wall)
+                {
+                    origin = new Vector3(point.x < bounds.center.x ? bounds.min.x - definition.LocalBounds.size.x : bounds.max.x,
+                        bounds.min.y, bounds.min.z);
+                }
+                else if (target.Definition.kind == BuildPartKind.Corner)
+                {
+                    Vector3 size = definition.LocalBounds.size;
+                    int side = FacingSide(localNormal, edge);
+                    origin = localNormal.y > .6f ? new Vector3(bounds.min.x, bounds.max.y, bounds.min.z) : side switch {
+                        0 => new Vector3(bounds.min.x, bounds.min.y, bounds.min.z - size.z),
+                        2 => new Vector3(bounds.min.x - size.x, bounds.min.y, bounds.min.z),
+                        4 => new Vector3(bounds.min.x, bounds.min.y, bounds.max.z),
+                        _ => new Vector3(bounds.max.x, bounds.min.y, bounds.min.z)
+                    };
+                }
+                else
+                {
+                    // Each quarter-metre plug is wholly inside the selected foundation/floor corner.
+                    origin = new Vector3(point.x <= bounds.center.x ? bounds.min.x : bounds.max.x - definition.LocalBounds.size.x,
+                        bounds.max.y, point.z <= bounds.center.z ? bounds.min.z : bounds.max.z - definition.LocalBounds.size.z);
+                }
+                preview.YawStep = BuildGeometry.Turn(contextTurn);
+            }
+            else if (definition.kind == BuildPartKind.Wall && target.Definition.kind == BuildPartKind.Corner)
+            {
+                int side = FacingSide(localNormal, edge);
+                origin = side switch {
+                    0 => new Vector3(bounds.min.x, bounds.min.y, bounds.min.z),
+                    2 => new Vector3(bounds.min.x, bounds.min.y, bounds.max.z),
+                    4 => new Vector3(bounds.max.x, bounds.min.y, bounds.max.z),
+                    _ => new Vector3(bounds.max.x, bounds.min.y, bounds.min.z)
+                };
+                preview.YawStep = BuildGeometry.Turn(side + 2 + contextTurn);
             }
             else if (definition.kind == BuildPartKind.Wall && target.Definition.kind != BuildPartKind.Wall)
             {
                 float length = definition.LocalBounds.size.x;
-                float alongX = Mathf.Clamp((BuildGeometry.Tick(point.x - length * .5f) * BuildGeometry.Unit), bounds.min.x, Mathf.Max(bounds.min.x, bounds.max.x - length));
-                float alongZ = Mathf.Clamp((BuildGeometry.Tick(point.z - length * .5f) * BuildGeometry.Unit), bounds.min.z, Mathf.Max(bounds.min.z, bounds.max.z - length));
+                float alongX = BayStart(point.x, bounds.min.x, bounds.max.x, definition);
+                float alongZ = BayStart(point.z, bounds.min.z, bounds.max.z, definition);
                 origin = edge switch {
                     0 => new Vector3(alongX, bounds.max.y, bounds.min.z),
                     2 => new Vector3(bounds.min.x, bounds.max.y, alongZ + length),
@@ -60,7 +98,8 @@ public static class BuildPlacement
             else if (definition.kind == BuildPartKind.Wall)
             {
                 origin = localNormal.y > .6f ? new Vector3(0, bounds.max.y, 0)
-                    : new Vector3(point.x < bounds.center.x ? -definition.LocalBounds.size.x : bounds.max.x, 0, 0);
+                    : new Vector3(point.x < bounds.center.x ? bounds.min.x - definition.WallBaySpan : bounds.max.x +
+                        target.Definition.WallEndInset + definition.WallEndInset, bounds.min.y, bounds.min.z);
                 preview.YawStep = BuildGeometry.Turn(contextTurn);
             }
             else if (definition.kind == BuildPartKind.Floor && target.Definition.kind == BuildPartKind.Foundation && localNormal.y > .6f)
@@ -68,7 +107,7 @@ public static class BuildPlacement
                 origin = new Vector3(bounds.min.x, bounds.max.y - definition.LocalBounds.min.y, bounds.min.z);
                 preview.YawStep = BuildGeometry.Turn(contextTurn);
             }
-            else if (target.Definition.kind == BuildPartKind.Wall)
+            else if (target.Definition.kind == BuildPartKind.Wall || target.Definition.kind == BuildPartKind.Corner)
             {
                 origin = new Vector3(point.x - definition.LocalBounds.size.x * .5f, bounds.max.y - definition.LocalBounds.min.y,
                     point.z - definition.LocalBounds.size.z * .5f);
@@ -91,6 +130,18 @@ public static class BuildPlacement
         preview.Origin = BuildGeometry.WorldPoint(preview.Frame, preview.Anchor);
         preview.WorldYaw = BuildGeometry.Turn(preview.Frame.YawStep + preview.YawStep);
         return preview;
+    }
+    private static float BayStart(float point, float min, float max, BuildDefinition wall)
+    {
+        float span = wall.WallBaySpan;
+        int last = Mathf.Max(0, Mathf.FloorToInt((max - min + .001f) / span) - 1);
+        int bay = Mathf.Clamp(Mathf.FloorToInt((point - min) / span), 0, last);
+        return min + wall.WallEndInset + bay * span;
+    }
+    private static int FacingSide(Vector3 normal, int nearest)
+    {
+        if (Mathf.Abs(normal.y) > .6f) return nearest;
+        return Mathf.Abs(normal.x) > Mathf.Abs(normal.z) ? (normal.x > 0 ? 6 : 2) : (normal.z > 0 ? 4 : 0);
     }
     private static int ClosestEdge(Bounds bounds, Vector3 p)
     {

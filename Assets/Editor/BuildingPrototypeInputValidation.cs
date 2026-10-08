@@ -26,6 +26,7 @@ public static class BuildingPrototypeInputValidation
     static BuildingPrototypeInputValidation() { EditorApplication.playModeStateChanged += OnState; }
     public static void RunBatch()
     {
+        BuildingPrototypeSetup.CreateAssets();
         SessionState.SetBool(Pending, true);
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         EditorApplication.EnterPlaymode();
@@ -41,7 +42,9 @@ public static class BuildingPrototypeInputValidation
             InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
             Application.runInBackground = true;
             rig = new GameObject("Synthetic input rig"); rig.transform.position = new Vector3(20000, 20000, 20000);
-            var motor = rig.AddComponent<CharacterMotor>(); var look = rig.AddComponent<FirstPersonLook>();
+            var motor = rig.AddComponent<CharacterMotor>();
+            var viewPivot = new GameObject("Synthetic view pivot"); viewPivot.transform.SetParent(rig.transform, false);
+            var look = viewPivot.AddComponent<FirstPersonLook>();
             Set(look, "yawRoot", rig.transform);
             var host = new GameObject("Synthetic local input"); host.transform.SetParent(rig.transform, false);
             controller = host.AddComponent<BuildingController>(); input = host.AddComponent<LocalPlayerInput>();
@@ -91,12 +94,30 @@ public static class BuildingPrototypeInputValidation
                 case 2: Queue(Key.B); break;
                 case 3:
                     Read(); Require(!controller.Active, "B did not exit building.");
+                    Require(controller.GameplayCursorRequested, "B exit did not request gameplay cursor capture.");
                     Read(); Require(!controller.Active, "Holding B reopened building."); Queue(); break;
                 case 4:
                     Read(); beforeMenu = rig.transform.rotation; nextMouseDelta = new Vector2(100, 50); Queue(Key.B); break;
                 case 5:
                     Read(); Require(controller.Active && controller.MenuOpen && rig.transform.rotation == beforeMenu, "B picker did not block look input.");
-                    Debug.Log("BUILDING INPUT PASS: native-frame B toggle, E rotation, idle wheel and modal look blocking; empty synthetic scene only."); Finish(null); break;
+                    Require(!controller.GameplayCursorRequested, "Picker retained cursor capture."); Queue(); break;
+                case 6:
+                    Read(); controller.Select(controller.World.Catalog.presets[3]);
+                    Require(controller.GameplayCursorRequested && !controller.MenuOpen, "Preset selection did not restore capture intent.");
+                    beforeMenu = rig.transform.rotation; nextMouseDelta = new Vector2(100, 50); Queue(); break;
+                case 7:
+                    Read(); Require(rig.transform.rotation == beforeMenu, "Relocking mouse jumped the camera.");
+                    nextMouseDelta = new Vector2(100, 50); Queue(); break;
+                case 8:
+                    Read(); Require(rig.transform.rotation == beforeMenu, "Deferred mouse delta jumped the camera.");
+                    nextMouseDelta = new Vector2(10, 0); Queue(); break;
+                case 9:
+                    Read(); Require(Quaternion.Angle(rig.transform.rotation, beforeMenu) > .1f,
+                        $"Look did not resume (delta={mouse.delta.ReadValue()}, skip={typeof(LocalPlayerInput).GetField("suppressLookFrames", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(input)}, menu={controller.MenuOpen}).");
+                    Queue(Key.Escape); break;
+                case 10:
+                    Read(); Require(!controller.Active && controller.GameplayCursorRequested, "Escape exit did not restore gameplay capture intent.");
+                    Debug.Log("BUILDING INPUT PASS: native B/E/Escape, held-key guards, picker capture transitions, two-frame mouse-delta suppression and resumed look; empty synthetic scene only."); Finish(null); break;
             }
         }
         catch (Exception ex) { Finish(ex); }

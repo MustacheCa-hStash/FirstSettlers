@@ -18,8 +18,9 @@ public sealed class BuildingController : MonoBehaviour
     private int worldHeading, contextTurn, suppressPlaceUntil;
     private Vector3Int nudge;
     private BuildInputCommand pending;
-    private CursorLockMode previousLock;
-    private bool previousVisibility;
+    private LocalPlayerInput input;
+    private int cursorCaptureFrames;
+    public bool GameplayCursorRequested { get; private set; }
     public bool Active { get; private set; }
     public bool MenuOpen { get; private set; }
     public BuildPreview Preview { get; private set; }
@@ -32,7 +33,7 @@ public sealed class BuildingController : MonoBehaviour
         if (viewCamera == null) viewCamera = GetComponentInParent<CharacterMotor>()?.GetComponentInChildren<Camera>();
         world.Camera = viewCamera;
         world.Focus = GetComponentInParent<CharacterMotor>()?.transform ?? transform;
-        var input = GetComponent<LocalPlayerInput>();
+        input = GetComponent<LocalPlayerInput>();
         if (input != null) input.SetBuilding(this);
         if (world.Catalog == null || world.Catalog.presets == null || world.Catalog.presets.Length == 0)
         { Debug.LogError("Building prototype catalog is missing.", this); enabled = false; return; }
@@ -44,7 +45,6 @@ public sealed class BuildingController : MonoBehaviour
         if (Active) Exit();
         else
         {
-            previousLock = Cursor.lockState; previousVisibility = Cursor.visible;
             Active = true; OpenMenu();
         }
     }
@@ -52,6 +52,7 @@ public sealed class BuildingController : MonoBehaviour
     {
         if (!Active) return;
         MenuOpen = true; pending = default;
+        GameplayCursorRequested = false; cursorCaptureFrames = 0;
         Cursor.lockState = CursorLockMode.None; Cursor.visible = true; view?.SetState(true, true);
     }
     public void Select(BuildDefinition definition)
@@ -59,18 +60,41 @@ public sealed class BuildingController : MonoBehaviour
         if (!Active || definition == null) return;
         selected = definition; MenuOpen = false; nudge = default; contextTurn = 0; target = null; pending = default;
         suppressPlaceUntil = Time.frameCount + 1;
-        Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; view?.SetState(true, false);
+        RequestGameplayCursor(); view?.SetState(true, false);
     }
-    public void Exit()
+    public void Exit() => Close(true);
+    private void Close(bool capture)
     {
-        if (Active) { Cursor.lockState = previousLock; Cursor.visible = previousVisibility; }
+        bool wasActive = Active;
         Active = false; MenuOpen = false; pending = default; target = null; Preview = default; view?.SetState(false, false);
+        if (capture && wasActive) RequestGameplayCursor();
+        else if (!capture) { GameplayCursorRequested = false; cursorCaptureFrames = 0; }
+    }
+    private void RequestGameplayCursor()
+    {
+        GameplayCursorRequested = true;
+        // The picker callback or Editor Escape handling can release capture later in the same frame.
+        // Repeat briefly after the transition, rather than continually fighting window/UI focus.
+        cursorCaptureFrames = 3;
+        input?.SuppressLookAfterCursorCapture();
+        Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false;
+    }
+    private void OnApplicationFocus(bool focused)
+    {
+        if (focused && isActiveAndEnabled && GameplayCursorRequested && !MenuOpen) RequestGameplayCursor();
+    }
+    private void RestoreCursorCapture()
+    {
+        if (cursorCaptureFrames <= 0 || MenuOpen || !Application.isFocused) return;
+        cursorCaptureFrames--;
+        Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false;
     }
     public void Submit(BuildInputCommand command) => pending = command;
-    private void OnDisable() => Exit();
-    private void OnDestroy() { Exit(); view?.Dispose(); }
+    private void OnDisable() => Close(false);
+    private void OnDestroy() { Close(false); view?.Dispose(); }
     private void LateUpdate()
     {
+        RestoreCursorCapture();
         var command = pending; pending = default;
         if (!Active || MenuOpen || selected == null || viewCamera == null) return;
         var ray = viewCamera.ViewportPointToRay(new Vector3(.5f, .5f, 0));

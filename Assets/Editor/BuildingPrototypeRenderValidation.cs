@@ -17,8 +17,58 @@ public static class BuildingPrototypeRenderValidation
     {
         Directory.CreateDirectory(".utmp/building-prototype");
         var catalog = AssetDatabase.LoadAssetAtPath<BuildCatalog>(BuildingPrototypeSetup.CatalogPath);
-        RenderWall(catalog.presets[0]); RenderMenu(catalog, 1280, 720); RenderMenu(catalog, 1920, 1080);
+        RenderWall(catalog.presets[0]); RenderRoom(catalog); RenderMenu(catalog, 1280, 720); RenderMenu(catalog, 1920, 1080);
         Debug.Log("BUILDING RENDER PASS: plain wall authoring pixels, near/far instanced submissions and removal, actual picker at 720p/1080p, contained controls. No live-scene audit or FPS benchmark.");
+    }
+    private static void RenderRoom(BuildCatalog catalog)
+    {
+        var session = new BuildSession(); var frame = session.CreateFrame(new Vector3(0,.5f,0), 0);
+        var foundation = session.Add(catalog.presets[2], frame, default, 0, true);
+        var baseFrame = session.Frame(foundation.OwnFrameId);
+        foreach (var p in new[] { new Vector3(2,0,0), new Vector3(0,0,2), new Vector3(2,0,4), new Vector3(4,0,2) })
+        {
+            var preview = BuildPlacement.Solve(catalog.presets[0], frame.Origin + p, Vector3.up, foundation, baseFrame, 0, 0, default);
+            session.Add(preview.Definition, baseFrame, preview.Anchor, preview.YawStep, false);
+        }
+        foreach (var p in new[] { Vector3.zero, new Vector3(4,0,0), new Vector3(4,0,4), new Vector3(0,0,4) })
+        {
+            var preview = BuildPlacement.Solve(catalog.presets[3], frame.Origin + p, Vector3.up, foundation, baseFrame, 0, 0, default);
+            session.Add(preview.Definition, baseFrame, preview.Anchor, preview.YawStep, false);
+        }
+        var root = new GameObject("Room authoring fixture");
+        var cameraObject = new GameObject("Room authoring camera"); var camera = cameraObject.AddComponent<Camera>(); camera.enabled = false;
+        camera.orthographic = true; camera.orthographicSize = 4; camera.aspect = 1.5f;
+        camera.transform.position = new Vector3(8,7,-8); camera.transform.LookAt(new Vector3(2,1.25f,2));
+        camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = new Color(.16f,.19f,.2f); camera.cullingMask = 1 << 31;
+        var lightObject = new GameObject("Room light"); var light = lightObject.AddComponent<Light>(); light.type = LightType.Directional;
+        light.intensity = 1.5f; light.shadows = LightShadows.None; light.cullingMask = 1 << 31; lightObject.transform.rotation = Quaternion.Euler(35,-35,0);
+        var texture = new RenderTexture(900,600,24,RenderTextureFormat.ARGB32); texture.Create();
+        var oldPipeline = GraphicsSettings.defaultRenderPipeline; var oldQuality = QualitySettings.renderPipeline; var oldTarget = RenderTexture.active;
+        try
+        {
+            int triangles = 0;
+            foreach (var piece in session.Pieces.Values)
+            {
+                var obj = Object.Instantiate(piece.Definition.authoringPrefab, root.transform); obj.layer = 31;
+                obj.transform.SetPositionAndRotation(piece.Origin, BuildGeometry.Rotation(piece.WorldYawStep));
+                triangles += piece.Definition.mesh.triangles.Length / 3;
+            }
+            var pipeline = AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>("Assets/Settings/PC_RPAsset.asset");
+            GraphicsSettings.defaultRenderPipeline = pipeline; QualitySettings.renderPipeline = pipeline;
+            RenderPipeline.SubmitRenderRequest(camera, new UniversalRenderPipeline.SingleCameraRequest { destination = texture });
+            RenderPipeline.SubmitRenderRequest(camera, new UniversalRenderPipeline.SingleCameraRequest { destination = texture });
+            SavePixels(texture, ".utmp/building-prototype/room.png");
+            int objectsBefore = Object.FindObjectsByType<Transform>().Length;
+            var renderer = new BuildRenderer(session); renderer.Draw(camera,3000,140);
+            if (triangles != 108 || renderer.DrawCalls != 3 || Object.FindObjectsByType<Transform>().Length != objectsBefore)
+                throw new InvalidOperationException("Nine-piece room geometry/batching changed unexpectedly.");
+            Debug.Log("BUILDING ROOM COST: 9 pieces, 108 triangles per geometry pass, 3 spatially grouped instance submissions; no renderer-created objects.");
+        }
+        finally
+        {
+            GraphicsSettings.defaultRenderPipeline = oldPipeline; QualitySettings.renderPipeline = oldQuality; RenderTexture.active = oldTarget;
+            Object.DestroyImmediate(root); Object.DestroyImmediate(cameraObject); Object.DestroyImmediate(lightObject); texture.Release(); Object.DestroyImmediate(texture);
+        }
     }
     public static void RunBatch()
     {

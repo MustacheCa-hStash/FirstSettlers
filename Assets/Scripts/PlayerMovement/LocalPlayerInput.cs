@@ -12,7 +12,9 @@ public sealed class LocalPlayerInput : MonoBehaviour
     private enum BuildButton { Toggle = 1, Cancel = 2, Picker = 4, LeftTurn = 8, RightTurn = 16,
         Left = 32, Right = 64, Forward = 128, Back = 256, Up = 512, Down = 1024, Place = 2048, Remove = 4096 }
     private BuildButton heldBuildButtons;
+    private int suppressLookFrames;
     public void SetBuilding(BuildingController controller) => building = controller;
+    public void SuppressLookAfterCursorCapture() => suppressLookFrames = 2;
 
     private void OnEnable()
     {
@@ -48,7 +50,8 @@ public sealed class LocalPlayerInput : MonoBehaviour
             motor.Simulate(default, Time.deltaTime);
             return;
         }
-        if (Mouse.current != null)
+        if (suppressLookFrames > 0) suppressLookFrames--;
+        else if (Mouse.current != null)
             look.ApplyLook(Mouse.current.delta.ReadValue());
 
         if (Keyboard.current == null)

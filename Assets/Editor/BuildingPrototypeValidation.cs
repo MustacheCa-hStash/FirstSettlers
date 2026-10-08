@@ -21,8 +21,8 @@ public static class BuildingPrototypeValidation
     {
         checks = 0;
         var catalog = AssetDatabase.LoadAssetAtPath<BuildCatalog>(BuildingPrototypeSetup.CatalogPath);
-        Check(catalog != null && catalog.presets.Length == 3, "Prototype catalog is missing.");
-        ValidateAssets(catalog); ValidateGeometry(catalog); ValidateSession(catalog); ValidatePhysicsAndUI(catalog);
+        Check(catalog != null && catalog.presets.Length == 4, "Prototype catalog is missing.");
+        ValidateAssets(catalog); ValidateGeometry(catalog); ValidateCornerKit(catalog); ValidateCompleteRoom(catalog); ValidateSession(catalog); ValidatePhysicsAndUI(catalog);
         Debug.Log("BUILDING PROTOTYPE PASS: " + checks + " checks; dimensions/colliders, rotated discrete frames, face connections, cross-cell records, " +
             "alternate support and detached cycles, foundation placement, blockers, pooled query identity and UI lifecycle.");
     }
@@ -42,7 +42,8 @@ public static class BuildingPrototypeValidation
             Check(!collider.isTrigger && definition.material.enableInstancing, "Collision or instancing is disabled.");
             Check(definition.material.GetTexture("_BaseMap") == null, "The prototype material is not plain.");
         }
-        Near(catalog.presets[0].LocalBounds.size, new Vector3(4, 2.75f, .25f), "Wall contract changed.");
+        Near(catalog.presets[0].LocalBounds.size, new Vector3(3.5f, 2.75f, .25f), "Wall contract changed.");
+        Near(catalog.presets[3].LocalBounds.size, new Vector3(.25f, 2.75f, .25f), "Flush corner contract changed.");
         Check(catalog.panel != null && catalog.layout != null, "Build UI assets are absent.");
     }
     private static void ValidateGeometry(BuildCatalog catalog)
@@ -59,10 +60,10 @@ public static class BuildingPrototypeValidation
         var target = new BuildPieceRecord { Definition = foundation, WorldYawStep = 1 };
         var attached = BuildPlacement.Solve(wall, frame.Origin + BuildGeometry.Rotation(1) * new Vector3(2, 0, 0), Vector3.up, target, frame, 0, 0, default);
         Check(attached.WorldYaw == 1, "A diagonal floor failed to align the wall.");
-        Near(attached.Origin, frame.Origin, "Wall edge does not align with the foundation.");
+        Near(attached.Origin, frame.Origin + BuildGeometry.Rotation(1) * new Vector3(.25f, 0, 0), "Wall did not reserve the corner slot.");
         var nudged = BuildPlacement.Solve(wall, frame.Origin + BuildGeometry.Rotation(1) * new Vector3(2, 0, 0), Vector3.up, target, frame, 0, 1, new Vector3Int(1, 1, 0));
         Check(nudged.WorldYaw == 2, "Relative 45-degree rotation failed.");
-        Near(BuildGeometry.LocalPoint(frame, nudged.Origin), new Vector3(.25f, .25f, 0), "Nudges left the local lattice.");
+        Near(BuildGeometry.LocalPoint(frame, nudged.Origin), new Vector3(.5f, .25f, 0), "Nudges left the local lattice.");
         Check(BuildGeometry.Connects(foundation.LocalBounds, frame.Origin, 1, wall.LocalBounds, frame.Origin, 1), "A wall on a diagonal foundation has no face connection.");
         Check(!BuildGeometry.Overlaps(foundation.LocalBounds, frame.Origin, 1, wall.LocalBounds, frame.Origin, 1), "Allowed face contact counts as penetration.");
         Check(BuildGeometry.Overlaps(wall.LocalBounds, Vector3.zero, 0, wall.LocalBounds, Vector3.zero, 1), "Rotated penetration was missed.");
@@ -71,6 +72,101 @@ public static class BuildingPrototypeValidation
             "Rotated empty AABB corners captured snapping.");
         var onTop = BuildPlacement.Solve(floor, frame.Origin, Vector3.up, target, frame, 0, 0, default);
         Check(!BuildGeometry.Overlaps(foundation.LocalBounds, frame.Origin, 1, floor.LocalBounds, onTop.Origin, onTop.WorldYaw), "Floor placement intersects foundation.");
+    }
+    private static void ValidateCornerKit(BuildCatalog catalog)
+    {
+        var wall = catalog.presets[0]; var corner = catalog.presets[3]; var foundation = catalog.presets[2];
+        foreach (int yaw in new[] { 0, 1, 3, 7 })
+        {
+            var session = new BuildSession(); var frame = session.CreateFrame(new Vector3(-12, 10, 20), yaw);
+            var basePiece = session.Add(foundation, frame, default, 0, true);
+            var baseFrame = session.Frame(basePiece.OwnFrameId);
+            Vector3 At(Vector3 p) => BuildGeometry.WorldPoint(baseFrame, BuildGeometry.Ticks(p));
+            var pieces = new List<BuildPieceRecord>();
+            var aims = new[] { new Vector3(2,0,0), new Vector3(0,0,2), new Vector3(2,0,4), new Vector3(4,0,2) };
+            foreach (var aim in aims)
+            {
+                var preview = BuildPlacement.Solve(wall, At(aim), Vector3.up, basePiece, baseFrame, 0, 0, default);
+                foreach (var other in pieces) Check(!BuildGeometry.Overlaps(wall.LocalBounds, preview.Origin, preview.WorldYaw,
+                    other.Definition.LocalBounds, other.Origin, other.WorldYawStep), "Perpendicular walls intersect.");
+                pieces.Add(session.Add(wall, baseFrame, preview.Anchor, preview.YawStep, false));
+            }
+            foreach (var aim in new[] { Vector3.zero, new Vector3(4,0,0), new Vector3(4,0,4), new Vector3(0,0,4) })
+            {
+                var preview = BuildPlacement.Solve(corner, At(aim), Vector3.up, basePiece, baseFrame, 0, 0, default);
+                foreach (var other in pieces) Check(!BuildGeometry.Overlaps(corner.LocalBounds, preview.Origin, preview.WorldYaw,
+                    other.Definition.LocalBounds, other.Origin, other.WorldYawStep), "Corner plug intersects another piece.");
+                var plug = session.Add(corner, baseFrame, preview.Anchor, preview.YawStep, false); pieces.Add(plug);
+                Check(plug.Supported && plug.Connections.Count == 3, "Corner did not touch its foundation and two walls.");
+            }
+            foreach (var piece in pieces)
+            {
+                Bounds b = piece.Definition.LocalBounds;
+                for (int x = 0; x < 2; x++) for (int z = 0; z < 2; z++)
+                {
+                    Vector3 vertex = piece.Origin + BuildGeometry.Rotation(piece.WorldYawStep) * new Vector3(x == 0 ? b.min.x : b.max.x, 0, z == 0 ? b.min.z : b.max.z);
+                    Vector3 local = BuildGeometry.LocalPoint(baseFrame, vertex);
+                    Check(local.x >= -.001f && local.x <= 4.001f && local.z >= -.001f && local.z <= 4.001f, "Piece protrudes outside foundation footprint.");
+                }
+            }
+            var firstWall = pieces[0]; var wallFrame = session.Frame(firstWall.OwnFrameId);
+            var endCap = BuildPlacement.Solve(corner, firstWall.Origin + BuildGeometry.Rotation(firstWall.WorldYawStep) * new Vector3(3.49f,1,0),
+                Vector3.up, firstWall, wallFrame, 0, 0, default);
+            Near(BuildGeometry.LocalPoint(baseFrame, endCap.Origin), new Vector3(3.75f,0,0), "Wall-end corner snapping missed the reserved slot.");
+            var startCap = BuildPlacement.Solve(corner, firstWall.Origin, Vector3.up, firstWall, wallFrame, 0, 0, default);
+            Near(BuildGeometry.LocalPoint(baseFrame, startCap.Origin), Vector3.zero, "Wall-start corner snapping missed the reserved slot.");
+            var extension = BuildPlacement.Solve(wall, firstWall.Origin + BuildGeometry.Rotation(firstWall.WorldYawStep) * new Vector3(3.49f,1,0),
+                Vector3.forward, firstWall, wallFrame, 0, 0, default);
+            Near(BuildGeometry.LocalPoint(baseFrame, extension.Origin), new Vector3(4.25f,0,0), "Consecutive panels lost the four-metre pitch.");
+            var leftExtension = BuildPlacement.Solve(wall, firstWall.Origin, Vector3.forward, firstWall, wallFrame, 0, 0, default);
+            Near(BuildGeometry.LocalPoint(baseFrame, leftExtension.Origin), new Vector3(-3.75f,0,0), "Reverse wall extension lost bay spacing.");
+            var seamPlug = pieces[5]; var plugFrame = session.Frame(seamPlug.OwnFrameId);
+            var adjacent = BuildPlacement.Solve(corner, seamPlug.Origin + BuildGeometry.Rotation(yaw) * new Vector3(.25f, 1, .125f),
+                BuildGeometry.Rotation(yaw) * Vector3.right, seamPlug, plugFrame, 0, 0, default);
+            Near(BuildGeometry.LocalPoint(baseFrame, adjacent.Origin), new Vector3(4,0,0), "Adjacent quarter plugs could not fill a straight seam.");
+        }
+    }
+    private static void ValidateCompleteRoom(BuildCatalog catalog)
+    {
+        var host = new GameObject("Complete room placement fixture");
+        var groundObject = new GameObject("Room terrain") { layer = GameplayLayers.WorldSolid };
+        Vector3 origin = new(22000, 22000, 22000);
+        groundObject.transform.position = origin + Vector3.down * .5f;
+        groundObject.AddComponent<BoxCollider>().size = new Vector3(40,1,40); groundObject.AddComponent<WorldGroundSurface>();
+        try
+        {
+            var world = host.AddComponent<BuildWorld>(); if (world.Session == null) Call(world, "Awake"); Physics.SyncTransforms();
+            foreach (int yaw in new[] { 0, 1 })
+            {
+                Vector3 offset = yaw == 0 ? Vector3.zero : Vector3.right * 12;
+                var foundation = BuildPlacement.Solve(catalog.presets[2], origin + offset, Vector3.up, null, null, yaw, 0, default);
+                var basePiece = world.Commit(foundation); Check(basePiece != null, "Room foundation rejected.");
+                var frame = world.Session.Frame(basePiece.OwnFrameId);
+                Vector3 At(Vector3 p) => frame.Origin + BuildGeometry.Rotation(yaw) * p;
+                // Reverse the order between fixtures: posts must never be prerequisites for placing walls.
+                void Walls()
+                {
+                    foreach (var aim in new[] { new Vector3(2,0,0), new Vector3(0,0,2), new Vector3(2,0,4), new Vector3(4,0,2) })
+                    {
+                        var preview = BuildPlacement.Solve(catalog.presets[0], At(aim), Vector3.up, basePiece, frame, 0, 0, default);
+                        world.Validate(ref preview); Check(preview.Valid, "Four-sided wall placement rejected: " + preview.Message);
+                        Check(world.Commit(preview) != null, "Wall failed commit.");
+                    }
+                }
+                void Corners()
+                {
+                    foreach (var aim in new[] { Vector3.zero, new Vector3(4,0,0), new Vector3(4,0,4), new Vector3(0,0,4) })
+                    {
+                        var preview = BuildPlacement.Solve(catalog.presets[3], At(aim), Vector3.up, basePiece, frame, 0, 0, default);
+                        world.Validate(ref preview); Check(preview.Valid, "Flush corner placement rejected: " + preview.Message);
+                        var piece = world.Commit(preview); Check(piece != null && piece.Supported, "Corner failed support/commit.");
+                        world.Validate(ref preview); Check(!preview.Valid, "Duplicate corner was accepted.");
+                    }
+                }
+                if (yaw == 0) { Walls(); Corners(); } else { Corners(); Walls(); }
+            }
+        }
+        finally { Object.DestroyImmediate(host); Object.DestroyImmediate(groundObject); Physics.SyncTransforms(); }
     }
     private static void ValidateSession(BuildCatalog catalog)
     {
@@ -143,7 +239,7 @@ public static class BuildingPrototypeValidation
             view.SetState(true, true);
             var document = root.GetComponentInChildren<UIDocument>();
             Check(document.rootVisualElement.Q<VisualElement>("build-menu").style.display.value == DisplayStyle.Flex &&
-                document.rootVisualElement.Query<Button>().ToList().Count == 3, "Picker layout/preset population failed.");
+                document.rootVisualElement.Query<Button>().ToList().Count == 4, "Picker layout/preset population failed.");
             view.SetState(true, false); view.Show("Plain wall", "Ready", true);
             Check(document.rootVisualElement.Q<Label>("build-status").text == "Ready" &&
                 document.rootVisualElement.Q<VisualElement>("build-hud").pickingMode == PickingMode.Ignore, "Placement HUD failed or captures input.");
@@ -158,7 +254,11 @@ public static class BuildingPrototypeValidation
             Check(proximity.Invoke(controller, new object[] { At(new Vector3(2, -.3f, -.16f)) }) == null, "Snap hysteresis retained a distant target.");
             Check(controller.Active && controller.MenuOpen && Cursor.lockState == CursorLockMode.None, "B mode did not release the menu cursor.");
             controller.Select(catalog.presets[0]); Check(controller.Active && !controller.MenuOpen, "Selection did not enter placement.");
-            controller.Exit(); Check(!controller.Active && Cursor.lockState == oldLock && Cursor.visible == oldVisible, "Exit did not restore cursor state.");
+            Check(controller.GameplayCursorRequested && !Cursor.visible, "Selection did not request gameplay capture.");
+            controller.OpenMenu(); Check(!controller.GameplayCursorRequested && Cursor.visible, "Picker retained gameplay capture.");
+            controller.Exit(); Check(!controller.Active && controller.GameplayCursorRequested && !Cursor.visible, "Exit restored a free cursor instead of gameplay.");
+            typeof(BuildingController).GetMethod("OnApplicationFocus", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(controller, new object[] { true });
+            Check(controller.GameplayCursorRequested && !Cursor.visible, "Focus regain did not request capture.");
         }
         finally
         {

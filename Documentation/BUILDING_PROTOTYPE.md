@@ -5,7 +5,7 @@ The enabled SmearScene player has a BuildingController and BuildWorld on LocalCo
 | Input | Action |
 | --- | --- |
 | B | Enter building and open the component picker; exit if already building |
-| Esc | Exit building and restore the previous cursor state |
+| Esc | Exit building and recapture the gameplay cursor |
 | Tab | Reopen the component picker |
 | Left mouse | Place a valid preview |
 | Right mouse | Remove the directly aimed-at building piece |
@@ -13,7 +13,7 @@ The enabled SmearScene player has a BuildingController and BuildWorld on LocalCo
 | Arrow keys | Nudge one increment along the active grid's X/Z axes |
 | Page Up / Page Down | Nudge one vertical increment |
 
-The picker releases the cursor and blocks movement/look input while gravity still runs. Choosing an item returns to a locked-cursor preview. The click used to select a preset cannot also place it. Green previews can be placed; red previews explain the failed check. Each click places one component. Tool damage can call BuildWorld.Damage(pieceId, amount); the prototype right-click is immediate removal.
+The picker releases the cursor and blocks movement/look input while gravity still runs. Choosing an item or exiting with B/Escape explicitly returns to a locked, hidden gameplay cursor. Capture is reapplied briefly after the UI transition and when application focus returns, rather than restoring a previously unlocked snapshot. The first two look samples after capture are suppressed to prevent a cursor-centering camera jump. The click used to select a preset cannot also place it. Green previews can be placed; red previews explain the failed check. Each click places one component. Tool damage can call BuildWorld.Damage(pieceId, amount); the prototype right-click is immediate removal.
 
 ## Geometry and authoring
 
@@ -21,11 +21,14 @@ One build unit is **0.25 Unity world units**, independently of terrain worldScal
 
 | Preset | X/Y/Z size in build units | Local bounds in Unity coordinates |
 | --- | --- | --- |
-| Plain wall | 16 / 11 / 1 | (0,0,0) to (4,2.75,0.25) |
+| Plain wall | 14 / 11 / 1 | (0,0,0) to (3.5,2.75,0.25) |
 | Timber floor | 16 / 1 / 16 | (0,-0.25,0) to (4,0,4) |
 | Stone foundation | 16 / 2 / 16 | (0,-0.5,0) to (4,0,4) |
+| Corner piece | 1 / 11 / 1 | (0,0,0) to (0.25,2.75,0.25) |
 
-All three are deliberately plain, 12-triangle cuboids with shared URP Lit materials, no texture maps, and exact matching BoxColliders. The wall collider centre is (2,1.375,0.125), size (4,2.75,0.25). The wall origin is its lower start corner; floors/foundations anchor at the top walking surface. A wall plus a floor slab spans a 3-unit storey.
+All four are deliberately plain, 12-triangle cuboids with shared URP Lit materials, no texture maps, and exact matching BoxColliders. The wall collider centre is (1.75,1.375,0.125), size (3.5,2.75,0.25). The corner collider centre is (0.125,1.375,0.125), size (0.25,2.75,0.25). Walls and corners use lower-corner origins; floors/foundations anchor at the top walking surface. A wall plus a floor slab spans a 3-unit storey. Corner pieces share the wall material, with no added bevels or intentional seams.
+
+Each four-metre wall bay reserves 0.25 m at both ends: **0.25 + 3.5 + 0.25 = 4 m**. All four wall panels can be placed independently on the foundation's inward border. Quarter-metre corner plugs then fill the holes entirely within its footprint, in either placement order. The result is flush inside and outside, including when the whole foundation is rotated 45 degrees.
 
 Definitions, meshes, materials, and authoring prefabs live in **Assets/Resources/Building**. The prefabs are authoring references; placed pieces are not instantiated from them. Replace a mesh in its BuildDefinition when importing Blender art, retaining its logical bounds and origin. Blender's Z-up must be converted to Unity's Y-up. Avoid changing root scale or deriving placement bounds from decorative mesh details.
 
@@ -35,7 +38,7 @@ Independent placements use a world lattice. Foundation bottoms are quantized dow
 
 A directly hit building piece supplies its own local grid. Ground hits within 0.10 units of a piece's oriented bounds may acquire that grid; the existing target releases beyond 0.15. Empty corners of rotated world AABBs do not attract snapping. Other obstructing objects do not acquire nearby building frames. Automatic contextual heading is separate from the manually selected ground heading, so leaving a 45-degree structure does not retain its automatic bias.
 
-Wall-on-floor/foundation previews choose the nearest perimeter edge and face inward. Wall-on-wall previews extend an end or stack on top. Floor previews cover foundation tops, extend floor edges, or sit on wall tops. Selecting a foundation and aiming at a wall/floor puts the footing underneath it, allowing missing support to be replaced in the same diagonal frame. Arrow/height offsets are discrete and reset when changing targets or presets. Rotation is discrete both on the ground and within a target frame. A placed piece gets an immutable frame at its own origin/heading, allowing a diagonal wing to be extended accurately without rounding its endpoints back onto the world grid.
+Wall-on-floor/foundation previews choose the nearest perimeter edge and face inward, with a one-unit end inset. Consecutive panels extend on a four-metre pitch, reserving a 0.5 m straight junction for two quarter-metre plugs. Corner pieces snap to the nearest foundation/floor corner or wall end; aiming at a corner's side allows an adjacent plug, and its top allows stacking. Walls can attach to corner faces. Floor previews cover foundation tops, extend floor edges, or sit on wall/corner tops. Selecting a foundation and aiming at a wall/floor puts the footing underneath it, accounting for the wall's bay inset so the repaired foundation retains its original footprint. Arrow/height offsets are discrete and reset when changing targets or presets. Rotation is discrete both on the ground and within a target frame. A placed piece gets an immutable frame at its own origin/heading, allowing a diagonal wing to be extended accurately without rounding its endpoints back onto the world grid.
 
 Placement checks the session spatial index using oriented-box overlap, then queries world/player colliders. Face contacts are allowed; penetration, player overlap, unsupported placement, buffer saturation, and nudging beyond 8-unit reach are rejected. Dimensions and support tolerances are separate from acquisition padding.
 
@@ -57,4 +60,16 @@ For a later save format, serialize immutable frames and record fields using stab
 
 **Tools/ValidateBuildingPrototype.ps1** compiles runtime/editor code and runs a separate Unity project under .utmp/building-prototype. **-Render** renders the real plain wall material and menu at 720p/1080p, checks object-free runtime submission at near/far distances, and verifies deletion removes distant instances. **-InputChecks** uses native player input frames in a new empty synthetic scene to check B/E, idle wheel input, and modal look blocking. The ordinary geometry and render fixtures do not enter Play mode; the input fixture does. None opens or audits the saved world scene. Unity licensing/cache access may require running the command outside a restrictive sandbox.
 
-The first kit has three presets, no resource costs, no save files, no debris animation, and no authored corner/roof/door variants. Plain cuboid wall intersections must avoid penetration; refined corners need matching geometry/pieces. Rebuilding render batches and recomputing support currently process session records after edits; unchanged frames retain cached batches. No measured FPS claim is made.
+The kit has four presets, no resource costs, no save files, no debris animation, and no authored roof/door or relative-45-degree junction variants. Rebuilding render batches and recomputing support currently process session records after edits; unchanged frames retain cached batches. No measured FPS claim is made.
+
+## CPU and GPU computation
+
+On steady frames the CPU checks cached batch bounds against six frustum planes and the range limit, then submits surviving instance groups. It also checks active collider distances and candidate activation. The nearby spatial query and distance sort refresh approximately every 0.1 seconds, after one metre of movement, or when records change. While actively placing, one raycast, nearby oriented-bound tests, and a bounded nonallocating physics overlap query validate the preview. UI labels change only when their contents differ, although constructing the preview heading still allocates a small string per frame.
+
+Structural support is an event-driven graph traversal, approximately O(N + E) for pieces and connections, without weight or joint simulation. The current prototype scans the session graph after edits and rebuilds all render batches after a revision, including health changes. Those edit-time costs and allocations can grow with large settlements; they are not paid continuously while an unchanged structure stands.
+
+The GPU renders one shared indexed cuboid mesh per component definition at many transforms, with opaque depth testing and a plain Lit material. Each preset has 24 vertices and 12 triangles. A foundation, four walls and four corners contain **108 triangles per geometry pass**. In the isolated same-cell room fixture this produces **three instanced submissions** (foundation, walls, corners), rather than nine individual submissions. Shadow/depth/other pipeline passes add work. Shadows stop at 140 units while geometry remains visible to 3,000.
+
+Instancing reduces CPU submission overhead; it does not remove per-instance vertex processing or pixel shading. The current path uploads visible instance matrices through RenderMeshInstanced each frame; it is not a GPU-resident compute-culling system. Opaque depth testing helps reject hidden fragments, but there is no building-specific occlusion culling, buried-face removal, or HLOD yet. CPU matrix arrays allocate 500 slots per batch, including unused capacity. Detailed custom meshes, extra materials, large edit bursts, and dense nearby colliders are the main scaling concerns to profile next.
+
+Unity Profiler samples: **FS.Building.Rendering**, **FS.Building.RenderBatchRebuild**, **FS.Building.PlacementValidation**, **FS.Building.CollisionStreaming**, **FS.Building.Support**. The test counts and renders establish geometry, batching and behavior; they do not establish milliseconds or live-world FPS.

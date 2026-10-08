@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Profiling;
 
 [Serializable]
 public sealed class BuildGridFrame
@@ -32,6 +33,7 @@ public sealed class BuildPieceRecord
 /// <summary>Session authority. Contains no GameObjects, colliders, or renderers. Frames outlive removed anchors.</summary>
 public sealed class BuildSession
 {
+    private static readonly ProfilerMarker SupportMarker = new("FS.Building.Support");
     private ulong nextPiece = 1, nextFrame = 1;
     private readonly Dictionary<ulong, BuildPieceRecord> pieces = new();
     private readonly Dictionary<ulong, BuildGridFrame> frames = new();
@@ -87,6 +89,7 @@ public sealed class BuildSession
     }
     public void RecomputeSupport()
     {
+        using var scope = SupportMarker.Auto();
         supportQueue.Clear();
         foreach (var piece in pieces.Values)
         {
