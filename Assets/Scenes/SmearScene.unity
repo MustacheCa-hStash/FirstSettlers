@@ -892,7 +892,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 1456
+  worldSeed: 14567
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -1900,6 +1900,9 @@ MonoBehaviour:
   motor: {fileID: 1578603183}
   look: {fileID: 2001000022}
   building: {fileID: 2002000002}
+  repeatArrowNudges: 1
+  nudgeRepeatDelay: 0.3
+  nudgeRepeatInterval: 0.1
 --- !u!1 &2001000020
 GameObject:
   m_ObjectHideFlags: 0

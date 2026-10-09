@@ -3,7 +3,7 @@
   <ui:VisualElement name="build-menu" class="build-menu">
     <ui:Label text="BUILD" class="build-title" />
     <ui:Label text="Choose a component" class="build-subtitle" />
-    <ui:VisualElement name="build-presets" />
+    <ui:ScrollView name="build-presets" class="build-presets" mode="Vertical" horizontal-scroller-visibility="Hidden" />
     <ui:Label text="Start with a foundation. Add walls, then fill their corners." class="build-note" />
     <ui:Label text="B / Esc · Close" class="build-note" />
   </ui:VisualElement>
@@ -11,6 +11,6 @@
     <ui:Label name="build-heading" class="build-title" />
     <ui:Label name="build-status" class="build-status" />
     <ui:Label text="Left click · Place     Right click · Remove     Q / E or wheel · Turn 45°" class="build-note" />
-    <ui:Label text="Arrows · Nudge     PgUp / PgDn · Height     Tab · Components     B / Esc · Exit" class="build-note" />
+    <ui:Label text="Arrows · Nudge relative to view (hold to repeat)     PgUp / PgDn · Height     Tab · Components     B / Esc · Exit" class="build-note" />
   </ui:VisualElement>
 </ui:UXML>

@@ -19,6 +19,7 @@ public sealed class BuildWorld : MonoBehaviour
     private readonly List<ulong> expired = new();
     private BuildGameplay gameplay;
     private BuildRenderer buildingRenderer;
+    private MeshCollider placementProbe;
     private int supportRevision = -1;
     public BuildSession Session { get; private set; }
     public BuildCatalog Catalog => catalog;
@@ -37,7 +38,7 @@ public sealed class BuildWorld : MonoBehaviour
         if (Focus != null) gameplay.Update(Focus.position, colliderRange, Mathf.Max(colliderRange + 1, colliderReleaseRange), activationsPerFrame);
         UpdateCollapse(); buildingRenderer.Draw(Camera, renderRange, shadowRange);
     }
-    private void OnDestroy() { gameplay?.Dispose(); }
+    private void OnDestroy() { gameplay?.Dispose(); if (placementProbe != null) BuildLifetime.Destroy(placementProbe.gameObject); }
     public BuildPieceRecord Commit(BuildPreview preview)
     {
         Validate(ref preview);
@@ -99,20 +100,23 @@ public sealed class BuildWorld : MonoBehaviour
         foreach (var piece in nearby)
         {
             if (wallsOnly && piece.Definition.kind != BuildPartKind.Wall) continue;
-            if (BuildGeometry.Overlaps(bounds,origin,preview.WorldYaw,piece.Definition.LocalBounds,piece.Origin,piece.WorldYawStep)) return true;
+            if (BuildOccupancy.Overlaps(preview.Definition,origin,preview.WorldYaw,piece.Definition,piece.Origin,piece.WorldYawStep)) return true;
         }
         return false;
     }
     private void ValidateCore(ref BuildPreview preview)
     {
         preview.Valid = false;
-        Bounds local = preview.Definition.LocalBounds;
+        preview.RoofContinuesFromBelow=false;
+        Bounds local = BuildOccupancy.Bounds(preview.Definition);
         Bounds world = BuildGeometry.WorldBounds(local, preview.Origin, preview.WorldYaw);
         Bounds search = world; search.Expand(.04f); Session.Query(search, nearby);
         bool supported = false;
         foreach (var piece in nearby)
         {
-            if (BuildGeometry.Overlaps(local, preview.Origin, preview.WorldYaw, piece.Definition.LocalBounds, piece.Origin, piece.WorldYawStep))
+            if(BuildRoof.IsBelow(preview.Definition,preview.Origin,preview.WorldYaw,piece.Definition,piece.Origin,piece.WorldYawStep))
+                preview.RoofContinuesFromBelow=true;
+            if (BuildOccupancy.Overlaps(preview.Definition, preview.Origin, preview.WorldYaw, piece.Definition, piece.Origin, piece.WorldYawStep))
             {
                 preview.Message = preview.TopAttachment && piece.Definition.kind == BuildPartKind.Wall
                     ? "Wall occupies the floor edge · place the floor before the upper wall"
@@ -130,7 +134,32 @@ public sealed class BuildWorld : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             Collider collider = overlaps[i];
-            if (collider.GetComponent<BuildGameplayProxy>() != null) continue;
+            if (collider.GetComponentInParent<BuildGameplayProxy>() != null) continue;
+            // Broad-phase boxes include empty attic. ComputePenetration uses
+            // each actual thin convex solid against the real external collider.
+            if (BuildOccupancy.Custom(preview.Definition))
+            {
+                bool intersects = false;
+                if (placementProbe == null)
+                {
+                    var probe=new GameObject("Build placement convex probe") { hideFlags=HideFlags.HideAndDontSave };
+                    placementProbe=probe.AddComponent<MeshCollider>(); placementProbe.convex=true; placementProbe.enabled=false;
+                }
+                foreach (var volume in preview.Definition.occupiedVolumes)
+                {
+                    // Assign while enabled so PhysX cooks a freshly imported
+                    // convex mesh; keep the probe disabled for world queries.
+                    placementProbe.enabled=true;
+                    placementProbe.sharedMesh=volume.mesh;
+                    bool penetrates;
+                    try { penetrates=Physics.ComputePenetration(placementProbe,preview.Origin,BuildGeometry.Rotation(preview.WorldYaw),
+                        collider,collider.transform.position,collider.transform.rotation,out _,out float depth) && depth>.003f; }
+                    finally { placementProbe.enabled=false; }
+                    if (penetrates)
+                    { intersects=true; break; }
+                }
+                if (!intersects) continue;
+            }
             if (preview.Grounded && IsGround(collider)) continue;
             preview.Message = collider.gameObject.layer == GameplayLayers.Player ? "Move clear of the preview" : "Blocked by terrain or another object";
             return;

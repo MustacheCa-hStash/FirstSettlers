@@ -10,10 +10,12 @@ The enabled SmearScene player has a BuildingController and BuildWorld on LocalCo
 | Left mouse | Place a valid preview |
 | Right mouse | Remove the directly aimed-at building piece |
 | Q / E, or mouse wheel | Rotate by 45 degrees |
-| Arrow keys | Nudge one increment along the active grid's X/Z axes |
+| Arrow keys | Nudge toward/away from the player or left/right relative to the view; hold to repeat |
 | Page Up / Page Down | Nudge one vertical increment |
 
 The picker releases the cursor and blocks movement/look input while gravity still runs. Choosing an item or exiting with B/Escape explicitly returns to a locked, hidden gameplay cursor. Capture is reapplied briefly after the UI transition and when application focus returns, rather than restoring a previously unlocked snapshot. The first two look samples after capture are suppressed to prevent a cursor-centering camera jump. The click used to select a preset cannot also place it. Green previews can be placed; red previews explain the failed check. Each click places one component. Tool damage can call BuildWorld.Damage(pieceId, amount); the prototype right-click is immediate removal.
+
+Horizontal arrow directions follow the camera's horizontal heading: Down moves toward the player, Up away, and Left/Right toward the player's respective sides. The closest perpendicular forward/right axes of the active build grid are used so each single-arrow step remains exactly one 0.25 m grid increment, including on rotated structures. Camera pitch does not tilt horizontal nudges; Page Up/Down remain vertical tap controls. Opposite held arrows cancel. Arrow holds repeat after 0.3 seconds, then at 0.1-second intervals using unscaled time, with no catch-up burst after a stalled frame. LocalPlayerInput exposes Repeat Arrow Nudges, Nudge Repeat Delay and Nudge Repeat Interval in the Inspector. Opening the picker, exiting building, disabling input or losing focus clears repeat state; an arrow held through the picker needs release/repress before it moves again.
 
 ## Geometry and authoring
 
@@ -102,6 +104,8 @@ The bay-post replacement passed runtime/editor compilation and **3,446 synthetic
 **Tools/ValidateBuildingPrototype.ps1 -ShadowChecks** runs a separate real-pixel regression with four foundations, four roof slabs and a fixed overhead sun. It samples one world point while the roof moves in/out of camera view and the camera shifts position. Before the fix, normalized pixel luminance changed from 0.6509 looking down to 0.0076 looking ahead, with the same roof/light. After the fix, the shadowed point remained 0.0076 in all three views; disabling the shadow range or removing the roof restored 0.6509. The test advances actual editor frames between cases to clear native draw submissions and verifies no stale roof shadow after removal. Existing graphics regression and runtime/editor compilation passed. Logs: `.utmp/building-prototype/roof-shadow-before.log`, `roof-shadow-after.log`, `roof-render-regression.log`. [Before](../ArtReferences/BuildingPrototype/RoofShadowBefore.png) / [after](../ArtReferences/BuildingPrototype/RoofShadowAfter.png) are isolated reproduction captures, not the user's saved world.
 
 ## CPU and GPU computation
+
+Player-relative arrow nudging passed runtime/editor compilation and the isolated **-InputChecks** suite: 3,617 existing building checks, direction checks over eight grid orientations and varied camera yaw/pitch, deterministic repeat timing, and native key press/hold/release/opposition/picker suppression. Log: `.utmp/building-prototype/input.log`. These fixtures do not inspect the saved world camera.
 
 On steady frames the CPU checks cached batch bounds against six frustum planes and the range limit, then submits surviving instance groups. It also checks active collider distances and candidate activation. The nearby spatial query and distance sort refresh approximately every 0.1 seconds, after one metre of movement, or when records change. While actively placing, one raycast, nearby oriented-bound tests, and a bounded nonallocating physics overlap query validate the preview. UI labels change only when their contents differ, although constructing the preview heading still allocates a small string per frame.
 

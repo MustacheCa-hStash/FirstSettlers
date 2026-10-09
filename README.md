@@ -1,5 +1,9 @@
 # FirstSettlers Work Notes
 
+## October 9: player-relative building arrows and hold repeat
+
+Arrows now map to the closest forward/right axes of the active build grid relative to the player's horizontal view: Down brings the preview closer, Up moves it away, and Left/Right follow the player's sides. Each individual arrow moves one 0.25 m grid step. Holds repeat after 0.3 seconds at 0.1-second intervals; LocalPlayerInput exposes a repeat toggle and timing settings. Menu/focus/disabled-input transitions clear holds, and opposing arrows cancel. Page Up/Down remain vertical tap controls. Runtime/editor compilation, direction/repeat correctness checks and native input regressions passed; see [building guide](Documentation/BUILDING_PROTOTYPE.md).
+
 ## October 9: continuous stair flights and wall-clearance snaps
 
 Removed the repeated 0.25 m flat exit from W21's walking hull. It is now a continuous 1.5 m / 2 m ramp (6 vertices/8 triangles), so consecutive flights keep rising without horizontal shelves. Landing-to-ramp adhesion handles downhill entry without contact loss. A floor-top starter can shift backward one grid unit if its next flight would otherwise overlap a far border wall; the shift must preserve support and clear both pieces. Nudges remain one unit relative to the shown snap. Fully enclosed 4 m bays have only 3.5 m of clear run and still cannot contain two full flights without more space.

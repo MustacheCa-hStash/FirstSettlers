@@ -12,15 +12,20 @@ public static class BuildingShadowValidation
 {
     private static Fixture fixture;
     private static int stage, frames;
+    private static bool thatchMode;
     private static readonly float[] luminance = new float[5];
     private static readonly string[] names = { "unshadowed", "look-down", "look-ahead", "moved", "roof-removed" };
 
     public static void RunBatch()
+    { Start(false); }
+    public static void RunThatchBatch()
+    { Start(true); }
+    private static void Start(bool useThatch)
     {
         try
         {
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            fixture = new Fixture(); stage = frames = 0;
+            thatchMode=useThatch; fixture = new Fixture(useThatch); stage = frames = 0;
             EditorApplication.update += Tick;
         }
         catch (Exception exception) { Finish(exception); }
@@ -43,7 +48,7 @@ public static class BuildingShadowValidation
                 throw new InvalidOperationException("Fixed roof shadow changed substantially with camera rotation/movement.");
             if (luminance[4] < luminance[0] * .95f)
                 throw new InvalidOperationException("Removing the roof left a stale shadow caster.");
-            Debug.Log("BUILDING SHADOW PASS: real instanced roof shadows remain on a fixed floor point when the roof is off-screen; camera turn/movement, disabled shadow range and caster removal verified.");
+            Debug.Log((thatchMode?"THATCH ":"")+"BUILDING SHADOW PASS: real instanced roof shadows remain on a fixed floor point when the roof is off-screen; camera turn/movement, disabled shadow range and caster removal verified.");
             Finish(null);
         }
         catch (Exception exception) { Finish(exception); }
@@ -72,15 +77,20 @@ public static class BuildingShadowValidation
         private readonly bool oldFog = RenderSettings.fog;
         private readonly float oldReflectionIntensity = RenderSettings.reflectionIntensity;
         private readonly Action<ScriptableRenderContext, Camera> submit;
-        private readonly Bounds roofBounds = new(new Vector3(4, 2.875f, 4), new Vector3(8, .25f, 8));
-        private readonly Vector3 probe = new(3.75f, .005f, 4.5f);
+        private readonly Bounds roofBounds;
+        private readonly Vector3 probe;
+        private readonly bool useThatch;
         private float shadowRange;
         private bool roofRemoved;
         public readonly BuildRenderer Renderer;
         public bool RoofInView => GeometryUtility.TestPlanesAABB(GeometryUtility.CalculateFrustumPlanes(camera), roofBounds);
 
-        public Fixture()
+        public Fixture(bool useThatch=false)
         {
+            this.useThatch=useThatch;
+            roofBounds=useThatch?new Bounds(new Vector3(4,3.91f,2),new Vector3(8.54f,2.32f,4.54f)):
+                new Bounds(new Vector3(4,2.875f,4),new Vector3(8,.25f,8));
+            probe=useThatch?new Vector3(3.75f,.005f,2.5f):new Vector3(3.75f,.005f,4.5f);
             var catalog = AssetDatabase.LoadAssetAtPath<BuildCatalog>(BuildingPrototypeSetup.CatalogPath);
             if (!catalog) throw new InvalidOperationException("Building catalog missing.");
             var frame = session.CreateFrame(Vector3.zero, 0);
@@ -88,7 +98,22 @@ public static class BuildingShadowValidation
             foreach (var position in new[] { Vector3Int.zero, new Vector3Int(16, 0, 0), new Vector3Int(0, 0, 16), new Vector3Int(16, 0, 16) })
             {
                 session.Add(catalog.presets[2], frame, position, 0, true);
-                roofIds[roofIndex++] = session.Add(catalog.presets[1], frame, position + new Vector3Int(0, 12, 0), 0, false).Id;
+                if(!useThatch)roofIds[roofIndex++] = session.Add(catalog.presets[1], frame, position + new Vector3Int(0, 12, 0), 0, false).Id;
+            }
+            if(useThatch)
+            {
+                var l=catalog.Find(ThatchRoofSetup.ContentId);var r=l;
+                roofIds[0]=session.Add(l,frame,new Vector3Int(0,11,0),0,false).Id;
+                roofIds[1]=session.Add(r,frame,new Vector3Int(16,11,0),0,false).Id;
+                roofIds[2]=session.Add(r,frame,new Vector3Int(16,11,16),4,false).Id;
+                roofIds[3]=session.Add(l,frame,new Vector3Int(32,11,16),4,false).Id;
+                bool first=true;
+                foreach(var piece in session.Pieces.Values)
+                    if(piece.Definition.kind==BuildPartKind.Roof)
+                    {
+                        var visual=BuildGeometry.WorldBounds(piece.Definition.mesh.bounds,piece.Origin,piece.WorldYawStep);
+                        if(first){roofBounds=visual;first=false;}else roofBounds.Encapsulate(visual);
+                    }
             }
             Renderer = new BuildRenderer(session);
             cameraObject = new GameObject("Off-screen roof shadow camera");
@@ -117,7 +142,7 @@ public static class BuildingShadowValidation
                 foreach (ulong id in roofIds) session.Remove(id);
                 roofRemoved = true;
             }
-            camera.transform.position = index == 3 ? new Vector3(4.35f, 1.6f, 2.15f) : new Vector3(4, 1.6f, 2);
+            camera.transform.position = (index == 3 ? new Vector3(4.35f, 1.6f, 2.15f) : new Vector3(4, 1.6f, 2)) - (useThatch?new Vector3(0,0,2):Vector3.zero);
             camera.transform.rotation = Quaternion.Euler(index == 2 ? 10 : 55, index == 3 ? -5 : 0, 0);
             shadowRange = index == 0 ? 0 : 140;
             if (RoofInView != (index == 2)) throw new InvalidOperationException("Roof visibility fixture is not isolating camera culling.");
@@ -135,7 +160,7 @@ public static class BuildingShadowValidation
                 RenderTexture.active = target;
                 pixels.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0); pixels.Apply();
                 Directory.CreateDirectory(".utmp/building-prototype");
-                File.WriteAllBytes($".utmp/building-prototype/shadow-{name}.png", pixels.EncodeToPNG());
+                File.WriteAllBytes($".utmp/building-prototype/{(useThatch?"thatch-":"")}shadow-{name}.png", pixels.EncodeToPNG());
                 Vector3 point = camera.WorldToViewportPoint(probe);
                 if (point.z <= 0 || point.x < .05f || point.x > .95f || point.y < .05f || point.y > .95f)
                     throw new InvalidOperationException("Fixed shadow probe is outside the camera view.");

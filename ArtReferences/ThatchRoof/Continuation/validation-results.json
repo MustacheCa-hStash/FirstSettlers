@@ -1,0 +1,20 @@
+{
+  "roof_checks": 1058,
+  "building_checks": 3617,
+  "stair_checks": 18496,
+  "stair_motor_paths": 96,
+  "tested_yaw_steps": 8,
+  "high_edge": "same heading, +2 m rise/+2 m run",
+  "low_edge": "same heading, -2 m rise/-2 m run",
+  "side_edge": "same heading, +/-4 m width",
+  "opposing_slope": "start from the other wall side",
+  "actual_uphill_commit_supported": true,
+  "join_preview_and_renderer_match": true,
+  "removing_lower_neighbor_restores_eave": true,
+  "support_loss_and_reconnection": true,
+  "bake_axis_conversion": true,
+  "runtime_vertices_normals_uvs_preserved": true,
+  "model_import_hierarchy_identity": true,
+  "single_prefab_and_menu_option": true,
+  "triangles_per_visual_mesh": 62
+}

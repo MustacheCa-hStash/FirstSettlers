@@ -20,6 +20,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 5b8e39b6246f7154eb15691e2f393f85, type: 2}
   - {fileID: 11400000, guid: 593e8d161c423c74c8b182f705af7d51, type: 2}
   - {fileID: 11400000, guid: 91ebb7cb8758d664e857fda516cb6ad0, type: 2}
+  - {fileID: 11400000, guid: 424bef391a2406440afd49d5f8b32b6e, type: 2}
   validPreview: {fileID: 2100000, guid: c3dba284489e3eb409443ade468101df, type: 2}
   invalidPreview: {fileID: 2100000, guid: b56ebe5995f0c8c4b95d0a75173ff3cd, type: 2}
   panel: {fileID: 11400000, guid: 84a64891247762442a90e81ca1d35870, type: 2}

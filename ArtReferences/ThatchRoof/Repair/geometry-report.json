@@ -1,0 +1,33 @@
+{
+  "thatch_vertices": 8,
+  "thatch_faces": 6,
+  "thatch_triangles": 12,
+  "closed_manifold": true,
+  "all_thatch_uv_faces_have_area": true,
+  "total_triangles": 62,
+  "wood_uvs": [
+    {
+      "object": "Roof_Single_EaveRail",
+      "faces": 6,
+      "all_faces_unwrapped": true
+    },
+    {
+      "object": "Roof_Single_Rafter_0",
+      "faces": 6,
+      "all_faces_unwrapped": true
+    },
+    {
+      "object": "Roof_Single_Rafter_1",
+      "faces": 6,
+      "all_faces_unwrapped": true
+    },
+    {
+      "object": "Roof_Single_Rafter_2",
+      "faces": 6,
+      "all_faces_unwrapped": true
+    }
+  ],
+  "wattle_unchanged": true,
+  "non_roof_objects_unchanged": true,
+  "export": "C:\\Users\\samee\\GitProjects\\FirstSettlers\\Assets\\Models\\Buildings\\Wood\\Roofs\\ThatchRoofPanel_4.0Wx2.0Hx2.0D.fbx"
+}

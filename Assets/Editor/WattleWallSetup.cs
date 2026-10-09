@@ -95,7 +95,7 @@ public static class WattleWallSetup
     public static Mesh Bake(GameObject model, out string inspection)
         => BakeStaticMesh(model, Size, "Wattle wall", out inspection);
 
-    public static Mesh BakeStaticMesh(GameObject model, Vector3 requiredSize, string meshName, out string inspection)
+    public static Mesh BakeStaticMesh(GameObject model, Vector3 requiredSize, string meshName, out string inspection, bool preserveStructuralOrigin = false)
     {
         var report = new StringBuilder(meshName.ToUpperInvariant() + " IMPORT INSPECTION\n");
         var filters = model.GetComponentsInChildren<MeshFilter>(true);
@@ -143,18 +143,18 @@ public static class WattleWallSetup
         if (vertices.Count == 0) throw new InvalidOperationException("Wattle mesh is empty.");
         var envelope = new Bounds(vertices[0], Vector3.zero);
         foreach (var point in vertices) envelope.Encapsulate(point);
-        report.AppendLine($"Transformed envelope: min={envelope.min:F6}, max={envelope.max:F6}, size={envelope.size:F6}; normalization offset={-envelope.min:F6}");
-        if ((envelope.size - requiredSize).sqrMagnitude > .000001f)
+        report.AppendLine($"Transformed envelope: min={envelope.min:F6}, max={envelope.max:F6}, size={envelope.size:F6}; normalization offset={(preserveStructuralOrigin ? Vector3.zero : -envelope.min):F6}");
+        if (!preserveStructuralOrigin && (envelope.size - requiredSize).sqrMagnitude > .000001f)
             throw new InvalidOperationException(meshName + " transformed dimensions do not match " + requiredSize + "; inspect the FBX rather than stretching its UV-mapped geometry. " + report);
         // Bake hierarchy transforms, then translate to the definition's lower-corner origin.
         // Snap only float round-off at the six intended boundary faces; never rescale UVs.
         for (int i = 0; i < vertices.Count; ++i)
         {
-            Vector3 point = vertices[i] - envelope.min;
+            Vector3 point = vertices[i] - (preserveStructuralOrigin ? Vector3.zero : envelope.min);
             for (int axis = 0; axis < 3; ++axis)
             {
                 if (Mathf.Abs(point[axis]) < .00001f) point[axis] = 0;
-                if (Mathf.Abs(point[axis] - requiredSize[axis]) < .00001f) point[axis] = requiredSize[axis];
+                if (!preserveStructuralOrigin && Mathf.Abs(point[axis] - requiredSize[axis]) < .00001f) point[axis] = requiredSize[axis];
             }
             vertices[i] = point;
         }

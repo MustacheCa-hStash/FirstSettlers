@@ -162,9 +162,26 @@ public static class BuildingPrototypeRenderValidation
             }
             var menu = document.rootVisualElement.Q<VisualElement>("build-menu");
             if (menu.worldBound.width < 200 || !float.IsFinite(menu.worldBound.height)) throw new InvalidOperationException("Menu layout did not resolve.");
+            var scroll=menu.Q<ScrollView>("build-presets");
+            if(scroll==null || scroll.contentViewport.worldBound.height<76 || menu.worldBound.yMax>document.rootVisualElement.worldBound.yMax+.1f)
+                throw new InvalidOperationException($"Picker scrolling/viewport does not fit the display. menu={menu.worldBound}, viewport={scroll?.contentViewport.worldBound}, display={width}x{height}");
             foreach (var button in menu.Query<Button>().ToList())
-                if (!menu.worldBound.Contains(button.worldBound.min) || !menu.worldBound.Contains(button.worldBound.max)) throw new InvalidOperationException("Preset button overflow.");
+                if(button.worldBound.xMin<menu.worldBound.xMin || button.worldBound.xMax>menu.worldBound.xMax)
+                    throw new InvalidOperationException("Preset button horizontal overflow.");
             SavePixels(target, $".utmp/building-prototype/menu-{width}x{height}.png");
+            var buttons=menu.Query<Button>().ToList();
+            scroll.ScrollTo(buttons[buttons.Count-1]);
+            for(int i=0;i<3;i++)
+            {
+                panel.GetType().GetMethod("Update", Methods).Invoke(panel,null);
+                panel.GetType().GetMethod("ValidateLayout", Methods).Invoke(panel,null);
+                panel.GetType().GetMethod("Repaint",Methods,null,new[]{typeof(Event)},null).Invoke(panel,new object[]{new Event{type=EventType.Repaint}});
+                panel.GetType().GetMethod("Render",Methods).Invoke(panel,null);
+            }
+            var last=buttons[buttons.Count-1].worldBound;
+            if(last.yMin<scroll.contentViewport.worldBound.yMin-.1f || last.yMax>scroll.contentViewport.worldBound.yMax+.1f)
+                throw new InvalidOperationException("Last component cannot be reached by scrolling.");
+            SavePixels(target,$".utmp/building-prototype/menu-bottom-{width}x{height}.png");
         }
         finally { RenderTexture.active = previous; view?.Dispose(); Object.DestroyImmediate(root); Object.DestroyImmediate(clone.panel); Object.DestroyImmediate(clone); target.Release(); Object.DestroyImmediate(target); }
     }

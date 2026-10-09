@@ -13,6 +13,17 @@ public static class BuildGeometry
         Mathf.FloorToInt(point.y / CellSize), Mathf.FloorToInt(point.z / CellSize));
     public static Vector3 WorldPoint(BuildGridFrame frame, Vector3Int ticks) => frame.Origin + Rotation(frame.YawStep) * ((Vector3)ticks * Unit);
     public static Vector3 LocalPoint(BuildGridFrame frame, Vector3 world) => Quaternion.Inverse(Rotation(frame.YawStep)) * (world - frame.Origin);
+    public static Vector3Int ViewRelativeNudge(Vector3Int arrows, Quaternion viewRotation, int gridYaw)
+    {
+        Vector3 forward = viewRotation * Vector3.forward; forward.y = 0;
+        // Looking vertically keeps the player's horizontal heading through the camera's right axis.
+        if (forward.sqrMagnitude < .0001f) forward = Vector3.Cross(viewRotation * Vector3.right, Vector3.up);
+        Vector3 local = Quaternion.Inverse(Rotation(gridYaw)) * forward;
+        Vector3Int gridForward = Mathf.Abs(local.x) > Mathf.Abs(local.z)
+            ? new Vector3Int(local.x >= 0 ? 1 : -1, 0, 0) : new Vector3Int(0, 0, local.z >= 0 ? 1 : -1);
+        Vector3Int gridRight = new(gridForward.z, 0, -gridForward.x);
+        return gridRight * arrows.x + gridForward * arrows.z + Vector3Int.up * arrows.y;
+    }
     public static Bounds WorldBounds(Bounds local, Vector3 origin, int yaw)
     {
         var rotation = Rotation(yaw);
@@ -48,6 +59,8 @@ public static class BuildGeometry
     /// <summary>Ordinary face contacts plus an explicit high-end/toe connector for straight stair flights.</summary>
     public static bool Connects(BuildDefinition a, Vector3 ao, int ay, BuildDefinition b, Vector3 bo, int by)
     {
+        if (a.kind == BuildPartKind.Roof) return BuildRoof.Connects(a,ao,ay,b,bo,by);
+        if (b.kind == BuildPartKind.Roof) return BuildRoof.Connects(b,bo,by,a,ao,ay);
         if (Connects(a.LocalBounds, ao, ay, b.LocalBounds, bo, by)) return true;
         if (a.kind != BuildPartKind.Stair || b.kind != BuildPartKind.Stair || Turn(ay) != Turn(by)) return false;
         Quaternion rotation = Rotation(ay);

@@ -1,7 +1,8 @@
 using UnityEngine;
 
-public enum BuildPartKind { Wall, Floor, Foundation, Corner, Stair }
+public enum BuildPartKind { Wall, Floor, Foundation, Corner, Stair, Roof }
 public enum WallPlacementMode { Panel, Infill, Surface }
+public enum RoofAttachmentMode { None, Gable, Beam }
 
 /// <summary>Authored placement geometry is independent of mesh detail and runtime proxies.</summary>
 [CreateAssetMenu(menuName = "First Settlers/Building/Component")]
@@ -21,8 +22,14 @@ public sealed class BuildDefinition : ScriptableObject
     public float WallEndInset => Mathf.Max(0, wallEndInsetUnits) * BuildGeometry.Unit;
     public float WallBaySpan => LocalBounds.size.x + 2 * WallEndInset;
     public Mesh mesh;
+    [Tooltip("Roof visual with the cosmetic eave removed at an uphill join. Same definition/prefab; selected automatically.")]
+    public Mesh roofContinuationMesh;
     [Tooltip("Independent convex walking hull for stairs. Other parts keep their logical BoxCollider.")]
     public Mesh collisionMesh;
+    [Tooltip("Convex occupied volumes, also used by pooled physical colliders. Empty keeps the existing logical box.")]
+    public BuildConvexVolume[] occupiedVolumes;
+    [Tooltip("Optional roof socket for future shaped gable infill or interior beams. Existing definitions keep None.")]
+    public RoofAttachmentMode roofAttachment;
     public Material material;
     public GameObject authoringPrefab;
     public float maxHealth = 100;

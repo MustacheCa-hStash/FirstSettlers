@@ -60,6 +60,7 @@ public static class BuildingPrototypeSetup
         var presets = new List<BuildDefinition> { wall, floor, foundation, corner, infill, wattle };
         var stair = W21StairSetup.CreateIfModelAvailable();
         if (stair != null) presets.Add(stair);
+        presets.AddRange(ThatchRoofSetup.CreateIfModelsAvailable());
         catalog.presets = presets.ToArray(); catalog.validPreview = valid; catalog.invalidPreview = invalid;
         catalog.panel = panel; catalog.layout = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(Folder + "/BuildMenu.uxml");
         if (catalog.layout == null || panel.themeStyleSheet == null) throw new InvalidOperationException("Building UI failed to import.");

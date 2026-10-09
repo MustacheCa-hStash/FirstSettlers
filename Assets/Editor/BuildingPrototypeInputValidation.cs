@@ -23,6 +23,8 @@ public static class BuildingPrototypeInputValidation
     private static Key[] nextKeys;
     private static bool injectPending;
     private static Vector2 nextMouseDelta;
+    private static double arrowStarted;
+    private static int arrowRepeats;
     static BuildingPrototypeInputValidation() { EditorApplication.playModeStateChanged += OnState; }
     public static void RunBatch()
     {
@@ -38,6 +40,7 @@ public static class BuildingPrototypeInputValidation
         try
         {
             BuildingPrototypeValidation.Run();
+            ValidateNudgeMappingAndRepeat();
             InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
             InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
             Application.runInBackground = true;
@@ -62,6 +65,39 @@ public static class BuildingPrototypeInputValidation
     private static void Read() => typeof(LocalPlayerInput).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(input, null);
     private static void Require(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
     private static void Queue(params Key[] keys) { nextKeys = keys; injectPending = true; }
+    private static void ValidateNudgeMappingAndRepeat()
+    {
+        for (int grid=0; grid<8; grid++)
+        for (int yaw=0; yaw<360; yaw+=15)
+        foreach (float pitch in new[] { -80f,0f,80f,90f })
+        {
+            Quaternion view=Quaternion.Euler(pitch,yaw,0);
+            Vector3 forward=Quaternion.Euler(0,yaw,0)*Vector3.forward, right=Quaternion.Euler(0,yaw,0)*Vector3.right;
+            var f=BuildGeometry.ViewRelativeNudge(Vector3Int.forward,view,grid);
+            var r=BuildGeometry.ViewRelativeNudge(Vector3Int.right,view,grid);
+            Vector3 fw=BuildGeometry.Rotation(grid)*((Vector3)f*BuildGeometry.Unit);
+            Vector3 rw=BuildGeometry.Rotation(grid)*((Vector3)r*BuildGeometry.Unit);
+            Require(Mathf.Abs(fw.magnitude-BuildGeometry.Unit)<.00001f && Mathf.Abs(rw.magnitude-BuildGeometry.Unit)<.00001f,
+                "An arrow moved more than one grid unit.");
+            Require(Vector3.Dot(fw,forward)>=BuildGeometry.Unit*.707f && Vector3.Dot(rw,right)>=BuildGeometry.Unit*.707f,
+                "Arrow movement points away from the player's intended direction.");
+            Require(Mathf.Abs(Vector3.Dot(fw,rw))<.00001f,"Forward/right nudge axes are not perpendicular.");
+            Require(BuildGeometry.ViewRelativeNudge(Vector3Int.back,view,grid)==-f && BuildGeometry.ViewRelativeNudge(Vector3Int.left,view,grid)==-r,
+                "Opposite arrows are not exact inverse grid steps.");
+            Require(BuildGeometry.ViewRelativeNudge(Vector3Int.up,view,grid)==Vector3Int.up,"Camera pitch tilted the vertical nudge.");
+        }
+        var repeat=new BuildNudgeRepeat();
+        Require(repeat.Sample(true,true,1,true,.3,.1),"Arrow press did not immediately nudge.");
+        Require(!repeat.Sample(true,false,1.29,true,.3,.1),"Held arrow repeated before its initial delay.");
+        Require(repeat.Sample(true,false,1.31,true,.3,.1),"Held arrow failed to repeat after its initial delay.");
+        Require(!repeat.Sample(true,false,1.4,true,.3,.1) && repeat.Sample(true,false,1.42,true,.3,.1),"Arrow repeat interval failed.");
+        Require(repeat.Sample(true,false,10,true,.3,.1) && !repeat.Sample(true,false,10,true,.3,.1),"A stalled frame produced a burst of nudges.");
+        Require(!repeat.Sample(false,false,10.1,true,.3,.1),"Released arrow kept repeating.");
+        Require(repeat.Sample(true,true,10.2,false,.3,.1) && !repeat.Sample(true,false,11,false,.3,.1),"Repeat-disabled mode did not retain tap behavior.");
+        repeat=default;
+        Require(!repeat.Sample(true,false,12,true,.3,.1),"A menu/reset hold resumed without a fresh press.");
+        Debug.Log("BUILDING NUDGE MATH PASS: player-relative unit steps across eight grids, yaw/pitch incl. vertical look, inverse arrows, repeat timing/release/reset/disabled mode and no stall catch-up.");
+    }
     private static void Inject()
     {
         if (!injectPending || InputState.currentUpdateType != InputUpdateType.Dynamic) return;
@@ -117,11 +153,45 @@ public static class BuildingPrototypeInputValidation
                     Queue(Key.Escape); break;
                 case 10:
                     Read(); Require(!controller.Active && controller.GameplayCursorRequested, "Escape exit did not restore gameplay capture intent.");
-                    Debug.Log("BUILDING INPUT PASS: native B/E/Escape, held-key guards, picker capture transitions, two-frame mouse-delta suppression and resumed look; empty synthetic scene only."); Finish(null); break;
+                    controller.Toggle(); controller.Select(controller.World.Catalog.presets[0]); Queue(); break;
+                case 11: Read(); Queue(Key.DownArrow); break;
+                case 12:
+                    Read(); Require(PendingNudge()==Vector3Int.back,"Down arrow did not send a backward step.");
+                    arrowStarted=Time.unscaledTimeAsDouble; arrowRepeats=0; Queue(Key.DownArrow); break;
+                case 13:
+                    Read();
+                    if (PendingNudge()!=Vector3Int.zero)
+                    {
+                        Require(PendingNudge()==Vector3Int.back,"Held down arrow sent a wrong direction.");
+                        Require(Time.unscaledTimeAsDouble-arrowStarted>=.28,"Held arrow repeated immediately.");
+                        arrowRepeats++;
+                    }
+                    if (arrowRepeats<2) { stage=13; Queue(Key.DownArrow); }
+                    else Queue(); break;
+                case 14:
+                    Read(); Require(PendingNudge()==Vector3Int.zero,"Released arrow generated another nudge."); Queue(Key.RightArrow); break;
+                case 15:
+                    Read(); Require(PendingNudge()==Vector3Int.right,"Right arrow did not send a rightward step.");
+                    controller.OpenMenu(); Queue(Key.RightArrow); break;
+                case 16:
+                    Read(); controller.Select(controller.World.Catalog.presets[0]);
+                    arrowStarted=Time.unscaledTimeAsDouble; Queue(Key.RightArrow); break;
+                case 17:
+                    Read(); Require(PendingNudge()==Vector3Int.zero,"Picker-held arrow resumed repeating after selection.");
+                    if (Time.unscaledTimeAsDouble-arrowStarted<.4) { stage=17; Queue(Key.RightArrow); }
+                    else Queue(); break;
+                case 18: Read(); Queue(Key.LeftArrow); break;
+                case 19:
+                    Read(); Require(PendingNudge()==Vector3Int.left,"Fresh press after picker suppression did not nudge.");
+                    Queue(Key.LeftArrow,Key.RightArrow); break;
+                case 20:
+                    Read(); Require(PendingNudge()==Vector3Int.zero,"Opposite held arrows did not cancel.");
+                    Debug.Log("BUILDING INPUT PASS: native B/E/Escape, held-key guards, picker capture/look, arrow press/hold/release/opposition and menu-held suppression; empty synthetic scene only."); Finish(null); break;
             }
         }
         catch (Exception ex) { Finish(ex); }
     }
+    private static Vector3Int PendingNudge() => ((BuildInputCommand)typeof(BuildingController).GetField("pending",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(controller)).Nudge;
     private static void Finish(Exception error)
     {
         InputSystem.onBeforeUpdate -= Inject; InputSystem.onAfterUpdate -= CheckFrame; EditorApplication.update -= CheckTimeout;

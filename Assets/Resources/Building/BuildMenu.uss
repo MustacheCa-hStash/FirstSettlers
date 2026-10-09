@@ -1,12 +1,13 @@
 .build-menu {
-    position: absolute; left: 50%; top: 22%; width: 380px; margin-left: -190px;
+    position: absolute; left: 50%; top: 10%; height: 80%; width: 420px; margin-left: -210px;
     padding: 24px; background-color: rgba(24, 29, 25, 0.96);
     border-radius: 12px; color: rgb(239, 232, 213);
 }
+.build-presets { flex-grow: 1; flex-shrink: 1; min-height: 0; }
 .build-title { font-size: 20px; -unity-font-style: bold; margin-bottom: 8px; color: rgb(225, 207, 157); }
 .build-subtitle { font-size: 16px; margin-bottom: 18px; }
 .build-preset {
-    height: 76px; margin-bottom: 8px; padding: 10px; -unity-text-align: middle-left; white-space: normal;
+    height: 76px; flex-shrink: 0; margin-bottom: 8px; padding: 10px; -unity-text-align: middle-left; white-space: normal;
     background-color: rgb(48, 57, 47); color: rgb(244, 239, 226); border-radius: 6px;
     border-width: 1px; border-color: rgb(87, 101, 80); font-size: 17px;
 }

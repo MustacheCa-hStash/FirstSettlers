@@ -7,7 +7,9 @@ public sealed class BuildGameplayProxy : QueryTarget
     public BoxCollider Shape { get; private set; }
     public MeshCollider RampShape { get; private set; }
     private SmoothWalkSurface smoothWalk;
-    public Collider ActiveShape => Record != null && Record.Definition.kind == BuildPartKind.Stair ? RampShape : Shape;
+    private readonly System.Collections.Generic.List<MeshCollider> volumes = new();
+    public Collider ActiveShape => Record != null && BuildOccupancy.Custom(Record.Definition) ? volumes[0] :
+        Record != null && Record.Definition.kind == BuildPartKind.Stair ? RampShape : Shape;
     protected override bool IsAvailable => Record != null;
     public void Bind(BuildPieceRecord record)
     {
@@ -19,9 +21,23 @@ public sealed class BuildGameplayProxy : QueryTarget
         if (Shape != null) Shape.enabled = false;
         if (RampShape != null) RampShape.enabled = false;
         if (smoothWalk != null) smoothWalk.enabled = false;
+        foreach (var volume in volumes) volume.enabled = false;
         transform.SetPositionAndRotation(record.Origin, BuildGeometry.Rotation(record.WorldYawStep));
         transform.localScale = Vector3.one;
-        if (record.Definition.kind == BuildPartKind.Stair)
+        if (BuildOccupancy.Custom(record.Definition))
+        {
+            for (int i=0; i<record.Definition.occupiedVolumes.Length; i++)
+            {
+                if (i == volumes.Count)
+                {
+                    var child=new GameObject("Occupied roof volume") { layer=GameplayLayers.WorldSolid };
+                    child.transform.SetParent(transform,false); volumes.Add(child.AddComponent<MeshCollider>());
+                }
+                var collider=volumes[i]; collider.convex=true; collider.isTrigger=false;
+                collider.sharedMesh=record.Definition.occupiedVolumes[i].mesh; collider.enabled=true;
+            }
+        }
+        else if (record.Definition.kind == BuildPartKind.Stair)
         {
             RampShape ??= gameObject.AddComponent<MeshCollider>();
             RampShape.convex = true; RampShape.isTrigger = false;
@@ -44,6 +60,7 @@ public sealed class BuildGameplayProxy : QueryTarget
         if (Shape != null) Shape.enabled = false;
         if (RampShape != null) RampShape.enabled = false;
         if (smoothWalk != null) smoothWalk.enabled = false;
+        foreach (var volume in volumes) volume.enabled = false;
         gameObject.SetActive(false);
     }
     public override bool TryGetInfo(out QueryTargetInfo info)

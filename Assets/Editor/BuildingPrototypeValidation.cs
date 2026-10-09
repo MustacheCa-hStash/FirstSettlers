@@ -22,7 +22,8 @@ public static class BuildingPrototypeValidation
         checks = 0;
         var catalog = AssetDatabase.LoadAssetAtPath<BuildCatalog>(BuildingPrototypeSetup.CatalogPath);
         bool stairLinked = AssetDatabase.LoadAssetAtPath<GameObject>(W21StairSetup.ModelPath) != null;
-        Check(catalog != null && catalog.presets.Length == (stairLinked ? 7 : 6), "Building catalog is missing or a ready wood option is absent.");
+        int roofCount=System.IO.File.Exists(ThatchRoofSetup.ModelPath)?1:0;
+        Check(catalog != null && catalog.presets.Length == (stairLinked ? 7 : 6)+roofCount, "Building catalog is missing or a ready wood option is absent.");
         Check(stairLinked == (catalog.Find(W21StairSetup.ContentId) != null),"W21 readiness/catalog registration disagrees.");
         ValidateAssets(catalog); ValidateGeometry(catalog); ValidateAimIntent(catalog); ValidateSkyGuidance(catalog); ValidateGuideLifecycle(catalog);
         ValidateCornerKit(catalog); ValidateCompleteRoom(catalog); ValidateStoreys(catalog); ValidateSession(catalog); ValidatePhysicsAndUI(catalog);
@@ -40,6 +41,12 @@ public static class BuildingPrototypeValidation
     {
         foreach (var definition in catalog.presets)
         {
+            if (definition.kind == BuildPartKind.Roof)
+            {
+                Check(definition.mesh.subMeshCount==1 && definition.material.enableInstancing && BuildOccupancy.Custom(definition),"Roof geometry/material/occupied shape missing.");
+                Check(definition.authoringPrefab.GetComponentsInChildren<MeshCollider>().Length==2 && definition.authoringPrefab.GetComponent<BoxCollider>()==null,"Roof occupies attic with a box.");
+                continue;
+            }
             Near(definition.mesh.bounds.center, definition.LocalBounds.center, "Mesh pivot/bounds disagree.");
             Near(definition.mesh.bounds.size, definition.LocalBounds.size, "Mesh dimensions disagree.");
             if (definition.kind == BuildPartKind.Stair)
@@ -206,6 +213,9 @@ public static class BuildingPrototypeValidation
         foreach (var source in catalog.presets)
         foreach (var selected in catalog.presets)
         {
+            // These assertions describe flat box bottom faces. Sloped roofs
+            // use the real underside sockets tested by ThatchRoofValidation.
+            if(source.kind==BuildPartKind.Roof || selected.kind==BuildPartKind.Roof) continue;
             var frame = new BuildGridFrame { Origin = new Vector3(-60,10,56), YawStep = (byte)yaw };
             var target = new BuildPieceRecord { Definition = source, Origin = frame.Origin, WorldYawStep = (byte)yaw };
             Vector3 aim = source.LocalBounds.center; aim.y = source.LocalBounds.min.y;

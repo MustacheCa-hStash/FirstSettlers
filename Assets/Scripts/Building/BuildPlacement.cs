@@ -12,6 +12,8 @@ public struct BuildPreview
     public bool TopAttachment;
     public bool FitStairContinuation;
     public Vector3Int StairFitNudge;
+    public bool RoofContinuesFromBelow;
+    public Mesh VisualMesh => RoofContinuesFromBelow && Definition.roofContinuationMesh!=null ? Definition.roofContinuationMesh : Definition.mesh;
     public string Message;
     public string Hint;
 }
@@ -44,7 +46,12 @@ public static class BuildPlacement
             Vector3 origin;
             int edge = ClosestEdge(bounds, point);
             bool upper = IsUpperHit(bounds, point, localNormal);
-            if (definition.kind == BuildPartKind.Stair)
+            if (definition.kind == BuildPartKind.Roof || target.Definition.kind == BuildPartKind.Roof)
+            {
+                origin = BuildRoof.Snap(definition,target,point,localNormal,contextTurn,viewerPosition,out int roofYaw,out string roofHint);
+                preview.YawStep = roofYaw; preview.Hint = roofHint;
+            }
+            else if (definition.kind == BuildPartKind.Stair)
             {
                 preview.YawStep = BuildGeometry.Turn(contextTurn);
                 Bounds footprint = BuildGeometry.WorldBounds(definition.LocalBounds, Vector3.zero, preview.YawStep);

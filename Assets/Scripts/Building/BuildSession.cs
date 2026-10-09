@@ -58,7 +58,10 @@ public sealed class BuildSession
         var piece = new BuildPieceRecord { Id = nextPiece++, DefinitionId = definition.contentId, Definition = definition,
             FrameId = frame.Id, AnchorUnits = anchor, YawStep = (byte)BuildGeometry.Turn(yaw), Health = definition.maxHealth,
             Grounded = grounded, Origin = BuildGeometry.WorldPoint(frame, anchor), WorldYawStep = (byte)BuildGeometry.Turn(frame.YawStep + yaw) };
-        piece.WorldBounds = BuildGeometry.WorldBounds(definition.LocalBounds, piece.Origin, piece.WorldYawStep);
+        // Index covers structural sockets AND occupied solids. Rendering has its
+        // own mesh bounds and never depends on this broad-phase envelope.
+        var indexed = definition.LocalBounds; indexed.Encapsulate(BuildOccupancy.Bounds(definition));
+        piece.WorldBounds = BuildGeometry.WorldBounds(indexed, piece.Origin, piece.WorldYawStep);
         piece.OwnFrameId = CreateFrame(piece.Origin, piece.WorldYawStep).Id;
         Bounds search = piece.WorldBounds; search.Expand(.04f);
         Query(search, neighbours);

@@ -1,0 +1,8 @@
+THATCH ROOF LEFTEND IMPORT INSPECTION
+ThatchRoofLeftEnd_4.0Wx2.0Hx2.0D: vertices=806, submeshes=1, raw bounds=Center: (-1.93, 1.16, -0.87), Extents: (2.19, 1.16, 1.13), hierarchy matrix=-1.00000	0.00000	0.00000	0.00000
+0.00000	1.00000	0.00000	0.00000
+0.00000	0.00000	-1.00000	0.00000
+0.00000	0.00000	0.00000	1.00000
+
+Transformed envelope: min=(-0.263048, 0.000000, -0.267132), max=(4.125000, 2.320000, 2.000000), size=(4.388048, 2.320000, 2.267132); normalization offset=(0.000000, 0.000000, 0.000000)
+Runtime: vertices=806, triangles=878, submeshes=1, min=(-0.263048, 0.000000, -0.267132), max=(4.125000, 2.320000, 2.000000), UV0=806

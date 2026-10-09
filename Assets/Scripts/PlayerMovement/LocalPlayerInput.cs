@@ -8,6 +8,11 @@ public sealed class LocalPlayerInput : MonoBehaviour
     [SerializeField] private CharacterMotor motor;
     [SerializeField] private FirstPersonLook look;
     [SerializeField] private BuildingController building;
+    [Header("Building arrow nudges")]
+    [SerializeField] private bool repeatArrowNudges = true;
+    [SerializeField, Min(0)] private float nudgeRepeatDelay = .3f;
+    [SerializeField, Min(.02f)] private float nudgeRepeatInterval = .1f;
+    private BuildNudgeRepeat leftNudge, rightNudge, forwardNudge, backNudge;
     [System.Flags]
     private enum BuildButton { Toggle = 1, Cancel = 2, Picker = 4, LeftTurn = 8, RightTurn = 16,
         Left = 32, Right = 64, Forward = 128, Back = 256, Up = 512, Down = 1024, Place = 2048, Remove = 4096 }
@@ -18,6 +23,7 @@ public sealed class LocalPlayerInput : MonoBehaviour
 
     private void OnEnable()
     {
+        ResetNudgeRepeat();
         heldBuildButtons = ReadBuildButtons(Keyboard.current, Mouse.current);
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -25,6 +31,7 @@ public sealed class LocalPlayerInput : MonoBehaviour
 
     private void OnDisable()
     {
+        ResetNudgeRepeat();
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
@@ -32,7 +39,10 @@ public sealed class LocalPlayerInput : MonoBehaviour
     private void Update()
     {
         if (motor == null || look == null)
+        {
+            ResetNudgeRepeat();
             return;
+        }
 
         Keyboard keyboard = Keyboard.current;
         BuildButton held = ReadBuildButtons(keyboard, Mouse.current);
@@ -47,6 +57,7 @@ public sealed class LocalPlayerInput : MonoBehaviour
         }
         if (building != null && building.MenuOpen)
         {
+            ResetNudgeRepeat();
             motor.Simulate(default, Time.deltaTime);
             return;
         }
@@ -56,6 +67,7 @@ public sealed class LocalPlayerInput : MonoBehaviour
 
         if (Keyboard.current == null)
         {
+            ResetNudgeRepeat();
             motor.Simulate(default, Time.deltaTime);
             return;
         }
@@ -69,12 +81,18 @@ public sealed class LocalPlayerInput : MonoBehaviour
                 float scroll = mouse.scroll.ReadValue().y;
                 if (scroll != 0) turn += scroll > 0 ? 1 : -1;
             }
+            double now = Time.unscaledTimeAsDouble;
+            bool Arrow(BuildButton button, ref BuildNudgeRepeat state) => state.Sample((held & button) != 0,
+                (pressed & button) != 0, now, repeatArrowNudges, nudgeRepeatDelay, nudgeRepeatInterval);
             var nudge = new Vector3Int(
-                (Pressed(BuildButton.Right) ? 1 : 0) - (Pressed(BuildButton.Left) ? 1 : 0),
+                (Arrow(BuildButton.Right, ref rightNudge) ? 1 : 0) - (Arrow(BuildButton.Left, ref leftNudge) ? 1 : 0),
                 (Pressed(BuildButton.Up) ? 1 : 0) - (Pressed(BuildButton.Down) ? 1 : 0),
-                (Pressed(BuildButton.Forward) ? 1 : 0) - (Pressed(BuildButton.Back) ? 1 : 0));
+                (Arrow(BuildButton.Forward, ref forwardNudge) ? 1 : 0) - (Arrow(BuildButton.Back, ref backNudge) ? 1 : 0));
+            if ((held & (BuildButton.Left | BuildButton.Right)) == (BuildButton.Left | BuildButton.Right)) nudge.x = 0;
+            if ((held & (BuildButton.Forward | BuildButton.Back)) == (BuildButton.Forward | BuildButton.Back)) nudge.z = 0;
             building.Submit(new BuildInputCommand(turn, nudge, Pressed(BuildButton.Place), Pressed(BuildButton.Remove)));
         }
+        else ResetNudgeRepeat();
         Vector2 move = new Vector2(
             (keyboard.dKey.isPressed ? 1f : 0f) - (keyboard.aKey.isPressed ? 1f : 0f),
             (keyboard.wKey.isPressed ? 1f : 0f) - (keyboard.sKey.isPressed ? 1f : 0f));
@@ -90,6 +108,8 @@ public sealed class LocalPlayerInput : MonoBehaviour
 
         motor.Simulate(command, Time.deltaTime);
     }
+    private void ResetNudgeRepeat() => leftNudge = rightNudge = forwardNudge = backNudge = default;
+    private void OnApplicationFocus(bool focused) { if (!focused) ResetNudgeRepeat(); }
     // Explicit edges are sampled once by this owner, including while the picker is open.
     // This also consumes menu clicks and prevents repeated toggles/placements while held.
     private static BuildButton ReadBuildButtons(Keyboard keyboard, Mouse mouse)

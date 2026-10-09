@@ -12,12 +12,13 @@ public sealed class BuildRenderer
     private sealed class Batch
     {
         public BuildDefinition Definition;
+        public Mesh Mesh;
         public readonly Matrix4x4[] Matrices = new Matrix4x4[Capacity];
         public int Count;
         public Bounds Bounds;
     }
     private readonly BuildSession session;
-    private readonly Dictionary<(BuildDefinition, Vector3Int), Batch> current = new();
+    private readonly Dictionary<(BuildDefinition, Mesh, Vector3Int), Batch> current = new();
     private readonly List<Batch> batches = new();
     private readonly Plane[] planes = new Plane[6];
     private int revision = -1;
@@ -42,7 +43,7 @@ public sealed class BuildRenderer
             var parameters = new RenderParams(batch.Definition.material) { camera = camera, worldBounds = batch.Bounds,
                 receiveShadows = true, shadowCastingMode = !visible ? ShadowCastingMode.ShadowsOnly :
                     castsShadows ? (twoSided ? ShadowCastingMode.TwoSided : ShadowCastingMode.On) : ShadowCastingMode.Off };
-            Graphics.RenderMeshInstanced(parameters, batch.Definition.mesh, 0, batch.Matrices, batch.Count);
+            Graphics.RenderMeshInstanced(parameters, batch.Mesh, 0, batch.Matrices, batch.Count);
             DrawCalls++;
         }
     }
@@ -52,11 +53,12 @@ public sealed class BuildRenderer
         batches.Clear(); current.Clear();
         foreach (var piece in session.Pieces.Values)
         {
-            var key = (piece.Definition, BuildGeometry.Cell(piece.WorldBounds.center));
+            Mesh mesh=BuildRoof.VisualMesh(piece,session);
+            var key = (piece.Definition, mesh, BuildGeometry.Cell(piece.WorldBounds.center));
             if (!current.TryGetValue(key, out var batch) || batch.Count == Capacity)
-            { batch = new Batch { Definition = piece.Definition }; current[key] = batch; batches.Add(batch); }
+            { batch = new Batch { Definition = piece.Definition, Mesh=mesh }; current[key] = batch; batches.Add(batch); }
             batch.Matrices[batch.Count++] = Matrix4x4.TRS(piece.Origin, BuildGeometry.Rotation(piece.WorldYawStep), Vector3.one);
-            Bounds visualBounds = BuildGeometry.WorldBounds(piece.Definition.mesh.bounds, piece.Origin, piece.WorldYawStep);
+            Bounds visualBounds = BuildGeometry.WorldBounds(mesh.bounds, piece.Origin, piece.WorldYawStep);
             if (batch.Count == 1) batch.Bounds = visualBounds; else batch.Bounds.Encapsulate(visualBounds);
         }
         revision = session.Revision;

@@ -120,7 +120,8 @@ public sealed class BuildingController : MonoBehaviour
         if (nextTarget != target) { target = nextTarget; contextTurn = 0; nudge = default; }
         if (target == null) worldHeading = BuildGeometry.Turn(worldHeading + command.Turn);
         else contextTurn = BuildGeometry.Turn(contextTurn + command.Turn);
-        nudge += command.Nudge;
+        int gridYaw = target != null ? world.Session.Frame(target.OwnFrameId).YawStep : worldHeading;
+        nudge += BuildGeometry.ViewRelativeNudge(command.Nudge, viewCamera.transform.rotation, gridYaw);
         var preview = BuildPlacement.Solve(selected, aimPoint, aimNormal, target,
             target != null ? world.Session.Frame(target.OwnFrameId) : null, worldHeading, contextTurn, nudge, ray.origin, preferTop);
         if (guided) preview.Hint = "Sky guide · " + preview.Hint;
@@ -142,9 +143,9 @@ public sealed class BuildingController : MonoBehaviour
         view.Show(selected.displayName + " · " + (preview.WorldYaw * 45) + "°",
             preview.Valid ? preview.Message + " · " + preview.Hint : preview.Message, preview.Valid);
         var parameters = new RenderParams(GetPreviewMaterial(preview.Valid))
-        { camera = viewCamera, worldBounds = BuildGeometry.WorldBounds(selected.LocalBounds, preview.Origin, preview.WorldYaw),
+        { camera = viewCamera, worldBounds = BuildGeometry.WorldBounds(preview.VisualMesh.bounds, preview.Origin, preview.WorldYaw),
             shadowCastingMode = ShadowCastingMode.Off, receiveShadows = false };
-        Graphics.RenderMesh(parameters, selected.mesh, 0, Matrix4x4.TRS(preview.Origin, BuildGeometry.Rotation(preview.WorldYaw), Vector3.one));
+        Graphics.RenderMesh(parameters, preview.VisualMesh, 0, Matrix4x4.TRS(preview.Origin, BuildGeometry.Rotation(preview.WorldYaw), Vector3.one));
     }
     private Material GetPreviewMaterial(bool valid)
     {
@@ -167,7 +168,7 @@ public sealed class BuildingController : MonoBehaviour
         if (Physics.Raycast(ray, out var hit, reach, GameplayLayers.SolidSurfaceMask, QueryTriggerInteraction.Ignore))
         {
             point = hit.point; normal = hit.normal;
-            direct = hit.collider.GetComponent<BuildGameplayProxy>()?.Record;
+            direct = hit.collider.GetComponentInParent<BuildGameplayProxy>()?.Record;
             if (direct != null && !world.Session.TryGet(direct.Id, out direct)) direct = null;
             nextTarget = direct ?? (BuildWorld.IsGround(hit.collider) ? NearbyTarget(hit.point) : null);
             skyGuide = default;
@@ -227,7 +228,7 @@ public sealed class BuildingController : MonoBehaviour
         if (count == jointGuideHits.Length) return false;
         for (int i = 0; i < count; i++)
         {
-            var piece = jointGuideHits[i].collider.GetComponent<BuildGameplayProxy>()?.Record;
+            var piece = jointGuideHits[i].collider.GetComponentInParent<BuildGameplayProxy>()?.Record;
             if (piece == corner) continue;
             // Only the walls touching this post may mask the aim above their top edge.
             if (piece == null || !world.Session.TryGet(piece.Id, out _) || piece.Definition.kind != BuildPartKind.Wall ||
