@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: w21-stair
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.wood.w21-half-storey-stair
+  displayName: W21 half-storey wood stair
+  kind: 4
+  wallPlacementMode: 0
+  sizeUnits: {x: 5, y: 6, z: 8}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  wallEndInsetUnits: 0
+  mesh: {fileID: 4300000, guid: 5569c70fa83d34940855fcbcd8684740, type: 2}
+  collisionMesh: {fileID: 4300000, guid: 7e6a360d1b5968346984c57bb9e70b3c, type: 2}
+  material: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
+  authoringPrefab: {fileID: 1678333872091687006, guid: 8225f71987119d7469996b03b2241e12, type: 3}
+  maxHealth: 100

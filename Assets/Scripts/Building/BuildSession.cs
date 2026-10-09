@@ -63,7 +63,7 @@ public sealed class BuildSession
         Bounds search = piece.WorldBounds; search.Expand(.04f);
         Query(search, neighbours);
         foreach (var other in neighbours)
-            if (BuildGeometry.Connects(definition.LocalBounds, piece.Origin, piece.WorldYawStep, other.Definition.LocalBounds, other.Origin, other.WorldYawStep))
+            if (BuildGeometry.Connects(definition, piece.Origin, piece.WorldYawStep, other.Definition, other.Origin, other.WorldYawStep))
             { piece.Connections.Add(other.Id); other.Connections.Add(piece.Id); }
         pieces.Add(piece.Id, piece);
         ForCells(piece.WorldBounds, key => {

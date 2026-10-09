@@ -15,9 +15,11 @@ public sealed class BuildingController : MonoBehaviour
     private BuildWorld world;
     private BuildMenuView view;
     private BuildDefinition selected;
+    private Material twoSidedValidPreview, twoSidedInvalidPreview;
     private BuildPieceRecord target;
-    private BuildWallAimGuide skyGuide;
+    private BuildSurfaceAimGuide skyGuide;
     private readonly List<BuildPieceRecord> candidates = new();
+    private readonly RaycastHit[] jointGuideHits = new RaycastHit[16];
     private int worldHeading, contextTurn, suppressPlaceUntil;
     private Vector3Int nudge;
     private BuildInputCommand pending;
@@ -64,6 +66,7 @@ public sealed class BuildingController : MonoBehaviour
         if (!Active || definition == null) return;
         selected = definition; MenuOpen = false; nudge = default; contextTurn = 0; target = null; pending = default;
         skyGuide = default; Preview = default;
+        if (definition.IsWallInfill && viewCamera != null) worldHeading = BuildPlacement.FacingYaw(-viewCamera.transform.forward);
         suppressPlaceUntil = Time.frameCount + 1;
         RequestGameplayCursor(); view?.SetState(true, false);
     }
@@ -97,7 +100,11 @@ public sealed class BuildingController : MonoBehaviour
     }
     public void Submit(BuildInputCommand command) => pending = command;
     private void OnDisable() => Close(false);
-    private void OnDestroy() { Close(false); view?.Dispose(); }
+    private void OnDestroy()
+    {
+        Close(false); view?.Dispose();
+        BuildLifetime.Destroy(twoSidedValidPreview); BuildLifetime.Destroy(twoSidedInvalidPreview);
+    }
     private void LateUpdate()
     {
         RestoreCursorCapture();
@@ -134,10 +141,24 @@ public sealed class BuildingController : MonoBehaviour
         Preview = preview;
         view.Show(selected.displayName + " · " + (preview.WorldYaw * 45) + "°",
             preview.Valid ? preview.Message + " · " + preview.Hint : preview.Message, preview.Valid);
-        var parameters = new RenderParams(preview.Valid ? world.Catalog.validPreview : world.Catalog.invalidPreview)
+        var parameters = new RenderParams(GetPreviewMaterial(preview.Valid))
         { camera = viewCamera, worldBounds = BuildGeometry.WorldBounds(selected.LocalBounds, preview.Origin, preview.WorldYaw),
             shadowCastingMode = ShadowCastingMode.Off, receiveShadows = false };
         Graphics.RenderMesh(parameters, selected.mesh, 0, Matrix4x4.TRS(preview.Origin, BuildGeometry.Rotation(preview.WorldYaw), Vector3.one));
+    }
+    private Material GetPreviewMaterial(bool valid)
+    {
+        var shared = valid ? world.Catalog.validPreview : world.Catalog.invalidPreview;
+        // The ghost must show the same face sides as the authored component (e.g. thin wattle sheets).
+        if (selected == null || selected.material == null || !selected.material.HasProperty("_Cull") ||
+            selected.material.GetFloat("_Cull") >= .5f) return shared;
+        return valid ? twoSidedValidPreview ??= TwoSidedPreview(shared) : twoSidedInvalidPreview ??= TwoSidedPreview(shared);
+    }
+    private static Material TwoSidedPreview(Material shared)
+    {
+        var material = new Material(shared) { name = shared.name + " (two-sided)", hideFlags = HideFlags.HideAndDontSave };
+        material.SetFloat("_Cull", (float)CullMode.Off);
+        return material;
     }
     private bool TryResolveAim(Ray ray, out Vector3 point, out Vector3 normal, out BuildPieceRecord direct,
         out BuildPieceRecord nextTarget, out bool guided)
@@ -150,18 +171,70 @@ public sealed class BuildingController : MonoBehaviour
             if (direct != null && !world.Session.TryGet(direct.Id, out direct)) direct = null;
             nextTarget = direct ?? (BuildWorld.IsGround(hit.collider) ? NearbyTarget(hit.point) : null);
             skyGuide = default;
-            if (direct != null && direct.Definition.kind == BuildPartKind.Wall &&
-                (selected.kind == BuildPartKind.Wall || selected.kind == BuildPartKind.Floor))
+            // A wall face beside a real corner can hide the narrow post from the centre ray.
+            // Resolve that connected joint locally; unrelated solids keep their ordinary priority.
+            if (selected.kind == BuildPartKind.Corner && direct != null && direct.Definition.kind == BuildPartKind.Wall && hit.normal.y > -.6f &&
+                TryJointCorner(ray, hit.point, hit.normal, hit.distance, direct, out var corner, out var cornerPoint, out var cornerNormal, out guided))
+            {
+                nextTarget = corner; point = cornerPoint; normal = cornerNormal;
+                skyGuide.Capture(corner, world.Session.Frame(corner.OwnFrameId), normal, ray.origin);
+            }
+            else if (direct != null && ((direct.Definition.kind == BuildPartKind.Wall &&
+                (selected.kind == BuildPartKind.Wall || selected.kind == BuildPartKind.Floor)) ||
+                (direct.Definition.kind == BuildPartKind.Corner && selected.kind == BuildPartKind.Corner)))
                 skyGuide.Capture(direct, world.Session.Frame(direct.OwnFrameId), hit.normal, ray.origin);
             return true;
         }
         if (target != null && world.Session.TryGet(target.Id, out _) &&
-            skyGuide.TryContinue(ray, reach, selected.kind == BuildPartKind.Wall ? selected.LocalBounds.size.y : skyRoofHeight,
+            skyGuide.TryContinue(ray, reach, selected.kind == BuildPartKind.Floor ? skyRoofHeight : selected.LocalBounds.size.y,
                 skySideMargin, out point, out normal))
         {
             nextTarget = target; guided = true; return true;
         }
         point = normal = default; skyGuide = default; return false;
+    }
+    private bool TryJointCorner(Ray ray, Vector3 hit, Vector3 hitNormal, float hitDistance, BuildPieceRecord wall,
+        out BuildPieceRecord corner, out Vector3 point, out Vector3 normal, out bool guided)
+    {
+        corner = null; point = hit; normal = hitNormal; guided = false;
+        Bounds search = wall.WorldBounds; search.Expand(Mathf.Max(acquireMargin, releaseMargin) * 2);
+        world.Session.Query(search, candidates);
+        float best = float.PositiveInfinity;
+        foreach (var piece in candidates)
+        {
+            if (piece.Definition.kind != BuildPartKind.Corner || !BuildGeometry.Connects(wall.Definition.LocalBounds, wall.Origin,
+                wall.WorldYawStep, piece.Definition.LocalBounds, piece.Origin, piece.WorldYawStep)) continue;
+            var frame = world.Session.Frame(piece.OwnFrameId);
+            Vector3 localHit = BuildGeometry.LocalPoint(frame, hit);
+            float distance = BuildGeometry.Distance(piece.Definition.LocalBounds, piece.Origin, piece.WorldYawStep, hit);
+            bool nearUpper = localHit.y >= piece.Definition.LocalBounds.center.y &&
+                distance <= (piece == target ? Mathf.Max(acquireMargin, releaseMargin) : acquireMargin);
+            var guide = new BuildSurfaceAimGuide(); guide.Capture(piece, frame, hitNormal, ray.origin);
+            bool inferred = guide.TryContinue(ray, reach, selected.LocalBounds.size.y, skySideMargin, out var guidePoint, out var guideNormal) &&
+                (Vector3.Distance(ray.origin, guidePoint) <= hitDistance + .01f || ClearCornerGuide(ray, guidePoint, piece));
+            if (!nearUpper && !inferred) continue;
+            float score = nearUpper ? distance : Vector3.Distance(guidePoint, hit);
+            if (score >= best) continue;
+            best = score; corner = piece; guided = !nearUpper;
+            point = guided ? guidePoint : hit; normal = guided ? guideNormal : hitNormal;
+        }
+        return corner != null;
+    }
+    private bool ClearCornerGuide(Ray ray, Vector3 guidePoint, BuildPieceRecord corner)
+    {
+        int count = Physics.RaycastNonAlloc(ray, jointGuideHits, Vector3.Distance(ray.origin, guidePoint),
+            GameplayLayers.SolidSurfaceMask, QueryTriggerInteraction.Ignore);
+        if (count == jointGuideHits.Length) return false;
+        for (int i = 0; i < count; i++)
+        {
+            var piece = jointGuideHits[i].collider.GetComponent<BuildGameplayProxy>()?.Record;
+            if (piece == corner) continue;
+            // Only the walls touching this post may mask the aim above their top edge.
+            if (piece == null || !world.Session.TryGet(piece.Id, out _) || piece.Definition.kind != BuildPartKind.Wall ||
+                piece.WorldBounds.max.y > guidePoint.y + .01f || !BuildGeometry.Connects(piece.Definition.LocalBounds, piece.Origin,
+                    piece.WorldYawStep, corner.Definition.LocalBounds, corner.Origin, corner.WorldYawStep)) return false;
+        }
+        return true;
     }
     private BuildPieceRecord NearbyTarget(Vector3 hit)
     {

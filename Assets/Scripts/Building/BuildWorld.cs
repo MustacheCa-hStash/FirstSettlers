@@ -74,7 +74,7 @@ public sealed class BuildWorld : MonoBehaviour
                     : "Overlaps an existing piece";
                 return;
             }
-            if (piece.Supported && BuildGeometry.Connects(local, preview.Origin, preview.WorldYaw, piece.Definition.LocalBounds, piece.Origin, piece.WorldYawStep)) supported = true;
+            if (piece.Supported && BuildGeometry.Connects(preview.Definition, preview.Origin, preview.WorldYaw, piece.Definition, piece.Origin, piece.WorldYawStep)) supported = true;
         }
         preview.Grounded = preview.Definition.kind == BuildPartKind.Foundation && Grounded(preview);
         // Query player separately as well as world solids, with no dependency on the physics collision matrix.

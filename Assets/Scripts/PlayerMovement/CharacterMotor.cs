@@ -40,6 +40,7 @@ public sealed class CharacterMotor : MonoBehaviour
     private CharacterController controller;
     private Vector3 horizontalVelocity;
     private float verticalVelocity;
+    private bool groundUsesSmoothRamp;
 
     public Vector3 ActualVelocity { get; private set; }
     public Vector3 GroundNormal { get; private set; } = Vector3.up;
@@ -80,7 +81,16 @@ public sealed class CharacterMotor : MonoBehaviour
         horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity, responsiveness * deltaTime);
 
         if (controller.isGrounded && verticalVelocity < 0f)
+        {
             verticalVelocity = -groundStickSpeed;
+            if (groundUsesSmoothRamp && GroundNormal.y > .1f)
+            {
+                // On an opted-in ramp, follow its downhill drop instead of
+                // outrunning gravity and repeatedly becoming airborne.
+                float surfaceDrop = Vector3.Dot(horizontalVelocity,new Vector3(GroundNormal.x,0,GroundNormal.z))/GroundNormal.y;
+                verticalVelocity = -Mathf.Max(groundStickSpeed,surfaceDrop+.5f);
+            }
+        }
 
         if (controller.isGrounded && command.JumpPressed)
             verticalVelocity = Mathf.Sqrt(2f * Mathf.Abs(gravity) * jumpHeight);
@@ -123,6 +133,7 @@ public sealed class CharacterMotor : MonoBehaviour
 
         float nearest = float.PositiveInfinity;
         Vector3 normal = Vector3.up;
+        groundUsesSmoothRamp = false;
         for (int i = 0; i < count; i++)
         {
             RaycastHit hit = groundHits[i];
@@ -133,6 +144,8 @@ public sealed class CharacterMotor : MonoBehaviour
             {
                 nearest = hit.distance;
                 normal = hit.normal;
+                var smooth = hit.collider.GetComponent<SmoothWalkSurface>();
+                groundUsesSmoothRamp = smooth != null && smooth.isActiveAndEnabled;
             }
         }
 

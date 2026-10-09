@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -10,6 +11,83 @@ public static class SplitPlankWallSetup
     public const string TexturePath = "Assets/Textures/Buildings/Wood/ordinary-wood-trim-albedo.png";
     public const string MaterialPath = "Assets/Materials/Buildings/Wood/SplitPlankWood.mat";
     public const string ShaderName = "Custom/BuildingWoodMatte";
+    public const string InfillModelPath = "Assets/Models/Buildings/Wood/TwoPlankInfill_0.5Wx2.75Hx0.25D.fbx";
+    public const string InfillDefinitionPath = "Assets/Resources/Building/two-plank-infill.asset";
+    public const string InfillPrefabPath = "Assets/Resources/Building/two-plank-infill.prefab";
+    public const string InfillContentId = "build.wood.two-plank-infill";
+
+    [MenuItem("Tools/Building/Rebuild Two-Plank Infill Wall")]
+    public static void RebuildInfill()
+    {
+        var catalog = AssetDatabase.LoadAssetAtPath<BuildCatalog>(BuildingPrototypeSetup.CatalogPath);
+        var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
+        if (catalog == null || material == null)
+            throw new InvalidOperationException("Install the split-plank wall before adding its infill.");
+        var infill = CreateInfill(material);
+        var presets = new List<BuildDefinition>(catalog.presets);
+        int index = presets.FindIndex(p => p != null && p.contentId == InfillContentId);
+        if (index < 0) presets.Add(infill); else presets[index] = infill;
+        catalog.presets = presets.ToArray();
+        EditorUtility.SetDirty(catalog);
+        AssetDatabase.SaveAssets();
+        Debug.Log("Two-plank infill wall added: 0.5 x 2.75 x 0.25 m, no end-post reservation.");
+    }
+
+    public static BuildDefinition CreateInfill(Material material)
+    {
+        var model = AssetDatabase.LoadAssetAtPath<GameObject>(InfillModelPath);
+        if (model == null || material == null)
+            throw new InvalidOperationException("Two-plank infill model or shared wood material is missing.");
+        var filters = model.GetComponentsInChildren<MeshFilter>(true);
+        if (filters.Length != 1 || filters[0].sharedMesh == null || filters[0].sharedMesh.subMeshCount != 1)
+            throw new InvalidOperationException("The infill requires one mesh with one material submesh.");
+        var mesh = filters[0].sharedMesh;
+        var bounds = new Bounds(new Vector3(.25f, 1.375f, .125f), new Vector3(.5f, 2.75f, .25f));
+        if ((mesh.bounds.center - bounds.center).sqrMagnitude > .000001f ||
+            (mesh.bounds.size - bounds.size).sqrMagnitude > .000001f || !Identity(filters[0].transform.localToWorldMatrix))
+            throw new InvalidOperationException("Infill FBX must itself occupy (0,0,0)..(0.5,2.75,0.25) with identity transforms.");
+
+        var definition = AssetDatabase.LoadAssetAtPath<BuildDefinition>(InfillDefinitionPath);
+        if (definition == null)
+        {
+            definition = ScriptableObject.CreateInstance<BuildDefinition>();
+            AssetDatabase.CreateAsset(definition, InfillDefinitionPath);
+        }
+        definition.contentId = InfillContentId;
+        definition.displayName = "Two-plank infill wall";
+        definition.kind = BuildPartKind.Wall;
+        definition.wallPlacementMode = WallPlacementMode.Infill;
+        definition.sizeUnits = new Vector3Int(2, 11, 1);
+        definition.minimumUnits = Vector3Int.zero;
+        definition.wallEndInsetUnits = 0;
+        definition.mesh = mesh;
+        definition.material = material;
+
+        bool existingPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(InfillPrefabPath) != null;
+        var root = existingPrefab ? PrefabUtility.LoadPrefabContents(InfillPrefabPath) : new GameObject(definition.displayName);
+        try
+        {
+            root.layer = GameplayLayers.WorldSolid;
+            root.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            root.transform.localScale = Vector3.one;
+            if (!root.TryGetComponent<MeshFilter>(out var filter)) filter = root.AddComponent<MeshFilter>();
+            filter.sharedMesh = mesh;
+            if (!root.TryGetComponent<MeshRenderer>(out var renderer)) renderer = root.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            if (!root.TryGetComponent<BoxCollider>(out var collider)) collider = root.AddComponent<BoxCollider>();
+            collider.center = definition.LocalBounds.center;
+            collider.size = definition.LocalBounds.size;
+            collider.isTrigger = false;
+            definition.authoringPrefab = PrefabUtility.SaveAsPrefabAsset(root, InfillPrefabPath);
+        }
+        finally
+        {
+            if (existingPrefab) PrefabUtility.UnloadPrefabContents(root);
+            else UnityEngine.Object.DestroyImmediate(root);
+        }
+        EditorUtility.SetDirty(definition);
+        return definition;
+    }
 
     [MenuItem("Tools/Building/Rebuild Split-Plank Wood Wall")]
     public static void Rebuild()

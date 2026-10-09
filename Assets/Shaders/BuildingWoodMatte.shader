@@ -13,12 +13,15 @@ Shader "Custom/BuildingWoodMatte"
         _ShadowStrength("Received Shadow Strength", Range(0, 1)) = 1
         _ShadowTint("Subtle Cool Shadow Tint", Color) = (0.86, 0.91, 1, 1)
         _ShadowTintStrength("Shadow Tint Strength", Range(0, 0.5)) = 0.12
+        [Toggle(_ALPHATEST_ON)] _AlphaClip("Alpha Cutout", Float) = 0
+        _Cutoff("Alpha Cutoff", Range(0, 1)) = 0.5
+        [Enum(UnityEngine.Rendering.CullMode)] _Cull("Render Face Culling", Float) = 2
     }
 
     SubShader
     {
         Tags { "RenderPipeline" = "UniversalPipeline" "RenderType" = "Opaque" "Queue" = "Geometry" }
-        Cull Back
+        Cull [_Cull]
         ZWrite On
 
         HLSLINCLUDE
@@ -42,6 +45,9 @@ Shader "Custom/BuildingWoodMatte"
             half _LightWrap;
             half _ShadowStrength;
             half _ShadowTintStrength;
+            half _AlphaClip;
+            half _Cutoff;
+            half _Cull;
         CBUFFER_END
 
         struct WoodAttributes
@@ -87,6 +93,20 @@ Shader "Custom/BuildingWoodMatte"
             half shadow = lerp(1.0h, light.shadowAttenuation, _ShadowStrength);
             return light.color * (diffuse * light.distanceAttenuation * shadow * _DirectLightStrength);
         }
+
+        void WoodClipAlpha(half alpha)
+        {
+            #if defined(_ALPHATEST_ON)
+                clip(alpha * _BaseColor.a - _Cutoff);
+            #endif
+        }
+
+        void WoodClipTexture(float2 uv)
+        {
+            #if defined(_ALPHATEST_ON)
+                WoodClipAlpha(SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv).a);
+            #endif
+        }
         ENDHLSL
 
         Pass
@@ -99,6 +119,7 @@ Shader "Custom/BuildingWoodMatte"
             #pragma vertex WoodVertex
             #pragma fragment WoodFragment
             #pragma multi_compile_instancing
+            #pragma shader_feature_local_fragment _ALPHATEST_ON
             #pragma multi_compile_fog
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
@@ -109,18 +130,22 @@ Shader "Custom/BuildingWoodMatte"
             #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
             #pragma multi_compile_fragment _ _LIGHT_COOKIES
 
-            half4 WoodFragment(WoodVaryings input) : SV_Target
+            half4 WoodFragment(WoodVaryings input, FRONT_FACE_TYPE facing : FRONT_FACE_SEMANTIC) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-                // The plank silhouette is modeled. Ignore the atlas's wattle alpha entirely.
-                half3 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv).rgb;
+                half4 texel = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
+                WoodClipAlpha(texel.a);
+                half3 albedo = texel.rgb;
                 half luma = dot(albedo, half3(0.2126h, 0.7152h, 0.0722h));
                 albedo = lerp(luma.xxx, albedo, _Saturation);
                 albedo = saturate((albedo - 0.18h) * _Contrast + 0.18h);
                 albedo *= _BaseColor.rgb * _Brightness;
 
                 half3 normalWS = NormalizeNormalPerPixel(input.normalWS);
+                // A thin weave sheet must receive light on the side facing the camera.
+                // Opaque wood keeps its original normal and back-face-culling behavior.
+                if (_Cull < 0.5h) normalWS *= IS_FRONT_VFACE(facing, 1.0h, -1.0h);
                 InputData inputData = (InputData)0;
                 inputData.positionWS = input.positionWS;
                 inputData.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(input.positionCS);
@@ -151,7 +176,7 @@ Shader "Custom/BuildingWoodMatte"
                     LIGHT_LOOP_END
                 #endif
                 #if defined(_ADDITIONAL_LIGHTS_VERTEX)
-                    lighting += input.fogAndVertexLight.yzw * _DirectLightStrength;
+                    lighting += (_Cull < 0.5h ? VertexLighting(input.positionWS, normalWS) : input.fogAndVertexLight.yzw) * _DirectLightStrength;
                 #endif
 
                 half shadowSide = 1.0h - saturate(dot(normalWS, mainLight.direction));
@@ -175,6 +200,7 @@ Shader "Custom/BuildingWoodMatte"
             #pragma vertex WoodShadowVertex
             #pragma fragment WoodDepthFragment
             #pragma multi_compile_instancing
+            #pragma shader_feature_local_fragment _ALPHATEST_ON
             #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
             float3 _LightDirection;
             float3 _LightPosition;
@@ -192,6 +218,10 @@ Shader "Custom/BuildingWoodMatte"
                 #else
                     float3 lightDirectionWS = _LightDirection;
                 #endif
+                // Bias a two-sided sheet toward the light-facing side, including
+                // when its authored front normal points away from that light.
+                if (_Cull < 0.5h && dot(normalWS, lightDirectionWS) < 0) normalWS = -normalWS;
+                output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, lightDirectionWS));
                 #if UNITY_REVERSED_Z
                     output.positionCS.z = min(output.positionCS.z, output.positionCS.w * UNITY_NEAR_CLIP_VALUE);
@@ -204,6 +234,7 @@ Shader "Custom/BuildingWoodMatte"
             half4 WoodDepthFragment(WoodVaryings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
+                WoodClipTexture(input.uv);
                 return 0;
             }
             ENDHLSL
@@ -219,9 +250,11 @@ Shader "Custom/BuildingWoodMatte"
             #pragma vertex WoodVertex
             #pragma fragment WoodDepthFragment
             #pragma multi_compile_instancing
+            #pragma shader_feature_local_fragment _ALPHATEST_ON
             half4 WoodDepthFragment(WoodVaryings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
+                WoodClipTexture(input.uv);
                 return 0;
             }
             ENDHLSL
@@ -236,12 +269,15 @@ Shader "Custom/BuildingWoodMatte"
             #pragma vertex WoodVertex
             #pragma fragment WoodDepthNormalsFragment
             #pragma multi_compile_instancing
+            #pragma shader_feature_local_fragment _ALPHATEST_ON
             #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
-            half4 WoodDepthNormalsFragment(WoodVaryings input) : SV_Target
+            half4 WoodDepthNormalsFragment(WoodVaryings input, FRONT_FACE_TYPE facing : FRONT_FACE_SEMANTIC) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                WoodClipTexture(input.uv);
                 float3 normalWS = NormalizeNormalPerPixel(input.normalWS);
+                if (_Cull < 0.5h) normalWS *= IS_FRONT_VFACE(facing, 1.0h, -1.0h);
                 #if defined(_GBUFFER_NORMALS_OCT)
                     float2 octNormal = PackNormalOctQuadEncode(normalWS);
                     return half4(PackFloat2To888(saturate(octNormal * 0.5 + 0.5)), 0);

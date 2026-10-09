@@ -1,4 +1,4 @@
-param([switch]$PrepareOnly, [switch]$CompileOnly, [switch]$Render, [switch]$InputChecks)
+param([switch]$PrepareOnly, [switch]$CompileOnly, [switch]$Render, [switch]$InputChecks, [switch]$ShadowChecks, [switch]$WattleChecks, [switch]$PreviewChecks, [switch]$StairChecks)
 $ErrorActionPreference = 'Stop'
 $buildingRoot = Split-Path -Parent $PSScriptRoot
 $buildingWork = Join-Path $buildingRoot '.utmp/building-prototype'
@@ -38,8 +38,11 @@ try {
     $buildingOwned = @(Get-ChildItem 'Assets/Scripts/Building' -File -Recurse | Where-Object { $_.Extension -ne '.meta' })
     $buildingOwned += @(Get-ChildItem 'Assets/Resources/Building' -File -Recurse | Where-Object { $_.Extension -ne '.meta' })
     $buildingOwned += @(Get-Item 'Assets/Scripts/WorldManager/WorldGroundSurface.cs','Assets/Editor/BuildingPrototypeSetup.cs','Assets/Editor/BuildingPrototypeValidation.cs','Assets/Editor/BuildingPrototypeRenderValidation.cs')
-    $buildingOwned += @(Get-Item 'Assets/Editor/BuildingPrototypeInputValidation.cs')
-    $buildingOwned += @(Get-Item 'Assets/Editor/SplitPlankWallSetup.cs','Assets/Shaders/BuildingWoodMatte.shader')
+    $buildingOwned += @(Get-Item 'Assets/Editor/BuildingPrototypeInputValidation.cs','Assets/Editor/BuildingShadowValidation.cs')
+    $buildingOwned += @(Get-Item 'Assets/Editor/BayPostSetup.cs')
+    $buildingOwned += @(Get-Item 'Assets/Editor/W21StairSetup.cs','Assets/Editor/W21StairValidation.cs')
+    $buildingOwned += @(Get-Item 'Assets/Scripts/PlayerMovement/SmoothWalkSurface.cs')
+    $buildingOwned += @(Get-Item 'Assets/Editor/SplitPlankWallSetup.cs','Assets/Editor/WattleWallSetup.cs','Assets/Editor/WattleWallValidation.cs','Assets/Shaders/BuildingWoodMatte.shader','Assets/Shaders/WattleValidationDepthReveal.shader')
     foreach ($buildingFile in $buildingOwned) {
         if (-not (Test-Path -LiteralPath ($buildingFile.FullName + '.meta'))) {
             "fileFormatVersion: 2`nguid: $([guid]::NewGuid().ToString('N'))" | Set-Content -LiteralPath ($buildingFile.FullName + '.meta')
@@ -52,7 +55,7 @@ try {
     }
     New-Item -ItemType Directory -Path "$buildingProject/Assets/Editor","$buildingProject/Assets/Resources","$buildingProject/Packages","$buildingProject/ProjectSettings" -Force | Out-Null
     Copy-Item -LiteralPath 'Assets/Scripts' -Destination "$buildingProject/Assets" -Recurse -Force
-    if ($Render) { Copy-Item -LiteralPath 'Assets/Settings' -Destination "$buildingProject/Assets" -Recurse -Force }
+    if ($Render -or $ShadowChecks -or $WattleChecks -or $PreviewChecks) { Copy-Item -LiteralPath 'Assets/Settings' -Destination "$buildingProject/Assets" -Recurse -Force }
     Copy-Item -LiteralPath 'Assets/Scripts.meta' -Destination "$buildingProject/Assets" -ErrorAction SilentlyContinue
     Copy-Item -LiteralPath 'Assets/Resources/Building' -Destination "$buildingProject/Assets/Resources" -Recurse -Force
     Copy-Item -LiteralPath 'Assets/Resources/Building.meta' -Destination "$buildingProject/Assets/Resources" -Force
@@ -67,10 +70,10 @@ try {
         }
     }
     New-Item -ItemType Directory -Path "$buildingProject/Assets/Shaders" -Force | Out-Null
-    foreach ($buildingShaderFile in 'BuildingWoodMatte.shader','TreeNightLighting.hlsl') {
+    foreach ($buildingShaderFile in 'BuildingWoodMatte.shader','TreeNightLighting.hlsl','WattleValidationDepthReveal.shader') {
         Copy-Item -LiteralPath "Assets/Shaders/$buildingShaderFile","Assets/Shaders/$buildingShaderFile.meta" -Destination "$buildingProject/Assets/Shaders" -Force
     }
-    foreach ($buildingName in 'BuildingPrototypeSetup','BuildingPrototypeValidation','BuildingPrototypeRenderValidation','BuildingPrototypeInputValidation','SplitPlankWallSetup') {
+    foreach ($buildingName in 'BuildingPrototypeSetup','BuildingPrototypeValidation','BuildingPrototypeRenderValidation','BuildingPrototypeInputValidation','SplitPlankWallSetup','WattleWallSetup','WattleWallValidation','BuildingShadowValidation','BayPostSetup','W21StairSetup','W21StairValidation') {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
     }
     foreach ($buildingName in 'ProjectVersion.txt','TagManager.asset','ProjectSettings.asset') {
@@ -87,10 +90,10 @@ try {
     }
     @{ dependencies = $buildingDependencies } | ConvertTo-Json -Depth 5 | Set-Content "$buildingProject/Packages/manifest.json"
     if ($PrepareOnly) { Write-Output "Prepared $buildingProject"; return }
-    $buildingLog = Join-Path $buildingWork $(if ($Render) { 'render.log' } elseif ($InputChecks) { 'input.log' } else { 'validation.log' })
-    $buildingMethod = if ($Render) { 'BuildingPrototypeRenderValidation.RunBatch' } elseif ($InputChecks) { 'BuildingPrototypeInputValidation.RunBatch' } else { 'BuildingPrototypeValidation.RunBatch' }
+    $buildingLog = Join-Path $buildingWork $(if ($StairChecks) { 'stairs.log' } elseif ($PreviewChecks) { 'preview.log' } elseif ($WattleChecks) { 'wattle.log' } elseif ($ShadowChecks) { 'shadows.log' } elseif ($Render) { 'render.log' } elseif ($InputChecks) { 'input.log' } else { 'validation.log' })
+    $buildingMethod = if ($StairChecks) { 'W21StairValidation.RunBatch' } elseif ($PreviewChecks) { 'WattleWallValidation.RunPreviewBatch' } elseif ($WattleChecks) { 'WattleWallValidation.RunBatch' } elseif ($ShadowChecks) { 'BuildingShadowValidation.RunBatch' } elseif ($Render) { 'BuildingPrototypeRenderValidation.RunBatch' } elseif ($InputChecks) { 'BuildingPrototypeInputValidation.RunBatch' } else { 'BuildingPrototypeValidation.RunBatch' }
     $buildingArgs = @('-batchmode','-projectPath',('"'+$buildingProject+'"'),'-executeMethod',$buildingMethod,'-logFile',('"'+$buildingLog+'"'))
-    if (-not $Render) { $buildingArgs += '-nographics' }
+    if (-not $Render -and -not $ShadowChecks -and -not $WattleChecks -and -not $PreviewChecks) { $buildingArgs += '-nographics' }
     $buildingProcess = Start-Process -FilePath "$buildingEditor/Unity.exe" -ArgumentList $buildingArgs -WindowStyle Hidden -PassThru
     Write-Output "Isolated Unity validation PID $($buildingProcess.Id); log $buildingLog"
     $buildingProcess.Id | Set-Content (Join-Path $buildingWork 'validation-pid.txt')

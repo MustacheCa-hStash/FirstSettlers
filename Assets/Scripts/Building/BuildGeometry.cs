@@ -45,7 +45,21 @@ public static class BuildGeometry
         return IntervalOverlap(ac.y, a.extents.y, bc.y, b.extents.y) > minimum &&
             HorizontalOverlap(a, ac, aq, b, bc, bq, minimum);
     }
-    /// <summary>Face contacts transmit support. Mere edge/corner touching does not.</summary>
+    /// <summary>Ordinary face contacts plus an explicit high-end/toe connector for straight stair flights.</summary>
+    public static bool Connects(BuildDefinition a, Vector3 ao, int ay, BuildDefinition b, Vector3 bo, int by)
+    {
+        if (Connects(a.LocalBounds, ao, ay, b.LocalBounds, bo, by)) return true;
+        if (a.kind != BuildPartKind.Stair || b.kind != BuildPartKind.Stair || Turn(ay) != Turn(by)) return false;
+        Quaternion rotation = Rotation(ay);
+        Vector3 delta = Quaternion.Inverse(rotation) * (bo - ao);
+        Bounds ab = a.LocalBounds, bb = b.LocalBounds;
+        bool aToB = Mathf.Abs(ab.max.y - (delta.y + bb.min.y)) <= .012f && Mathf.Abs(ab.max.z - (delta.z + bb.min.z)) <= .012f;
+        bool bToA = Mathf.Abs(ab.min.y - (delta.y + bb.max.y)) <= .012f && Mathf.Abs(ab.min.z - (delta.z + bb.max.z)) <= .012f;
+        float width = Mathf.Min(ab.max.x, delta.x + bb.max.x) - Mathf.Max(ab.min.x, delta.x + bb.min.x);
+        return (aToB || bToA) && width > .015f;
+    }
+
+    /// <summary>Ordinary face contacts transmit support. Mere edge/corner touching does not.</summary>
     public static bool Connects(Bounds a, Vector3 ao, int ay, Bounds b, Vector3 bo, int by)
     {
         const float tolerance = .012f;

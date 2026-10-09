@@ -32,9 +32,16 @@ public sealed class BuildRenderer
         GeometryUtility.CalculateFrustumPlanes(camera, planes);
         foreach (var batch in batches)
         {
-            if (batch.Bounds.SqrDistance(camera.transform.position) > range * range || !GeometryUtility.TestPlanesAABB(planes, batch.Bounds)) continue;
+            float distanceSquared = batch.Bounds.SqrDistance(camera.transform.position);
+            bool visible = distanceSquared <= range * range && GeometryUtility.TestPlanesAABB(planes, batch.Bounds);
+            bool castsShadows = shadowRange > 0 && distanceSquared <= shadowRange * shadowRange;
+            // A roof/wall outside the camera view can still shade visible surfaces.
+            // Keep nearby casters in Unity's light culling without drawing their color/depth passes.
+            if (!visible && !castsShadows) continue;
+            bool twoSided = batch.Definition.material.HasProperty("_Cull") && batch.Definition.material.GetFloat("_Cull") < .5f;
             var parameters = new RenderParams(batch.Definition.material) { camera = camera, worldBounds = batch.Bounds,
-                receiveShadows = true, shadowCastingMode = batch.Bounds.SqrDistance(camera.transform.position) <= shadowRange * shadowRange ? ShadowCastingMode.On : ShadowCastingMode.Off };
+                receiveShadows = true, shadowCastingMode = !visible ? ShadowCastingMode.ShadowsOnly :
+                    castsShadows ? (twoSided ? ShadowCastingMode.TwoSided : ShadowCastingMode.On) : ShadowCastingMode.Off };
             Graphics.RenderMeshInstanced(parameters, batch.Definition.mesh, 0, batch.Matrices, batch.Count);
             DrawCalls++;
         }

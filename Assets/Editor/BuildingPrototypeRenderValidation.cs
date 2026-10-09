@@ -18,6 +18,11 @@ public static class BuildingPrototypeRenderValidation
         Directory.CreateDirectory(".utmp/building-prototype");
         var catalog = AssetDatabase.LoadAssetAtPath<BuildCatalog>(BuildingPrototypeSetup.CatalogPath);
         RenderWall(catalog.presets[0]); RenderRoom(catalog); RenderMenu(catalog, 1280, 720); RenderMenu(catalog, 1920, 1080);
+        RenderWall(catalog.Find(SplitPlankWallSetup.InfillContentId), "infill");
+        RenderWall(catalog.Find(WattleWallSetup.ContentId), "wattle");
+        var stair = catalog.Find(W21StairSetup.ContentId);
+        if (stair != null) RenderWall(stair,"w21-stair");
+        RenderWall(catalog.presets[3], "bay-post");
         Debug.Log("BUILDING RENDER PASS: textured matte wall authoring pixels, near/far instanced submissions and removal, actual picker at 720p/1080p, contained controls. No live-scene audit or FPS benchmark.");
     }
     private static void RenderRoom(BuildCatalog catalog)
@@ -77,7 +82,7 @@ public static class BuildingPrototypeRenderValidation
         try { Run(); EditorApplication.Exit(0); }
         catch (Exception ex) { Debug.LogException(ex); EditorApplication.Exit(1); }
     }
-    private static void RenderWall(BuildDefinition wall)
+    private static void RenderWall(BuildDefinition wall, string capturePrefix = "wall")
     {
         var cameraObject = new GameObject("Building authoring camera"); var camera = cameraObject.AddComponent<Camera>(); camera.enabled = false;
         camera.orthographic = true; camera.orthographicSize = 2.5f; camera.aspect = 1.5f;
@@ -105,11 +110,11 @@ public static class BuildingPrototypeRenderValidation
                 ShaderUtil.CompilePass(wall.material, shaderPass, true);
             if (ShaderUtil.ShaderHasError(wall.material.shader)) throw new InvalidOperationException("Wall shader failed.");
             RenderPipeline.SubmitRenderRequest(camera, new UniversalRenderPipeline.SingleCameraRequest { destination = target });
-            SavePixels(target, ".utmp/building-prototype/wall.png");
+            SavePixels(target, $".utmp/building-prototype/{capturePrefix}.png");
             camera.transform.position = new Vector3(-6, 3.5f, 6);
             camera.transform.LookAt(wall.LocalBounds.center);
             RenderPipeline.SubmitRenderRequest(camera, new UniversalRenderPipeline.SingleCameraRequest { destination = target });
-            SavePixels(target, ".utmp/building-prototype/wall-back.png");
+            SavePixels(target, $".utmp/building-prototype/{capturePrefix}-back.png");
             authoring.GetComponent<MeshRenderer>().enabled = false;
             camera.cullingMask = ~0;
             var session = new BuildSession(); var frame = session.CreateFrame(Vector3.zero, 1);
@@ -124,7 +129,7 @@ public static class BuildingPrototypeRenderValidation
             RenderPipelineManager.beginCameraRendering += submitInstances;
             RenderPipeline.SubmitRenderRequest(camera, new UniversalRenderPipeline.SingleCameraRequest { destination = target });
             RenderPipeline.SubmitRenderRequest(camera, new UniversalRenderPipeline.SingleCameraRequest { destination = target });
-            SavePixels(target, ".utmp/building-prototype/wall-instanced.png");
+            SavePixels(target, $".utmp/building-prototype/{capturePrefix}-instanced.png");
             RenderPipelineManager.beginCameraRendering -= submitInstances;
             submitInstances = null;
             if (ShaderUtil.ShaderHasError(wall.material.shader)) throw new InvalidOperationException("Instanced matte wall shader failed.");

@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: two-plank-infill
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.wood.two-plank-infill
+  displayName: Two-plank infill wall
+  kind: 0
+  wallPlacementMode: 1
+  sizeUnits: {x: 2, y: 11, z: 1}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  wallEndInsetUnits: 0
+  mesh: {fileID: -7597368314065379557, guid: 1a7f9774442ab4b4cb3a7a62a1b4849d, type: 3}
+  material: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
+  authoringPrefab: {fileID: 8091120725145889356, guid: f86327fa34832f44f9a5dfb5cd256672, type: 3}
+  maxHealth: 100

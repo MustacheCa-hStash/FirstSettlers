@@ -1,10 +1,13 @@
 # Ordinary wood: Iron Age inspired building concepts
 
-Three drawn concept sheets for First Settlers. No meshes, prefabs, scripts, colliders or scene assets were created or changed.
+Five drawn concept sheets for First Settlers. No meshes, prefabs, scripts, colliders or scene assets were created or changed by the concept work.
 
 - [01: Core building parts](01-core-building-parts.png)
 - [02: Enclosure additions](02-enclosure-additions.png)
 - [03: Roof and assembly proposals](03-roof-and-assembly.png)
+- [04: Ladders and low access](04-ladders-and-low-access.png)
+- [05: Stairs and landings](05-stairs-and-landings.png)
+- [Access dimensions, starter parts and implementation notes](ACCESS_COMPONENTS.md)
 - [Ordinary wood trim atlas, UV coordinates and Blender guide](Textures/README.md)
 
 The images communicate construction, silhouettes and proportions. The dimensions below are the intended design specification; painted grain, joinery, assembly openings and perspective are illustrative, not measured manufacturing drawings.
@@ -36,7 +39,7 @@ All sizes are metres. W/H/D refer to wall width, height and thickness; floor/foo
 | --- | --- | --- | --- |
 | W01 | Split-plank wall | 3.50 W x 2.75 H x 0.25 D | Riven vertical boards on pegged rails. Matches current wall envelope: 14/11/1 ticks. |
 | W02 | Wattle wall | 3.50 W x 2.75 H x 0.25 D | Woven wood rods on thin stakes/rails. Alternate wall appearance with the same envelope. |
-| W03 | Bay post | 0.25 W x 2.75 H x 0.25 D | Separate lightly squared pole filling a corner or wall end. Matches current Corner definition: 1/11/1 ticks. |
+| W03 | Bay post | 0.25 W x 2.75 H x 0.25 D | Separate lightly squared pole filling a corner or wall end. Now uses the Bay post option (retained Corner placement kind): 1/11/1 ticks. |
 | W04 | Timber floor | 4.00 x 4.00 footprint; 0.25 deep | Split boards over shallow joists, all within the current 16/1/16-tick floor envelope. |
 | W05 | Sleeper footing | 4.00 x 4.00 footprint; 0.50 deep | Proposed ordinary-wood foundation variant using low cross-laid sleepers; current foundation dimensions: 16/2/16 ticks. Foundation remains the grounding role. |
 | W06 | Horizontal beam | 4.00 L x 0.25 x 0.25 | Exposed lintel/tie member. Proposed beam placement rules; optional 2 m variant shares the same section. |
@@ -50,6 +53,14 @@ All sizes are metres. W/H/D refer to wall width, height and thickness; floor/foo
 | W14 | Woven roof deck | Same projection/rise as W13 | Close branch laths over the timber frame. Roof substrate, with optional thatch above it; not a horizontal floor. |
 | W15 | Gable infill | 3.50 W x 2.00 peak H x 0.25 D | Ends rise 0.25 m, peak rises 2 m; slope matches the central 3.5 m of a 4 m bay. Needs shaped end fillers in the remaining 0.25 m strips. |
 | W16 | Ridge beam | 4.00 L x 0.25 x 0.25 | Reuse W06 geometry with ridge-specific attachment, rather than authoring a duplicate fundamental mesh. |
+| W17 | Upright rung ladder | 0.75 W x 3.50 H x 0.25 D | Reaches a 3 m floor with 0.50 m handholds; 0.25 m rung pitch. |
+| W18 | Leaning loft ladder | 0.75 W; 3.00 rise; 1.00 run | Steep rung ladder, with 0.75 x 3.50 x 1.25 m reserved envelope including handholds. |
+| W19 | Notched log ladder | 0.50 W; 3.00 rise; 1.00 run | Optional carved-footstep variant; 0.50 x 3.25 x 1.25 m envelope. |
+| W20 | Threshold steps | 1.00 W; 0.50 rise; 1.00 run | Two broad 0.25 m risers and 0.50 m goings. |
+| W21 | Half-storey stair | 1.25 W; 1.50 rise; 2.00 run | Eight 0.1875 m risers with 0.25 m goings, on pegged stringers. |
+| W22 | Full-storey stair | 1.25 W; 3.00 rise; 4.00 run | Sixteen matching risers/goings; optional long variant of two W21 modules. |
+| W23 | Small landing | 1.25 x 1.25 footprint; 0.25 deep | Top-surface anchor; intermediate turn at 1.50 m elevation between half flights. |
+| W24 | Stair handrail | 2.00 run; 1.50 rise; 1.00 above tread line | 2.00 L x 2.50 overall H x 0.25 side-depth envelope. |
 
 ## Roof relationships
 
@@ -67,4 +78,4 @@ For a small first art pass, start with post, plank wall, floor, doorway/door and
 
 ## Generation
 
-Made with the built-in image_gen tool. [Exact generation and correction prompts](GENERATION_PROMPTS.md) are saved alongside the three final PNGs. All sheets were visually checked for labels and dimensions; two annotation corrections were generated. Runtime tests were unnecessary because this deliverable changes concept references only.
+Made with the built-in image_gen tool. [Initial building generation and correction prompts](GENERATION_PROMPTS.md) and [access component prompts](ACCESS_GENERATION_PROMPTS.md) are saved alongside the five final PNGs. Sheets were visually checked, with targeted annotation corrections. [The access guide](ACCESS_COMPONENTS.md) records the authoritative modeling dimensions and runtime requirements. Runtime tests were unnecessary because these additions change concept references only.

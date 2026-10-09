@@ -1,5 +1,45 @@
 # FirstSettlers Work Notes
 
+## October 9: W21 half-storey wood stair
+
+Linked the uploaded stair as the seventh build option. Blender X/Y/Z dimensions 1.25/2/1.5 m become Unity width/height/run 1.25/1.5/2 m, with a lower-front-left origin and ascent along +Z. The 240-vertex/120-triangle visual mesh uses the existing wood material. A separate convex ramp has a zero-height toe and 0.25 m flat exit; stair-marked downhill adhesion eliminates contact loss without changing ordinary terrain behavior. Pooled bodies switch cleanly between ramp and box colliders. Straight stair continuations and high-end landings transmit support.
+
+Compilation, 3,615 prototype checks, 7,276 stair checks and 48 actual-player up/down traversals passed, including near-side paths, rotated frames and 60/120 Hz simulation. Front/back/instanced rendering and the seven-option menu passed. The source FBX/importer, saved scene, wood material, shader and lighting asset were preserved. See [stair guide and previews](Documentation/W21_STAIR.md). Restart Play mode after Unity imports changes.
+
+## October 9: two-sided wattle placement preview
+
+Reproduced the missing weave in the green/red ghost: preview materials culled the thin sheets' back faces while solid rails stayed visible. BuildingController now uses cached two-sided preview copies when the authored component material is two-sided. Placed wattle cutouts/shadows and other component previews retain their existing behavior. Runtime/editor compilation and the GPU preview regression cover both colors, both sides, all eight headings, material reuse and cleanup. Legacy weave coverage failed in 16/32 views; the corrected preview passes all 32. See [wattle guide](Documentation/WATTLE_WALL.md).
+
+## October 8: imported bay post replaces the plain corner
+
+The fourth building option is now **Bay post**, using the imported quarter-metre post FBX and shared matte wood atlas material. Its 0.25 x 2.75 x 0.25 m bounds, origin, collider, corner/pillar snapping and support are preserved. Definition, mesh and prefab were renamed to bay-post assets with their original GUIDs and stable content ID, so existing references remain valid. The uploaded post has 24 vertices/12 triangles, retaining the room's geometry budget. Existing nearby/off-screen building shadow casting applies to it.
+
+## October 8: enclosed-corner guidance, wattle surfaces and underside attachment
+
+Corner stacking now resolves the real post at connected wall joints and uses a bounded guide volume above it. Adjacent wall tops can mask that guide without stealing the post target; unrelated obstacles remain blocking, and ordinary collision checks remain authoritative. Wattle now uses Surface wall placement across foundation/floor tops, retaining its verified lower-corner origin, mesh and collider. Bottom-face hits attach selected pieces below the target, including walls/pillars beneath roofs. Foundation repair and manual grid adjustments remain available.
+
+## October 8: wattle wall and two-sided matte wood cutouts
+
+Added the uploaded 3.5 x 2.75 x 0.25 m wattle wall as the sixth building option, preserving the prior five options and their order. Its one-material, 64-vertex/32-triangle visual mesh uses the shared wood atlas with a dedicated WattleWood material. The matte shader clips alpha consistently in forward, shadow, depth and depth-normal passes and supports both faces with corrected lighting normals. Existing wood remains opaque/back-face culled; the physical wall remains a full BoxCollider.
+
+Runtime/editor compilation, 2,828 synthetic checks, the six-option menu, actual instanced rendering and GPU pass/shadow comparisons passed. The previous off-screen roof-shadow regression also passed. Source FBX/importer, opaque wood material, saved scene and lighting settings were preserved. The FBX's upper UV islands have a small authored offset relative to the request notes; the imported UVs were retained. See [wattle integration, previews and rebuild instructions](Documentation/WATTLE_WALL.md). Restart Play mode after Unity imports the assets.
+
+## October 8: filler defaults and corner sky stacking
+
+Two-plank infill now has an authored Infill placement mode: it faces the viewer on open surfaces, follows aimed wall ends at all side-face heights, and defaults across a pillar's viewed face rather than making a perpendicular corner. Top/above-top aim still stacks, and manual turns/nudges remain. Its length can straddle adjoining floor bays to fill their seam. Logical dimensions and colliders are unchanged.
+
+Corner pieces now acquire bounded sky guidance from all four sides or their top. Looking above a previously hit corner/pillar previews a direct stack, with ordinary reach, collision, support and obstruction checks. No physical guide objects are created. See [building prototype guide](Documentation/BUILDING_PROTOTYPE.md).
+
+## October 8: stable building shadows from off-screen roofs
+
+Building batches outside the camera frustum now remain submitted as shadow-only casters while inside the existing 140 m shadow range. Visible geometry retains its frustum/3,000 m distance checks, and shadow range zero disables casting. This fixes camera rotation/movement removing the roof from the shadow map while the floor remains visible. No sun, cascade, material, collision or saved-scene settings changed.
+
+A real-pixel regression reproduced the bug with four foundations and roof slabs, then verified that a fixed world point stays identically shadowed when looking down, turning forward and moving. Removing the roof or disabling shadows restores direct sunlight. Runtime/editor compilation and existing building render checks passed. See [shadow regression details and captures](Documentation/BUILDING_PROTOTYPE.md).
+
+## October 8: two-plank infill building option
+
+Added the imported half-metre two-plank wall as a fifth picker option, sharing the split-plank wall's matte shader/material and wood trim atlas. Its logical/collider dimensions are 0.5 x 2.75 x 0.25 m, with no end-post reservation, so it fills straight seams occupied by two quarter-metre corner plugs. The full wall and corner options remain. Import bounds, 2,110 placement/collider checks (including rotated seam snapping and bridge support), front/back/instanced rendering and the five-option menu passed. See [wood wall and infill guide](Documentation/SPLIT_PLANK_WALL.md). Restart Play mode after import.
+
 ## October 8: split-plank wood building wall
 
 The building picker now uses the authored split-plank FBX in place of the plain wall, retaining the existing wall asset/content ID and 3.5 x 2.75 x 0.25 m logical box. The wood trim atlas is assigned through `SplitPlankWood.mat` and the new `Custom/BuildingWoodMatte` shader: diffuse sun/ambient lighting, shadows, additional lights, fog and the existing nighttime ambient-floor dimming, with no specular or reflection contribution.

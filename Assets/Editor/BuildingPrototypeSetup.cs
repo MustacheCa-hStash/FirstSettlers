@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -45,14 +46,21 @@ public static class BuildingPrototypeSetup
         var wall = Part("wall", "Plain wall", BuildPartKind.Wall, new Vector3Int(14, 11, 1), Vector3Int.zero, wallMaterial);
         var floor = Part("floor", "Timber floor", BuildPartKind.Floor, new Vector3Int(16, 1, 16), new Vector3Int(0, -1, 0), floorMaterial);
         var foundation = Part("foundation", "Stone foundation", BuildPartKind.Foundation, new Vector3Int(16, 2, 16), new Vector3Int(0, -2, 0), foundationMaterial);
-        var corner = Part("corner", "Corner piece", BuildPartKind.Corner, new Vector3Int(1, 11, 1), Vector3Int.zero, wallMaterial);
+        BayPostSetup.MigrateLegacyAssets();
+        var corner = Part("corner", "Bay post", BuildPartKind.Corner, new Vector3Int(1, 11, 1), Vector3Int.zero, wallMaterial, "bay-post");
         SplitPlankWallSetup.Apply(wall);
+        BayPostSetup.Apply(corner, wall.material);
+        var infill = SplitPlankWallSetup.CreateInfill(wall.material);
+        var wattle = WattleWallSetup.Create(wall.material);
         var panel = Asset<PanelSettings>(Folder + "/BuildPanel.asset");
         panel.scaleMode = PanelScaleMode.ScaleWithScreenSize; panel.referenceResolution = new Vector2Int(1920, 1080);
         panel.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight; panel.match = .5f; panel.sortingOrder = 30;
         panel.themeStyleSheet = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(Folder + "/BuildTheme.tss");
         var catalog = Asset<BuildCatalog>(CatalogPath);
-        catalog.presets = new[] { wall, floor, foundation, corner }; catalog.validPreview = valid; catalog.invalidPreview = invalid;
+        var presets = new List<BuildDefinition> { wall, floor, foundation, corner, infill, wattle };
+        var stair = W21StairSetup.CreateIfModelAvailable();
+        if (stair != null) presets.Add(stair);
+        catalog.presets = presets.ToArray(); catalog.validPreview = valid; catalog.invalidPreview = invalid;
         catalog.panel = panel; catalog.layout = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(Folder + "/BuildMenu.uxml");
         if (catalog.layout == null || panel.themeStyleSheet == null) throw new InvalidOperationException("Building UI failed to import.");
         EditorUtility.SetDirty(panel); EditorUtility.SetDirty(catalog); AssetDatabase.SaveAssets();
@@ -78,13 +86,14 @@ public static class BuildingPrototypeSetup
         }
         EditorUtility.SetDirty(material); return material;
     }
-    private static BuildDefinition Part(string id, string name, BuildPartKind kind, Vector3Int size, Vector3Int minimum, Material material)
+    private static BuildDefinition Part(string id, string name, BuildPartKind kind, Vector3Int size, Vector3Int minimum, Material material, string assetId = null)
     {
-        var definition = Asset<BuildDefinition>(Folder + "/" + id + ".asset");
+        assetId ??= id;
+        var definition = Asset<BuildDefinition>(Folder + "/" + assetId + ".asset");
         definition.contentId = "build.prototype." + id; definition.displayName = name; definition.kind = kind;
         definition.sizeUnits = size; definition.minimumUnits = minimum; definition.material = material;
         definition.wallEndInsetUnits = kind == BuildPartKind.Wall ? 1 : 0;
-        string meshPath = Folder + "/" + id + "-mesh.asset";
+        string meshPath = Folder + "/" + assetId + "-mesh.asset";
         var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
         // Reauthor generated geometry in place when the dimensional contract changes; preserve asset GUIDs.
         var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -104,7 +113,7 @@ public static class BuildingPrototypeSetup
         {
             obj.AddComponent<MeshFilter>().sharedMesh = mesh; obj.AddComponent<MeshRenderer>().sharedMaterial = material;
             var collider = obj.AddComponent<BoxCollider>(); collider.center = definition.LocalBounds.center; collider.size = definition.LocalBounds.size;
-            definition.authoringPrefab = PrefabUtility.SaveAsPrefabAsset(obj, Folder + "/" + id + ".prefab");
+            definition.authoringPrefab = PrefabUtility.SaveAsPrefabAsset(obj, Folder + "/" + assetId + ".prefab");
         }
         finally { Object.DestroyImmediate(obj); }
         EditorUtility.SetDirty(definition); return definition;
