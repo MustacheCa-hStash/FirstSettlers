@@ -6,16 +6,17 @@ Mesh:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: W21 walking ramp (8 vertices, 12 triangles, 0.25 m flat exit)
+  m_Name: W21 continuous walking ramp (6 vertices, 8 triangles, 1.5 m rise / 2 m
+    run)
   serializedVersion: 12
   m_SubMeshes:
   - serializedVersion: 2
     firstByte: 0
-    indexCount: 36
+    indexCount: 24
     topology: 0
     baseVertex: 0
     firstVertex: 0
-    vertexCount: 8
+    vertexCount: 6
     localAABB:
       m_Center: {x: 0.625, y: 0.75, z: 1}
       m_Extent: {x: 0.625, y: 0.75, z: 1}
@@ -35,10 +36,10 @@ Mesh:
   m_KeepVertices: 1
   m_KeepIndices: 1
   m_IndexFormat: 0
-  m_IndexBuffer: 000002000100000003000200040005000600040006000700000001000500000005000400010002000600010006000500020003000700020007000600030000000400030004000700
+  m_IndexBuffer: 000002000100030004000500000004000100000003000400010002000500010005000400020000000300020003000500
   m_VertexData:
     serializedVersion: 3
-    m_VertexCount: 8
+    m_VertexCount: 6
     m_Channels:
     - stream: 0
       offset: 0
@@ -96,8 +97,8 @@ Mesh:
       offset: 0
       format: 0
       dimension: 0
-    m_DataSize: 192
-    _typelessdata: 000000000000000000000000fc8620bf185db23e185d32bf000000000000c03f0000e03fdfd1e1bdc1b4533f2b230dbf000000000000c03f0000004069ed2abfca397d3d58eb3d3f00000000000000000000004088c6fabec6fa50bf15bc9c3e0000a03f00000000000000003ce1343fb2bb16bf43fac8be0000a03f0000c03f0000e03f94607f3d7483473f5d9c1fbf0000a03f0000c03f0000004093e85c3fcca2233e3274f53e0000a03f00000000000000400eda0d3f6c6becbe9150313f
+    m_DataSize: 144
+    _typelessdata: 0000000000000000000000000379acbe449757bf4497d73e000000000000c03f000000404e4fe0bec1ecbabe594a523f00000000000000000000004088c6fabec6fa50bf15bc9c3e0000a03f00000000000000003f3ab93ecf8867bfcf88673e0000a03f0000c03f00000040db95bd3ee1fc1dbf7ebc313f0000a03f00000000000000400eda0d3f6c6becbe9150313f
   m_CompressedMesh:
     m_Vertices:
       m_NumItems: 0

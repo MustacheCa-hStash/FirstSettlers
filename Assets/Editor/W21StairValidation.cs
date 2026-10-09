@@ -21,20 +21,65 @@ public static class W21StairValidation
             var stair = W21StairSetup.PrepareDefinition(); AssetDatabase.SaveAssets();
             checks = 0;
             Check(stair.kind == BuildPartKind.Stair && stair.sizeUnits == new Vector3Int(5,6,8) && stair.minimumUnits == Vector3Int.zero,"Stair grid contract changed.");
-            Check(stair.collisionMesh.vertexCount == 8 && stair.collisionMesh.triangles.Length == 36,"Stair walking hull is not the small independent convex mesh.");
+            Check(stair.collisionMesh.vertexCount == 6 && stair.collisionMesh.triangles.Length == 24,"Stair walking hull is not the continuous triangular prism.");
             Check((stair.collisionMesh.bounds.min).sqrMagnitude < .000001f && (stair.collisionMesh.bounds.max-W21StairSetup.Size).sqrMagnitude < .000001f,"Stair walking envelope changed.");
             var catalog = AssetDatabase.LoadAssetAtPath<BuildCatalog>(BuildingPrototypeSetup.CatalogPath);
             Check(stair.mesh != null || catalog.Find(W21StairSetup.ContentId) == null,"Unlinked stair was put in the live menu.");
             ValidatePlacement(stair,catalog);
+            ValidateStarterWallClearance(stair,catalog);
             ValidatePool(stair,catalog.presets[0]);
             foreach (int yaw in new[] { 0,1,2,7 })
                 foreach (float x in new[] { .43f,.625f,.82f })
                     foreach (bool down in new[] { false,true })
-                        foreach (float delta in new[] { 1f/60,1f/120 }) Walk(stair,catalog,yaw,x,down,delta);
-            Debug.Log($"W21 STAIR PASS: {checks} checks; 48 real-motor up/down walks including near-side positions, 45-degree frames, toe/exit joins, collider rays, stair/floor snaps, direct-flight support and pooled box/ramp transitions. No final FBX is required.");
+                        foreach (float delta in new[] { 1f/60,1f/120 })
+                            foreach (int flights in new[] { 1,2 }) Walk(stair,catalog,yaw,x,down,delta,flights);
+            Debug.Log($"W21 STAIR PASS: {checks} checks; 96 single/chained real-motor up/down walks, continuous rise through flight joins, near-side positions, 45-degree frames, toe/exit joins, wall-clearance starter snaps, collider rays, support and pooled box/ramp transitions.");
             EditorApplication.Exit(0);
         }
         catch (Exception exception) { Debug.LogException(exception); EditorApplication.Exit(1); }
+    }
+
+    private static void ValidateStarterWallClearance(BuildDefinition stair,BuildCatalog catalog)
+    {
+        foreach (int yaw in new[] { 0,1,2,7 })
+        {
+            var host = new GameObject("Stair wall clearance fixture"); var world = host.AddComponent<BuildWorld>();
+            if (world.Session == null) Invoke(world,"Awake");
+            try
+            {
+                var frame = world.Session.CreateFrame(new Vector3(26000+yaw*20,26000,26000),yaw);
+                var floor = world.Session.Add(catalog.presets[2],frame,default,0,true);
+                var farWall = world.Session.Add(catalog.presets[0],frame,new Vector3Int(15,0,16),4,false);
+                var floorFrame = world.Session.Frame(floor.OwnFrameId);
+                Vector3 At(Vector3 p) => frame.Origin + BuildGeometry.Rotation(yaw)*p;
+                var raw = BuildPlacement.Solve(stair,At(new Vector3(.625f,0,1)),Vector3.up,floor,floorFrame,0,0,default);
+                var old = raw; old.FitStairContinuation = false; world.Validate(ref old);
+                Check(old.Valid,"Baseline first stair was not a valid floor-top placement.");
+                var oldFirst = world.Commit(old);
+                var blocked = BuildPlacement.Solve(stair,At(new Vector3(.625f,1.5f,2)),Vector3.up,oldFirst,world.Session.Frame(oldFirst.OwnFrameId),0,0,default);
+                world.Validate(ref blocked); Check(!blocked.Valid && blocked.Message == "Overlaps an existing piece","Quarter-metre wall clash was not reproduced.");
+                Debug.Log($"W21 SNAP BEFORE: yaw={yaw}, starter Z=0, next end Z=4, wall inside Z=3.75; next overlaps by 0.25 m.");
+                world.Remove(oldFirst.Id);
+                world.Validate(ref raw); Check(raw.Valid,"Clearance-adjusted first stair was rejected.");
+                Vector3 local = Quaternion.Inverse(BuildGeometry.Rotation(yaw))*(raw.Origin-frame.Origin);
+                Check(Mathf.Abs(local.z+.25f) < .004f,"Starter was not moved back exactly one quarter-metre unit.");
+                Vector3 once = raw.Origin; world.Validate(ref raw); Check((raw.Origin-once).sqrMagnitude < .000001f,"Clearance snap changed on repeated validation.");
+                var first = world.Commit(raw);
+                var next = BuildPlacement.Solve(stair,first.Origin+BuildGeometry.Rotation(yaw)*new Vector3(.625f,1.5f,2),Vector3.up,first,world.Session.Frame(first.OwnFrameId),0,0,default);
+                var second = world.Commit(next); Check(second != null && second.Supported,"Adjusted continuation did not fit against the inner wall face.");
+                Check(!BuildGeometry.Overlaps(second.Definition.LocalBounds,second.Origin,second.WorldYawStep,farWall.Definition.LocalBounds,farWall.Origin,farWall.WorldYawStep),"Corrected stair still overlaps wall.");
+                Debug.Log($"W21 SNAP AFTER: yaw={yaw}, starter Z={local.z:F3}, next end Z={local.z+4:F3}; wall inside Z=3.75, overlap=0.");
+                world.Remove(first.Id); world.Remove(second.Id);
+                var manual = BuildPlacement.Solve(stair,At(new Vector3(.625f,0,1)),Vector3.up,floor,floorFrame,0,0,new Vector3Int(1,0,0));
+                world.Validate(ref manual);
+                Check((manual.Origin-(raw.Origin+BuildGeometry.Rotation(yaw)*Vector3.right*.25f)).sqrMagnitude < .00002f,"Manual stair nudge did not move one unit from the fitted preview.");
+                world.Session.Add(catalog.presets[0],frame,new Vector3Int(1,0,0),0,false);
+                var tight = BuildPlacement.Solve(stair,At(new Vector3(.625f,0,1.25f)),Vector3.up,floor,floorFrame,0,0,default);
+                var tightOrigin = tight.Origin; world.Validate(ref tight);
+                Check(tight.Valid && (tight.Origin-tightOrigin).sqrMagnitude < .000001f && tight.Hint.Contains("more clear run"),"Enclosed 3.5 m room silently shifted into its near wall.");
+            }
+            finally { Object.DestroyImmediate(host); Physics.SyncTransforms(); }
+        }
     }
 
     private static void ValidatePlacement(BuildDefinition stair,BuildCatalog catalog)
@@ -85,7 +130,7 @@ public static class W21StairValidation
             {
                 var ray = new Ray(stairs.Origin+new Vector3(.625f,3,z),Vector3.down);
                 Check(proxy.RampShape.Raycast(ray,out var hit,5),"Walking hull missed a vertical ray.");
-                float expected = Mathf.Min(z/(2-.25f),1)*1.5f;
+                float expected = z/2*1.5f;
                 Check(Mathf.Abs(hit.point.y-stairs.Origin.y-expected) < .02f,"Walking surface has a lip or wrong height.");
             }
             proxy.Unbind(); Check(!proxy.Shape.enabled && !proxy.RampShape.enabled && !proxy.TryGetInfo(out _),"Ramp release retained collision/query state.");
@@ -94,40 +139,48 @@ public static class W21StairValidation
         finally { Object.DestroyImmediate(root); Physics.SyncTransforms(); }
     }
 
-    private static void Walk(BuildDefinition stair,BuildCatalog catalog,int yaw,float x,bool down,float dt)
+    private static void Walk(BuildDefinition stair,BuildCatalog catalog,int yaw,float x,bool down,float dt,int flights)
     {
         var session = new BuildSession(); var origin = new Vector3(100,10,100); var rotation = BuildGeometry.Rotation(yaw);
         var frame = session.CreateFrame(origin,yaw);
         session.Add(catalog.presets[2],frame,new Vector3Int(-8,0,-8),0,true);
-        session.Add(stair,frame,default,0,false);
-        session.Add(catalog.presets[1],frame,new Vector3Int(0,6,8),0,false);
+        for (int flight = 0; flight < flights; ++flight) session.Add(stair,frame,new Vector3Int(0,6*flight,8*flight),0,false);
+        session.Add(catalog.presets[1],frame,new Vector3Int(0,6*flights,8*flights),0,false);
         using var gameplay = new BuildGameplay(session); gameplay.Update(origin,32,40,8); Physics.SyncTransforms();
         var rig = new GameObject("W21 motor traversal"); rig.layer = GameplayLayers.Player;
         var controller = rig.AddComponent<CharacterController>();
         // Matches the saved player's CC configuration, read without opening that scene.
         controller.height = 1.8f; controller.center = new Vector3(0,.9f,0); controller.radius = .4f;
         controller.slopeLimit = 50; controller.stepOffset = .3f; controller.skinWidth = .08f; controller.minMoveDistance = 0;
-        rig.transform.SetPositionAndRotation(origin+rotation*new Vector3(x,down ? 1.58f : .08f,down ? 2.8f : -.8f),rotation);
+        float endZ = 2*flights+.8f, topY = 1.5f*flights;
+        rig.transform.SetPositionAndRotation(origin+rotation*new Vector3(x,down ? topY+.08f : .08f,down ? endZ : -.8f),rotation);
         var motor = rig.AddComponent<CharacterMotor>(); Invoke(motor,"Awake"); Physics.SyncTransforms();
-        float previousZ = down ? 2.8f : -.8f; int stalled = 0, airFrames = 0;
+        float previousZ = down ? endZ : -.8f, previousY = down ? topY+.08f : .08f;
+        float minJoinSlope = float.PositiveInfinity, maxJoinSlope = 0; int stalled = 0, airFrames = 0, joinSamples = 0;
         try
         {
             for (int i = 0; i < 30; ++i) motor.Simulate(new CharacterMoveCommand(Vector2.zero,false,false,false),dt);
-            int limit = Mathf.CeilToInt(3/dt);
+            int limit = Mathf.CeilToInt(4/dt);
             for (int i = 0; i < limit; ++i)
             {
                 motor.Simulate(new CharacterMoveCommand(new Vector2(0,down ? -1 : 1),false,false,false),dt);
                 Vector3 local = Quaternion.Inverse(rotation)*(rig.transform.position-origin);
                 if (i > 12 && Mathf.Abs(local.z-previousZ) < .001f) stalled++; else stalled = 0;
-                previousZ = local.z;
-                if (local.z > .2f && local.z < 1.6f && !motor.IsGrounded) airFrames++;
-                Check(stalled < 20,$"Stair walk got stuck: yaw={yaw}, x={x}, down={down}, position={local}.");
-                Check(local.y > -.2f && local.y < 2.1f,"Character fell through or rose above the stair.");
-                if ((!down && local.z > 2.8f) || (down && local.z < -.65f))
+                if (flights == 2 && local.z > 1.5f && local.z < 2.5f && Mathf.Abs(local.z-previousZ) > .005f)
                 {
-                    Check(Mathf.Abs(local.y-(down ? 0 : 1.5f)) < .12f,$"Stair exit did not seat on the adjoining floor: {local}.");
+                    float ratio = (local.y-previousY)/(local.z-previousZ);
+                    minJoinSlope = Mathf.Min(minJoinSlope,ratio); maxJoinSlope = Mathf.Max(maxJoinSlope,ratio); joinSamples++;
+                }
+                previousZ = local.z; previousY = local.y;
+                if (local.z > .2f && local.z < 2*flights-.4f && !motor.IsGrounded) airFrames++;
+                Check(stalled < 20,$"Stair walk got stuck: yaw={yaw}, x={x}, down={down}, position={local}.");
+                Check(local.y > -.2f && local.y < topY+.6f,"Character fell through or rose above the stair.");
+                if ((!down && local.z > endZ) || (down && local.z < -.65f))
+                {
+                    Check(Mathf.Abs(local.y-(down ? 0 : topY)) < .12f,$"Stair exit did not seat on the adjoining floor: {local}.");
                     Check(airFrames == 0,$"Stair movement lost smooth ramp contact: yaw={yaw}, x={x}, down={down}, airborne={airFrames}.");
-                    Debug.Log($"W21 WALK: yaw={yaw}, x={x:F3}, down={down}, dt={dt:F5}, finish={local:F4}, airborneRampFrames={airFrames}");
+                    if (flights == 2) Check(joinSamples > 4 && minJoinSlope > .3f && maxJoinSlope < 1.1f,$"Flight join has a vertical pause or jump: min slope={minJoinSlope}, max={maxJoinSlope}.");
+                    Debug.Log($"W21 WALK: flights={flights}, yaw={yaw}, x={x:F3}, down={down}, dt={dt:F5}, finish={local:F4}, airborneRampFrames={airFrames}, joinSlope={minJoinSlope:F4}..{maxJoinSlope:F4}");
                     return;
                 }
             }

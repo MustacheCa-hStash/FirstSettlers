@@ -10,6 +10,8 @@ public struct BuildPreview
     public int WorldYaw;
     public bool Grounded, Valid;
     public bool TopAttachment;
+    public bool FitStairContinuation;
+    public Vector3Int StairFitNudge;
     public string Message;
     public string Hint;
 }
@@ -62,6 +64,7 @@ public static class BuildPlacement
                     origin = new Vector3(SurfaceAnchor(point.x,bounds.min.x,bounds.max.x,footprint.min.x,footprint.max.x),
                         bounds.max.y-footprint.min.y, SurfaceAnchor(point.z,bounds.min.z,bounds.max.z,footprint.min.z,footprint.max.z));
                     preview.Hint = "Stair foot on surface";
+                    preview.FitStairContinuation = true; preview.StairFitNudge = nudge;
                 }
                 else if ((target.Definition.kind is BuildPartKind.Floor or BuildPartKind.Foundation) && Mathf.Abs(localNormal.y) < .6f)
                 {

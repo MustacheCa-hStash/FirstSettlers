@@ -15,7 +15,7 @@ public static class W21StairSetup
     public const string VisualPath = "Assets/Resources/Building/w21-stair-mesh.asset";
     public const string PrefabPath = "Assets/Resources/Building/w21-stair.prefab";
     public const string ContentId = "build.wood.w21-half-storey-stair";
-    public const float Width = 1.25f, Rise = 1.5f, Run = 2f, ExitLength = .25f;
+    public const float Width = 1.25f, Rise = 1.5f, Run = 2f;
     public static readonly Vector3 Size = new(Width,Rise,Run);
 
     [MenuItem("Tools/Building/Prepare W21 Stair Import")]
@@ -77,7 +77,7 @@ public static class W21StairSetup
             bool topAtRear = false, lowAtToe = false;
             for (int i = 0; i < vertices.Length; ++i)
             {
-                topAtRear |= vertices[i].y > Rise-.02f && vertices[i].z > Run-ExitLength-.02f && normals[i].y > .5f;
+                topAtRear |= vertices[i].y > Rise-.02f && vertices[i].z > Run-.25f-.02f && normals[i].y > .5f;
                 lowAtToe |= vertices[i].y < .10f && vertices[i].z < .30f;
             }
             if (!topAtRear || !lowAtToe)
@@ -115,12 +115,12 @@ public static class W21StairSetup
 
     public static Mesh MakeWalkingHull()
     {
-        // A closed convex prism: no vertical lip at the toe, and a flat exit
-        // at the exact upper walking elevation. It remains within the 2 m run.
-        Vector2[] profile = { new(0,0), new(Rise,Run-ExitLength), new(Rise,Run), new(0,Run) };
-        var vertices = new Vector3[8];
+        // A triangular prism with a continuous 1.5/2 slope. Consecutive pieces
+        // have collinear walking faces, without a horizontal shelf at each join.
+        Vector2[] profile = { new(0,0), new(Rise,Run), new(0,Run) };
+        var vertices = new Vector3[6];
         for (int side = 0; side < 2; ++side)
-            for (int i = 0; i < 4; ++i) vertices[side*4+i] = new Vector3(side*Width,profile[i].x,profile[i].y);
+            for (int i = 0; i < 3; ++i) vertices[side*3+i] = new Vector3(side*Width,profile[i].x,profile[i].y);
         var indices = new List<int>();
         void Triangle(int a,int b,int c)
         {
@@ -129,9 +129,9 @@ public static class W21StairSetup
             if (Vector3.Dot(normal,outward) < 0) (b,c) = (c,b);
             indices.Add(a); indices.Add(b); indices.Add(c);
         }
-        Triangle(0,1,2); Triangle(0,2,3); Triangle(4,5,6); Triangle(4,6,7);
-        for (int i = 0; i < 4; ++i) { int next=(i+1)%4; Triangle(i,next,next+4); Triangle(i,next+4,i+4); }
-        var mesh = new Mesh { name = "W21 walking ramp (8 vertices, 12 triangles, 0.25 m flat exit)" };
+        Triangle(0,1,2); Triangle(3,4,5);
+        for (int i = 0; i < 3; ++i) { int next=(i+1)%3; Triangle(i,next,next+3); Triangle(i,next+3,i+3); }
+        var mesh = new Mesh { name = "W21 continuous walking ramp (6 vertices, 8 triangles, 1.5 m rise / 2 m run)" };
         mesh.vertices = vertices; mesh.SetTriangles(indices,0); mesh.RecalculateNormals(); mesh.RecalculateBounds();
         return mesh;
     }

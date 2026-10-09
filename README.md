@@ -1,5 +1,11 @@
 # FirstSettlers Work Notes
 
+## October 9: continuous stair flights and wall-clearance snaps
+
+Removed the repeated 0.25 m flat exit from W21's walking hull. It is now a continuous 1.5 m / 2 m ramp (6 vertices/8 triangles), so consecutive flights keep rising without horizontal shelves. Landing-to-ramp adhesion handles downhill entry without contact loss. A floor-top starter can shift backward one grid unit if its next flight would otherwise overlap a far border wall; the shift must preserve support and clear both pieces. Nudges remain one unit relative to the shown snap. Fully enclosed 4 m bays have only 3.5 m of clear run and still cannot contain two full flights without more space.
+
+96 single/chained actual-motor traversal cases and rotated wall-clearance samples passed. The previous 0.25 m overlap was reproduced and cleared; tight-room, nudge and stable-preview cases passed. No existing records are moved, and the visual mesh, FBX, catalog, scene, material, shader and lighting asset were preserved. See [stair approach and samples](Documentation/W21_STAIR.md). Restart Play mode to refresh pooled colliders.
+
 ## October 9: W21 half-storey wood stair
 
 Linked the uploaded stair as the seventh build option. Blender X/Y/Z dimensions 1.25/2/1.5 m become Unity width/height/run 1.25/1.5/2 m, with a lower-front-left origin and ascent along +Z. The 240-vertex/120-triangle visual mesh uses the existing wood material. A separate convex ramp has a zero-height toe and 0.25 m flat exit; stair-marked downhill adhesion eliminates contact loss without changing ordinary terrain behavior. Pooled bodies switch cleanly between ramp and box colliders. Straight stair continuations and high-end landings transmit support.

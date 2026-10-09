@@ -83,11 +83,28 @@ public sealed class CharacterMotor : MonoBehaviour
         if (controller.isGrounded && verticalVelocity < 0f)
         {
             verticalVelocity = -groundStickSpeed;
-            if (groundUsesSmoothRamp && GroundNormal.y > .1f)
+            Vector3 stickNormal = GroundNormal;
+            bool smoothRamp = groundUsesSmoothRamp && stickNormal.y > .1f;
+            // Before leaving a flat landing, sample a short step ahead. The
+            // current ground may still be the floor while movement enters a
+            // descending ramp; waiting for its contact loses a few frames.
+            if (horizontalVelocity.sqrMagnitude > .01f && (!smoothRamp || stickNormal.y > .98f))
+            {
+                Vector3 ahead = horizontalVelocity.normalized*Mathf.Min(.25f,controller.radius*.75f);
+                Vector3 rayOrigin = transform.position+ahead+Vector3.up*.15f;
+                if (Physics.Raycast(rayOrigin,Vector3.down,out var upcoming,controller.stepOffset+controller.skinWidth+.2f,solidSurfaceMask,QueryTriggerInteraction.Ignore))
+                {
+                    var surface = upcoming.collider.GetComponent<SmoothWalkSurface>();
+                    float drop = transform.position.y-upcoming.point.y;
+                    if (surface != null && surface.isActiveAndEnabled && upcoming.normal.y > .1f && drop <= controller.stepOffset+controller.skinWidth)
+                    { smoothRamp = true; stickNormal = upcoming.normal; }
+                }
+            }
+            if (smoothRamp)
             {
                 // On an opted-in ramp, follow its downhill drop instead of
                 // outrunning gravity and repeatedly becoming airborne.
-                float surfaceDrop = Vector3.Dot(horizontalVelocity,new Vector3(GroundNormal.x,0,GroundNormal.z))/GroundNormal.y;
+                float surfaceDrop = Vector3.Dot(horizontalVelocity,new Vector3(stickNormal.x,0,stickNormal.z))/stickNormal.y;
                 verticalVelocity = -Mathf.Max(groundStickSpeed,surfaceDrop+.5f);
             }
         }

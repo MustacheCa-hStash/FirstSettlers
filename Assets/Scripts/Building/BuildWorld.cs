@@ -60,6 +60,51 @@ public sealed class BuildWorld : MonoBehaviour
     public void Validate(ref BuildPreview preview)
     {
         using var scope = PlacementMarker.Auto();
+        if (!preview.FitStairContinuation || preview.Definition.kind != BuildPartKind.Stair)
+        { ValidateCore(ref preview); return; }
+        Vector3 nudge = BuildGeometry.Rotation(preview.Frame.YawStep)*((Vector3)preview.StairFitNudge*BuildGeometry.Unit);
+        preview.Origin -= nudge; preview.Anchor -= preview.StairFitNudge;
+        preview.FitStairContinuation = false;
+        ValidateCore(ref preview);
+        if (preview.Valid && NextStairOverlaps(preview,true))
+        {
+            // Fit the unnudged starter to the inward wall face, not its outside
+            // bay edge. Keep this bounded to one quarter-metre correction.
+            var candidate = preview;
+            candidate.Origin -= BuildGeometry.Rotation(preview.WorldYaw)*Vector3.forward*BuildGeometry.Unit;
+            candidate.Frame = new BuildGridFrame { Origin = candidate.Origin, YawStep = (byte)candidate.WorldYaw };
+            candidate.Anchor = Vector3Int.zero; candidate.YawStep = 0;
+            ValidateCore(ref candidate);
+            if (candidate.Valid && !NextStairOverlaps(candidate,false))
+            { candidate.Hint = "Stair foot · 0.25 m clearance for next flight"; preview = candidate; }
+            else preview.Hint = "Stair foot · next flight needs more clear run";
+        }
+        // Apply manual offsets AFTER the base snap, so each nudge still moves
+        // exactly one unit from the visible preview rather than jumping two.
+        if (nudge.sqrMagnitude > .000001f)
+        {
+            preview.Origin += nudge;
+            preview.Frame = new BuildGridFrame { Origin = preview.Origin, YawStep = (byte)preview.WorldYaw };
+            preview.Anchor = Vector3Int.zero; preview.YawStep = 0;
+            ValidateCore(ref preview);
+            preview.Hint = "Stair foot · manual offset";
+        }
+    }
+    private bool NextStairOverlaps(BuildPreview preview,bool wallsOnly)
+    {
+        Bounds bounds = preview.Definition.LocalBounds;
+        Vector3 origin = preview.Origin + BuildGeometry.Rotation(preview.WorldYaw)*new Vector3(0,bounds.size.y,bounds.size.z);
+        Bounds query = BuildGeometry.WorldBounds(bounds,origin,preview.WorldYaw); query.Expand(.04f);
+        Session.Query(query,nearby);
+        foreach (var piece in nearby)
+        {
+            if (wallsOnly && piece.Definition.kind != BuildPartKind.Wall) continue;
+            if (BuildGeometry.Overlaps(bounds,origin,preview.WorldYaw,piece.Definition.LocalBounds,piece.Origin,piece.WorldYawStep)) return true;
+        }
+        return false;
+    }
+    private void ValidateCore(ref BuildPreview preview)
+    {
         preview.Valid = false;
         Bounds local = preview.Definition.LocalBounds;
         Bounds world = BuildGeometry.WorldBounds(local, preview.Origin, preview.WorldYaw);
