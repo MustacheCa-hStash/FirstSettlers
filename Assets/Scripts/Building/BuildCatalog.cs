@@ -11,7 +11,11 @@ public sealed class BuildCatalog : ScriptableObject
     public BuildDefinition Find(string id)
     {
         foreach (var definition in presets)
-            if (definition != null && definition.contentId == id) return definition;
+            if (definition != null)
+            {
+                if(definition.contentId == id)return definition;
+                if(definition.flipVariant!=null && definition.flipVariant.contentId==id)return definition.flipVariant;
+            }
         return null;
     }
 }

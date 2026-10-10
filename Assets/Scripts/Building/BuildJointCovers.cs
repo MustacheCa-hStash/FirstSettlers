@@ -8,13 +8,13 @@ public static class BuildJointCovers
     {
         public Vector3 position,local;
         public BuildPieceRecord owner;
+        public bool suppressed;
     }
     public static void Resolve(IReadOnlyList<BuildPieceRecord> pieces,Dictionary<ulong,BuildResolvedState> states,System.Func<BuildPieceRecord,IReadOnlyList<BuildPieceRecord>> nearby=null)
     {
         var bins=new Dictionary<Vector3Int,List<Group>>();var groups=new List<Group>();
         foreach(var p in pieces)
         {
-            if(p.Definition.jointCoverVariants==null || p.Definition.jointCoverVariants.Length==0)continue;
             foreach(var joint in states[p.Id].joints)
             {
                 var cell=Cell(joint.Position);Group found=null;
@@ -26,13 +26,15 @@ public static class BuildJointCovers
                     found=new Group{position=joint.Position,owner=p,local=joint.LocalPosition};groups.Add(found);
                     if(!bins.TryGetValue(cell,out var list))bins[cell]=list=new List<Group>();list.Add(found);
                 }
-                else if(BuildJointPlanning.ComparePose(p,found.owner)<0){found.owner=p;found.local=joint.LocalPosition;}
+                else if(HasCover(p) && (!HasCover(found.owner) || BuildJointPlanning.ComparePose(p,found.owner)<0)){found.owner=p;found.local=joint.LocalPosition;}
+                found.suppressed|=!BuildWallShape.AllowsCover(p.Definition,joint.LocalPosition);
             }
         }
         groups.Sort((a,b)=>{for(int i=0;i<3;i++){int c=a.position[i].CompareTo(b.position[i]);if(c!=0)return c;}return 0;});
         var outputs=new Dictionary<ulong,List<BuildRenderAttachment>>();
         foreach(var g in groups)
         {
+            if(g.suppressed || !HasCover(g.owner))continue;
             var p=g.owner;Vector3 position=p.Origin+BuildGeometry.Rotation(p.WorldYawStep)*g.local;bool supplied=false;
             foreach(var other in nearby?.Invoke(p)??pieces)
             {
@@ -47,7 +49,11 @@ public static class BuildJointCovers
             if(!outputs.TryGetValue(p.Id,out var list))outputs[p.Id]=list=new List<BuildRenderAttachment>();
             list.Add(new BuildRenderAttachment{mesh=mesh,material=p.Definition.jointCoverMaterial??p.Definition.material,localMatrix=Matrix4x4.Translate(g.local)});
         }
-        foreach(var pair in outputs)states[pair.Key].attachments=pair.Value.ToArray();
+        foreach(var pair in outputs)
+        {
+            var state=states[pair.Key];var combined=new List<BuildRenderAttachment>(state.attachments);combined.AddRange(pair.Value);state.attachments=combined.ToArray();
+        }
     }
+    private static bool HasCover(BuildPieceRecord p)=>p.Definition.jointCoverVariants!=null && p.Definition.jointCoverVariants.Length>0;
     private static Vector3Int Cell(Vector3 p)=>new(Mathf.FloorToInt(p.x/.25f),Mathf.FloorToInt(p.y/.25f),Mathf.FloorToInt(p.z/.25f));
 }

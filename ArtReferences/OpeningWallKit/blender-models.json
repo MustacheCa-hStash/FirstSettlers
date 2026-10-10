@@ -1,0 +1,54 @@
+{
+  "models": [
+    {
+      "tag": "W09",
+      "file": "W09_DoorwayWall_4x3x0.25.fbx",
+      "parts": 24,
+      "triangles": 288,
+      "closedComponents": true,
+      "allFaceUVsValid": true
+    },
+    {
+      "tag": "W11",
+      "file": "W11_ShutterWall_4x3x0.25.fbx",
+      "parts": 32,
+      "triangles": 384,
+      "closedComponents": true,
+      "allFaceUVsValid": true
+    },
+    {
+      "tag": "W15_Rising",
+      "file": "W15_GableRising_2x2x0.25.fbx",
+      "parts": 10,
+      "triangles": 116,
+      "closedComponents": true,
+      "allFaceUVsValid": true
+    },
+    {
+      "tag": "W15_Falling",
+      "file": "W15_GableFalling_2x2x0.25.fbx",
+      "parts": 10,
+      "triangles": 116,
+      "closedComponents": true,
+      "allFaceUVsValid": true
+    },
+    {
+      "tag": "W15_Rising_Seam",
+      "file": "W15_GableRising_RoofSeam.fbx",
+      "parts": 1,
+      "triangles": 12,
+      "closedComponents": true,
+      "allFaceUVsValid": true
+    },
+    {
+      "tag": "W15_Falling_Seam",
+      "file": "W15_GableFalling_RoofSeam.fbx",
+      "parts": 1,
+      "triangles": 12,
+      "closedComponents": true,
+      "allFaceUVsValid": true
+    }
+  ],
+  "preservedExistingObjects": 187,
+  "atlas": "ordinary-wood-trim-albedo.png"
+}

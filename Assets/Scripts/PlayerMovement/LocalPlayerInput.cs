@@ -16,7 +16,7 @@ public sealed class LocalPlayerInput : MonoBehaviour
     [System.Flags]
     private enum BuildButton { Toggle = 1, Cancel = 2, Picker = 4, LeftTurn = 8, RightTurn = 16,
         Left = 32, Right = 64, Forward = 128, Back = 256, Up = 512, Down = 1024, Place = 2048, Remove = 4096,
-        Debug = 8192, Freeze = 16384 }
+        Debug = 8192, Freeze = 16384, Flip = 32768 }
     private BuildButton heldBuildButtons;
     private int suppressLookFrames;
     public void SetBuilding(BuildingController controller) => building = controller;
@@ -93,7 +93,7 @@ public sealed class LocalPlayerInput : MonoBehaviour
                 (Arrow(BuildButton.Forward, ref forwardNudge) ? 1 : 0) - (Arrow(BuildButton.Back, ref backNudge) ? 1 : 0));
             if ((held & (BuildButton.Left | BuildButton.Right)) == (BuildButton.Left | BuildButton.Right)) nudge.x = 0;
             if ((held & (BuildButton.Forward | BuildButton.Back)) == (BuildButton.Forward | BuildButton.Back)) nudge.z = 0;
-            building.Submit(new BuildInputCommand(turn, nudge, Pressed(BuildButton.Place), Pressed(BuildButton.Remove)));
+            building.Submit(new BuildInputCommand(turn, nudge, Pressed(BuildButton.Place), Pressed(BuildButton.Remove), Pressed(BuildButton.Flip)));
         }
         else ResetNudgeRepeat();
         Vector2 move = new Vector2(
@@ -125,6 +125,7 @@ public sealed class LocalPlayerInput : MonoBehaviour
             if (keyboard.tabKey.isPressed) buttons |= BuildButton.Picker;
             if (keyboard.qKey.isPressed) buttons |= BuildButton.LeftTurn;
             if (keyboard.eKey.isPressed) buttons |= BuildButton.RightTurn;
+            if (keyboard.rKey.isPressed) buttons |= BuildButton.Flip;
             if (keyboard.leftArrowKey.isPressed) buttons |= BuildButton.Left;
             if (keyboard.rightArrowKey.isPressed) buttons |= BuildButton.Right;
             if (keyboard.upArrowKey.isPressed) buttons |= BuildButton.Forward;

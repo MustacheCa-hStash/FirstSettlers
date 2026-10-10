@@ -50,6 +50,7 @@ try {
     $buildingOwned += @(Get-Item 'Assets/Editor/FloorFramingSetup.cs','Assets/Editor/BuildCollisionAuthoring.cs','Assets/Editor/BuildFramingValidation.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/BuildColliderDebugValidation.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/BuildIntersectionRegressionValidation.cs','Assets/Editor/ModularWoodSetup.cs','Assets/Editor/ModularWoodValidation.cs')
+    $buildingOwned += @(Get-Item 'Assets/Editor/OpeningWallSetup.cs','Assets/Editor/OpeningWallValidation.cs')
     $buildingOwned += @(Get-Item 'Assets/Scripts/PlayerMovement/SmoothWalkSurface.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/SplitPlankWallSetup.cs','Assets/Editor/WattleWallSetup.cs','Assets/Editor/WattleWallValidation.cs','Assets/Shaders/BuildingWoodMatte.shader','Assets/Shaders/WattleValidationDepthReveal.shader')
     foreach ($buildingFile in $buildingOwned) {
@@ -83,6 +84,9 @@ try {
         Copy-Item -LiteralPath "Assets/Shaders/$buildingShaderFile","Assets/Shaders/$buildingShaderFile.meta" -Destination "$buildingProject/Assets/Shaders" -Force
     }
     foreach ($buildingName in 'BuildingPrototypeSetup','BuildingPrototypeValidation','BuildingPrototypeRenderValidation','BuildingPrototypeInputValidation','SplitPlankWallSetup','WattleWallSetup','WattleWallValidation','BuildingShadowValidation','BayPostSetup','W21StairSetup','W21StairValidation','ThatchRoofSetup','ThatchRoofValidation','FloorFramingSetup','BuildCollisionAuthoring','BuildFramingValidation','BuildColliderDebugValidation','BuildIntersectionRegressionValidation','ModularWoodSetup','ModularWoodValidation') {
+        Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
+    }
+    foreach ($buildingName in 'OpeningWallSetup','OpeningWallValidation') {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
     }
     foreach ($buildingName in 'ProjectVersion.txt','TagManager.asset','ProjectSettings.asset') {

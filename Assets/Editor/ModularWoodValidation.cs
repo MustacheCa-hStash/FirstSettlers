@@ -41,6 +41,7 @@ public static class ModularWoodValidation
         {
             var c=Resources.Load<BuildCatalog>("Building/PrototypeCatalog");Check(Application.isPlaying,"Validation must run in Play mode");
             GameplayLifetime(c);
+            OpeningWallValidation.Runtime(c,Check);
             var walls=new[]{c.presets[0],c.Find(WattleWallSetup.ContentId)};
             for(int yaw=0;yaw<8;yaw++)
             {
@@ -59,7 +60,8 @@ public static class ModularWoodValidation
     }
     private static void Assets(BuildCatalog c)
     {
-        Check(c.presets.Length==7 && c.Find(SplitPlankWallSetup.InfillContentId)==null,"Removed infill still in menu or catalog changed unexpectedly");
+        Check(c.presets.Length==10 && c.Find(SplitPlankWallSetup.InfillContentId)==null,"Removed infill still in menu or catalog changed unexpectedly");
+        OpeningWallValidation.Assets(c,Check);
         var wall=c.presets[0];var floor=c.presets[1];var post=c.presets[3];var wattle=c.Find(WattleWallSetup.ContentId);
         foreach(var d in new[]{wall,wattle})
         {
@@ -75,6 +77,8 @@ public static class ModularWoodValidation
         Near(post.LocalBounds.size,new Vector3(.25f,3,.25f),"Post physics size");Near(post.mesh.bounds.size,new Vector3(.26f,3.003f,.26f),"Post visual relief");
         Check(floor.uvVariants.Length==3 && floor.floorOpeningUvVariants.Length==3,"Floor UV layouts missing");
         var all=new List<Mesh>{wall.mesh,wattle.mesh};all.AddRange(post.uvVariants);all.AddRange(floor.uvVariants);all.AddRange(floor.floorOpeningUvVariants);
+        foreach(var id in new[]{OpeningWallSetup.DoorId,OpeningWallSetup.WindowId,OpeningWallSetup.GableId,OpeningWallSetup.FallingId})all.Add(c.Find(id).mesh);
+        all.Add(c.Find(OpeningWallSetup.GableId).gableRoofSeamMesh);all.Add(c.Find(OpeningWallSetup.FallingId).gableRoofSeamMesh);
         foreach(var mesh in all)UVs(mesh);
         foreach(var variant in floor.uvVariants)
         {
@@ -243,6 +247,17 @@ public static class ModularWoodValidation
             foreach(ulong id in new List<ulong>(s.Pieces.Keys))s.Remove(id);
             for(int i=0;i<3;i++)s.Add(c.presets[1],f,new Vector3Int(i*16,0,0),0,true);
             Capture("varied-floorboards",new Vector3(6,12,3),new Vector3(6,0,2),5.2f);
+            foreach(ulong id in new List<ulong>(s.Pieces.Keys))s.Remove(id);
+            s.Add(c.Find(OpeningWallSetup.DoorId),f,default,0,true);s.Add(c.Find(OpeningWallSetup.WindowId),f,new Vector3Int(20,0,0),0,true);
+            s.Add(c.Find(OpeningWallSetup.GableId),f,new Vector3Int(40,0,0),0,true);s.Add(c.Find(OpeningWallSetup.FallingId),f,new Vector3Int(48,0,0),0,true);
+            Capture("opening-kit-front",new Vector3(7,5,-16),new Vector3(7,1.5f,0),5.2f);
+            Capture("opening-kit-back",new Vector3(7,5,16),new Vector3(7,1.5f,0),5.2f);
+            foreach(ulong id in new List<ulong>(s.Pieces.Keys))s.Remove(id);
+            s.Add(c.presets[2],f,default,0,true);s.Add(c.Find(OpeningWallSetup.DoorId),f,default,0,false);
+            s.Add(c.Find(OpeningWallSetup.WindowId),f,new Vector3Int(16,0,0),6,false);s.Add(c.presets[0],f,new Vector3Int(0,0,16),0,false);
+            s.Add(c.Find(OpeningWallSetup.GableId),f,new Vector3Int(0,12,0),0,false);s.Add(c.Find(OpeningWallSetup.FallingId),f,new Vector3Int(8,12,0),0,false);
+            s.Add(c.Find(ThatchRoofSetup.ContentId),f,new Vector3Int(0,12,16),2,false);s.Add(c.Find(ThatchRoofSetup.ContentId),f,new Vector3Int(16,12,0),6,false);
+            Capture("opening-kit-house",new Vector3(9,7,-11),new Vector3(2,2.5f,2),4.6f);
         }finally{RenderPipelineManager.beginCameraRendering-=submit;GraphicsSettings.defaultRenderPipeline=old;QualitySettings.renderPipeline=quality;RenderTexture.active=active;target.Release();Object.DestroyImmediate(target);Object.DestroyImmediate(camObj);Object.DestroyImmediate(lightObj);}
     }
 }

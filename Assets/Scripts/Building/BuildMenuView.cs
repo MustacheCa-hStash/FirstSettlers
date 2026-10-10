@@ -22,8 +22,9 @@ public sealed class BuildMenuView : IDisposable
         {
             var chosen = definition;
             var button = new Button(() => select(chosen)) { name = chosen.contentId,
-                text = $"{chosen.displayName}\n{chosen.LocalBounds.size.x:0.##} × {chosen.LocalBounds.size.z:0.##} m · {chosen.LocalBounds.size.y:0.##} m high" };
+                text = $"{chosen.displayName}\n{chosen.LocalBounds.size.x:0.##} × {chosen.LocalBounds.size.z:0.##} m · {chosen.LocalBounds.size.y:0.##} m high"+(chosen.flipVariant!=null?"\nR · Flip slope":"") };
             button.AddToClassList("build-preset");
+            if(chosen.flipVariant!=null)button.style.height=96;
             root.Q<VisualElement>("build-presets").Add(button);
         }
         IgnorePicking(hud); SetState(false, false);

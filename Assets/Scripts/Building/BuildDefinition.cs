@@ -3,6 +3,7 @@ using UnityEngine;
 public enum BuildPartKind { Wall, Floor, Foundation, Corner, Stair, Roof }
 public enum WallPlacementMode { Panel, Infill, Surface }
 public enum RoofAttachmentMode { None, Gable, Beam }
+public enum GableSlope { None, Rising, Falling }
 
 /// <summary>Authored placement geometry is independent of mesh detail and runtime proxies.</summary>
 [CreateAssetMenu(menuName = "First Settlers/Building/Component")]
@@ -29,6 +30,16 @@ public sealed class BuildDefinition : ScriptableObject
     public float WallEndInset => Mathf.Max(0, wallEndInsetUnits) * BuildGeometry.Unit;
     public float WallBaySpan => LocalBounds.size.x + 2 * WallEndInset;
     public Mesh mesh;
+    [Tooltip("Authored solid sections around wall openings. Empty uses the full logical box unless convex volumes are supplied.")]
+    public Bounds[] solidBoxes;
+    [Tooltip("Clear apertures which generated junction framing must preserve.")]
+    public Bounds[] wallOpenings;
+    public GableSlope gableSlope;
+    public bool IsHalfGable => gableSlope != GableSlope.None;
+    [Tooltip("Opposite slope representation, selected with R without adding another menu option.")]
+    public BuildDefinition flipVariant;
+    [Tooltip("Visual seam strip shown only where a half-gable meets an aligned roof end. Does not alter its two-metre structural rise.")]
+    public Mesh gableRoofSeamMesh;
     public Mesh[] uvVariants;
     public Mesh[] floorOpeningUvVariants;
     public Mesh[] jointCoverVariants;

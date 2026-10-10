@@ -5,9 +5,9 @@ public readonly struct BuildInputCommand
     public readonly int Turn;
     // X/Z are player-relative arrow directions; the controller maps them into the active grid. Y is vertical.
     public readonly Vector3Int Nudge;
-    public readonly bool Place, Remove;
-    public BuildInputCommand(int turn, Vector3Int nudge, bool place, bool remove)
-    { Turn = turn; Nudge = nudge; Place = place; Remove = remove; }
+    public readonly bool Place, Remove, Flip;
+    public BuildInputCommand(int turn, Vector3Int nudge, bool place, bool remove, bool flip=false)
+    { Turn = turn; Nudge = nudge; Place = place; Remove = remove; Flip = flip; }
 }
 
 /// <summary>One edge-triggered nudge followed by bounded hold repeat, using unscaled time.</summary>

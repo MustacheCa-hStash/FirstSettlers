@@ -12,7 +12,7 @@ public static class BuildSocketPlacement
         bool post=target.Definition.kind==BuildPartKind.Corner && b.min.x<0 && b.min.z<0;
         bool selectedWall=d.kind==BuildPartKind.Wall && d.jointSockets?.Length>0;
         bool selectedPost=d.kind==BuildPartKind.Corner && d.LocalBounds.min.x<0 && d.LocalBounds.min.z<0;
-        bool upper=n.y>.6f || point.y>=b.center.y;Vector3 origin;int yaw=BuildGeometry.Turn(turn);string hint;bool top=false;
+        bool upper=!target.Definition.IsHalfGable && (n.y>.6f || point.y>=b.center.y);Vector3 origin;int yaw=BuildGeometry.Turn(turn);string hint;bool top=false;
         if(selectedPost && wall)
         {
             origin=new Vector3(point.x<b.center.x?0:b.max.x,n.y>.6f?b.min.y+target.Definition.StackRise:b.min.y,0);hint="Post at wall endpoint";

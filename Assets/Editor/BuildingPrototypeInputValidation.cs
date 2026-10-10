@@ -205,12 +205,27 @@ public static class BuildingPrototypeInputValidation
                 case 26:Read();Queue(Key.F8);break;
                 case 27:
                     Read();Require(controller.World.ColliderDebug.Mode==BuildColliderDebugMode.Off,"F8 did not disable diagnostics.");
-                    Debug.Log("BUILDING INPUT PASS: native B/E/Escape/F8/F9, held-key guards, picker capture/look, arrow press/hold/release/opposition, debug cycle/freeze/outside-build and menu-held suppression; empty synthetic scene only."); Finish(null); break;
+                    var cameraObject=new GameObject("Gable flip input camera");cameraObject.transform.SetParent(rig.transform,false);var camera=cameraObject.AddComponent<Camera>();camera.enabled=false;Set(controller,"viewCamera",camera);
+                    controller.Toggle();controller.Select(controller.World.Catalog.Find(OpeningWallSetup.GableId));Queue(Key.R);break;
+                case 28:
+                    Read();Require(PendingCommand().Flip,"R did not submit slope flip");ApplyController();
+                    Require(Selected().contentId==OpeningWallSetup.FallingId,"R did not select mirrored representation");
+                    Read();Require(!PendingCommand().Flip,"Held R repeated flip");ApplyController();Require(Selected().contentId==OpeningWallSetup.FallingId,"Held R flipped back");Queue();break;
+                case 29:Read();Queue(Key.R);break;
+                case 30:
+                    Read();ApplyController();Require(Selected().contentId==OpeningWallSetup.GableId,"Second fresh R did not restore rising slope");controller.OpenMenu();Queue(Key.R);break;
+                case 31:Read();controller.Select(controller.World.Catalog.Find(OpeningWallSetup.GableId));Queue(Key.R);break;
+                case 32:
+                    Read();Require(!PendingCommand().Flip,"Picker-held R replayed slope flip");
+                    Debug.Log("BUILDING INPUT PASS: native B/E/Escape/F8/F9/R, gable representation flip/held/menu guards, picker capture/look, arrow repeat and diagnostics; empty synthetic scene only.");Finish(null);break;
             }
         }
         catch (Exception ex) { Finish(ex); }
     }
     private static Vector3Int PendingNudge() => ((BuildInputCommand)typeof(BuildingController).GetField("pending",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(controller)).Nudge;
+    private static BuildInputCommand PendingCommand()=>(BuildInputCommand)typeof(BuildingController).GetField("pending",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(controller);
+    private static BuildDefinition Selected()=>(BuildDefinition)typeof(BuildingController).GetField("selected",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(controller);
+    private static void ApplyController()=>typeof(BuildingController).GetMethod("LateUpdate",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(controller,null);
     private static void Finish(Exception error)
     {
         InputSystem.onBeforeUpdate -= Inject; InputSystem.onAfterUpdate -= CheckFrame; EditorApplication.update -= CheckTimeout;

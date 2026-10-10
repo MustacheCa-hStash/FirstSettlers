@@ -114,6 +114,7 @@ public sealed class BuildingController : MonoBehaviour
         RestoreCursorCapture();
         var command = pending; pending = default;
         if (!Active || MenuOpen || selected == null || viewCamera == null) return;
+        if(command.Flip && selected.flipVariant!=null){selected=selected.flipVariant;world.ClearPreview();}
         var ray = viewCamera.ViewportPointToRay(new Vector3(.5f, .5f, 0));
         if (!TryResolveAim(ray, out var aimPoint, out var aimNormal, out var direct, out var nextTarget, out bool guided))
         {
@@ -146,7 +147,7 @@ public sealed class BuildingController : MonoBehaviour
             world.Commit(preview); suppressPlaceUntil = Time.frameCount;
         }
         Preview = preview;
-        view.Show(selected.displayName + " · " + (preview.WorldYaw * 45) + "°",
+        view.Show(selected.displayName + " · " + (preview.WorldYaw * 45) + "°"+(selected.flipVariant!=null?" · R: flip slope":""),
             preview.Valid ? preview.Message+" · "+(preview.Warning!=BuildPlacementWarning.None?preview.WarningMessage:preview.Hint) : preview.Message,
             preview.Valid,preview.Valid && preview.Warning!=BuildPlacementWarning.None);
         DrawPreviewMesh(preview.VisualMesh,preview);

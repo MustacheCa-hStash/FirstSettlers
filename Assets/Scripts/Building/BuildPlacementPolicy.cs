@@ -6,6 +6,13 @@ public static class BuildPlacementPolicy
     public static bool IsDuplicate(BuildPieceRecord a,BuildPieceRecord b)
     {
         if(a.Definition.kind!=b.Definition.kind)return false;
+        if(a.Definition.IsHalfGable || b.Definition.IsHalfGable)
+        {
+            if(!a.Definition.IsHalfGable || !b.Definition.IsHalfGable)return false;
+            Vector3 ap=a.Origin+BuildGeometry.Rotation(a.WorldYawStep)*BuildWallShape.Peak(a.Definition);
+            Vector3 bp=b.Origin+BuildGeometry.Rotation(b.WorldYawStep)*BuildWallShape.Peak(b.Definition);
+            if((ap-bp).sqrMagnitude>.000144f)return false;
+        }
         int turn=BuildGeometry.Turn(a.WorldYawStep-b.WorldYawStep);
         bool sameShapeHeading=a.Definition.kind is BuildPartKind.Stair or BuildPartKind.Roof ? turn==0 :
             a.Definition.kind==BuildPartKind.Wall ? turn%4==0 : turn%2==0;

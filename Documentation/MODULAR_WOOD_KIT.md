@@ -1,8 +1,12 @@
 # Full-span wood kit: Blender source and Unity integration
 
 Implemented standard: 4 m wall spans, 3 m storeys and centred 0.25 m wall/post
-colliders. The build menu now has seven options; the two-plank infill is archived
+colliders. The base kit has seven options; the two-plank infill is archived
 outside the menu. Existing component IDs/GUIDs and the ordinary wood atlas remain.
+
+W09/W11 and the flippable W15 half-gable extend the menu to ten options. See
+[opening wall kit](OPENING_WALL_KIT.md) for models, open colliders, triangle/roof
+snaps and contextual seam strips.
 
 ## Blender
 

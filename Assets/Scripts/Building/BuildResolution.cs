@@ -34,10 +34,14 @@ public sealed class BuildResolution : IDisposable
             Bounds b=Relative(other.Definition.LocalBounds,other,p);
             if(other.Definition.kind is BuildPartKind.Wall or BuildPartKind.Corner)
             {
-                if(Mathf.Min(b.max.y,p.Definition.LocalBounds.max.y)-Mathf.Max(b.min.y,p.Definition.LocalBounds.min.y)>.005f)
+                foreach(var section in BuildWallShape.FloorSections(other.Definition,p.Origin.y+p.Definition.LocalBounds.min.y-other.Origin.y))
                 {
-                    if(!Aligned(p,other)){invalid=true;continue;}
-                    AddCut(cuts,b,p.Definition.LocalBounds);
+                    var solid=Relative(section,other,p);
+                    if(Mathf.Min(solid.max.y,p.Definition.LocalBounds.max.y)-Mathf.Max(solid.min.y,p.Definition.LocalBounds.min.y)>.005f)
+                    {
+                        if(!Aligned(p,other)){invalid=true;continue;}
+                        AddCut(cuts,solid,p.Definition.LocalBounds);
+                    }
                 }
             }
             else if(other.Definition.kind==BuildPartKind.Stair)
@@ -101,11 +105,15 @@ public sealed class BuildResolution : IDisposable
     }
     private BuildResolvedState Ordinary(BuildPieceRecord p,IReadOnlyList<BuildPieceRecord> pieces,Dictionary<ulong,BuildResolvedState> floors)
     {
-        var d=p.Definition;Mesh core=BuildTrimUV.Core(p);
+        var d=p.Definition;Mesh core=BuildTrimUV.Core(p);var seams=BuildWallShape.RoofSeam(p,pieces);
         if(d.kind==BuildPartKind.Roof && d.roofContinuationMesh!=null)
             foreach(var other in pieces)if(BuildRoof.IsBelow(d,p.Origin,p.WorldYawStep,other.Definition,other.Origin,other.WorldYawStep)){core=d.roofContinuationMesh;break;}
         var boxes=new List<Bounds>();var volumes=BuildOccupancy.Custom(d)?d.occupiedVolumes:Array.Empty<BuildConvexVolume>();
-        if(volumes.Length==0)boxes.Add(d.LocalBounds);
+        if(volumes.Length==0)
+        {
+            if(d.solidBoxes!=null && d.solidBoxes.Length>0)boxes.AddRange(d.solidBoxes);
+            else boxes.Add(d.LocalBounds);
+        }
         var headers=new List<Bounds>();
         if(d.kind is BuildPartKind.Wall or BuildPartKind.Corner or BuildPartKind.Roof)
         {
@@ -129,7 +137,7 @@ public sealed class BuildResolution : IDisposable
             if(bearing)headers=Subtract(new[]{foot},cut);
         }
         boxes.AddRange(headers);Sort(headers);
-        if(headers.Count==0)return new BuildResolvedState{mesh=core,boxes=boxes.ToArray(),volumes=volumes,key=core==d.mesh?"full":"joined"};
+        if(headers.Count==0)return new BuildResolvedState{mesh=core,boxes=boxes.ToArray(),volumes=volumes,attachments=seams,key=core==d.mesh?"full":"joined"};
         string key=Key(d,core==d.mesh?"bearing":"joined-bearing",headers);
         if(!meshes.TryGetValue(key,out var visual))
         {
@@ -151,7 +159,7 @@ public sealed class BuildResolution : IDisposable
             }
             visual=BuildTimberMesh.Create("Shared bearing only",parts,roofAtlas:d.kind==BuildPartKind.Roof);meshes.Add(key,visual);
         }
-        return new BuildResolvedState{mesh=core,auxiliaryMesh=visual,boxes=boxes.ToArray(),volumes=volumes,key=key};
+        return new BuildResolvedState{mesh=core,auxiliaryMesh=visual,boxes=boxes.ToArray(),volumes=volumes,attachments=seams,key=key};
     }
     public static Bounds? StairFloorCut(BuildPieceRecord stair,BuildPieceRecord floor)
     {

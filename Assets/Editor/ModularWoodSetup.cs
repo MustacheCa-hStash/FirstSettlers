@@ -23,13 +23,15 @@ public static class ModularWoodSetup
         return saved;
     }
     public static Mesh WallMesh(GameObject model)
+        =>StructuralMesh(model,new Bounds(new Vector3(2,1.5f,0),new Vector3(4,3,.25f)));
+    public static Mesh StructuralMesh(GameObject model,Bounds expected)
     {
         var filters=model.GetComponentsInChildren<MeshFilter>(true);
         if(filters.Length!=1 || filters[0].sharedMesh==null || filters[0].sharedMesh.subMeshCount!=1 || model.GetComponentsInChildren<SkinnedMeshRenderer>(true).Length!=0)
             throw new InvalidOperationException("A modular wall requires one static mesh and one material submesh: "+model.name);
-        var mesh=filters[0].sharedMesh;var expected=new Bounds(new Vector3(2,1.5f,0),new Vector3(4,3,.25f));
+        var mesh=filters[0].sharedMesh;
         if((mesh.bounds.center-expected.center).sqrMagnitude>.000001f || (mesh.bounds.size-expected.size).sqrMagnitude>.000001f)
-            throw new InvalidOperationException("Wall mesh must occupy X=0..4, Y=0..3, Z=-0.125..0.125: "+model.name);
+            throw new InvalidOperationException("Wall mesh does not match its authored structural envelope "+expected+": "+model.name);
         var matrix=filters[0].transform.localToWorldMatrix;
         for(int row=0;row<4;row++)for(int column=0;column<4;column++)
             if(Mathf.Abs(matrix[row,column]-(row==column?1:0))>.00001f)

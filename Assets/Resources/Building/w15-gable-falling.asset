@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: w15-gable-falling
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.wood.w15-gable-falling
+  displayName: "W15 half-gable \xB7 falling"
+  kind: 0
+  wallPlacementMode: 0
+  sizeUnits: {x: 8, y: 8, z: 1}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: 0, y: 0, z: -0.125}
+  jointSockets:
+  - localPosition: {x: 0, y: 0, z: 0}
+    outward: {x: -1, y: 0, z: 0}
+    interior: 0
+  - localPosition: {x: 2, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 0
+  stackRiseUnits: 8
+  wallEndInsetUnits: 0
+  mesh: {fileID: -4843467792546201307, guid: 60b663f4467b4d8d952b12d0bce3d3df, type: 3}
+  solidBoxes: []
+  wallOpenings: []
+  gableSlope: 2
+  flipVariant: {fileID: 11400000, guid: e5200a5337d9f3b4bbcd2f6a88cbf8ba, type: 2}
+  gableRoofSeamMesh: {fileID: -7988196202946288696, guid: 0f23c7a83b544a8895223968f88e0975, type: 3}
+  uvVariants: []
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes:
+  - mesh: {fileID: 4300000, guid: 165da2f57bd96e74a9487c021ea754af, type: 2}
+    vertices:
+    - {x: 0, y: 0, z: -0.125}
+    - {x: 2, y: 0, z: -0.125}
+    - {x: 0, y: 2, z: -0.125}
+    - {x: 0, y: 0, z: 0.125}
+    - {x: 2, y: 0, z: 0.125}
+    - {x: 0, y: 2, z: 0.125}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: 0.70710677, y: 0.70710677, z: 0}
+    - {x: -1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0, y: 1, z: 0}
+    - {x: 0.70710677, y: -0.70710677, z: 0}
+    - {x: -1, y: 0, z: 0}
+    - {x: 0, y: 0, z: 1}
+    - {x: -0.99227786, y: 0, z: -0.12403473}
+    - {x: 0.7043607, y: -0.7043607, z: -0.08804509}
+    - {x: 0, y: 0.99227786, z: -0.12403473}
+    bounds:
+      m_Center: {x: 1, y: 1, z: 0}
+      m_Extent: {x: 1, y: 1, z: 0.125}
+  roofAttachment: 1
+  material: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
+  authoringPrefab: {fileID: 5727563201830122683, guid: 0530349d34281e444a9413e08a6a26de, type: 3}
+  maxHealth: 100

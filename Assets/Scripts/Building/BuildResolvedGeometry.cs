@@ -31,6 +31,9 @@ public static class BuildResolvedGeometry
         foreach(var v in sb.volumes)foreach(var ab in sa.boxes)
             if(BuildGeometry.Connects(v.bounds,b.Origin,b.WorldYawStep,ab,a.Origin,a.WorldYawStep) &&
                 BuildOccupancy.SolidOverlap(v,default,b.Origin,BuildGeometry.Rotation(b.WorldYawStep),null,ab,a.Origin,BuildGeometry.Rotation(a.WorldYawStep),-.008f))return true;
+        foreach(var av in sa.volumes)foreach(var bv in sb.volumes)
+            if(BuildGeometry.Connects(av.bounds,a.Origin,a.WorldYawStep,bv.bounds,b.Origin,b.WorldYawStep) &&
+                BuildOccupancy.SolidOverlap(av,default,a.Origin,BuildGeometry.Rotation(a.WorldYawStep),bv,default,b.Origin,BuildGeometry.Rotation(b.WorldYawStep),-.008f))return true;
         if(a.Definition.kind==BuildPartKind.Roof && b.Definition.kind is BuildPartKind.Wall or BuildPartKind.Corner)
             return BuildRoof.Connects(a.Definition,a.Origin,a.WorldYawStep,b.Definition,b.Origin,b.WorldYawStep);
         if(b.Definition.kind==BuildPartKind.Roof && a.Definition.kind is BuildPartKind.Wall or BuildPartKind.Corner)
@@ -47,6 +50,7 @@ public static class BuildResolvedGeometry
     }
     private static bool StackSocket(BuildPieceRecord lower,BuildPieceRecord upper)
     {
+        if(lower.Definition.IsHalfGable)return false;
         if(lower.Definition.kind is not (BuildPartKind.Wall or BuildPartKind.Corner) || upper.Definition.kind is not (BuildPartKind.Wall or BuildPartKind.Corner))return false;
         Bounds a=lower.Definition.LocalBounds,b=upper.Definition.LocalBounds;float rise=lower.Definition.StackRise;
         if(rise<a.size.y-.012f || rise>a.size.y+BuildResolution.Band+.012f)return false;

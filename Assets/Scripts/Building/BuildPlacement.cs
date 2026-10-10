@@ -50,6 +50,7 @@ public static class BuildPlacement
             Bounds bounds = target.Definition.LocalBounds;
             Vector3 point = BuildGeometry.LocalPoint(targetFrame, hit);
             Vector3 localNormal = Quaternion.Inverse(BuildGeometry.Rotation(target.WorldYawStep)) * normal;
+            if(BuildGablePlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,out var gablePreview))return gablePreview;
             if(BuildSocketPlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,preferTopAttachment,out var socketPreview))return socketPreview;
             Vector3 origin;
             int edge = ClosestEdge(bounds, point);

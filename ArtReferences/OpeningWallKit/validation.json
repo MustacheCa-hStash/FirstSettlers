@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "checks": 29891,
+  "realMotorWalks": 96,
+  "doorwayMotorCrossings": 16,
+  "nativeSlopeFlipInputPassed": true
+}
