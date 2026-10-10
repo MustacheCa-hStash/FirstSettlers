@@ -13,11 +13,11 @@ public sealed class BuildGameplayProxy : QueryTarget
     public void GetEnabledColliders(System.Collections.Generic.List<Collider> output)
     {
         output.Clear();
-        if(Record==null || !gameObject.activeInHierarchy)return;
+        if(this==null || Record==null || !gameObject.activeInHierarchy)return;
         if(Shape!=null && Shape.enabled)output.Add(Shape);
         if(RampShape!=null && RampShape.enabled)output.Add(RampShape);
-        foreach(var c in boxes)if(c.enabled)output.Add(c);
-        foreach(var c in volumes)if(c.enabled)output.Add(c);
+        foreach(var c in boxes)if(c!=null && c.enabled)output.Add(c);
+        foreach(var c in volumes)if(c!=null && c.enabled)output.Add(c);
     }
     public Collider ActiveShape => Record != null && Record.Definition.kind==BuildPartKind.Stair ? RampShape :
         Record != null && BuildOccupancy.Custom(Record.Definition) && volumes.Count>0 ? volumes[0] : Shape;
@@ -95,11 +95,12 @@ public sealed class BuildGameplayProxy : QueryTarget
     public void Unbind()
     {
         InvalidateIdentity(); Record = null;
+        if (this == null) return;
         if (Shape != null) Shape.enabled = false;
         if (RampShape != null) RampShape.enabled = false;
         if (smoothWalk != null) smoothWalk.enabled = false;
-        foreach (var volume in volumes) volume.enabled = false;
-        foreach (var box in boxes) box.enabled=false;
+        foreach (var volume in volumes) if(volume!=null)volume.enabled = false;
+        foreach (var box in boxes) if(box!=null)box.enabled=false;
         gameObject.SetActive(false);
     }
     public override bool TryGetInfo(out QueryTargetInfo info)

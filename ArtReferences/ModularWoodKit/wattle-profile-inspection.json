@@ -1,0 +1,26 @@
+{
+  "source": "C:\\Users\\samee\\OneDrive\\Desktop\\BlenderModelsFirstSettlers\\Building\\BuildComponents.blend",
+  "editableParts": [
+    "Modular_WattleWall_0",
+    "Modular_WattleWall_1",
+    "Modular_WattleWall_2"
+  ],
+  "unityLocalMin": [
+    0.0,
+    0.0,
+    -0.125
+  ],
+  "unityLocalMax": [
+    4.0,
+    3.0,
+    0.125
+  ],
+  "uvFacesValid": true,
+  "legacyObject": "Wattle_Wall",
+  "legacyBlenderDimensions": [
+    3.5,
+    0.25,
+    2.75
+  ],
+  "remodelRequired": false
+}

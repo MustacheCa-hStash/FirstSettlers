@@ -73,7 +73,7 @@ MonoBehaviour:
     interior: 0
   stackRiseUnits: 12
   wallEndInsetUnits: 0
-  mesh: {fileID: 4300000, guid: 9a208e8bf5c0c7e4f8321b9f55aea4b9, type: 2}
+  mesh: {fileID: -417000807741414499, guid: d4bafefdc5fa92b4aa59f40f7259d834, type: 3}
   uvVariants: []
   floorOpeningUvVariants: []
   jointCoverVariants:

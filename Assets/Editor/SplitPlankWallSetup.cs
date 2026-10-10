@@ -106,15 +106,7 @@ public static class SplitPlankWallSetup
         var shader = Shader.Find(ShaderName);
         if (model == null || texture == null || shader == null)
             throw new InvalidOperationException("Split-plank model, trim atlas or matte shader is missing.");
-        var filters = model.GetComponentsInChildren<MeshFilter>(true);
-        if (filters.Length != 1 || filters[0].sharedMesh == null || filters[0].sharedMesh.subMeshCount != 1)
-            throw new InvalidOperationException("The building renderer requires one wall mesh with one material submesh.");
-        var mesh = filters[0].sharedMesh;
-        var bounds = new Bounds(new Vector3(2, 1.5f, 0), new Vector3(4, 3, .25f));
-        if ((mesh.bounds.center - bounds.center).sqrMagnitude > .000001f ||
-            (mesh.bounds.size - bounds.size).sqrMagnitude > .000001f ||
-            !Identity(filters[0].transform.localToWorldMatrix))
-            throw new InvalidOperationException("FBX mesh must itself occupy (0,0,-0.125)..(4,3,0.125), with no compensating object transform. Check Bake Axis Conversion and applied export transforms.");
+        var mesh = ModularWoodSetup.WallMesh(model);
 
         Directory.CreateDirectory(Path.GetDirectoryName(MaterialPath));
         AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);

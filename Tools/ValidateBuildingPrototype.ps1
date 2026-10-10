@@ -1,5 +1,6 @@
-param([switch]$PrepareOnly, [switch]$CompileOnly, [switch]$Render, [switch]$InputChecks, [switch]$ShadowChecks, [switch]$WattleChecks, [switch]$PreviewChecks, [switch]$StairChecks, [switch]$RoofChecks, [switch]$FramingChecks, [switch]$ColliderDebugChecks, [switch]$IntersectionChecks, [switch]$ModularChecks)
+param([switch]$PrepareOnly, [switch]$CompileOnly, [switch]$Render, [switch]$InputChecks, [switch]$ShadowChecks, [switch]$WattleChecks, [switch]$PreviewChecks, [switch]$StairChecks, [switch]$RoofChecks, [switch]$FramingChecks, [switch]$ColliderDebugChecks, [switch]$IntersectionChecks, [switch]$ModularChecks, [switch]$InstalledAssets)
 $ErrorActionPreference = 'Stop'
+if ($InstalledAssets) { $ModularChecks = $true }
 # Full-span assets supersede legacy dimensional fixtures. Keep native input validation separate.
 if (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'Assets/Models/Buildings/Wood/Modular/SplitPlankWall_4.00Wx3.00Hx0.25D.fbx')) {
     if (-not $PrepareOnly -and -not $CompileOnly -and -not $InputChecks) { $ModularChecks = $true }
@@ -101,6 +102,7 @@ try {
     $buildingLog = Join-Path $buildingWork $(if ($ModularChecks) { 'modular-wood.log' } elseif ($IntersectionChecks) { 'intersection-regression.log' } elseif ($ColliderDebugChecks) { 'collider-debug.log' } elseif ($FramingChecks) { 'framing.log' } elseif ($RoofChecks) { 'roof.log' } elseif ($StairChecks) { 'stairs.log' } elseif ($PreviewChecks) { 'preview.log' } elseif ($WattleChecks) { 'wattle.log' } elseif ($ShadowChecks) { 'shadows.log' } elseif ($Render) { 'render.log' } elseif ($InputChecks) { 'input.log' } else { 'validation.log' })
     $buildingMethod = if ($ModularChecks) { 'ModularWoodValidation.RunBatch' } elseif ($IntersectionChecks) { 'BuildIntersectionRegressionValidation.RunBatch' } elseif ($ColliderDebugChecks) { 'BuildColliderDebugValidation.RunBatch' } elseif ($FramingChecks) { 'BuildFramingValidation.RunBatch' } elseif ($RoofChecks) { 'ThatchRoofValidation.RunBatch' } elseif ($StairChecks) { 'W21StairValidation.RunBatch' } elseif ($PreviewChecks) { 'WattleWallValidation.RunPreviewBatch' } elseif ($WattleChecks) { 'WattleWallValidation.RunBatch' } elseif ($ShadowChecks) { 'BuildingShadowValidation.RunBatch' } elseif ($Render) { 'BuildingPrototypeRenderValidation.RunBatch' } elseif ($InputChecks) { 'BuildingPrototypeInputValidation.RunBatch' } else { 'BuildingPrototypeValidation.RunBatch' }
     $buildingArgs = @('-batchmode','-projectPath',('"'+$buildingProject+'"'),'-executeMethod',$buildingMethod,'-logFile',('"'+$buildingLog+'"'))
+    if ($InstalledAssets) { $buildingArgs[4] = 'ModularWoodValidation.RunInstalledBatch' }
     if (-not $Render -and -not $ShadowChecks -and -not $WattleChecks -and -not $PreviewChecks -and -not $RoofChecks -and -not $FramingChecks -and -not $ColliderDebugChecks -and -not $IntersectionChecks -and -not $ModularChecks) { $buildingArgs += '-nographics' }
     $buildingProcess = Start-Process -FilePath "$buildingEditor/Unity.exe" -ArgumentList $buildingArgs -WindowStyle Hidden -PassThru
     Write-Output "Isolated Unity validation PID $($buildingProcess.Id); log $buildingLog"

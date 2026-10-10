@@ -16,26 +16,33 @@ public sealed class BuildGameplay : IDisposable
     private Vector3 lastFocus = Vector3.positiveInfinity;
     private float nextScan;
     private int revision = -1;
+    private bool disposed;
     public int ActiveCount => active.Count;
-    public bool TryGetProxy(ulong id,out BuildGameplayProxy proxy) => active.TryGetValue(id,out proxy);
+    public bool TryGetProxy(ulong id,out BuildGameplayProxy proxy)
+    {
+        if (!disposed && active.TryGetValue(id,out proxy) && proxy != null) return true;
+        proxy = null; return false;
+    }
     public BuildGameplay(BuildSession session) { this.session = session; }
     public void Remove(ulong id)
     {
-        if (!active.TryGetValue(id, out var proxy)) return;
-        active.Remove(id); proxy.Unbind();
-        if (pool.Count < 128) pool.Push(proxy); else BuildLifetime.Destroy(proxy.gameObject);
+        if (disposed || !active.TryGetValue(id, out var proxy)) return;
+        active.Remove(id); Retire(proxy);
         Physics.SyncTransforms();
     }
     public void Update(Vector3 focus, float radius, float releaseRadius, int activationLimit)
     {
         using var scope = UpdateMarker.Auto();
+        // Unity may destroy this hierarchy before the owning BuildWorld during scene teardown.
+        if (disposed) return;
+        if (root == null) { Dispose(); return; }
         release.Clear();
         foreach (var pair in active)
-            if (!session.TryGet(pair.Key, out var piece) || BuildGeometry.Distance(piece.Definition.LocalBounds, piece.Origin, piece.WorldYawStep, focus) > releaseRadius) release.Add(pair.Key);
+            if (pair.Value == null || !session.TryGet(pair.Key, out var piece) || BuildGeometry.Distance(piece.Definition.LocalBounds, piece.Origin, piece.WorldYawStep, focus) > releaseRadius) release.Add(pair.Key);
         bool changed = release.Count > 0;
-        foreach(var pair in active)if(session.TryGet(pair.Key,out var current) && pair.Value.BoundRevision!=current.ResolvedRevision)
+        foreach(var pair in active)if(pair.Value != null && session.TryGet(pair.Key,out var current) && pair.Value.BoundRevision!=current.ResolvedRevision)
         {pair.Value.Bind(current);changed=true;}
-        foreach (ulong id in release) { var proxy = active[id]; active.Remove(id); proxy.Unbind(); if (pool.Count < 128) pool.Push(proxy); else BuildLifetime.Destroy(proxy.gameObject); }
+        foreach (ulong id in release) { var proxy = active[id]; active.Remove(id); Retire(proxy); }
         if (revision != session.Revision || Time.unscaledTime >= nextScan || (focus - lastFocus).sqrMagnitude > 1)
         {
             session.Query(new Bounds(focus, Vector3.one * (radius * 2)), candidates);
@@ -47,7 +54,9 @@ public sealed class BuildGameplay : IDisposable
         {
             if (activated >= activationLimit) break;
             if (!session.TryGet(piece.Id, out _) || active.ContainsKey(piece.Id) || BuildGeometry.Distance(piece.Definition.LocalBounds, piece.Origin, piece.WorldYawStep, focus) > radius) continue;
-            var proxy = pool.Count > 0 ? pool.Pop() : Create();
+            BuildGameplayProxy proxy = null;
+            while (pool.Count > 0 && proxy == null) proxy = pool.Pop();
+            if (proxy == null) proxy = Create();
             proxy.Bind(piece); active.Add(piece.Id, proxy); activated++; changed = true;
         }
         if (changed) Physics.SyncTransforms();
@@ -57,10 +66,19 @@ public sealed class BuildGameplay : IDisposable
         var obj = new GameObject("Build collision"); obj.transform.SetParent(root.transform, false);
         return obj.AddComponent<BuildGameplayProxy>();
     }
+    private void Retire(BuildGameplayProxy proxy)
+    {
+        // Use Unity's null comparison: a destroyed native object still has a managed wrapper.
+        if (proxy == null) return;
+        proxy.Unbind();
+        if (pool.Count < 128) pool.Push(proxy); else BuildLifetime.Destroy(proxy.gameObject);
+    }
     public void Dispose()
     {
+        if (disposed) return;
+        disposed = true;
         // Destroy is deferred in Play mode; retired pools must stop colliding immediately.
-        foreach(var proxy in active.Values)proxy.Unbind();
+        foreach(var proxy in active.Values)if(proxy != null)proxy.Unbind();
         if(root!=null){root.SetActive(false);BuildLifetime.Destroy(root);}
         active.Clear();pool.Clear();
     }

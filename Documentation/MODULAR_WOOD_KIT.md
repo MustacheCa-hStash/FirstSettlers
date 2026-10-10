@@ -31,6 +31,16 @@ New Blender materials use the atlas through the active UV layer directly, with
 roughness 0.95 and low specular response. Wattle alpha is connected explicitly;
 Unity retains its existing double-sided cutout shader/material.
 
+Both wall definitions and authoring prefabs now reference their full-span FBX
+meshes directly. The shared importer checks the same 4 × 3 × 0.25 m envelope,
+identity transforms and single material submesh for split plank and wattle.
+The old `wattle-wall-mesh.asset` is no longer a runtime dependency: it retained
+3.5 × 2.75 m geometry despite the definition/collider already using 4 × 3 m.
+Direct FBX references ensure new model imports update the visible wall without
+requiring a separate mesh bake. Rebuilding wattle alone also relinks shared
+corner-post variants/material. The original Blender `Wattle_Wall` remains a
+legacy object; use `Modular_WattleWall_0..2` in the editable collection.
+
 ## Texture variation
 
 Each timber component uses a deterministic crop inside the same padded ordinary
@@ -85,6 +95,10 @@ additional stair clipping/opening features were not introduced here.
 
 Collision pools now deactivate immediately on disposal before Unity's deferred
 Destroy, preventing one retired pool from colliding during the rest of the frame.
+Cleanup also tolerates Unity destroying proxies or the collision hierarchy before
+`BuildWorld.OnDestroy`. Repeated disposal is safe; queries exclude destroyed
+proxies, and streaming skips destroyed pooled entries/recreates missing active
+proxies while the collision root is alive. A destroyed root closes the pool.
 
 Restart Play mode after adopting these assets: this is a session prototype and
 existing active-session poses from the old dimensions are not migrated in place.
@@ -103,10 +117,19 @@ checks. Full-span geometry supersedes the legacy 3.5 m dimensional fixtures;
 geometry flags now route to this suite. `-InputChecks` remains the native input
 suite. Original validation source is retained for historical reference.
 
-Verified: **21,445 checks**, including 14 unique floorboard mappings in each layout,
+Use `Tools/ValidateBuildingPrototype.ps1 -InstalledAssets` for the final integration
+check: it copies the main project's actual assets into the isolated test project
+and validates them without rebuilding them first. This reproduced the stale
+wattle geometry before repair and passed after linking the corrected FBX.
+
+Verified: **23,650 checks**, including 14 unique floorboard mappings in each layout,
 all authored triangle UVs/normals, eight rotations, both construction orders,
 butt/corner/T/cross covers, explicit-post overrides, exact rotated endpoints,
 three-storey placement, retained colliders and **96 real CharacterMotor walks**.
+Wall interaction checks cover all four split-plank/wattle pairings, with
+stair-overlap eligibility, stacking, floor/roof seating, junction post ownership
+and solid collider parity. Lifetime regressions cover destroyed active/pooled
+proxies, root-before-world teardown and repeated disposal in actual Play mode.
 Blender inspection also checked all triangles of 90 editable components, with no
 collapsed UVs. Rendered front/back/top/underside and Unity case views are saved in
 `ArtReferences/ModularWoodKit`.

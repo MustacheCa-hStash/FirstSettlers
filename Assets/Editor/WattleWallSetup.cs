@@ -8,11 +8,10 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
-/// <summary>Preserves the authored FBX and UVs, baking its hierarchy into one runtime mesh.</summary>
+/// <summary>Links the full-span wall directly to its authored FBX/UVs; also provides shared hierarchy baking for other kit parts.</summary>
 public static class WattleWallSetup
 {
     public const string ModelPath = "Assets/Models/Buildings/Wood/Modular/WattleWall_4.00Wx3.00Hx0.25D.fbx";
-    public const string MeshPath = "Assets/Resources/Building/wattle-wall-mesh.asset";
     public const string DefinitionPath = "Assets/Resources/Building/wattle-wall.asset";
     public const string PrefabPath = "Assets/Resources/Building/wattle-wall.prefab";
     public const string MaterialPath = "Assets/Materials/Buildings/Wood/WattleWood.mat";
@@ -26,6 +25,10 @@ public static class WattleWallSetup
         var wood = AssetDatabase.LoadAssetAtPath<Material>(SplitPlankWallSetup.MaterialPath);
         if (catalog == null || wood == null) throw new InvalidOperationException("Install the existing wood prototype first.");
         var definition = Create(wood);
+        var wall = catalog.Find("build.prototype.wall");
+        var post = AssetDatabase.LoadAssetAtPath<BuildDefinition>(BuildingPrototypeSetup.Folder+"/bay-post.asset");
+        if(wall==null || post==null)throw new InvalidOperationException("The shared wall/post kit must be installed before rebuilding wattle.");
+        ModularWoodSetup.Link(wall,definition,post);
         var presets = new List<BuildDefinition>(catalog.presets);
         int index = presets.FindIndex(p => p != null && p.contentId == ContentId);
         if (index < 0) presets.Add(definition); else presets[index] = definition;
@@ -38,11 +41,8 @@ public static class WattleWallSetup
     {
         var model = ModularWoodSetup.Import(ModelPath);
         if (model == null || opaqueWood == null) throw new InvalidOperationException("Wattle FBX or shared wood material is missing.");
-        var baked = Bake(model, out string inspection);
-        Debug.Log(inspection);
-        var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(MeshPath);
-        if (mesh == null) { mesh = baked; AssetDatabase.CreateAsset(mesh, MeshPath); }
-        else { EditorUtility.CopySerialized(baked, mesh); Object.DestroyImmediate(baked); EditorUtility.SetDirty(mesh); }
+        // Same source path as split plank: no independent baked copy can retain old dimensions/UVs.
+        var mesh = ModularWoodSetup.WallMesh(model);
 
         var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
         if (material == null)
@@ -92,7 +92,16 @@ public static class WattleWallSetup
     }
 
     public static Mesh Bake(GameObject model, out string inspection)
-        => BakeStaticMesh(model, Size, "Wattle wall", out inspection,true);
+    {
+        var mesh=BakeStaticMesh(model, Size, "Wattle wall", out inspection,true);
+        var expected=new Bounds(new Vector3(2,1.5f,0),Size);
+        if((mesh.bounds.center-expected.center).sqrMagnitude>.000001f || (mesh.bounds.size-Size).sqrMagnitude>.000001f)
+        {
+            Object.DestroyImmediate(mesh);
+            throw new InvalidOperationException("Wattle FBX must occupy X=0..4, Y=0..3, Z=-0.125..0.125; its mesh must match the split-plank profile. "+inspection);
+        }
+        return mesh;
+    }
 
     public static Mesh BakeStaticMesh(GameObject model, Vector3 requiredSize, string meshName, out string inspection, bool preserveStructuralOrigin = false)
     {
