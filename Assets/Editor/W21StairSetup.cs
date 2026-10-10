@@ -53,6 +53,7 @@ public static class W21StairSetup
         definition.kind = BuildPartKind.Stair; definition.sizeUnits = new Vector3Int(5,6,8);
         definition.minimumUnits = Vector3Int.zero; definition.wallEndInsetUnits = 0;
         definition.collisionMesh = collision;
+        definition.occupiedVolumes=new[]{BuildCollisionAuthoring.Volume(collision)};
         definition.material = AssetDatabase.LoadAssetAtPath<Material>(SplitPlankWallSetup.MaterialPath);
         if (!definition.material) throw new InvalidOperationException("The existing opaque wood material is missing.");
         SavePrefab(definition); EditorUtility.SetDirty(definition);

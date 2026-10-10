@@ -7,7 +7,7 @@ using UnityEngine;
 /// <summary>Wire the authored FBX into the existing wall slot without changing placement geometry.</summary>
 public static class SplitPlankWallSetup
 {
-    public const string ModelPath = "Assets/Models/Buildings/Wood/SplitPlankWall_3.5Wx2.75Hx0.25D.fbx";
+    public const string ModelPath = "Assets/Models/Buildings/Wood/Modular/SplitPlankWall_4.00Wx3.00Hx0.25D.fbx";
     public const string TexturePath = "Assets/Textures/Buildings/Wood/ordinary-wood-trim-albedo.png";
     public const string MaterialPath = "Assets/Materials/Buildings/Wood/SplitPlankWood.mat";
     public const string ShaderName = "Custom/BuildingWoodMatte";
@@ -16,7 +16,7 @@ public static class SplitPlankWallSetup
     public const string InfillPrefabPath = "Assets/Resources/Building/two-plank-infill.prefab";
     public const string InfillContentId = "build.wood.two-plank-infill";
 
-    [MenuItem("Tools/Building/Rebuild Two-Plank Infill Wall")]
+    [MenuItem("Tools/Building/Legacy/Rebuild Two-Plank Infill Wall")]
     public static void RebuildInfill()
     {
         var catalog = AssetDatabase.LoadAssetAtPath<BuildCatalog>(BuildingPrototypeSetup.CatalogPath);
@@ -96,12 +96,12 @@ public static class SplitPlankWallSetup
         if (wall == null) throw new InvalidOperationException("Install the building prototype before rebuilding its wall.");
         Apply(wall);
         AssetDatabase.SaveAssets();
-        Debug.Log("Split-plank wood wall rebuilt from its FBX and atlas; logical box remains 3.5 x 2.75 x 0.25 m.");
+        Debug.Log("Split-plank wood wall rebuilt from its FBX and atlas; full-span profile is 4 x 3 x 0.25 m.");
     }
 
     public static void Apply(BuildDefinition wall)
     {
-        var model = AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath);
+        var model = ModularWoodSetup.Import(ModelPath);
         var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(TexturePath);
         var shader = Shader.Find(ShaderName);
         if (model == null || texture == null || shader == null)
@@ -110,11 +110,11 @@ public static class SplitPlankWallSetup
         if (filters.Length != 1 || filters[0].sharedMesh == null || filters[0].sharedMesh.subMeshCount != 1)
             throw new InvalidOperationException("The building renderer requires one wall mesh with one material submesh.");
         var mesh = filters[0].sharedMesh;
-        var bounds = new Bounds(new Vector3(1.75f, 1.375f, .125f), new Vector3(3.5f, 2.75f, .25f));
+        var bounds = new Bounds(new Vector3(2, 1.5f, 0), new Vector3(4, 3, .25f));
         if ((mesh.bounds.center - bounds.center).sqrMagnitude > .000001f ||
             (mesh.bounds.size - bounds.size).sqrMagnitude > .000001f ||
             !Identity(filters[0].transform.localToWorldMatrix))
-            throw new InvalidOperationException("FBX mesh must itself occupy (0,0,0)..(3.5,2.75,0.25), with no compensating object transform. Check Bake Axis Conversion and applied export transforms.");
+            throw new InvalidOperationException("FBX mesh must itself occupy (0,0,-0.125)..(4,3,0.125), with no compensating object transform. Check Bake Axis Conversion and applied export transforms.");
 
         Directory.CreateDirectory(Path.GetDirectoryName(MaterialPath));
         AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
@@ -142,9 +142,7 @@ public static class SplitPlankWallSetup
         // Retain the existing content ID and asset GUID, replacing the same picker option.
         wall.displayName = "Split-plank wood wall";
         wall.kind = BuildPartKind.Wall;
-        wall.sizeUnits = new Vector3Int(14, 11, 1);
-        wall.minimumUnits = Vector3Int.zero;
-        wall.wallEndInsetUnits = 1;
+        ModularWoodSetup.Profile(wall,true);
         wall.mesh = mesh;
         wall.material = material;
 

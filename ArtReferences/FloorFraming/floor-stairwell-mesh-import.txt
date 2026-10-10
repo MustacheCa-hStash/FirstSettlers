@@ -1,0 +1,8 @@
+FLOOR-STAIRWELL-MESH IMPORT INSPECTION
+TimberFloorStairwell_4.00Wx0.25Hx4.00D: vertices=960, submeshes=1, raw bounds=Center: (2.00, -0.13, 2.00), Extents: (2.00, 0.13, 2.00), hierarchy matrix=1.00000	0.00000	0.00000	0.00000
+0.00000	1.00000	0.00000	0.00000
+0.00000	0.00000	1.00000	0.00000
+0.00000	0.00000	0.00000	1.00000
+
+Transformed envelope: min=(0.000000, -0.250000, 0.000000), max=(4.000000, 0.000000, 4.000000), size=(4.000000, 0.250000, 4.000000); normalization offset=(0.000000, 0.000000, 0.000000)
+Runtime: vertices=960, triangles=480, submeshes=1, min=(0.000000, -0.250000, 0.000000), max=(4.000000, 0.000000, 4.000000), UV0=960

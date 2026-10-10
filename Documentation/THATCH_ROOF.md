@@ -1,5 +1,8 @@
 # Single thatched roof
 
+Floor/framing integration now seats roofs at the 3 m storey bearing level.
+See [current floor/framing behavior](FLOOR_FRAMING.md). Source roof shape and UVs remain unchanged.
+
 There is one **Thatch roof** menu option, appended after the seven existing
 building options. The previous repeat/left/right/single configurations and their
 generated Unity assets have been removed. Setup and rebuild create only this roof.

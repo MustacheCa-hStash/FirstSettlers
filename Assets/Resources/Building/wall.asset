@@ -15,10 +15,78 @@ MonoBehaviour:
   contentId: build.prototype.wall
   displayName: Split-plank wood wall
   kind: 0
-  sizeUnits: {x: 14, y: 11, z: 1}
+  wallPlacementMode: 0
+  sizeUnits: {x: 16, y: 12, z: 1}
   minimumUnits: {x: 0, y: 0, z: 0}
-  wallEndInsetUnits: 1
-  mesh: {fileID: 1744005865678228203, guid: 07ef57cc5eb515243b9fa852e35f3afb, type: 3}
+  boundsOffset: {x: 0, y: 0, z: -0.125}
+  jointSockets:
+  - localPosition: {x: 0, y: 0, z: 0}
+    outward: {x: -1, y: 0, z: 0}
+    interior: 0
+  - localPosition: {x: 0.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 0.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 0.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 4, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 0
+  stackRiseUnits: 12
+  wallEndInsetUnits: 0
+  mesh: {fileID: 7012794593902957436, guid: b3ba6fe3b7d8d2441ba71063f8e4491f, type: 3}
+  uvVariants: []
+  floorOpeningUvVariants: []
+  jointCoverVariants:
+  - {fileID: 4300000, guid: 5d0a7eadf5badb4449c0a5d5dbefdf33, type: 2}
+  - {fileID: 4300000, guid: d2e70049445e60544aa31a2033d034c3, type: 2}
+  - {fileID: 4300000, guid: 566b6722b5674574793bcc991f9631a2, type: 2}
+  jointCoverMaterial: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes: []
+  roofAttachment: 0
   material: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
   authoringPrefab: {fileID: 68295084002125233, guid: 2f4b1039852a3634b9fa8428910f72b8, type: 3}
   maxHealth: 100

@@ -33,7 +33,7 @@ public static class W21StairValidation
                     foreach (bool down in new[] { false,true })
                         foreach (float delta in new[] { 1f/60,1f/120 })
                             foreach (int flights in new[] { 1,2 }) Walk(stair,catalog,yaw,x,down,delta,flights);
-            Debug.Log($"W21 STAIR PASS: {checks} checks; 96 single/chained real-motor up/down walks, continuous rise through flight joins, near-side positions, 45-degree frames, toe/exit joins, wall-clearance starter snaps, collider rays, support and pooled box/ramp transitions.");
+            Debug.Log($"W21 STAIR PASS: {checks} checks; 96 single/chained real-motor up/down walks, continuous rise through flight joins, near-side positions, 45-degree frames, toe/exit joins, stable starter snaps and advisory wall overlap, collider rays, support and pooled box/ramp transitions.");
             EditorApplication.Exit(0);
         }
         catch (Exception exception) { Debug.LogException(exception); EditorApplication.Exit(1); }
@@ -41,44 +41,25 @@ public static class W21StairValidation
 
     private static void ValidateStarterWallClearance(BuildDefinition stair,BuildCatalog catalog)
     {
-        foreach (int yaw in new[] { 0,1,2,7 })
+        foreach(int yaw in new[]{0,1,2,7})
         {
-            var host = new GameObject("Stair wall clearance fixture"); var world = host.AddComponent<BuildWorld>();
-            if (world.Session == null) Invoke(world,"Awake");
+            var host=new GameObject("Permissive stair snap fixture");var w=host.AddComponent<BuildWorld>();if(w.Session==null)Invoke(w,"Awake");
             try
             {
-                var frame = world.Session.CreateFrame(new Vector3(26000+yaw*20,26000,26000),yaw);
-                var floor = world.Session.Add(catalog.presets[2],frame,default,0,true);
-                var farWall = world.Session.Add(catalog.presets[0],frame,new Vector3Int(15,0,16),4,false);
-                var floorFrame = world.Session.Frame(floor.OwnFrameId);
-                Vector3 At(Vector3 p) => frame.Origin + BuildGeometry.Rotation(yaw)*p;
-                var raw = BuildPlacement.Solve(stair,At(new Vector3(.625f,0,1)),Vector3.up,floor,floorFrame,0,0,default);
-                var old = raw; old.FitStairContinuation = false; world.Validate(ref old);
-                Check(old.Valid,"Baseline first stair was not a valid floor-top placement.");
-                var oldFirst = world.Commit(old);
-                var blocked = BuildPlacement.Solve(stair,At(new Vector3(.625f,1.5f,2)),Vector3.up,oldFirst,world.Session.Frame(oldFirst.OwnFrameId),0,0,default);
-                world.Validate(ref blocked); Check(!blocked.Valid && blocked.Message == "Overlaps an existing piece","Quarter-metre wall clash was not reproduced.");
-                Debug.Log($"W21 SNAP BEFORE: yaw={yaw}, starter Z=0, next end Z=4, wall inside Z=3.75; next overlaps by 0.25 m.");
-                world.Remove(oldFirst.Id);
-                world.Validate(ref raw); Check(raw.Valid,"Clearance-adjusted first stair was rejected.");
-                Vector3 local = Quaternion.Inverse(BuildGeometry.Rotation(yaw))*(raw.Origin-frame.Origin);
-                Check(Mathf.Abs(local.z+.25f) < .004f,"Starter was not moved back exactly one quarter-metre unit.");
-                Vector3 once = raw.Origin; world.Validate(ref raw); Check((raw.Origin-once).sqrMagnitude < .000001f,"Clearance snap changed on repeated validation.");
-                var first = world.Commit(raw);
-                var next = BuildPlacement.Solve(stair,first.Origin+BuildGeometry.Rotation(yaw)*new Vector3(.625f,1.5f,2),Vector3.up,first,world.Session.Frame(first.OwnFrameId),0,0,default);
-                var second = world.Commit(next); Check(second != null && second.Supported,"Adjusted continuation did not fit against the inner wall face.");
-                Check(!BuildGeometry.Overlaps(second.Definition.LocalBounds,second.Origin,second.WorldYawStep,farWall.Definition.LocalBounds,farWall.Origin,farWall.WorldYawStep),"Corrected stair still overlaps wall.");
-                Debug.Log($"W21 SNAP AFTER: yaw={yaw}, starter Z={local.z:F3}, next end Z={local.z+4:F3}; wall inside Z=3.75, overlap=0.");
-                world.Remove(first.Id); world.Remove(second.Id);
-                var manual = BuildPlacement.Solve(stair,At(new Vector3(.625f,0,1)),Vector3.up,floor,floorFrame,0,0,new Vector3Int(1,0,0));
-                world.Validate(ref manual);
-                Check((manual.Origin-(raw.Origin+BuildGeometry.Rotation(yaw)*Vector3.right*.25f)).sqrMagnitude < .00002f,"Manual stair nudge did not move one unit from the fitted preview.");
-                world.Session.Add(catalog.presets[0],frame,new Vector3Int(1,0,0),0,false);
-                var tight = BuildPlacement.Solve(stair,At(new Vector3(.625f,0,1.25f)),Vector3.up,floor,floorFrame,0,0,default);
-                var tightOrigin = tight.Origin; world.Validate(ref tight);
-                Check(tight.Valid && (tight.Origin-tightOrigin).sqrMagnitude < .000001f && tight.Hint.Contains("more clear run"),"Enclosed 3.5 m room silently shifted into its near wall.");
-            }
-            finally { Object.DestroyImmediate(host); Physics.SyncTransforms(); }
+                var f=w.Session.CreateFrame(new Vector3(26000+yaw*20,26000,26000),yaw);var q=BuildGeometry.Rotation(yaw);
+                var floor=w.Session.Add(catalog.presets[2],f,default,0,true);
+                var wall=w.Session.Add(catalog.presets[0],f,new Vector3Int(15,0,16),4,false);
+                var raw=BuildPlacement.Solve(stair,f.Origin+q*new Vector3(.625f,0,1),Vector3.up,floor,w.Session.Frame(floor.OwnFrameId),0,0,default);
+                Vector3 chosen=raw.Origin;w.Validate(ref raw);Check(raw.Valid && (raw.Origin-chosen).sqrMagnitude<.000001f,"Clearance warning shifted the chosen stair snap");
+                w.Validate(ref raw);Check((raw.Origin-chosen).sqrMagnitude<.000001f,"Repeated validation drifted the stair snap");
+                var first=w.Commit(raw);Check(first!=null,"Starter commit failed");
+                var next=BuildPlacement.Solve(stair,first.Origin+q*new Vector3(.625f,1.5f,2),Vector3.up,first,w.Session.Frame(first.OwnFrameId),0,0,default);
+                w.Validate(ref next);Check(next.Valid && next.Warning==BuildPlacementWarning.BuildOverlap && next.WarningPieceId==wall.Id,"Quarter-metre wall clash was not advisory");
+                var second=w.Commit(next);Check(second!=null && second.Supported,"Overlapping continuation did not commit");
+                w.Remove(first.Id);w.Remove(second.Id);
+                var manual=BuildPlacement.Solve(stair,f.Origin+q*new Vector3(.625f,0,1),Vector3.up,floor,w.Session.Frame(floor.OwnFrameId),0,0,new Vector3Int(1,0,0));
+                w.Validate(ref manual);Check((manual.Origin-(chosen+q*Vector3.right*.25f)).sqrMagnitude<.00002f,"Manual nudge was not exactly one unit");
+            }finally{Object.DestroyImmediate(host);Physics.SyncTransforms();}
         }
     }
 
@@ -141,7 +122,7 @@ public static class W21StairValidation
 
     private static void Walk(BuildDefinition stair,BuildCatalog catalog,int yaw,float x,bool down,float dt,int flights)
     {
-        var session = new BuildSession(); var origin = new Vector3(100,10,100); var rotation = BuildGeometry.Rotation(yaw);
+        using var session = new BuildSession(); var origin = new Vector3(100,10,100); var rotation = BuildGeometry.Rotation(yaw);
         var frame = session.CreateFrame(origin,yaw);
         session.Add(catalog.presets[2],frame,new Vector3Int(-8,0,-8),0,true);
         for (int flight = 0; flight < flights; ++flight) session.Add(stair,frame,new Vector3Int(0,6*flight,8*flight),0,false);

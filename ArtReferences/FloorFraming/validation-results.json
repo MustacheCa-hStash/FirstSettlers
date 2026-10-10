@@ -1,0 +1,28 @@
+{
+  "models": {
+    "full_floor_triangles": 324,
+    "stairwell_floor_triangles": 480,
+    "rim_span_triangles": 12,
+    "bearing_cap_triangles": 12
+  },
+  "framing_checks": 6195,
+  "building_checks": 3617,
+  "stair_checks": 18496,
+  "original_stair_motor_cases": 96,
+  "stairwell_motor_cases": 16,
+  "roof_checks": 1058,
+  "roof_shadow_pass": true,
+  "native_input_pass": true,
+  "yaw_frames_tested": 8,
+  "floor_first_and_stairs_first": true,
+  "floor_first_and_roof_first": true,
+  "reversible_openings_bearings_and_foundation_caps": true,
+  "original_blender_objects_preserved": true,
+  "atlas_reused_unchanged": true,
+  "menu_options": 8,
+  "limitations": [
+    "Diagonal cuts within a local building frame require explicit pieces.",
+    "Doors, gables and basement openings remain separate future functional components.",
+    "Not a large-world FPS benchmark."
+  ]
+}

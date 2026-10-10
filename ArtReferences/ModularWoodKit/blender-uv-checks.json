@@ -1,0 +1,542 @@
+[
+  {
+    "name": "Modular_BayPost",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.01689999876022341
+  },
+  {
+    "name": "Modular_SplitPlankWall_0",
+    "triangles": 68,
+    "collapsedUVs": 0,
+    "minUVarea": 7.571954450114049e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_1",
+    "triangles": 44,
+    "collapsedUVs": 0,
+    "minUVarea": 7.400976151927807e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_10",
+    "triangles": 44,
+    "collapsedUVs": 0,
+    "minUVarea": 8.105188760154647e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_11",
+    "triangles": 56,
+    "collapsedUVs": 0,
+    "minUVarea": 8.567170759476994e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_12",
+    "triangles": 56,
+    "collapsedUVs": 0,
+    "minUVarea": 8.215132574207473e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_13",
+    "triangles": 44,
+    "collapsedUVs": 0,
+    "minUVarea": 7.568003557167913e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_14",
+    "triangles": 56,
+    "collapsedUVs": 0,
+    "minUVarea": 7.854511414606691e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_15",
+    "triangles": 44,
+    "collapsedUVs": 0,
+    "minUVarea": 7.55764949289528e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_16",
+    "triangles": 44,
+    "collapsedUVs": 0,
+    "minUVarea": 8.653202936415028e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_17",
+    "triangles": 44,
+    "collapsedUVs": 0,
+    "minUVarea": 7.779730517576411e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_18",
+    "triangles": 44,
+    "collapsedUVs": 0,
+    "minUVarea": 7.732485836076108e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_2",
+    "triangles": 44,
+    "collapsedUVs": 0,
+    "minUVarea": 7.817863476589082e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_3",
+    "triangles": 68,
+    "collapsedUVs": 0,
+    "minUVarea": 8.073172903522163e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_4",
+    "triangles": 44,
+    "collapsedUVs": 0,
+    "minUVarea": 8.494147358817372e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_5",
+    "triangles": 44,
+    "collapsedUVs": 0,
+    "minUVarea": 7.354246625013161e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_6",
+    "triangles": 44,
+    "collapsedUVs": 0,
+    "minUVarea": 7.879442911473689e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_7",
+    "triangles": 44,
+    "collapsedUVs": 0,
+    "minUVarea": 7.962301253883197e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_8",
+    "triangles": 68,
+    "collapsedUVs": 0,
+    "minUVarea": 8.489787752807842e-07
+  },
+  {
+    "name": "Modular_SplitPlankWall_9",
+    "triangles": 44,
+    "collapsedUVs": 0,
+    "minUVarea": 8.1639072035955e-07
+  },
+  {
+    "name": "Modular_TimberFloor_0",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.015625
+  },
+  {
+    "name": "Modular_TimberFloor_1",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.015625
+  },
+  {
+    "name": "Modular_TimberFloor_10",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003050000202655667
+  },
+  {
+    "name": "Modular_TimberFloor_11",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003050000202655667
+  },
+  {
+    "name": "Modular_TimberFloor_12",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003050000202655667
+  },
+  {
+    "name": "Modular_TimberFloor_13",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003050000202655667
+  },
+  {
+    "name": "Modular_TimberFloor_14",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003050000202655667
+  },
+  {
+    "name": "Modular_TimberFloor_15",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003050000202655667
+  },
+  {
+    "name": "Modular_TimberFloor_16",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003050000202655667
+  },
+  {
+    "name": "Modular_TimberFloor_17",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0030499992936849907
+  },
+  {
+    "name": "Modular_TimberFloor_18",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003050000202655667
+  },
+  {
+    "name": "Modular_TimberFloor_19",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003050000202655667
+  },
+  {
+    "name": "Modular_TimberFloor_2",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.015625
+  },
+  {
+    "name": "Modular_TimberFloor_20",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003050000202655667
+  },
+  {
+    "name": "Modular_TimberFloor_21",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003050000202655667
+  },
+  {
+    "name": "Modular_TimberFloor_22",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.005999999880790696
+  },
+  {
+    "name": "Modular_TimberFloor_23",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0059999943673609835
+  },
+  {
+    "name": "Modular_TimberFloor_24",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.005999999880790696
+  },
+  {
+    "name": "Modular_TimberFloor_25",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0060000058412548185
+  },
+  {
+    "name": "Modular_TimberFloor_26",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.006000005468725811
+  },
+  {
+    "name": "Modular_TimberFloor_3",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.015625
+  },
+  {
+    "name": "Modular_TimberFloor_4",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.00299999427795683
+  },
+  {
+    "name": "Modular_TimberFloor_5",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0030000008344650553
+  },
+  {
+    "name": "Modular_TimberFloor_6",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0030000008344650553
+  },
+  {
+    "name": "Modular_TimberFloor_7",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0030000008344650553
+  },
+  {
+    "name": "Modular_TimberFloor_8",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0030500009477139045
+  },
+  {
+    "name": "Modular_TimberFloor_9",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003050000202655667
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_0",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.015625
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_1",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003855154837406616
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_10",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0015250001944601133
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_11",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0005273965931920088
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_12",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.00024013019549329329
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_13",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0002393994432452473
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_14",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0002515724882385939
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_15",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.00027194235616434526
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_16",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.00025543419498497144
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_17",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0002635262256012183
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_18",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.00027368579036135543
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_19",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0002358420179202625
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_2",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.006425260049166326
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_20",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.00023174561810890282
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_21",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0015250001013278336
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_22",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0005304945416497731
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_23",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003050000202655667
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_24",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003050000202655667
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_25",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0018308718182629136
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_26",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 5.085691897654954e-05
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_27",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003051452672810484
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_28",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 5.085688917461084e-05
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_29",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0019354729152540884
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_3",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.015625
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_30",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.003225789026554793
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_31",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0017201434857980757
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_32",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0028669071209650454
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_33",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.001677797379791457
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_34",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.002796328370271439
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_35",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.001958757555343027
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_36",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0032645940182192135
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_4",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.015625
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_5",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.00299999427795683
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_6",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0030000008344650553
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_7",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0030000008344650553
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_8",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0030000008344650553
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_9",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0030500009477139045
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_Trimmer0",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.007812499534338713
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_Trimmer1",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0078125
+  },
+  {
+    "name": "Modular_TimberFloorStairwell_Trimmer2",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.0078125
+  },
+  {
+    "name": "Modular_WattleWall_0",
+    "triangles": 8,
+    "collapsedUVs": 0,
+    "minUVarea": 0.13379788508505897
+  },
+  {
+    "name": "Modular_WattleWall_1",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.010227277874946594
+  },
+  {
+    "name": "Modular_WattleWall_2",
+    "triangles": 12,
+    "collapsedUVs": 0,
+    "minUVarea": 0.010227277874946594
+  }
+]

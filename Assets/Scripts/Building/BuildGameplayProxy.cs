@@ -8,8 +8,19 @@ public sealed class BuildGameplayProxy : QueryTarget
     public MeshCollider RampShape { get; private set; }
     private SmoothWalkSurface smoothWalk;
     private readonly System.Collections.Generic.List<MeshCollider> volumes = new();
-    public Collider ActiveShape => Record != null && BuildOccupancy.Custom(Record.Definition) ? volumes[0] :
-        Record != null && Record.Definition.kind == BuildPartKind.Stair ? RampShape : Shape;
+    private readonly System.Collections.Generic.List<BoxCollider> boxes = new();
+    public int BoundRevision { get; private set; }
+    public void GetEnabledColliders(System.Collections.Generic.List<Collider> output)
+    {
+        output.Clear();
+        if(Record==null || !gameObject.activeInHierarchy)return;
+        if(Shape!=null && Shape.enabled)output.Add(Shape);
+        if(RampShape!=null && RampShape.enabled)output.Add(RampShape);
+        foreach(var c in boxes)if(c.enabled)output.Add(c);
+        foreach(var c in volumes)if(c.enabled)output.Add(c);
+    }
+    public Collider ActiveShape => Record != null && Record.Definition.kind==BuildPartKind.Stair ? RampShape :
+        Record != null && BuildOccupancy.Custom(Record.Definition) && volumes.Count>0 ? volumes[0] : Shape;
     protected override bool IsAvailable => Record != null;
     public void Bind(BuildPieceRecord record)
     {
@@ -17,14 +28,41 @@ public sealed class BuildGameplayProxy : QueryTarget
             throw new System.InvalidOperationException("A stair requires its authored walking hull.");
         if (Record != record) InvalidateIdentity();
         Record = record;
+        BoundRevision=record.ResolvedRevision;
         gameObject.layer = GameplayLayers.WorldSolid;
         if (Shape != null) Shape.enabled = false;
         if (RampShape != null) RampShape.enabled = false;
         if (smoothWalk != null) smoothWalk.enabled = false;
         foreach (var volume in volumes) volume.enabled = false;
+        foreach (var box in boxes) box.enabled=false;
         transform.SetPositionAndRotation(record.Origin, BuildGeometry.Rotation(record.WorldYawStep));
         transform.localScale = Vector3.one;
-        if (BuildOccupancy.Custom(record.Definition))
+        var state=record.Resolved;
+        if(record.Definition.kind==BuildPartKind.Stair)
+        {
+            RampShape ??=gameObject.AddComponent<MeshCollider>();RampShape.convex=true;RampShape.sharedMesh=record.Definition.collisionMesh;RampShape.enabled=true;
+            smoothWalk ??=gameObject.AddComponent<SmoothWalkSurface>();smoothWalk.enabled=true;
+        }
+        else if (state!=null)
+        {
+            for(int i=0;i<state.boxes.Length;i++)
+            {
+                BoxCollider collider;
+                if(i==0){Shape??=gameObject.AddComponent<BoxCollider>();collider=Shape;}
+                else
+                {
+                    if(i-1==boxes.Count){var child=new GameObject("Resolved solid"){layer=GameplayLayers.WorldSolid};child.transform.SetParent(transform,false);boxes.Add(child.AddComponent<BoxCollider>());}
+                    collider=boxes[i-1];
+                }
+                collider.center=state.boxes[i].center;collider.size=state.boxes[i].size;collider.isTrigger=false;collider.enabled=true;
+            }
+            for(int i=0;i<state.volumes.Length;i++)
+            {
+                if(i==volumes.Count){var child=new GameObject("Resolved convex solid"){layer=GameplayLayers.WorldSolid};child.transform.SetParent(transform,false);volumes.Add(child.AddComponent<MeshCollider>());}
+                var collider=volumes[i];collider.convex=true;collider.sharedMesh=state.volumes[i].mesh;collider.enabled=true;
+            }
+        }
+        else if (BuildOccupancy.Custom(record.Definition))
         {
             for (int i=0; i<record.Definition.occupiedVolumes.Length; i++)
             {
@@ -61,6 +99,7 @@ public sealed class BuildGameplayProxy : QueryTarget
         if (RampShape != null) RampShape.enabled = false;
         if (smoothWalk != null) smoothWalk.enabled = false;
         foreach (var volume in volumes) volume.enabled = false;
+        foreach (var box in boxes) box.enabled=false;
         gameObject.SetActive(false);
     }
     public override bool TryGetInfo(out QueryTargetInfo info)

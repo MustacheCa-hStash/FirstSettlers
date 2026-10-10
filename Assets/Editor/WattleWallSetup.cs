@@ -11,13 +11,13 @@ using Object = UnityEngine.Object;
 /// <summary>Preserves the authored FBX and UVs, baking its hierarchy into one runtime mesh.</summary>
 public static class WattleWallSetup
 {
-    public const string ModelPath = "Assets/Models/Buildings/Wood/WattleWall_3.5Wx2.75Hx0.25D.fbx";
+    public const string ModelPath = "Assets/Models/Buildings/Wood/Modular/WattleWall_4.00Wx3.00Hx0.25D.fbx";
     public const string MeshPath = "Assets/Resources/Building/wattle-wall-mesh.asset";
     public const string DefinitionPath = "Assets/Resources/Building/wattle-wall.asset";
     public const string PrefabPath = "Assets/Resources/Building/wattle-wall.prefab";
     public const string MaterialPath = "Assets/Materials/Buildings/Wood/WattleWood.mat";
     public const string ContentId = "build.wood.wattle-wall";
-    private static readonly Vector3 Size = new(3.5f, 2.75f, .25f);
+    private static readonly Vector3 Size = new(4, 3, .25f);
 
     [MenuItem("Tools/Building/Rebuild Wattle Wall")]
     public static void Rebuild()
@@ -36,7 +36,7 @@ public static class WattleWallSetup
 
     public static BuildDefinition Create(Material opaqueWood)
     {
-        var model = AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath);
+        var model = ModularWoodSetup.Import(ModelPath);
         if (model == null || opaqueWood == null) throw new InvalidOperationException("Wattle FBX or shared wood material is missing.");
         var baked = Bake(model, out string inspection);
         Debug.Log(inspection);
@@ -70,9 +70,8 @@ public static class WattleWallSetup
             AssetDatabase.CreateAsset(definition, DefinitionPath);
         }
         definition.contentId = ContentId; definition.displayName = "Wattle wall";
-        definition.kind = BuildPartKind.Wall; definition.wallPlacementMode = WallPlacementMode.Surface;
-        definition.sizeUnits = new Vector3Int(14, 11, 1); definition.minimumUnits = Vector3Int.zero;
-        definition.wallEndInsetUnits = 1; definition.mesh = mesh; definition.material = material;
+        definition.kind = BuildPartKind.Wall; definition.wallPlacementMode = WallPlacementMode.Panel;
+        ModularWoodSetup.Profile(definition,true); definition.mesh = mesh; definition.material = material;
         bool existing = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) != null;
         var root = existing ? PrefabUtility.LoadPrefabContents(PrefabPath) : new GameObject("Wattle wall");
         try
@@ -93,7 +92,7 @@ public static class WattleWallSetup
     }
 
     public static Mesh Bake(GameObject model, out string inspection)
-        => BakeStaticMesh(model, Size, "Wattle wall", out inspection);
+        => BakeStaticMesh(model, Size, "Wattle wall", out inspection,true);
 
     public static Mesh BakeStaticMesh(GameObject model, Vector3 requiredSize, string meshName, out string inspection, bool preserveStructuralOrigin = false)
     {
@@ -169,7 +168,7 @@ public static class WattleWallSetup
     {
         try
         {
-            var model = AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath);
+            var model = ModularWoodSetup.Import(ModelPath);
             if (!model) throw new InvalidOperationException("Wattle FBX was not imported.");
             var mesh = Bake(model, out string report);
             Object.DestroyImmediate(mesh);

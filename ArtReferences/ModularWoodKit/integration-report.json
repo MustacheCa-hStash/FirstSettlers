@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "checks": 21445,
+  "nativeInputPassed": true,
+  "realMotorWalks": 96,
+  "catalogOptions": 7,
+  "wallSize": [
+    4,
+    3,
+    0.25
+  ],
+  "postColliderSize": [
+    0.25,
+    3,
+    0.25
+  ],
+  "postVisualSize": [
+    0.26,
+    3.003,
+    0.26
+  ],
+  "source": "C:/Users/samee/OneDrive/Desktop/BlenderModelsFirstSettlers/Building/BuildComponents.blend",
+  "sourceBackup": "BuildComponents.before-modular-standard-2026-10-10.blend",
+  "legacySourceObjectsPreserved": true,
+  "texturesAndSavedSceneChanged": false,
+  "scope": "Real Play-mode isolated regression suite and rendered source/game views; no saved-world audit"
+}

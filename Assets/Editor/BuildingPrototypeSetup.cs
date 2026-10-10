@@ -49,15 +49,16 @@ public static class BuildingPrototypeSetup
         BayPostSetup.MigrateLegacyAssets();
         var corner = Part("corner", "Bay post", BuildPartKind.Corner, new Vector3Int(1, 11, 1), Vector3Int.zero, wallMaterial, "bay-post");
         SplitPlankWallSetup.Apply(wall);
+        FloorFramingSetup.Apply(floor);
         BayPostSetup.Apply(corner, wall.material);
-        var infill = SplitPlankWallSetup.CreateInfill(wall.material);
         var wattle = WattleWallSetup.Create(wall.material);
+        ModularWoodSetup.Link(wall,wattle,corner);
         var panel = Asset<PanelSettings>(Folder + "/BuildPanel.asset");
         panel.scaleMode = PanelScaleMode.ScaleWithScreenSize; panel.referenceResolution = new Vector2Int(1920, 1080);
         panel.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight; panel.match = .5f; panel.sortingOrder = 30;
         panel.themeStyleSheet = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(Folder + "/BuildTheme.tss");
         var catalog = Asset<BuildCatalog>(CatalogPath);
-        var presets = new List<BuildDefinition> { wall, floor, foundation, corner, infill, wattle };
+        var presets = new List<BuildDefinition> { wall, floor, foundation, corner, wattle };
         var stair = W21StairSetup.CreateIfModelAvailable();
         if (stair != null) presets.Add(stair);
         presets.AddRange(ThatchRoofSetup.CreateIfModelsAvailable());

@@ -31,6 +31,8 @@ public sealed class BuildingController : MonoBehaviour
     public BuildPreview Preview { get; private set; }
     public BuildWorld World => world;
     public Camera ViewCamera => viewCamera;
+    public void CycleColliderDebug() => world?.ColliderDebug.CycleMode();
+    public void ToggleDebugFreeze() => world?.ColliderDebug.ToggleFreeze();
 
     private void Start()
     {
@@ -55,6 +57,7 @@ public sealed class BuildingController : MonoBehaviour
     }
     public void OpenMenu()
     {
+        world?.ClearPreview();
         if (!Active) return;
         MenuOpen = true; pending = default;
         skyGuide = default;
@@ -73,6 +76,7 @@ public sealed class BuildingController : MonoBehaviour
     public void Exit() => Close(true);
     private void Close(bool capture)
     {
+        world?.ClearPreview();
         bool wasActive = Active;
         Active = false; MenuOpen = false; pending = default; target = null; Preview = default; view?.SetState(false, false);
         skyGuide = default;
@@ -113,6 +117,7 @@ public sealed class BuildingController : MonoBehaviour
         var ray = viewCamera.ViewportPointToRay(new Vector3(.5f, .5f, 0));
         if (!TryResolveAim(ray, out var aimPoint, out var aimNormal, out var direct, out var nextTarget, out bool guided))
         {
+            world.ClearPreview();
             Preview = default; target = null; nudge = default; skyGuide = default;
             view.Show(selected.displayName, "Aim at ground or a building within reach", false); return;
         }
@@ -128,7 +133,8 @@ public sealed class BuildingController : MonoBehaviour
         world.Validate(ref preview);
         // Nudges cannot extend an interaction into arbitrary distant construction.
         if (BuildGeometry.Distance(selected.LocalBounds, preview.Origin, preview.WorldYaw, ray.origin) > reach)
-        { preview.Valid = false; preview.Message = "Preview is beyond building reach"; }
+        { preview.Valid = false; preview.Failure=BuildPlacementFailure.Reach;preview.Message = "Preview is beyond building reach"; }
+        world.UpdateDebugPreview(preview);
         if (command.Remove && direct != null)
         {
             world.Remove(direct.Id); target = null; nudge = default; Preview = default;
@@ -141,11 +147,19 @@ public sealed class BuildingController : MonoBehaviour
         }
         Preview = preview;
         view.Show(selected.displayName + " · " + (preview.WorldYaw * 45) + "°",
-            preview.Valid ? preview.Message + " · " + preview.Hint : preview.Message, preview.Valid);
-        var parameters = new RenderParams(GetPreviewMaterial(preview.Valid))
-        { camera = viewCamera, worldBounds = BuildGeometry.WorldBounds(preview.VisualMesh.bounds, preview.Origin, preview.WorldYaw),
-            shadowCastingMode = ShadowCastingMode.Off, receiveShadows = false };
-        Graphics.RenderMesh(parameters, preview.VisualMesh, 0, Matrix4x4.TRS(preview.Origin, BuildGeometry.Rotation(preview.WorldYaw), Vector3.one));
+            preview.Valid ? preview.Message+" · "+(preview.Warning!=BuildPlacementWarning.None?preview.WarningMessage:preview.Hint) : preview.Message,
+            preview.Valid,preview.Valid && preview.Warning!=BuildPlacementWarning.None);
+        DrawPreviewMesh(preview.VisualMesh,preview);
+        if(preview.Resolved?.auxiliaryMesh!=null)DrawPreviewMesh(preview.Resolved.auxiliaryMesh,preview);
+        if(preview.Resolved!=null)foreach(var attachment in preview.Resolved.attachments)DrawPreviewMesh(attachment.mesh,preview,attachment.localMatrix);
+    }
+    private void DrawPreviewMesh(Mesh mesh,BuildPreview preview,Matrix4x4? localMatrix=null)
+    {
+        if(mesh==null)return;
+        var matrix=Matrix4x4.TRS(preview.Origin,BuildGeometry.Rotation(preview.WorldYaw),Vector3.one)*(localMatrix??Matrix4x4.identity);
+        var parameters=new RenderParams(GetPreviewMaterial(preview.Valid))
+        {camera=viewCamera,worldBounds=BuildRenderer.TransformBounds(mesh.bounds,matrix),shadowCastingMode=ShadowCastingMode.Off,receiveShadows=false};
+        Graphics.RenderMesh(parameters,mesh,0,matrix);
     }
     private Material GetPreviewMaterial(bool valid)
     {

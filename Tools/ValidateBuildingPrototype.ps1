@@ -1,5 +1,9 @@
-param([switch]$PrepareOnly, [switch]$CompileOnly, [switch]$Render, [switch]$InputChecks, [switch]$ShadowChecks, [switch]$WattleChecks, [switch]$PreviewChecks, [switch]$StairChecks, [switch]$RoofChecks)
+param([switch]$PrepareOnly, [switch]$CompileOnly, [switch]$Render, [switch]$InputChecks, [switch]$ShadowChecks, [switch]$WattleChecks, [switch]$PreviewChecks, [switch]$StairChecks, [switch]$RoofChecks, [switch]$FramingChecks, [switch]$ColliderDebugChecks, [switch]$IntersectionChecks, [switch]$ModularChecks)
 $ErrorActionPreference = 'Stop'
+# Full-span assets supersede legacy dimensional fixtures. Keep native input validation separate.
+if (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'Assets/Models/Buildings/Wood/Modular/SplitPlankWall_4.00Wx3.00Hx0.25D.fbx')) {
+    if (-not $PrepareOnly -and -not $CompileOnly -and -not $InputChecks) { $ModularChecks = $true }
+}
 $buildingRoot = Split-Path -Parent $PSScriptRoot
 $buildingWork = Join-Path $buildingRoot '.utmp/building-prototype'
 $buildingProject = Join-Path $buildingWork 'unity-project'
@@ -42,6 +46,9 @@ try {
     $buildingOwned += @(Get-Item 'Assets/Editor/BayPostSetup.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/W21StairSetup.cs','Assets/Editor/W21StairValidation.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/ThatchRoofSetup.cs','Assets/Editor/ThatchRoofValidation.cs')
+    $buildingOwned += @(Get-Item 'Assets/Editor/FloorFramingSetup.cs','Assets/Editor/BuildCollisionAuthoring.cs','Assets/Editor/BuildFramingValidation.cs')
+    $buildingOwned += @(Get-Item 'Assets/Editor/BuildColliderDebugValidation.cs')
+    $buildingOwned += @(Get-Item 'Assets/Editor/BuildIntersectionRegressionValidation.cs','Assets/Editor/ModularWoodSetup.cs','Assets/Editor/ModularWoodValidation.cs')
     $buildingOwned += @(Get-Item 'Assets/Scripts/PlayerMovement/SmoothWalkSurface.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/SplitPlankWallSetup.cs','Assets/Editor/WattleWallSetup.cs','Assets/Editor/WattleWallValidation.cs','Assets/Shaders/BuildingWoodMatte.shader','Assets/Shaders/WattleValidationDepthReveal.shader')
     foreach ($buildingFile in $buildingOwned) {
@@ -56,7 +63,7 @@ try {
     }
     New-Item -ItemType Directory -Path "$buildingProject/Assets/Editor","$buildingProject/Assets/Resources","$buildingProject/Packages","$buildingProject/ProjectSettings" -Force | Out-Null
     Copy-Item -LiteralPath 'Assets/Scripts' -Destination "$buildingProject/Assets" -Recurse -Force
-    if ($Render -or $ShadowChecks -or $WattleChecks -or $PreviewChecks -or $RoofChecks) { Copy-Item -LiteralPath 'Assets/Settings' -Destination "$buildingProject/Assets" -Recurse -Force }
+    if ($Render -or $ShadowChecks -or $WattleChecks -or $PreviewChecks -or $RoofChecks -or $FramingChecks -or $ColliderDebugChecks -or $IntersectionChecks -or $ModularChecks) { Copy-Item -LiteralPath 'Assets/Settings' -Destination "$buildingProject/Assets" -Recurse -Force }
     Copy-Item -LiteralPath 'Assets/Scripts.meta' -Destination "$buildingProject/Assets" -ErrorAction SilentlyContinue
     Copy-Item -LiteralPath 'Assets/Resources/Building' -Destination "$buildingProject/Assets/Resources" -Recurse -Force
     Copy-Item -LiteralPath 'Assets/Resources/Building.meta' -Destination "$buildingProject/Assets/Resources" -Force
@@ -74,7 +81,7 @@ try {
     foreach ($buildingShaderFile in 'BuildingWoodMatte.shader','TreeNightLighting.hlsl','WattleValidationDepthReveal.shader') {
         Copy-Item -LiteralPath "Assets/Shaders/$buildingShaderFile","Assets/Shaders/$buildingShaderFile.meta" -Destination "$buildingProject/Assets/Shaders" -Force
     }
-    foreach ($buildingName in 'BuildingPrototypeSetup','BuildingPrototypeValidation','BuildingPrototypeRenderValidation','BuildingPrototypeInputValidation','SplitPlankWallSetup','WattleWallSetup','WattleWallValidation','BuildingShadowValidation','BayPostSetup','W21StairSetup','W21StairValidation','ThatchRoofSetup','ThatchRoofValidation') {
+    foreach ($buildingName in 'BuildingPrototypeSetup','BuildingPrototypeValidation','BuildingPrototypeRenderValidation','BuildingPrototypeInputValidation','SplitPlankWallSetup','WattleWallSetup','WattleWallValidation','BuildingShadowValidation','BayPostSetup','W21StairSetup','W21StairValidation','ThatchRoofSetup','ThatchRoofValidation','FloorFramingSetup','BuildCollisionAuthoring','BuildFramingValidation','BuildColliderDebugValidation','BuildIntersectionRegressionValidation','ModularWoodSetup','ModularWoodValidation') {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
     }
     foreach ($buildingName in 'ProjectVersion.txt','TagManager.asset','ProjectSettings.asset') {
@@ -91,10 +98,10 @@ try {
     }
     @{ dependencies = $buildingDependencies } | ConvertTo-Json -Depth 5 | Set-Content "$buildingProject/Packages/manifest.json"
     if ($PrepareOnly) { Write-Output "Prepared $buildingProject"; return }
-    $buildingLog = Join-Path $buildingWork $(if ($RoofChecks) { 'roof.log' } elseif ($StairChecks) { 'stairs.log' } elseif ($PreviewChecks) { 'preview.log' } elseif ($WattleChecks) { 'wattle.log' } elseif ($ShadowChecks) { 'shadows.log' } elseif ($Render) { 'render.log' } elseif ($InputChecks) { 'input.log' } else { 'validation.log' })
-    $buildingMethod = if ($RoofChecks) { 'ThatchRoofValidation.RunBatch' } elseif ($StairChecks) { 'W21StairValidation.RunBatch' } elseif ($PreviewChecks) { 'WattleWallValidation.RunPreviewBatch' } elseif ($WattleChecks) { 'WattleWallValidation.RunBatch' } elseif ($ShadowChecks) { 'BuildingShadowValidation.RunBatch' } elseif ($Render) { 'BuildingPrototypeRenderValidation.RunBatch' } elseif ($InputChecks) { 'BuildingPrototypeInputValidation.RunBatch' } else { 'BuildingPrototypeValidation.RunBatch' }
+    $buildingLog = Join-Path $buildingWork $(if ($ModularChecks) { 'modular-wood.log' } elseif ($IntersectionChecks) { 'intersection-regression.log' } elseif ($ColliderDebugChecks) { 'collider-debug.log' } elseif ($FramingChecks) { 'framing.log' } elseif ($RoofChecks) { 'roof.log' } elseif ($StairChecks) { 'stairs.log' } elseif ($PreviewChecks) { 'preview.log' } elseif ($WattleChecks) { 'wattle.log' } elseif ($ShadowChecks) { 'shadows.log' } elseif ($Render) { 'render.log' } elseif ($InputChecks) { 'input.log' } else { 'validation.log' })
+    $buildingMethod = if ($ModularChecks) { 'ModularWoodValidation.RunBatch' } elseif ($IntersectionChecks) { 'BuildIntersectionRegressionValidation.RunBatch' } elseif ($ColliderDebugChecks) { 'BuildColliderDebugValidation.RunBatch' } elseif ($FramingChecks) { 'BuildFramingValidation.RunBatch' } elseif ($RoofChecks) { 'ThatchRoofValidation.RunBatch' } elseif ($StairChecks) { 'W21StairValidation.RunBatch' } elseif ($PreviewChecks) { 'WattleWallValidation.RunPreviewBatch' } elseif ($WattleChecks) { 'WattleWallValidation.RunBatch' } elseif ($ShadowChecks) { 'BuildingShadowValidation.RunBatch' } elseif ($Render) { 'BuildingPrototypeRenderValidation.RunBatch' } elseif ($InputChecks) { 'BuildingPrototypeInputValidation.RunBatch' } else { 'BuildingPrototypeValidation.RunBatch' }
     $buildingArgs = @('-batchmode','-projectPath',('"'+$buildingProject+'"'),'-executeMethod',$buildingMethod,'-logFile',('"'+$buildingLog+'"'))
-    if (-not $Render -and -not $ShadowChecks -and -not $WattleChecks -and -not $PreviewChecks -and -not $RoofChecks) { $buildingArgs += '-nographics' }
+    if (-not $Render -and -not $ShadowChecks -and -not $WattleChecks -and -not $PreviewChecks -and -not $RoofChecks -and -not $FramingChecks -and -not $ColliderDebugChecks -and -not $IntersectionChecks -and -not $ModularChecks) { $buildingArgs += '-nographics' }
     $buildingProcess = Start-Process -FilePath "$buildingEditor/Unity.exe" -ArgumentList $buildingArgs -WindowStyle Hidden -PassThru
     Write-Output "Isolated Unity validation PID $($buildingProcess.Id); log $buildingLog"
     $buildingProcess.Id | Set-Content (Join-Path $buildingWork 'validation-pid.txt')

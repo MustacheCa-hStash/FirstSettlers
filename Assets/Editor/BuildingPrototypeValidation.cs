@@ -96,6 +96,7 @@ public static class BuildingPrototypeValidation
             }
             else if (definition.kind == BuildPartKind.Stair)
                 Check(definition.material == catalog.presets[0].material && definition.mesh.subMeshCount == 1,"Stair does not use the single opaque wood material.");
+            else if(definition.kind==BuildPartKind.Floor)Check(definition.material==catalog.presets[0].material && definition.floorParts.Length>0,"Floor framing atlas missing");
             else Check(definition.material.GetTexture("_BaseMap") == null, "An unrelated prototype material changed.");
         }
         Near(catalog.presets[0].LocalBounds.size, new Vector3(3.5f, 2.75f, .25f), "Wall contract changed.");
@@ -278,7 +279,7 @@ public static class BuildingPrototypeValidation
                 Check(joint[3] == firstWall && joint[4] == corner,"Adjacent wall stole the near-joint pillar target.");
                 var stack = BuildPlacement.Solve(catalog.presets[3],(Vector3)joint[1],(Vector3)joint[2],corner,
                     world.Session.Frame(corner.OwnFrameId),0,0,default,viewer);
-                Near(BuildGeometry.LocalPoint(frame,stack.Origin),new Vector3(0,2.75f,0),"Enclosed post stack shifted onto the wall end.");
+                Near(BuildGeometry.LocalPoint(frame,stack.Origin),new Vector3(0,3,0),"Enclosed post stack shifted onto the wall end.");
                 world.Validate(ref stack); Check(stack.Valid,"Two enclosing walls blocked a valid post stack: " + stack.Message);
                 targetField.SetValue(controller,corner);
                 var sky = Resolve(new Vector3(.125f,3.25f,.25f));
@@ -404,9 +405,8 @@ public static class BuildingPrototypeValidation
                 "Pillar sky guidance failed on a side face.");
             Near(hitNormal, rotation * normal, "Pillar sky guidance switched faces.");
             var stack = BuildPlacement.Solve(pillar, hit, hitNormal, target, frame, 0, 0, default, viewer);
-            Near(BuildGeometry.LocalPoint(frame, stack.Origin), new Vector3(0,2.75f,0), "Sky pillar did not stack directly above.");
-            Check(stack.Hint == "Stack above" && BuildGeometry.Connects(pillar.LocalBounds, target.Origin, target.WorldYawStep,
-                pillar.LocalBounds, stack.Origin, stack.WorldYaw), "Sky pillar stack lost its hint or support.");
+            Near(BuildGeometry.LocalPoint(frame, stack.Origin), new Vector3(0,3,0), "Sky pillar did not stack directly above.");
+            Check(stack.Hint == "Stack above" && Mathf.Abs(stack.Origin.y-target.Origin.y-3)<.001f, "Sky pillar stack lost its hint or bearing band.");
             Check(!BuildGeometry.Overlaps(pillar.LocalBounds, target.Origin, target.WorldYawStep,
                 pillar.LocalBounds, stack.Origin, stack.WorldYaw), "Sky pillar stack penetrated its source.");
             Check(!guide.TryContinue(Aim(3.25f,.3f), 8, 2.75f, .15f, out _, out _), "Pillar sky guide retained sideways aim too far away.");
@@ -441,7 +441,7 @@ public static class BuildingPrototypeValidation
         Check(BuildGeometry.Distance(floor.LocalBounds, Vector3.zero, 1, new Vector3(.1f, 0, 2.5f)) > 1,
             "Rotated empty AABB corners captured snapping.");
         var onTop = BuildPlacement.Solve(floor, frame.Origin, Vector3.up, target, frame, 0, 0, default);
-        Check(!BuildGeometry.Overlaps(foundation.LocalBounds, frame.Origin, 1, floor.LocalBounds, onTop.Origin, onTop.WorldYaw), "Floor placement intersects foundation.");
+        Near(onTop.Origin,frame.Origin,"Flush ground finish changed the walking level");
     }
     private static void ValidateCornerKit(BuildCatalog catalog)
     {
@@ -517,8 +517,8 @@ public static class BuildingPrototypeValidation
                 var local = session.Frame(placed.OwnFrameId); Quaternion rotation = BuildGeometry.Rotation(local.YawStep);
                 Vector3 At(Vector3 p) => local.Origin + rotation * p;
                 var stack = BuildPlacement.Solve(wall, At(new Vector3(.5f,2,.25f)), rotation * Vector3.forward, placed, local, 0, 0, default);
-                Near(BuildGeometry.LocalPoint(local, stack.Origin), new Vector3(0,2.75f,0), "Upper side hit did not stack a wall.");
-                Check(BuildGeometry.Connects(wall.LocalBounds, placed.Origin, placed.WorldYawStep, wall.LocalBounds, stack.Origin, stack.WorldYaw), "Stacked wall has no support contact.");
+                Near(BuildGeometry.LocalPoint(local, stack.Origin), new Vector3(0,3,0), "Upper side hit did not stack a wall.");
+                Check(Mathf.Abs(stack.Origin.y-placed.Origin.y-wall.LocalBounds.max.y-.25f)<.001f,"Stacked wall did not reserve bearing band");
                 Check(!BuildGeometry.Overlaps(wall.LocalBounds, placed.Origin, placed.WorldYawStep, wall.LocalBounds, stack.Origin, stack.WorldYaw), "Stacked wall intersects its parent.");
                 var lower = BuildPlacement.Solve(wall, At(new Vector3(3, .5f, .25f)), rotation * Vector3.forward, placed, local, 0, 0, default);
                 Near(BuildGeometry.LocalPoint(local, lower.Origin), new Vector3(3.5f,0,0), "Lower hit stopped extending a wall directly.");
@@ -602,7 +602,7 @@ public static class BuildingPrototypeValidation
             Check(!guide.TryContinue(new Ray(viewer, normal), 8, 1, .15f, out _, out _), "Backward sky intersection was accepted.");
             Check(guide.TryContinue(Aim(1.75f,5.25f), 8, wall.LocalBounds.size.y, .15f, out hit, out hitNormal), "Stacked-wall selection region is too short.");
             var stack = BuildPlacement.Solve(wall, hit, hitNormal, target, frame, 0, 0, default, viewer);
-            Near(BuildGeometry.LocalPoint(frame, stack.Origin), new Vector3(0,2.75f,0), "Sky wall did not select direct stacking.");
+            Near(BuildGeometry.LocalPoint(frame, stack.Origin), new Vector3(0,3,0), "Sky wall did not select direct stacking.");
             guide.Capture(target, frame, Vector3.up, viewer);
             Check(guide.TryContinue(Aim(1.75f,3.25f), 8, 1, .15f, out _, out hitNormal), "Top face could not seed a viewer-side guide.");
             Near(hitNormal, normal, "Top-face guidance picked the wrong viewer side.");
@@ -703,7 +703,7 @@ public static class BuildingPrototypeValidation
                 var upper = world.Commit(stack); Check(upper != null, "Direct upper wall rejected.");
                 var roof = BuildPlacement.Solve(catalog.presets[1], At(new Vector3(2,3,.25f)), rotation * Vector3.forward, lower, wallFrame, 0, 0, default);
                 world.Validate(ref roof);
-                Check(!roof.Valid && roof.Message.StartsWith("Wall occupies the floor edge"), "A slab was inserted into an occupied wall joint.");
+                Check(roof.Valid, "Floor between stacked walls rejected: "+roof.Message);
                 var side = BuildPlacement.Solve(catalog.presets[1], At(new Vector3(2,2.5f,.25f)), rotation * Vector3.forward, lower, wallFrame, 0, 0, default);
                 world.Validate(ref side); Check(side.Valid, "Side platform was incorrectly blocked by a directly stacked wall: " + side.Message);
                 world.Remove(upper.Id);
@@ -829,7 +829,7 @@ public static class BuildingPrototypeValidation
             var blocker = new GameObject("Fixture player") { layer = GameplayLayers.Player };
             blocker.transform.SetParent(root.transform, true); blocker.transform.position = blocked.Origin + BuildGeometry.Rotation(blocked.WorldYaw) * blocked.Definition.LocalBounds.center;
             blocker.AddComponent<BoxCollider>().size = Vector3.one * .1f; Physics.SyncTransforms();
-            world.Validate(ref blocked); Check(!blocked.Valid && blocked.Message == "Move clear of the preview", "Player penetration is not blocked.");
+            world.Validate(ref blocked); Check(!blocked.Valid && blocked.Failure==BuildPlacementFailure.External && blocked.BlockingCollider!=null && blocked.Message.StartsWith("Move clear of the preview"), "Player penetration is not blocked.");
             Object.DestroyImmediate(blocker);
             world.Remove(first.Id); Check(!placedWall.Supported, "Wall retained support after its last foundation was removed.");
             var repair = BuildPlacement.Solve(catalog.presets[2], placedWall.Origin, Vector3.up, placedWall,

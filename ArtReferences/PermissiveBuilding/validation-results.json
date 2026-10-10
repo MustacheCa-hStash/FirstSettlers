@@ -1,0 +1,32 @@
+{
+  "playMode": {
+    "passed": true,
+    "checks": 1049,
+    "genericIntersectionsAdvisory": true,
+    "future4m3mProfilesAndOrderIndependentJoints": true,
+    "physicalCollidersRetained": true,
+    "samePlaneWallStairStacks": true,
+    "duplicateFootprintsRejected": true
+  },
+  "framing": {
+    "passed": true,
+    "checks": 6195
+  },
+  "stairs": {
+    "passed": true,
+    "realMotorWalks": 96,
+    "checks": 18484
+  },
+  "colliderDebug": {
+    "passed": true,
+    "checks": 822
+  },
+  "roof": {
+    "offscreenShadows": true,
+    "passed": true,
+    "checks": 1058
+  },
+  "dimensions": "Current assets unchanged; proposed full-span 4m/3m profiles supported in code",
+  "automaticCornerVisuals": "Planned; no visual output generated",
+  "scope": "Isolated Unity regression fixtures, not a saved-world audit"
+}

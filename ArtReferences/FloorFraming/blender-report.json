@@ -1,0 +1,43 @@
+{
+  "models": [
+    {
+      "name": "TimberFloor",
+      "file": "TimberFloor_4.00Wx0.25Hx4.00D.fbx",
+      "triangles": 324,
+      "parts": 27
+    },
+    {
+      "name": "TimberFloorStairwell",
+      "file": "TimberFloorStairwell_4.00Wx0.25Hx4.00D.fbx",
+      "triangles": 480,
+      "parts": 40
+    },
+    {
+      "name": "RimBeam",
+      "file": "RimBeam_3.50Wx0.25Hx0.25D.fbx",
+      "triangles": 12,
+      "parts": 1
+    },
+    {
+      "name": "CornerBearingCap",
+      "file": "CornerBearingCap_0.25Wx0.25Hx0.25D.fbx",
+      "triangles": 12,
+      "parts": 1
+    }
+  ],
+  "existing_objects_preserved": [
+    "BayPost",
+    "HalfFlightStair",
+    "Roof_Single_EaveRail",
+    "Roof_Single_Rafter_0",
+    "Roof_Single_Rafter_1",
+    "Roof_Single_Rafter_2",
+    "Roof_Single_Thatch",
+    "Roof_Single_WovenSubstrate",
+    "Roof_Thatch_Export",
+    "StairEnvelope",
+    "Wattle_Wall",
+    "Wood_SplitPlankWall",
+    "Wood_TwoPlankInfill"
+  ]
+}

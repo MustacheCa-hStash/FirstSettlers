@@ -13,7 +13,14 @@ public struct BuildPreview
     public bool FitStairContinuation;
     public Vector3Int StairFitNudge;
     public bool RoofContinuesFromBelow;
-    public Mesh VisualMesh => RoofContinuesFromBelow && Definition.roofContinuationMesh!=null ? Definition.roofContinuationMesh : Definition.mesh;
+    public BuildResolvedState Resolved;
+    public BuildPlacementFailure Failure;
+    public ulong BlockingPieceId;
+    public Collider BlockingCollider;
+    public BuildPlacementWarning Warning;
+    public ulong WarningPieceId;
+    public string WarningMessage;
+    public Mesh VisualMesh => Resolved!=null ? Resolved.mesh : RoofContinuesFromBelow && Definition.roofContinuationMesh!=null ? Definition.roofContinuationMesh : Definition.mesh;
     public string Message;
     public string Hint;
 }
@@ -43,6 +50,7 @@ public static class BuildPlacement
             Bounds bounds = target.Definition.LocalBounds;
             Vector3 point = BuildGeometry.LocalPoint(targetFrame, hit);
             Vector3 localNormal = Quaternion.Inverse(BuildGeometry.Rotation(target.WorldYawStep)) * normal;
+            if(BuildSocketPlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,preferTopAttachment,out var socketPreview))return socketPreview;
             Vector3 origin;
             int edge = ClosestEdge(bounds, point);
             bool upper = IsUpperHit(bounds, point, localNormal);
@@ -146,7 +154,7 @@ public static class BuildPlacement
                     if (upper)
                     {
                         origin = new Vector3(SurfaceAnchor(point.x, bounds.min.x, bounds.max.x, definition.LocalBounds.min.x, definition.LocalBounds.max.x),
-                            bounds.max.y - definition.LocalBounds.min.y,
+                            bounds.min.y + target.Definition.StackRise - definition.LocalBounds.min.y,
                             SurfaceAnchor(point.z, bounds.min.z, bounds.max.z, definition.LocalBounds.min.z, definition.LocalBounds.max.z));
                         preview.Hint = "Pillar above";
                     }
@@ -169,7 +177,7 @@ public static class BuildPlacement
                 {
                     Vector3 size = definition.LocalBounds.size;
                     int side = FacingSide(localNormal, edge);
-                    origin = upper ? new Vector3(bounds.min.x, bounds.max.y, bounds.min.z) : side switch {
+                    origin = upper ? new Vector3(bounds.min.x, bounds.min.y + target.Definition.StackRise, bounds.min.z) : side switch {
                         0 => new Vector3(bounds.min.x, bounds.min.y, bounds.min.z - size.z),
                         2 => new Vector3(bounds.min.x - size.x, bounds.min.y, bounds.min.z),
                         4 => new Vector3(bounds.min.x, bounds.min.y, bounds.max.z),
@@ -217,7 +225,7 @@ public static class BuildPlacement
             {
                 int side = FacingSide(localNormal, edge);
                 origin = upper ? new Vector3(bounds.center.x - definition.LocalBounds.center.x,
-                    bounds.max.y - definition.LocalBounds.min.y, bounds.min.z - definition.LocalBounds.min.z) : side switch {
+                    bounds.min.y + target.Definition.StackRise - definition.LocalBounds.min.y, bounds.min.z - definition.LocalBounds.min.z) : side switch {
                     0 => new Vector3(bounds.min.x, bounds.min.y, bounds.min.z),
                     2 => new Vector3(bounds.min.x, bounds.min.y, bounds.max.z),
                     4 => new Vector3(bounds.max.x, bounds.min.y, bounds.max.z),
@@ -235,7 +243,7 @@ public static class BuildPlacement
             else if (definition.kind == BuildPartKind.Wall)
             {
                 bool stack = definition.IsWallInfill ? localNormal.y > .6f || point.y > bounds.max.y : upper;
-                origin = stack ? new Vector3(bounds.min.x, bounds.max.y - definition.LocalBounds.min.y, bounds.min.z)
+                origin = stack ? new Vector3(bounds.min.x, bounds.min.y + target.Definition.StackRise - definition.LocalBounds.min.y, bounds.min.z)
                     : new Vector3(point.x < bounds.center.x ? bounds.min.x - definition.LocalBounds.max.x :
                         bounds.max.x - definition.LocalBounds.min.x, bounds.min.y, bounds.min.z);
                 preview.YawStep = BuildGeometry.Turn(contextTurn);
@@ -243,7 +251,7 @@ public static class BuildPlacement
             }
             else if (definition.kind == BuildPartKind.Floor && target.Definition.kind == BuildPartKind.Foundation && localNormal.y > .6f)
             {
-                origin = new Vector3(bounds.min.x, bounds.max.y - definition.LocalBounds.min.y, bounds.min.z);
+                origin = new Vector3(bounds.min.x, bounds.max.y - definition.LocalBounds.max.y, bounds.min.z);
                 preview.YawStep = BuildGeometry.Turn(contextTurn);
             }
             else if (target.Definition.kind == BuildPartKind.Wall || target.Definition.kind == BuildPartKind.Corner)
@@ -259,7 +267,7 @@ public static class BuildPlacement
                     // The wall's centre selects the bay; the aimed face selects the side of that bay.
                     // At its top, the slab covers the full wall thickness before extending toward the viewer.
                     origin = new Vector3(bounds.center.x - footprint.center.x,
-                        seated ? bounds.max.y - footprint.min.y : BuildGeometry.Tick(point.y) * BuildGeometry.Unit - footprint.max.y,
+                        seated ? bounds.min.y + target.Definition.StackRise - footprint.max.y : BuildGeometry.Tick(point.y) * BuildGeometry.Unit - footprint.max.y,
                         towardsPositiveZ
                             ? (seated ? bounds.min.z : bounds.max.z) - footprint.min.z
                             : (seated ? bounds.max.z : bounds.min.z) - footprint.max.z);
@@ -267,7 +275,13 @@ public static class BuildPlacement
                 }
                 else
                 {
-                    origin = new Vector3(bounds.center.x - footprint.center.x, bounds.max.y - footprint.min.y,
+                    if(definition.kind==BuildPartKind.Floor && viewerPosition.HasValue)
+                    {
+                        var view=BuildGeometry.LocalPoint(targetFrame,viewerPosition.Value);
+                        origin=new Vector3(view.x>=bounds.center.x?bounds.min.x-footprint.min.x:bounds.max.x-footprint.max.x,
+                            bounds.min.y+target.Definition.StackRise-footprint.max.y,view.z>=bounds.center.z?bounds.min.z-footprint.min.z:bounds.max.z-footprint.max.z);
+                    }
+                    else origin = new Vector3(bounds.center.x - footprint.center.x, bounds.min.y + target.Definition.StackRise - footprint.max.y,
                         bounds.center.z - footprint.center.z);
                     preview.Hint = "Platform above pillar";
                 }

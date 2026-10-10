@@ -19,3 +19,4 @@
 }
 .build-status { color: rgb(159, 211, 156); font-size: 15px; }
 .build-error { color: rgb(244, 157, 138); }
+.build-warning { color: rgb(244, 204, 117); }

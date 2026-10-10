@@ -1,0 +1,36 @@
+{
+  "colliderDebug": {
+    "passed": true,
+    "rotations": 8,
+    "checks": 820,
+    "realWallAdjacentWalks": 8
+  },
+  "input": {
+    "passed": true,
+    "heldKeyGuards": true,
+    "hotkeys": [
+      "F8",
+      "F9"
+    ]
+  },
+  "stairs": {
+    "passed": true,
+    "realMotorWalks": 96,
+    "checks": 18496
+  },
+  "framing": {
+    "passed": true,
+    "checks": 6195
+  },
+  "prototype": {
+    "passed": true,
+    "checks": 3617
+  },
+  "roof": {
+    "offscreenShadowCheck": true,
+    "passed": true,
+    "checks": 1058
+  },
+  "clipping": "Planned only; no Blender or stair dimension edits",
+  "scope": "Isolated Unity fixtures; not a saved-world placement audit"
+}

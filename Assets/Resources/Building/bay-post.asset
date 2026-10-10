@@ -16,10 +16,26 @@ MonoBehaviour:
   displayName: Bay post
   kind: 3
   wallPlacementMode: 0
-  sizeUnits: {x: 1, y: 11, z: 1}
+  sizeUnits: {x: 1, y: 12, z: 1}
   minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: -0.125, y: 0, z: -0.125}
+  jointSockets: []
+  stackRiseUnits: 12
   wallEndInsetUnits: 0
   mesh: {fileID: 4300000, guid: 5d0a7eadf5badb4449c0a5d5dbefdf33, type: 2}
+  uvVariants:
+  - {fileID: 4300000, guid: 5d0a7eadf5badb4449c0a5d5dbefdf33, type: 2}
+  - {fileID: 4300000, guid: d2e70049445e60544aa31a2033d034c3, type: 2}
+  - {fileID: 4300000, guid: 566b6722b5674574793bcc991f9631a2, type: 2}
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes: []
+  roofAttachment: 0
   material: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
   authoringPrefab: {fileID: 1526273392173975860, guid: c727d6b31bc19c44db587fd7edeea1db, type: 3}
   maxHealth: 100

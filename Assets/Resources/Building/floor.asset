@@ -15,10 +15,273 @@ MonoBehaviour:
   contentId: build.prototype.floor
   displayName: Timber floor
   kind: 1
+  wallPlacementMode: 0
   sizeUnits: {x: 16, y: 1, z: 16}
   minimumUnits: {x: 0, y: -1, z: 0}
+  boundsOffset: {x: 0, y: 0, z: 0}
+  jointSockets: []
+  stackRiseUnits: 0
   wallEndInsetUnits: 0
   mesh: {fileID: 4300000, guid: c3b655d483a4b124ea8cd44f549a5df0, type: 2}
-  material: {fileID: 2100000, guid: 8aa4227086c6e494088ae61c96b53215, type: 2}
+  uvVariants:
+  - {fileID: 4300000, guid: c3b655d483a4b124ea8cd44f549a5df0, type: 2}
+  - {fileID: 4300000, guid: d8de7d687fafb5047ad401e9422d0dd3, type: 2}
+  - {fileID: 4300000, guid: 1453700862b10cb41a47baf7d2ecc2cd, type: 2}
+  floorOpeningUvVariants:
+  - {fileID: 4300000, guid: fa3415d806cff6b46b2833515be6f735, type: 2}
+  - {fileID: 4300000, guid: e32baa089cca32e47b1df725dfef54d3, type: 2}
+  - {fileID: 4300000, guid: ad0c9e0b72bf755419feb09b9a325c9b, type: 2}
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 4300000, guid: fa3415d806cff6b46b2833515be6f735, type: 2}
+  floorParts:
+  - bounds:
+      m_Center: {x: 2, y: -0.125, z: 0.125}
+      m_Extent: {x: 1.75, y: 0.125, z: 0.125}
+    grainAxis: 0
+    uvSeed: 1000
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 2, y: -0.125, z: 3.875}
+      m_Extent: {x: 1.75, y: 0.125, z: 0.125}
+    grainAxis: 0
+    uvSeed: 1001
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 0.125, y: -0.125, z: 2}
+      m_Extent: {x: 0.125, y: 0.125, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1002
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 3.875, y: -0.125, z: 2}
+      m_Extent: {x: 0.125, y: 0.125, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1003
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 0.125, y: -0.125, z: 0.125}
+      m_Extent: {x: 0.125, y: 0.125, z: 0.125}
+    grainAxis: 1
+    uvSeed: 1004
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 0.125, y: -0.125, z: 3.875}
+      m_Extent: {x: 0.125, y: 0.125, z: 0.125}
+    grainAxis: 1
+    uvSeed: 1005
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 3.875, y: -0.125, z: 0.125}
+      m_Extent: {x: 0.125, y: 0.125, z: 0.125}
+    grainAxis: 1
+    uvSeed: 1006
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 3.875, y: -0.125, z: 3.875}
+      m_Extent: {x: 0.125, y: 0.125, z: 0.125}
+    grainAxis: 1
+    uvSeed: 1007
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 0.375, y: -0.025, z: 2}
+      m_Extent: {x: 0.12200001, y: 0.025, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1008
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 0.625, y: -0.025, z: 2}
+      m_Extent: {x: 0.12199998, y: 0.025, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1009
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 0.875, y: -0.025, z: 2}
+      m_Extent: {x: 0.12199998, y: 0.025, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1010
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 1.125, y: -0.025, z: 2}
+      m_Extent: {x: 0.12199998, y: 0.025, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1011
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 1.375, y: -0.025, z: 2}
+      m_Extent: {x: 0.12199998, y: 0.025, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1012
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 1.625, y: -0.025, z: 2}
+      m_Extent: {x: 0.12199998, y: 0.025, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1013
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 1.875, y: -0.025, z: 2}
+      m_Extent: {x: 0.12199998, y: 0.025, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1014
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 2.125, y: -0.025, z: 2}
+      m_Extent: {x: 0.12199998, y: 0.025, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1015
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 2.375, y: -0.025, z: 2}
+      m_Extent: {x: 0.12199998, y: 0.025, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1016
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 2.625, y: -0.025, z: 2}
+      m_Extent: {x: 0.12199998, y: 0.025, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1017
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 2.875, y: -0.025, z: 2}
+      m_Extent: {x: 0.12199998, y: 0.025, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1018
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 3.125, y: -0.025, z: 2}
+      m_Extent: {x: 0.12199998, y: 0.025, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1019
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 3.375, y: -0.025, z: 2}
+      m_Extent: {x: 0.12199998, y: 0.025, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1020
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 3.625, y: -0.025, z: 2}
+      m_Extent: {x: 0.12199998, y: 0.025, z: 1.75}
+    grainAxis: 2
+    uvSeed: 1021
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 2, y: -0.15, z: 0.55}
+      m_Extent: {x: 1.75, y: 0.1, z: 0.060000002}
+    grainAxis: 0
+    uvSeed: 1022
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 2, y: -0.15, z: 1.25}
+      m_Extent: {x: 1.75, y: 0.1, z: 0.059999943}
+    grainAxis: 0
+    uvSeed: 1023
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 2, y: -0.15, z: 1.95}
+      m_Extent: {x: 1.75, y: 0.1, z: 0.060000002}
+    grainAxis: 0
+    uvSeed: 1024
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 2, y: -0.15, z: 2.65}
+      m_Extent: {x: 1.75, y: 0.1, z: 0.060000062}
+    grainAxis: 0
+    uvSeed: 1025
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  - bounds:
+      m_Center: {x: 2, y: -0.15, z: 3.35}
+      m_Extent: {x: 1.75, y: 0.1, z: 0.060000062}
+    grainAxis: 0
+    uvSeed: 1026
+    hasUvBounds: 0
+    uvBounds:
+      m_Center: {x: 0, y: 0, z: 0}
+      m_Extent: {x: 0, y: 0, z: 0}
+  collisionMesh: {fileID: 0}
+  occupiedVolumes: []
+  roofAttachment: 0
+  material: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
   authoringPrefab: {fileID: 5417352161981259766, guid: 35889484402f5d34eb4f7c6e2f395888, type: 3}
   maxHealth: 100

@@ -39,7 +39,9 @@ public static class BuildingPrototypeInputValidation
         SessionState.SetBool(Pending, false);
         try
         {
-            BuildingPrototypeValidation.Run();
+            // Legacy dimensional checks belong to the old 3.5m kit. Full-span geometry has its own Play-mode suite.
+            var inputCatalog=Resources.Load<BuildCatalog>("Building/PrototypeCatalog");
+            if(inputCatalog.presets[0].jointSockets==null || inputCatalog.presets[0].jointSockets.Length==0)BuildingPrototypeValidation.Run();
             ValidateNudgeMappingAndRepeat();
             InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
             InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
@@ -186,7 +188,24 @@ public static class BuildingPrototypeInputValidation
                     Queue(Key.LeftArrow,Key.RightArrow); break;
                 case 20:
                     Read(); Require(PendingNudge()==Vector3Int.zero,"Opposite held arrows did not cancel.");
-                    Debug.Log("BUILDING INPUT PASS: native B/E/Escape, held-key guards, picker capture/look, arrow press/hold/release/opposition and menu-held suppression; empty synthetic scene only."); Finish(null); break;
+                    Queue(Key.F8);break;
+                case 21:
+                    Read();Require(controller.World.ColliderDebug.Mode==BuildColliderDebugMode.Solids,"F8 did not enable collider diagnostics.");
+                    Read();Require(controller.World.ColliderDebug.Mode==BuildColliderDebugMode.Solids,"Held F8 cycled twice.");
+                    Queue();break;
+                case 22:Read();Queue(Key.F9);break;
+                case 23:
+                    Read();Require(controller.World.ColliderDebug.Frozen,"F9 did not freeze diagnostics.");
+                    Read();Require(controller.World.ColliderDebug.Frozen,"Held F9 unfroze diagnostics.");
+                    controller.Exit();Queue();break;
+                case 24:Read();Queue(Key.F8);break;
+                case 25:
+                    Read();Require(controller.World.ColliderDebug.Mode==BuildColliderDebugMode.SolidsAndClearance && !controller.World.ColliderDebug.Frozen,"F8 failed outside build mode.");
+                    Queue();break;
+                case 26:Read();Queue(Key.F8);break;
+                case 27:
+                    Read();Require(controller.World.ColliderDebug.Mode==BuildColliderDebugMode.Off,"F8 did not disable diagnostics.");
+                    Debug.Log("BUILDING INPUT PASS: native B/E/Escape/F8/F9, held-key guards, picker capture/look, arrow press/hold/release/opposition, debug cycle/freeze/outside-build and menu-held suppression; empty synthetic scene only."); Finish(null); break;
             }
         }
         catch (Exception ex) { Finish(ex); }

@@ -15,7 +15,8 @@ public sealed class LocalPlayerInput : MonoBehaviour
     private BuildNudgeRepeat leftNudge, rightNudge, forwardNudge, backNudge;
     [System.Flags]
     private enum BuildButton { Toggle = 1, Cancel = 2, Picker = 4, LeftTurn = 8, RightTurn = 16,
-        Left = 32, Right = 64, Forward = 128, Back = 256, Up = 512, Down = 1024, Place = 2048, Remove = 4096 }
+        Left = 32, Right = 64, Forward = 128, Back = 256, Up = 512, Down = 1024, Place = 2048, Remove = 4096,
+        Debug = 8192, Freeze = 16384 }
     private BuildButton heldBuildButtons;
     private int suppressLookFrames;
     public void SetBuilding(BuildingController controller) => building = controller;
@@ -54,6 +55,8 @@ public sealed class LocalPlayerInput : MonoBehaviour
             if (Pressed(BuildButton.Toggle)) building.Toggle();
             else if (Pressed(BuildButton.Cancel) && building.Active) building.Exit();
             else if (Pressed(BuildButton.Picker) && building.Active) building.OpenMenu();
+            if (Pressed(BuildButton.Debug)) building.CycleColliderDebug();
+            if (Pressed(BuildButton.Freeze)) building.ToggleDebugFreeze();
         }
         if (building != null && building.MenuOpen)
         {
@@ -128,6 +131,8 @@ public sealed class LocalPlayerInput : MonoBehaviour
             if (keyboard.downArrowKey.isPressed) buttons |= BuildButton.Back;
             if (keyboard.pageUpKey.isPressed) buttons |= BuildButton.Up;
             if (keyboard.pageDownKey.isPressed) buttons |= BuildButton.Down;
+            if (keyboard.f8Key.isPressed) buttons |= BuildButton.Debug;
+            if (keyboard.f9Key.isPressed) buttons |= BuildButton.Freeze;
         }
         if (mouse != null)
         {

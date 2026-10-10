@@ -17,6 +17,7 @@ public sealed class BuildGameplay : IDisposable
     private float nextScan;
     private int revision = -1;
     public int ActiveCount => active.Count;
+    public bool TryGetProxy(ulong id,out BuildGameplayProxy proxy) => active.TryGetValue(id,out proxy);
     public BuildGameplay(BuildSession session) { this.session = session; }
     public void Remove(ulong id)
     {
@@ -32,6 +33,8 @@ public sealed class BuildGameplay : IDisposable
         foreach (var pair in active)
             if (!session.TryGet(pair.Key, out var piece) || BuildGeometry.Distance(piece.Definition.LocalBounds, piece.Origin, piece.WorldYawStep, focus) > releaseRadius) release.Add(pair.Key);
         bool changed = release.Count > 0;
+        foreach(var pair in active)if(session.TryGet(pair.Key,out var current) && pair.Value.BoundRevision!=current.ResolvedRevision)
+        {pair.Value.Bind(current);changed=true;}
         foreach (ulong id in release) { var proxy = active[id]; active.Remove(id); proxy.Unbind(); if (pool.Count < 128) pool.Push(proxy); else BuildLifetime.Destroy(proxy.gameObject); }
         if (revision != session.Revision || Time.unscaledTime >= nextScan || (focus - lastFocus).sqrMagnitude > 1)
         {
@@ -54,7 +57,13 @@ public sealed class BuildGameplay : IDisposable
         var obj = new GameObject("Build collision"); obj.transform.SetParent(root.transform, false);
         return obj.AddComponent<BuildGameplayProxy>();
     }
-    public void Dispose() { if (root != null) BuildLifetime.Destroy(root); active.Clear(); pool.Clear(); }
+    public void Dispose()
+    {
+        // Destroy is deferred in Play mode; retired pools must stop colliding immediately.
+        foreach(var proxy in active.Values)proxy.Unbind();
+        if(root!=null){root.SetActive(false);BuildLifetime.Destroy(root);}
+        active.Clear();pool.Clear();
+    }
 }
 
 internal static class BuildLifetime

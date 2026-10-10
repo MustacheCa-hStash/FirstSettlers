@@ -15,11 +15,78 @@ MonoBehaviour:
   contentId: build.wood.wattle-wall
   displayName: Wattle wall
   kind: 0
-  wallPlacementMode: 2
-  sizeUnits: {x: 14, y: 11, z: 1}
+  wallPlacementMode: 0
+  sizeUnits: {x: 16, y: 12, z: 1}
   minimumUnits: {x: 0, y: 0, z: 0}
-  wallEndInsetUnits: 1
+  boundsOffset: {x: 0, y: 0, z: -0.125}
+  jointSockets:
+  - localPosition: {x: 0, y: 0, z: 0}
+    outward: {x: -1, y: 0, z: 0}
+    interior: 0
+  - localPosition: {x: 0.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 0.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 0.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 4, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 0
+  stackRiseUnits: 12
+  wallEndInsetUnits: 0
   mesh: {fileID: 4300000, guid: 9a208e8bf5c0c7e4f8321b9f55aea4b9, type: 2}
+  uvVariants: []
+  floorOpeningUvVariants: []
+  jointCoverVariants:
+  - {fileID: 4300000, guid: 5d0a7eadf5badb4449c0a5d5dbefdf33, type: 2}
+  - {fileID: 4300000, guid: d2e70049445e60544aa31a2033d034c3, type: 2}
+  - {fileID: 4300000, guid: 566b6722b5674574793bcc991f9631a2, type: 2}
+  jointCoverMaterial: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes: []
+  roofAttachment: 0
   material: {fileID: 2100000, guid: 90e7c0d2ac241574aa950428c8faabf0, type: 2}
   authoringPrefab: {fileID: 3441734144796141730, guid: 8fed05e34af9fbc4282650ce890b327d, type: 3}
   maxHealth: 100

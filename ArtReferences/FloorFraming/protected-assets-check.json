@@ -1,0 +1,11 @@
+{
+  "unchanged_from_head": [
+    "Assets/Scenes/SmearScene.unity",
+    "Assets/Settings/PC_RPAsset.asset",
+    "Assets/Materials/Buildings/Wood/SplitPlankWood.mat",
+    "Assets/Materials/Buildings/Wood/WattleWood.mat",
+    "Assets/Textures/Buildings/Wood/ordinary-wood-trim-albedo.png",
+    "Assets/Resources/Building/w21-stair-collision.asset",
+    "Assets/Resources/Building/w21-stair-mesh.asset"
+  ]
+}

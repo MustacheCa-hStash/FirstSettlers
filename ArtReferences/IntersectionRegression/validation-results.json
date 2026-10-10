@@ -1,0 +1,40 @@
+{
+  "playMode": {
+    "roofStairCases": [
+      "headroom-only",
+      "solid-overlap"
+    ],
+    "rotations": 8,
+    "physicalCollidersRetained": true,
+    "wallStates": [
+      "stacked",
+      "preview floor",
+      "insert floor",
+      "remove floor",
+      "remove lower wall",
+      "restore lower wall"
+    ],
+    "passed": true,
+    "importedWallReadable": false,
+    "roofStairPlacementOrders": [
+      "roof-first",
+      "stairs-first"
+    ],
+    "checks": 832
+  },
+  "framing": {
+    "passed": true,
+    "checks": 6195
+  },
+  "roof": {
+    "passed": true,
+    "offscreenShadows": true,
+    "checks": 1058
+  },
+  "colliderDebug": {
+    "passed": true,
+    "checks": 820
+  },
+  "sourceMeshAndAtlasChanges": "None",
+  "scope": "Isolated Unity fixtures with real Play-mode stacked-wall pixel captures"
+}

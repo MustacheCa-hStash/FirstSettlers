@@ -34,11 +34,12 @@ public sealed class BuildMenuView : IDisposable
         menu.style.display = active && choosing ? DisplayStyle.Flex : DisplayStyle.None;
         hud.style.display = active && !choosing ? DisplayStyle.Flex : DisplayStyle.None;
     }
-    public void Show(string title, string message, bool valid)
+    public void Show(string title, string message, bool valid,bool warning=false)
     {
         if (lastHeading != title) heading.text = lastHeading = title;
         if (lastStatus != message) status.text = lastStatus = message;
         status.EnableInClassList("build-error", !valid);
+        status.EnableInClassList("build-warning",valid && warning);
     }
     public void Dispose() { if (obj != null) BuildLifetime.Destroy(obj); }
 }

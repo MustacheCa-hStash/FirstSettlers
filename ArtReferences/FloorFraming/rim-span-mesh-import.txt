@@ -1,0 +1,8 @@
+RIM-SPAN-MESH IMPORT INSPECTION
+RimBeam_3.50Wx0.25Hx0.25D: vertices=24, submeshes=1, raw bounds=Center: (1.75, -0.13, 0.13), Extents: (1.75, 0.13, 0.13), hierarchy matrix=1.00000	0.00000	0.00000	0.00000
+0.00000	1.00000	0.00000	0.00000
+0.00000	0.00000	1.00000	0.00000
+0.00000	0.00000	0.00000	1.00000
+
+Transformed envelope: min=(0.000000, -0.250000, 0.000000), max=(3.500000, 0.000000, 0.250000), size=(3.500000, 0.250000, 0.250000); normalization offset=(0.000000, 0.000000, 0.000000)
+Runtime: vertices=24, triangles=12, submeshes=1, min=(0.000000, -0.250000, 0.000000), max=(3.500000, 0.000000, 0.250000), UV0=24

@@ -64,12 +64,17 @@ public static class BuildRoof
                 reverse=BuildGeometry.LocalPoint(new BuildGridFrame{Origin=target.Origin,YawStep=target.WorldYawStep},viewer.Value).z<b.center.z;
             yaw=BuildGeometry.Turn((reverse?4:0)+turn);
             float viewerX=viewer.HasValue?BuildGeometry.LocalPoint(new BuildGridFrame{Origin=target.Origin,YawStep=target.WorldYawStep},viewer.Value).x:b.max.x;
+            bool centred=target.Definition.jointSockets?.Length>0 || target.Definition.kind==BuildPartKind.Corner && b.min.x<0 && b.min.z<0;
             float start=target.Definition.kind==BuildPartKind.Wall? b.min.x-target.Definition.WallEndInset:
+                centred?(viewerX>=b.center.x?0:-Width):
                 (viewerX>=b.center.x ? b.min.x : b.max.x-Width);
             hint="Roof eave on wall/post top";
-            return reverse?new Vector3(start+Width,b.max.y,b.max.z):new Vector3(start,b.max.y,b.min.z);
+            float seat=target.Definition.kind is BuildPartKind.Wall or BuildPartKind.Corner ? b.min.y+target.Definition.StackRise : b.max.y;
+            return reverse?new Vector3(start+Width,seat,centred?0:b.max.z):new Vector3(start,seat,centred?0:b.min.z);
         }
         yaw=BuildGeometry.Turn(turn);
+        if(definition.kind==BuildPartKind.Floor)
+        { hint="Floor at roof bearing level";return new Vector3(0,-definition.LocalBounds.max.y,0); }
         if(definition.roofAttachment==RoofAttachmentMode.Gable)
         {
             // A four-metre triangular infill spans both roof halves. Its base
@@ -96,6 +101,7 @@ public static class BuildRoof
     }
     public static Mesh VisualMesh(BuildPieceRecord piece,BuildSession session)
     {
+        if(piece.Resolved!=null)return piece.Resolved.mesh;
         if(piece.Definition.roofContinuationMesh!=null)
             foreach(ulong id in piece.Connections)
                 if(session.TryGet(id,out var other) && IsBelow(piece.Definition,piece.Origin,piece.WorldYawStep,other.Definition,other.Origin,other.WorldYawStep))
