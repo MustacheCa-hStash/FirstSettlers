@@ -115,24 +115,26 @@ public static class W21StairSetup
     }
 
     public static Mesh MakeWalkingHull()
+        =>MakeWalkingHull(Width,Rise,Run);
+    public static Mesh MakeWalkingHull(float width,float rise,float run)
     {
         // A triangular prism with a continuous 1.5/2 slope. Consecutive pieces
         // have collinear walking faces, without a horizontal shelf at each join.
-        Vector2[] profile = { new(0,0), new(Rise,Run), new(0,Run) };
+        Vector2[] profile = { new(0,0), new(rise,run), new(0,run) };
         var vertices = new Vector3[6];
         for (int side = 0; side < 2; ++side)
-            for (int i = 0; i < 3; ++i) vertices[side*3+i] = new Vector3(side*Width,profile[i].x,profile[i].y);
+            for (int i = 0; i < 3; ++i) vertices[side*3+i] = new Vector3(side*width,profile[i].x,profile[i].y);
         var indices = new List<int>();
         void Triangle(int a,int b,int c)
         {
             Vector3 normal = Vector3.Cross(vertices[b]-vertices[a],vertices[c]-vertices[a]);
-            Vector3 outward = (vertices[a]+vertices[b]+vertices[c])/3 - Size*.5f;
+            Vector3 outward = (vertices[a]+vertices[b]+vertices[c])/3 - new Vector3(width,rise,run)*.5f;
             if (Vector3.Dot(normal,outward) < 0) (b,c) = (c,b);
             indices.Add(a); indices.Add(b); indices.Add(c);
         }
         Triangle(0,1,2); Triangle(3,4,5);
         for (int i = 0; i < 3; ++i) { int next=(i+1)%3; Triangle(i,next,next+3); Triangle(i,next+3,i+3); }
-        var mesh = new Mesh { name = "W21 continuous walking ramp (6 vertices, 8 triangles, 1.5 m rise / 2 m run)" };
+        var mesh = new Mesh { name = $"Continuous stair ramp (6 vertices, 8 triangles, {rise} m rise / {run} m run)" };
         mesh.vertices = vertices; mesh.SetTriangles(indices,0); mesh.RecalculateNormals(); mesh.RecalculateBounds();
         return mesh;
     }

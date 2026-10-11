@@ -1,5 +1,6 @@
-param([switch]$PrepareOnly, [switch]$CompileOnly, [switch]$Render, [switch]$InputChecks, [switch]$ShadowChecks, [switch]$WattleChecks, [switch]$PreviewChecks, [switch]$StairChecks, [switch]$RoofChecks, [switch]$FramingChecks, [switch]$ColliderDebugChecks, [switch]$IntersectionChecks, [switch]$ModularChecks, [switch]$InstalledAssets, [switch]$UiChecks, [switch]$UiAssets)
+param([switch]$PrepareOnly, [switch]$CompileOnly, [switch]$Render, [switch]$InputChecks, [switch]$ShadowChecks, [switch]$WattleChecks, [switch]$PreviewChecks, [switch]$StairChecks, [switch]$RoofChecks, [switch]$FramingChecks, [switch]$ColliderDebugChecks, [switch]$IntersectionChecks, [switch]$ModularChecks, [switch]$InstalledAssets, [switch]$UiChecks, [switch]$UiAssets, [switch]$StairUiAssets)
 $ErrorActionPreference = 'Stop'
+if ($StairUiAssets) { $UiChecks = $true }
 if ($InstalledAssets) { $ModularChecks = $true }
 # Full-span assets supersede legacy dimensional fixtures. Keep native input validation separate.
 if (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'Assets/Models/Buildings/Wood/Modular/SplitPlankWall_4.00Wx3.00Hx0.25D.fbx')) {
@@ -51,6 +52,7 @@ try {
     $buildingOwned += @(Get-Item 'Assets/Editor/BuildColliderDebugValidation.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/BuildIntersectionRegressionValidation.cs','Assets/Editor/ModularWoodSetup.cs','Assets/Editor/ModularWoodValidation.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/OpeningWallSetup.cs','Assets/Editor/OpeningWallValidation.cs')
+    $buildingOwned += @(Get-Item 'Assets/Editor/StairExtensionSetup.cs','Assets/Editor/StairExtensionValidation.cs')
     $buildingOwned += @(Get-Item 'Assets/Scripts/PlayerMovement/SmoothWalkSurface.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/BuildStoneUiAuthoring.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/SplitPlankWallSetup.cs','Assets/Editor/WattleWallSetup.cs','Assets/Editor/WattleWallValidation.cs','Assets/Shaders/BuildingWoodMatte.shader','Assets/Shaders/WattleValidationDepthReveal.shader')
@@ -87,7 +89,7 @@ try {
     foreach ($buildingName in 'BuildingPrototypeSetup','BuildingPrototypeValidation','BuildingPrototypeRenderValidation','BuildingPrototypeInputValidation','SplitPlankWallSetup','WattleWallSetup','WattleWallValidation','BuildingShadowValidation','BayPostSetup','W21StairSetup','W21StairValidation','ThatchRoofSetup','ThatchRoofValidation','FloorFramingSetup','BuildCollisionAuthoring','BuildFramingValidation','BuildColliderDebugValidation','BuildIntersectionRegressionValidation','ModularWoodSetup','ModularWoodValidation') {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
     }
-    foreach ($buildingName in 'OpeningWallSetup','OpeningWallValidation') {
+    foreach ($buildingName in 'OpeningWallSetup','OpeningWallValidation','StairExtensionSetup','StairExtensionValidation') {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
     }
     Copy-Item -LiteralPath 'Assets/Editor/BuildStoneUiAuthoring.cs','Assets/Editor/BuildStoneUiAuthoring.cs.meta' -Destination "$buildingProject/Assets/Editor" -Force
@@ -109,7 +111,7 @@ try {
     $buildingMethod = if ($ModularChecks) { 'ModularWoodValidation.RunBatch' } elseif ($IntersectionChecks) { 'BuildIntersectionRegressionValidation.RunBatch' } elseif ($ColliderDebugChecks) { 'BuildColliderDebugValidation.RunBatch' } elseif ($FramingChecks) { 'BuildFramingValidation.RunBatch' } elseif ($RoofChecks) { 'ThatchRoofValidation.RunBatch' } elseif ($StairChecks) { 'W21StairValidation.RunBatch' } elseif ($PreviewChecks) { 'WattleWallValidation.RunPreviewBatch' } elseif ($WattleChecks) { 'WattleWallValidation.RunBatch' } elseif ($ShadowChecks) { 'BuildingShadowValidation.RunBatch' } elseif ($Render) { 'BuildingPrototypeRenderValidation.RunBatch' } elseif ($InputChecks) { 'BuildingPrototypeInputValidation.RunBatch' } else { 'BuildingPrototypeValidation.RunBatch' }
     if ($UiChecks -or $UiAssets) {
         $buildingLog = Join-Path $buildingWork 'stone-ui.log'
-        $buildingMethod = if ($UiAssets) { 'BuildStoneUiAuthoring.BuildBatch' } else { 'BuildStoneUiAuthoring.ValidateBatch' }
+        $buildingMethod = if ($StairUiAssets) { 'BuildStoneUiAuthoring.StairThumbnailsBatch' } elseif ($UiAssets) { 'BuildStoneUiAuthoring.BuildBatch' } else { 'BuildStoneUiAuthoring.ValidateBatch' }
     }
     $buildingArgs = @('-batchmode','-projectPath',('"'+$buildingProject+'"'),'-executeMethod',$buildingMethod,'-logFile',('"'+$buildingLog+'"'))
     if ($InstalledAssets) { $buildingArgs[4] = 'ModularWoodValidation.RunInstalledBatch' }

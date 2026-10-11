@@ -95,6 +95,13 @@ public sealed class BuildWorld : MonoBehaviour
         bool cached=previewRevision==Session.Revision && previewDefinition==preview.Definition && previewOrigin==preview.Origin && previewYaw==preview.WorldYaw && previewGrounded==preview.Grounded;
         var states=cached?previewStates:Session.ResolvePreview(candidate);var state=states[candidate.Id];preview.Resolved=state;
         DebugStates=states;
+        if(preview.Definition.kind==BuildPartKind.Stair && !BuildStairAttachment.HasExposedFlight(candidate))
+        {Reject(ref preview,BuildPlacementFailure.Support,"Stair flight is completely buried");return;}
+        if(preview.Definition.kind==BuildPartKind.Stair && preview.StairAimTarget==0 && preview.Hint=="Ground grid")
+        {Reject(ref preview,BuildPlacementFailure.Support,"Aim at a supported building attachment; stairs cannot start from terrain");return;}
+        if(preview.Definition.kind==BuildPartKind.Stair && preview.StairAimTarget!=0 && Session.TryGet(preview.StairAimTarget,out var aimedStair) && aimedStair.Definition.kind==BuildPartKind.Stair &&
+            !BuildStairAttachment.Connects(candidate,aimedStair,aimedStair.Resolved))
+        {Reject(ref preview,BuildPlacementFailure.Support,"Stair endpoint is buried or does not meet the adjoining flight",aimedStair);return;}
         if(state.boxes.Length+state.volumes.Length==0)
         {Reject(ref preview,BuildPlacementFailure.Joint,"No compatible floor joint at this orientation");return;}
         if(state.invalidJoint)Warn(ref preview,BuildPlacementWarning.UnresolvedJoint);
@@ -123,7 +130,7 @@ public sealed class BuildWorld : MonoBehaviour
         for(int i=0;i<count;i++)
         {
             var collider=overlaps[i];if(collider.GetComponentInParent<BuildGameplayProxy>()!=null)continue;
-            if(preview.Grounded && IsGround(collider))continue;
+            if((preview.Grounded || preview.Definition.kind==BuildPartKind.Stair) && IsGround(collider))continue;
             bool hit=false;
             foreach(var b in state.boxes)
             {

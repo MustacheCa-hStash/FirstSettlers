@@ -189,7 +189,7 @@ public sealed class BuildingController : MonoBehaviour
             point = hit.point; normal = hit.normal;
             direct = hit.collider.GetComponentInParent<BuildGameplayProxy>()?.Record;
             if (direct != null && !world.Session.TryGet(direct.Id, out direct)) direct = null;
-            nextTarget = direct ?? (BuildWorld.IsGround(hit.collider) ? NearbyTarget(hit.point) : null);
+            nextTarget = direct ?? (selected.kind!=BuildPartKind.Stair && BuildWorld.IsGround(hit.collider) ? NearbyTarget(hit.point) : null);
             skyGuide = default;
             // A wall face beside a real corner can hide the narrow post from the centre ray.
             // Resolve that connected joint locally; unrelated solids keep their ordinary priority.

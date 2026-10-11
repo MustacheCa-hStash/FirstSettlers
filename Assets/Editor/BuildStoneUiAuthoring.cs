@@ -33,6 +33,15 @@ public static class BuildStoneUiAuthoring
     }
     public static void BuildBatch()=>Batch(true);
     public static void ValidateBatch()=>Batch(false);
+    public static void StairThumbnailsBatch()
+    {
+        try
+        {
+            var catalog=AssetDatabase.LoadAssetAtPath<BuildCatalog>(BuildingPrototypeSetup.CatalogPath);
+            foreach(var id in new[]{StairExtensionSetup.W22Id,StairExtensionSetup.W24Id})Thumbnail(catalog.Find(id));
+            AssetDatabase.SaveAssets();Validate();EditorApplication.Exit(0);
+        }catch(Exception ex){Debug.LogException(ex);EditorApplication.Exit(1);}
+    }
     private static void Batch(bool bake)
     {
         try{if(bake)Bake();Validate();EditorApplication.Exit(0);}
@@ -156,6 +165,14 @@ public static class BuildStoneUiAuthoring
                 typeof(Clickable).GetMethod("SimulateSingleClick",Methods).Invoke(button.clickable,new object[]{click,0});
             }
             Click(presets[0]);Require(committed==null,"Grid click entered placement before confirmation");
+            var stairButton=root.Q<Button>(StairExtensionSetup.W22Id);
+            stairButton.Focus();Draw();Require(view.Highlighted==source.Find(StairExtensionSetup.W22Id),"Keyboard focus did not highlight W22");
+            using(var submit=NavigationSubmitEvent.GetPooled()){submit.target=stairButton;stairButton.SendEvent(submit);}
+            Require(committed==source.Find(StairExtensionSetup.W22Id),"Enter after highlighting did not choose W22");committed=null;
+            var railButton=root.Q<Button>(StairExtensionSetup.W24Id);
+            using(var up=PointerUpEvent.GetPooled(new Event{type=EventType.MouseUp,button=0,clickCount=2}))
+            using(var doubleClick=ClickEvent.GetPooled(up)){doubleClick.target=railButton;railButton.SendEvent(doubleClick);}
+            Require(committed==source.Find(StairExtensionSetup.W24Id),"Double-click did not choose W24");committed=null;
             Click(root.Q<Button>("quick-"+source.presets[2].contentId));
             Require(committed==source.presets[2],"Quick piece did not choose its actual catalog definition");
             var gable=source.Find(OpeningWallSetup.GableId);
@@ -168,6 +185,12 @@ public static class BuildStoneUiAuthoring
             using(var submit=NavigationSubmitEvent.GetPooled())
             {submit.target=root.Q<Button>(gable.contentId);root.Q<Button>(gable.contentId).SendEvent(submit);}
             Require(committed==gable.flipVariant,"Focused canonical tile overrode the staged slope on keyboard submit");
+            committed=null;
+            using(var up=PointerUpEvent.GetPooled(new Event{type=EventType.MouseUp,button=0,clickCount=2}))
+            using(var doubleClick=ClickEvent.GetPooled(up)){doubleClick.target=root.Q<Button>(gable.contentId);root.Q<Button>(gable.contentId).SendEvent(doubleClick);}
+            Require(committed==gable.flipVariant,"Double-click lost staged gable slope");
+            view.Filter(5);Draw();int stairsShown=0;foreach(var button in presets)if(button.resolvedStyle.display!=DisplayStyle.None)stairsShown++;
+            Require(stairsShown==3,"Stairs filter must include W21/W22/W24");
             view.SetSelection(gable);view.Filter(0);Draw();
             var menu=root.Q<VisualElement>("build-menu");
             foreach(var stone in root.Query<VisualElement>(className:"stone-panel").ToList())

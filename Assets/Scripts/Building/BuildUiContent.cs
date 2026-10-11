@@ -6,10 +6,11 @@ public static class BuildUiContent
     public static readonly string[] Categories = { "All pieces", "Foundations", "Walls", "Floors", "Posts", "Stairs", "Roofs" };
     public static string ThumbnailKey(BuildDefinition d) => d.contentId.Replace('.', '_');
     public static int Category(BuildDefinition d) => d.IsHalfGable ? 6 : d.kind switch
-    { BuildPartKind.Foundation=>1, BuildPartKind.Wall=>2, BuildPartKind.Floor=>3, BuildPartKind.Corner=>4, BuildPartKind.Stair=>5, BuildPartKind.Roof=>6, _=>0 };
+    { BuildPartKind.Foundation=>1, BuildPartKind.Wall=>2, BuildPartKind.Floor=>3, BuildPartKind.Corner=>4, BuildPartKind.Stair or BuildPartKind.Handrail=>5, BuildPartKind.Roof=>6, _=>0 };
     public static string Name(BuildDefinition d) => d.contentId switch
     {
         "build.prototype.wall"=>"Split-plank wall", "build.wood.w21-half-storey-stair"=>"W21 stair",
+        "build.wood.w22-full-storey-stair"=>"W22 stair", "build.wood.w24-stair-handrail"=>"W24 handrail",
         "build.wood.w09-doorway"=>"Doorway wall", "build.wood.w11-shutter-wall"=>"Window wall",
         "build.wood.w15-gable-rising" or "build.wood.w15-gable-falling"=>"Half-gable", _=>d.displayName
     };
@@ -18,7 +19,7 @@ public static class BuildUiContent
         "build.prototype.foundation"=>0, "build.prototype.floor"=>1, "build.prototype.wall"=>2,
         "build.prototype.corner"=>3, "build.wood.wattle-wall"=>4, "build.wood.w21-half-storey-stair"=>5,
         "build.wood.thatch-roof-panel"=>6, "build.wood.w09-doorway"=>7, "build.wood.w11-shutter-wall"=>8,
-        "build.wood.w15-gable-rising"=>9, _=>10
+        "build.wood.w15-gable-rising"=>9, "build.wood.w22-full-storey-stair"=>10, "build.wood.w24-stair-handrail"=>11, _=>12
     };
     public static string Dimensions(BuildDefinition d)
     { Vector3 s=d.LocalBounds.size; return $"{s.x:0.##} × {s.y:0.##} × {s.z:0.##} m"; }
@@ -30,6 +31,8 @@ public static class BuildUiContent
         "build.prototype.corner"=>"A timber post for corners, interior supports and stacking.",
         "build.wood.wattle-wall"=>"Woven timber panel for enclosing your structure.",
         "build.wood.w21-half-storey-stair"=>"A half-storey flight. Continue from the upper end.",
+        "build.wood.w22-full-storey-stair"=>"A full-storey flight: 3 m rise over a 4 m run. Aim beneath a piece to descend.",
+        "build.wood.w24-stair-handrail"=>"A 2 m rail segment. Aim at either stair edge; use two segments per side of W22.",
         "build.wood.thatch-roof-panel"=>"One pitched panel. Aim at an edge to continue the slope or span.",
         "build.wood.w09-doorway"=>"Wall with a 1.25 × 2.25 m clear doorway.",
         "build.wood.w11-shutter-wall"=>"Wall with a 1 × 0.75 m window opening.",

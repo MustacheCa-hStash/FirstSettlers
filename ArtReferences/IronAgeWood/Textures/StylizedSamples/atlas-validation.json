@@ -1,0 +1,14 @@
+{
+  "variants": ["soft-hewn-oak", "weathered-woodland"],
+  "exportSize": [2048, 2048],
+  "generatedSourceSize": [1254, 1254],
+  "contentLayout": "../atlas-layout.json",
+  "paddingPixels": 16,
+  "alphaChangedPixels": 0,
+  "wattleChangedChannels": 0,
+  "woodRepeatEdgeMaxDifference": 0,
+  "validationScope": "Uncompressed PNG pixels; original region I including gutters retained; all other regions opaque",
+  "preview": "existing-wall-texture-swap.png",
+  "previewRenderer": "Blender Cycles, same imported modular wall and unchanged UV0, identical materials except base-color image",
+  "unityLiveValidation": false
+}

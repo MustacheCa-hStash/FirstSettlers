@@ -63,9 +63,15 @@ public sealed class BuildMenuView : IDisposable
         {
             var entry=new Entry{definition=definition};
             var texture=Thumbnail(definition);
-            entry.button=new Button(()=>SetSelection(entry.definition)){name=definition.contentId,
+            entry.button=new Button(()=>HighlightEntry(entry.definition)){name=definition.contentId,
                 tooltip=BuildUiContent.Name(definition)+" · "+BuildUiContent.Dimensions(definition)};
             entry.button.AddToClassList("build-preset");
+            entry.button.RegisterCallback<FocusInEvent>(_=>HighlightEntry(entry.definition));
+            entry.button.RegisterCallback<ClickEvent>(e=>
+            {
+                if(!visible || e.button!=0 || e.clickCount!=2)return;
+                HighlightEntry(entry.definition);ConfirmSelection();e.StopImmediatePropagation();
+            });
             var image=new Image{image=texture,scaleMode=ScaleMode.ScaleToFit,pickingMode=PickingMode.Ignore};
             image.AddToClassList("build-thumbnail"); entry.button.Add(image);
             var label=new Label(BuildUiContent.Name(definition)){pickingMode=PickingMode.Ignore};
@@ -116,6 +122,11 @@ public sealed class BuildMenuView : IDisposable
             bool chosen=entry.definition==definition||entry.definition.flipVariant==definition;
             entry.button.EnableInClassList("selected",chosen);entry.quick.EnableInClassList("selected",chosen);
         }
+    }
+    private void HighlightEntry(BuildDefinition definition)
+    {
+        // A focused/clicked canonical gable tile represents either staged slope.
+        if(highlighted!=definition && definition.flipVariant!=highlighted)SetSelection(definition);
     }
     public void FlipSelection(){if(visible&&highlighted!=null&&highlighted.flipVariant!=null)SetSelection(highlighted.flipVariant);}
     public void ConfirmSelection(){if(visible&&highlighted!=null)select(highlighted);}

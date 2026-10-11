@@ -6,7 +6,7 @@ The building picker now uses the approved limestone-and-pillars style: three sep
 
 - **B** opens building; **B / Esc** exits.
 - Click a category to filter the catalog, then click a component to inspect its name, dimensions and description.
-- **Choose piece / Enter** confirms the highlighted definition and returns to placement.
+- **Enter** confirms the highlighted definition and returns to placement. Keyboard focus highlights a component too; **double-click** a catalog tile to select it immediately. The Choose piece button remains available.
 - For half-gables, **Flip slope / R** changes the staged variant and its thumbnail. It does not commit a world piece or change the active placement definition until confirmed.
 - The **Quick pieces** strip selects a catalog component and enters placement immediately. It is a shortcut strip for the current kit, not inventory or persisted custom favorites.
 - During placement, existing left-click place, right-click remove, Q/E/wheel rotation, arrow nudges, Page Up/Down height and R slope flip are preserved. **Tab** reopens the catalog with the active definition selected.
@@ -24,7 +24,7 @@ Catalog order/grouping is presentation-only. It does not change the preset array
 | Controller and hardware routing | `BuildingController.cs`, `Assets/Scripts/PlayerMovement/LocalPlayerInput.cs` |
 | Nine-slice limestone and pillar artwork | `Assets/Resources/Building/UI/StonePanel.png`, `StonePillar.png` |
 | Heading/body font assets | `Assets/Resources/Building/UI/Fonts/StoneHeading.asset`, `StoneBody.asset` |
-| Eleven actual-mesh thumbnails | `Assets/Resources/Building/UI/Thumbnails/` |
+| Thirteen actual-mesh thumbnails (twelve tiles plus mirrored gable) | `Assets/Resources/Building/UI/Thumbnails/` |
 | Asset baker and render/interaction validation | `Assets/Editor/BuildStoneUiAuthoring.cs` |
 
 Thumbnails are 512 × 384 transparent PNGs rendered from each installed BuildDefinition.mesh and material under simple diffuse lighting. Both half-gable slopes are baked; only the canonical slope occupies a catalog tile. The foundation preview is the actual plain foundation geometry, not the decorative masonry block drawn in the concept. Rebuild thumbnails after changing catalog geometry/materials using **Tools > Building > Rebuild Stone UI Assets**. This explicit action imports the skin as 2D textures, updates thumbnails and creates missing fonts; it never loads or saves a game scene or rebuilds the building catalog.
@@ -34,6 +34,13 @@ Fonts use Dynamic OS Georgia Bold for headings and Segoe UI Regular for body tex
 The catalog creates its visual tree once per view, caches its tiles and filters them in place. The UI does not render preview cameras or inspect meshes in player builds. Switching the detail view loads an already-baked texture; hidden menus have no per-frame UI refresh loop. Category symbols are cached UI Toolkit vector geometry. The passive placement HUD ignores pointer picking throughout its subtree. LocalPlayerInput remains the local hardware reader; UI submit handling preserves the staged slope when a canonical tile has focus and avoids duplicate confirmation.
 
 ## Verification
+
+W22/W24 thumbnails are now installed in the tile grid, detail panel and quick
+strip; both belong to the Stairs category alongside W21. The targeted
+`-StairUiAssets` authoring switch bakes only those two images and then validates
+the picker. Installed-asset checks cover keyboard focus followed by Enter,
+double-click confirmation, preserved staged gable slopes and layouts at all four
+resolutions. Native Enter/held-key/menu guards passed separately.
 
 **Tools > Building > Validate Stone UI (synthetic)** tests the installed UI skin bindings, texture dimensions, all current thumbnails, category membership, staged versus committed selection, both gable variants, quick-strip clicks, keyboard submit with a focused canonical tile, passive HUD picking and contained controls. It renders real UI Toolkit output at 1280 × 720, 1920 × 1080, 3840 × 2160 and 1024 × 768, including placement and warning views. It uses temporary objects and a cloned PanelSettings; it does not inspect the saved world camera.
 

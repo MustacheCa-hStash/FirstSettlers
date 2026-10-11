@@ -1,0 +1,731 @@
+{
+  "sourceMeshEdits": false,
+  "uvEdits": false,
+  "models": [
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\BayPost_0.25Wx2.75Hx0.25D.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 0,
+        "C": 0,
+        "D": 0,
+        "E": 0,
+        "F": 0,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 6,
+      "exceptions": [
+        {
+          "object": "Cube",
+          "polygon": 0,
+          "uvBounds": [
+            0.0,
+            0.6311216950416565,
+            1.0,
+            0.7477845549583435
+          ]
+        },
+        {
+          "object": "Cube",
+          "polygon": 1,
+          "uvBounds": [
+            -2.9802322387695312e-08,
+            0.6285958290100098,
+            1.0,
+            0.7483569979667664
+          ]
+        },
+        {
+          "object": "Cube",
+          "polygon": 2,
+          "uvBounds": [
+            0.0,
+            0.630466878414154,
+            1.0,
+            0.7477808594703674
+          ]
+        },
+        {
+          "object": "Cube",
+          "polygon": 3,
+          "uvBounds": [
+            -2.9802322387695312e-08,
+            0.6285717487335205,
+            1.0,
+            0.7481874823570251
+          ]
+        },
+        {
+          "object": "Cube",
+          "polygon": 4,
+          "uvBounds": [
+            0.2588742673397064,
+            0.26097437739372253,
+            0.4912432134151459,
+            0.4933432638645172
+          ]
+        },
+        {
+          "object": "Cube",
+          "polygon": 5,
+          "uvBounds": [
+            0.25070568919181824,
+            0.2532591223716736,
+            0.4959445297718048,
+            0.49849796295166016
+          ]
+        }
+      ],
+      "uvSHA256": "ea6d3aab62faafc1dccf886ed5332a5b279d29651f5eeef650ebb750a48210e5"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Floors\\CornerBearingCap_0.25Wx0.25Hx0.25D.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 4,
+        "C": 0,
+        "D": 0,
+        "E": 2,
+        "F": 0,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "7237c654431c6954e66a7585bc452b3a482fbd72ff65336e0b9845ff776627bd"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Floors\\RimBeam_3.50Wx0.25Hx0.25D.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 4,
+        "C": 0,
+        "D": 0,
+        "E": 2,
+        "F": 0,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "340f0911945ef4a1db1db1d6fcb7ecd4a8a1e28c74ecfbcf999510b99f144141"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Floors\\TimberFloor_4.00Wx0.25Hx4.00D.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 108,
+        "C": 0,
+        "D": 0,
+        "E": 30,
+        "F": 24,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "d8a84600f7594988bd7dec6cdcb8d6787020461855816e2981d3363eadafbe0c"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Floors\\TimberFloor_4.00Wx0.25Hx4.00D_UV1.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 108,
+        "C": 0,
+        "D": 0,
+        "E": 26,
+        "F": 28,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "e2608fb37b78b2b6e4b4356b1025b6bea7a963bdd15c584897264346641d5066"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Floors\\TimberFloor_4.00Wx0.25Hx4.00D_UV2.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 108,
+        "C": 0,
+        "D": 0,
+        "E": 30,
+        "F": 24,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "5f694a8512dd7583a699bcdcffc512a31498a1b626bed9504b42979a944da2bb"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Floors\\TimberFloorStairwell_4.00Wx0.25Hx4.00D.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 160,
+        "C": 0,
+        "D": 0,
+        "E": 52,
+        "F": 28,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "5e4a2c8c2e7672bd6f46ce1ca29f3ac1e35d0ff054202a01bacf2547c59e874d"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Floors\\TimberFloorStairwell_4.00Wx0.25Hx4.00D_UV1.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 160,
+        "C": 0,
+        "D": 0,
+        "E": 38,
+        "F": 42,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "80ceea60c4990a55b233b62ed80468868ca6dda4740359706abc32c5f5cba3d9"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Floors\\TimberFloorStairwell_4.00Wx0.25Hx4.00D_UV2.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 160,
+        "C": 0,
+        "D": 0,
+        "E": 50,
+        "F": 30,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "24605f1f20578cce1445d6211797e940c0a4edcd03d3852dde07925991c39acb"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Modular\\BayPost_0.26Wx3.00Hx0.26D.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 4,
+        "C": 0,
+        "D": 0,
+        "E": 0,
+        "F": 2,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "014269f694170436208c3a2ebb103527bc7e0f70da53ae5def523e18705264dc"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Modular\\BayPost_0.26Wx3.00Hx0.26D_UV1.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 4,
+        "C": 0,
+        "D": 0,
+        "E": 2,
+        "F": 0,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "9a60f420ee061294156dd8e13589fe8172da819acfb8d01bd0b8a7f46bce64a9"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Modular\\BayPost_0.26Wx3.00Hx0.26D_UV2.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 4,
+        "C": 0,
+        "D": 0,
+        "E": 2,
+        "F": 0,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "5d5eb56af578bed91180dfbcb2987979b96b9adea2252d061d87de17ce3a3bc5"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Modular\\SplitPlankWall_4.00Wx3.00Hx0.25D.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 419,
+        "C": 0,
+        "D": 0,
+        "E": 62,
+        "F": 67,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "05664d742df83ce1d260f7e6f4302e7b7f9537ca01f9d9dfcd04f421a27221c8"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Modular\\W09_DoorwayWall_4x3x0.25.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 96,
+        "C": 0,
+        "D": 0,
+        "E": 26,
+        "F": 22,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "bac302086939a94708832ed76e3e35ce48ad9a731c167448be761509e8bd4169"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Modular\\W11_ShutterWall_4x3x0.25.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 128,
+        "C": 0,
+        "D": 0,
+        "E": 28,
+        "F": 36,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "231b6fa4dbb250168b1736dbff96aa474b28a5aee4c96f4a5c1cb926f19704f4"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Modular\\W15_GableFalling_2x2x0.25.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 40,
+        "C": 0,
+        "D": 0,
+        "E": 11,
+        "F": 8,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "10b172d6344db9e63d497a4ab707f1aa806230549a8465aa46ca5b227e41b658"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Modular\\W15_GableFalling_RoofSeam.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 4,
+        "C": 0,
+        "D": 0,
+        "E": 0,
+        "F": 2,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "15c9bbf303819fa68c15ea214df9ce81b42f1c1161de0f01042066f83321a09e"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Modular\\W15_GableRising_2x2x0.25.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 40,
+        "C": 0,
+        "D": 0,
+        "E": 11,
+        "F": 8,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "c9f28bec3202c73548456e23e63caf82a91d8d4986b5689023644e52bb3fd49f"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Modular\\W15_GableRising_RoofSeam.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 4,
+        "C": 0,
+        "D": 0,
+        "E": 0,
+        "F": 2,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "ac1386482b2b763b88c0463ec593b632d36805926daefaa6639f401f649d81d4"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Modular\\WattleWall_4.00Wx3.00Hx0.25D.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 8,
+        "C": 0,
+        "D": 0,
+        "E": 2,
+        "F": 2,
+        "G": 0,
+        "H": 0,
+        "I": 4
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "315dfb7f350fe715d9b238f85ada1b3dd5c85faae1293f61350c1000e467151f"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\SplitPlankWall_3.5Wx2.75Hx0.25D.fbx",
+      "facesByContentRegion": {
+        "A": 279,
+        "B": 185,
+        "C": 78,
+        "D": 0,
+        "E": 0,
+        "F": 0,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 6,
+      "exceptions": [
+        {
+          "object": "Wood_SplitPlankWall",
+          "polygon": 60,
+          "uvBounds": [
+            0.9443199634552002,
+            0.8817873001098633,
+            0.9456897377967834,
+            0.8827261328697205
+          ]
+        },
+        {
+          "object": "Wood_SplitPlankWall",
+          "polygon": 61,
+          "uvBounds": [
+            0.004008512943983078,
+            0.8817873001098633,
+            0.005378214176744223,
+            0.8827261328697205
+          ]
+        },
+        {
+          "object": "Wood_SplitPlankWall",
+          "polygon": 264,
+          "uvBounds": [
+            0.9443199634552002,
+            0.8827260732650757,
+            0.9456897377967834,
+            0.9321916699409485
+          ]
+        },
+        {
+          "object": "Wood_SplitPlankWall",
+          "polygon": 265,
+          "uvBounds": [
+            0.004008512943983078,
+            0.8827261328697205,
+            0.005378214176744223,
+            0.9321917295455933
+          ]
+        },
+        {
+          "object": "Wood_SplitPlankWall",
+          "polygon": 478,
+          "uvBounds": [
+            0.005378212779760361,
+            0.8827260732650757,
+            0.9443199634552002,
+            0.9321917295455933
+          ]
+        },
+        {
+          "object": "Wood_SplitPlankWall",
+          "polygon": 510,
+          "uvBounds": [
+            0.008215782232582569,
+            0.942816972732544,
+            0.9816067218780518,
+            0.992919921875
+          ]
+        }
+      ],
+      "uvSHA256": "c21a343998e4bd423ade1944806b404d5f8bea3b4618e0f776ceb1807c55e95d"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Stairs\\HalfStoryStair_1.25Wx1.5Hx2.0D.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 32,
+        "C": 12,
+        "D": 0,
+        "E": 0,
+        "F": 0,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 16,
+      "exceptions": [
+        {
+          "object": "HalfFlightStair",
+          "polygon": 10,
+          "uvBounds": [
+            0.012315690517425537,
+            0.8814626336097717,
+            0.9934921860694885,
+            0.9923933148384094
+          ]
+        },
+        {
+          "object": "HalfFlightStair",
+          "polygon": 11,
+          "uvBounds": [
+            0.0,
+            0.8677621483802795,
+            1.0,
+            1.00089430809021
+          ]
+        },
+        {
+          "object": "HalfFlightStair",
+          "polygon": 16,
+          "uvBounds": [
+            0.012315690517425537,
+            0.8814626336097717,
+            0.9934921860694885,
+            0.9923933148384094
+          ]
+        },
+        {
+          "object": "HalfFlightStair",
+          "polygon": 17,
+          "uvBounds": [
+            0.0,
+            0.8677621483802795,
+            1.0,
+            1.00089430809021
+          ]
+        },
+        {
+          "object": "HalfFlightStair",
+          "polygon": 22,
+          "uvBounds": [
+            0.012315690517425537,
+            0.8814626336097717,
+            0.9934921860694885,
+            0.9923933148384094
+          ]
+        },
+        {
+          "object": "HalfFlightStair",
+          "polygon": 23,
+          "uvBounds": [
+            0.0,
+            0.8677621483802795,
+            1.0,
+            1.00089430809021
+          ]
+        },
+        {
+          "object": "HalfFlightStair",
+          "polygon": 28,
+          "uvBounds": [
+            0.012315690517425537,
+            0.8814626336097717,
+            0.9934921860694885,
+            0.9923933148384094
+          ]
+        },
+        {
+          "object": "HalfFlightStair",
+          "polygon": 29,
+          "uvBounds": [
+            0.0,
+            0.8677621483802795,
+            1.0,
+            1.00089430809021
+          ]
+        },
+        {
+          "object": "HalfFlightStair",
+          "polygon": 34,
+          "uvBounds": [
+            0.012315690517425537,
+            0.8814626336097717,
+            0.9934921860694885,
+            0.9923933148384094
+          ]
+        },
+        {
+          "object": "HalfFlightStair",
+          "polygon": 35,
+          "uvBounds": [
+            0.0,
+            0.8677621483802795,
+            1.0,
+            1.00089430809021
+          ]
+        },
+        {
+          "object": "HalfFlightStair",
+          "polygon": 40,
+          "uvBounds": [
+            0.012315690517425537,
+            0.8814626336097717,
+            0.9934921860694885,
+            0.9923933148384094
+          ]
+        },
+        {
+          "object": "HalfFlightStair",
+          "polygon": 41,
+          "uvBounds": [
+            0.0,
+            0.8677621483802795,
+            1.0,
+            1.00089430809021
+          ]
+        },
+        {
+          "object": "HalfFlightStair",
+          "polygon": 46,
+          "uvBounds": [
+            0.012315690517425537,
+            0.8814626336097717,
+            0.9934921860694885,
+            0.9923933148384094
+          ]
+        },
+        {
+          "object": "HalfFlightStair",
+          "polygon": 47,
+          "uvBounds": [
+            0.0,
+            0.8677621483802795,
+            1.0,
+            1.00089430809021
+          ]
+        },
+        {
+          "object": "HalfFlightStair",
+          "polygon": 52,
+          "uvBounds": [
+            0.012315690517425537,
+            0.8814626336097717,
+            0.9934921860694885,
+            0.9923933148384094
+          ]
+        },
+        {
+          "object": "HalfFlightStair",
+          "polygon": 53,
+          "uvBounds": [
+            0.0,
+            0.8677621483802795,
+            1.0,
+            1.00089430809021
+          ]
+        }
+      ],
+      "uvSHA256": "cf53b14c9759ae4853da5698bcba7d7d8eb61a410472f89b97df369d29e14960"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Stairs\\W22_FullStoreyStair_1.25Wx3Hx4D.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 84,
+        "C": 0,
+        "D": 0,
+        "E": 18,
+        "F": 18,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "a628e085a4c30c123511dc1b92421646a5954309fa02aa8484a0e47136c859a0"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\Stairs\\W24_StairHandrail_0.25Wx2.5Hx2D.fbx",
+      "facesByContentRegion": {
+        "A": 0,
+        "B": 12,
+        "C": 0,
+        "D": 0,
+        "E": 2,
+        "F": 4,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "e39a6bfedd23c8d2669506288c81e576598c89430b437f79e1a2362b361d6d20"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\TwoPlankInfill_0.5Wx2.75Hx0.25D.fbx",
+      "facesByContentRegion": {
+        "A": 54,
+        "B": 10,
+        "C": 78,
+        "D": 0,
+        "E": 0,
+        "F": 0,
+        "G": 0,
+        "H": 0,
+        "I": 0
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "f9aeb349330244dd402037741d7bf6c0a349856e0ecc7f8f1989d7b198abf8a5"
+    },
+    {
+      "file": "Assets\\Models\\Buildings\\Wood\\WattleWall_3.5Wx2.75Hx0.25D.fbx",
+      "facesByContentRegion": {
+        "A": 8,
+        "B": 0,
+        "C": 0,
+        "D": 0,
+        "E": 2,
+        "F": 2,
+        "G": 0,
+        "H": 0,
+        "I": 4
+      },
+      "facesOutsideContentBounds": 0,
+      "exceptions": [],
+      "uvSHA256": "5101dfc7ecda6e4a021e5e3c4168d34b27fbed8af5babab6ec35ec0f66714e94"
+    }
+  ]
+}

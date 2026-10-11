@@ -24,14 +24,17 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: 412ed0d4ef4df2d4fa10520abb1cf1ac, type: 3}
+        m_Texture: {fileID: 2800000, guid: 74f972a553254ebe80a279a46109fec3, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _AlphaClip: 0
     - _AmbientFloor: 0.18
     - _Brightness: 1
     - _Contrast: 0.9
+    - _Cull: 2
+    - _Cutoff: 0.5
     - _DirectLightStrength: 0.85
     - _LightWrap: 0.08
     - _Saturation: 0.9

@@ -8,6 +8,9 @@ W09/W11 and the flippable W15 half-gable extend the menu to ten options. See
 [opening wall kit](OPENING_WALL_KIT.md) for models, open colliders, triangle/roof
 snaps and contextual seam strips.
 
+W22 full-storey stairs and W24 segment handrails extend it to twelve. See
+[stair extensions and terrain eligibility](W22_W24_STAIRS.md).
+
 ## Blender
 
 Source: `C:/Users/samee/OneDrive/Desktop/BlenderModelsFirstSettlers/Building/BuildComponents.blend`.

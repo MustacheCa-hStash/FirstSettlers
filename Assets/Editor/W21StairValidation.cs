@@ -125,15 +125,25 @@ public static class W21StairValidation
         using var session = new BuildSession(); var origin = new Vector3(100,10,100); var rotation = BuildGeometry.Rotation(yaw);
         var frame = session.CreateFrame(origin,yaw);
         session.Add(catalog.presets[2],frame,new Vector3Int(-8,0,-8),0,true);
-        for (int flight = 0; flight < flights; ++flight) session.Add(stair,frame,new Vector3Int(0,6*flight,8*flight),0,false);
-        session.Add(catalog.presets[1],frame,new Vector3Int(0,6*flights,8*flights),0,false);
-        using var gameplay = new BuildGameplay(session); gameplay.Update(origin,32,40,8); Physics.SyncTransforms();
+        float rise=stair.LocalBounds.size.y,run=stair.LocalBounds.size.z;
+        for (int flight = 0; flight < flights; ++flight)
+        {
+            session.Add(stair,frame,BuildGeometry.Ticks(new Vector3(0,rise*flight,run*flight)),0,false);
+            if(stair.contentId==StairExtensionSetup.W22Id)
+                foreach(float segment in new[]{0f,2f})foreach(float side in new[]{-.1875f,1.1875f})
+                {
+                    var railFrame=session.CreateFrame(origin+rotation*new Vector3(side,rise*flight+segment*.75f,run*flight+segment),yaw);
+                    session.Add(catalog.Find(StairExtensionSetup.W24Id),railFrame,default,0,false);
+                }
+        }
+        session.Add(catalog.presets[1],frame,BuildGeometry.Ticks(new Vector3(0,rise*flights,run*flights)),0,false);
+        using var gameplay = new BuildGameplay(session); gameplay.Update(origin,32,40,64); Physics.SyncTransforms();
         var rig = new GameObject("W21 motor traversal"); rig.layer = GameplayLayers.Player;
         var controller = rig.AddComponent<CharacterController>();
         // Matches the saved player's CC configuration, read without opening that scene.
         controller.height = 1.8f; controller.center = new Vector3(0,.9f,0); controller.radius = .4f;
         controller.slopeLimit = 50; controller.stepOffset = .3f; controller.skinWidth = .08f; controller.minMoveDistance = 0;
-        float endZ = 2*flights+.8f, topY = 1.5f*flights;
+        float endZ = run*flights+.8f, topY = rise*flights;
         rig.transform.SetPositionAndRotation(origin+rotation*new Vector3(x,down ? topY+.08f : .08f,down ? endZ : -.8f),rotation);
         var motor = rig.AddComponent<CharacterMotor>(); Invoke(motor,"Awake"); Physics.SyncTransforms();
         float previousZ = down ? endZ : -.8f, previousY = down ? topY+.08f : .08f;
@@ -147,13 +157,13 @@ public static class W21StairValidation
                 motor.Simulate(new CharacterMoveCommand(new Vector2(0,down ? -1 : 1),false,false,false),dt);
                 Vector3 local = Quaternion.Inverse(rotation)*(rig.transform.position-origin);
                 if (i > 12 && Mathf.Abs(local.z-previousZ) < .001f) stalled++; else stalled = 0;
-                if (flights == 2 && local.z > 1.5f && local.z < 2.5f && Mathf.Abs(local.z-previousZ) > .005f)
+                if (flights == 2 && local.z > run-.5f && local.z < run+.5f && Mathf.Abs(local.z-previousZ) > .005f)
                 {
                     float ratio = (local.y-previousY)/(local.z-previousZ);
                     minJoinSlope = Mathf.Min(minJoinSlope,ratio); maxJoinSlope = Mathf.Max(maxJoinSlope,ratio); joinSamples++;
                 }
                 previousZ = local.z; previousY = local.y;
-                if (local.z > .2f && local.z < 2*flights-.4f && !motor.IsGrounded) airFrames++;
+                if (local.z > .2f && local.z < run*flights-.4f && !motor.IsGrounded) airFrames++;
                 Check(stalled < 20,$"Stair walk got stuck: yaw={yaw}, x={x}, down={down}, position={local}.");
                 Check(local.y > -.2f && local.y < topY+.6f,"Character fell through or rose above the stair.");
                 if ((!down && local.z > endZ) || (down && local.z < -.65f))

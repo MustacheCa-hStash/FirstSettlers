@@ -31,7 +31,7 @@
         <ui:VisualElement name="build-quick-pieces" class="build-quick-pieces" />
       </ui:VisualElement>
       <ui:VisualElement class="build-footer stone-panel">
-        <ui:Label text="Enter · Choose     B / Esc · Exit" />
+        <ui:Label text="Enter / Double-click · Choose     B / Esc · Exit" />
       </ui:VisualElement>
     </ui:VisualElement>
   </ui:VisualElement>

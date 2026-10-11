@@ -42,6 +42,7 @@ public static class ModularWoodValidation
             var c=Resources.Load<BuildCatalog>("Building/PrototypeCatalog");Check(Application.isPlaying,"Validation must run in Play mode");
             GameplayLifetime(c);
             OpeningWallValidation.Runtime(c,Check);
+            StairExtensionValidation.Runtime(c,Check);
             var walls=new[]{c.presets[0],c.Find(WattleWallSetup.ContentId)};
             for(int yaw=0;yaw<8;yaw++)
             {
@@ -49,19 +50,20 @@ public static class ModularWoodValidation
                 foreach(var wall in walls)foreach(var mate in walls)Placement(c,yaw,wall,mate);
             }
             var walk=typeof(W21StairValidation).GetMethod("Walk",BindingFlags.NonPublic|BindingFlags.Static);
-            var stair=c.Find(W21StairSetup.ContentId);
+            foreach(var stair in new[]{c.Find(W21StairSetup.ContentId),c.Find(StairExtensionSetup.W22Id)})
             foreach(int yaw in new[]{0,1,2,7})foreach(float x in new[]{.43f,.625f,.82f})foreach(bool down in new[]{false,true})foreach(float dt in new[]{1f/60,1f/120})foreach(int flights in new[]{1,2})
                 walk.Invoke(null,new object[]{stair,c,yaw,x,down,dt,flights});
             Render(c);Check(errors.Count==0,"Runtime errors: "+string.Join(" | ",errors));
-            Directory.CreateDirectory(".utmp/modular-kit");File.WriteAllText(".utmp/modular-kit/validation.json","{\"passed\":true,\"checks\":"+checks+",\"realMotorWalks\":96}");
-            Debug.Log("MODULAR WOOD PASS: "+checks+" checks; full-span dimensions, authored UVs/normals, varied floors, exact endpoint snaps, butt/corner/T/cross covers, explicit-post suppression/restoration, construction order, three storeys, retained colliders, 96 real-motor stair walks and actual rendered views.");
+            Directory.CreateDirectory(".utmp/modular-kit");File.WriteAllText(".utmp/modular-kit/validation.json","{\"passed\":true,\"checks\":"+checks+",\"realMotorWalks\":192}");
+            Debug.Log("MODULAR WOOD PASS: "+checks+" checks; full-span dimensions, authored UVs/normals, varied floors, exact endpoint snaps, butt/corner/T/cross covers, explicit-post suppression/restoration, construction order, three storeys, retained colliders, 192 real-motor stair walks and actual rendered views.");
             Application.logMessageReceived-=Log;EditorApplication.Exit(0);
         }catch(Exception ex){Application.logMessageReceived-=Log;Debug.LogException(ex);EditorApplication.Exit(1);}
     }
     private static void Assets(BuildCatalog c)
     {
-        Check(c.presets.Length==10 && c.Find(SplitPlankWallSetup.InfillContentId)==null,"Removed infill still in menu or catalog changed unexpectedly");
+        Check(c.presets.Length==12 && c.Find(SplitPlankWallSetup.InfillContentId)==null,"Removed infill still in menu or catalog changed unexpectedly");
         OpeningWallValidation.Assets(c,Check);
+        StairExtensionValidation.Assets(c,Check);
         var wall=c.presets[0];var floor=c.presets[1];var post=c.presets[3];var wattle=c.Find(WattleWallSetup.ContentId);
         foreach(var d in new[]{wall,wattle})
         {
@@ -79,6 +81,7 @@ public static class ModularWoodValidation
         var all=new List<Mesh>{wall.mesh,wattle.mesh};all.AddRange(post.uvVariants);all.AddRange(floor.uvVariants);all.AddRange(floor.floorOpeningUvVariants);
         foreach(var id in new[]{OpeningWallSetup.DoorId,OpeningWallSetup.WindowId,OpeningWallSetup.GableId,OpeningWallSetup.FallingId})all.Add(c.Find(id).mesh);
         all.Add(c.Find(OpeningWallSetup.GableId).gableRoofSeamMesh);all.Add(c.Find(OpeningWallSetup.FallingId).gableRoofSeamMesh);
+        all.Add(c.Find(StairExtensionSetup.W22Id).mesh);all.Add(c.Find(StairExtensionSetup.W24Id).mesh);
         foreach(var mesh in all)UVs(mesh);
         foreach(var variant in floor.uvVariants)
         {
@@ -258,6 +261,13 @@ public static class ModularWoodValidation
             s.Add(c.Find(OpeningWallSetup.GableId),f,new Vector3Int(0,12,0),0,false);s.Add(c.Find(OpeningWallSetup.FallingId),f,new Vector3Int(8,12,0),0,false);
             s.Add(c.Find(ThatchRoofSetup.ContentId),f,new Vector3Int(0,12,16),2,false);s.Add(c.Find(ThatchRoofSetup.ContentId),f,new Vector3Int(16,12,0),6,false);
             Capture("opening-kit-house",new Vector3(9,7,-11),new Vector3(2,2.5f,2),4.6f);
+            foreach(ulong id in new List<ulong>(s.Pieces.Keys))s.Remove(id);
+            s.Add(c.Find(StairExtensionSetup.W22Id),f,default,0,true);
+            foreach(float z in new[]{0f,2f})foreach(float x in new[]{-.1875f,1.1875f})
+                s.Add(c.Find(StairExtensionSetup.W24Id),s.CreateFrame(new Vector3(x,z*.75f,z),0),default,0,false);
+            s.Add(c.presets[1],f,new Vector3Int(0,12,16),0,false);
+            Capture("w22-with-handrails",new Vector3(7,6,-7),new Vector3(1.5f,1.9f,2.5f),3.9f);
+            Capture("w22-back",new Vector3(-5,5,9),new Vector3(.625f,1.5f,2),3.1f);
         }finally{RenderPipelineManager.beginCameraRendering-=submit;GraphicsSettings.defaultRenderPipeline=old;QualitySettings.renderPipeline=quality;RenderTexture.active=active;target.Release();Object.DestroyImmediate(target);Object.DestroyImmediate(camObj);Object.DestroyImmediate(lightObj);}
     }
 }

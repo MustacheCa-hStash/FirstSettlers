@@ -18,6 +18,9 @@ public static class BuildResolvedGeometry
     }
     public static bool Connects(BuildPieceRecord a,BuildResolvedState sa,BuildPieceRecord b,BuildResolvedState sb)
     {
+        if(a.Definition.kind==BuildPartKind.Stair)return BuildStairAttachment.Connects(a,b,sb);
+        if(b.Definition.kind==BuildPartKind.Stair)return BuildStairAttachment.Connects(b,a,sa);
+        if(a.Definition.kind==BuildPartKind.Handrail || b.Definition.kind==BuildPartKind.Handrail)return false;
         // Accepted interpenetration is real structural contact. Clearance alone never grants support.
         if(Overlaps(a,sa,b,sb))return true;
         if(StackSocket(a,b) || StackSocket(b,a))return true;

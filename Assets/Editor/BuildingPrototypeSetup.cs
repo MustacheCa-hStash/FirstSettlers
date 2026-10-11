@@ -63,6 +63,7 @@ public static class BuildingPrototypeSetup
         if (stair != null) presets.Add(stair);
         presets.AddRange(ThatchRoofSetup.CreateIfModelsAvailable());
         if(File.Exists(ModularWoodSetup.Folder+"/"+OpeningWallSetup.Files[0]))presets.AddRange(OpeningWallSetup.Create(wall,corner));
+        if(File.Exists(StairExtensionSetup.W22Model))presets.AddRange(StairExtensionSetup.Create());
         catalog.presets = presets.ToArray(); catalog.validPreview = valid; catalog.invalidPreview = invalid;
         catalog.panel = panel; catalog.layout = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(Folder + "/BuildMenu.uxml");
         if (catalog.layout == null || panel.themeStyleSheet == null) throw new InvalidOperationException("Building UI failed to import.");

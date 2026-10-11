@@ -1,0 +1,115 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: w24-handrail
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.wood.w24-stair-handrail
+  displayName: W24 stair handrail
+  kind: 6
+  wallPlacementMode: 0
+  sizeUnits: {x: 1, y: 10, z: 8}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: 0, y: 0, z: 0}
+  jointSockets: []
+  stackRiseUnits: 0
+  wallEndInsetUnits: 0
+  mesh: {fileID: -5819758700428987779, guid: 4d271dc162eb42f891e3cc84a3015922, type: 3}
+  solidBoxes: []
+  wallOpenings: []
+  gableSlope: 0
+  flipVariant: {fileID: 0}
+  gableRoofSeamMesh: {fileID: 0}
+  uvVariants: []
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes:
+  - mesh: {fileID: 4300000, guid: e08ad445459112143ba513867b7c2505, type: 2}
+    vertices:
+    - {x: 0.0625, y: 0, z: 0}
+    - {x: 0.1875, y: 0, z: 0}
+    - {x: 0.0625, y: 1, z: 0}
+    - {x: 0.1875, y: 1, z: 0}
+    - {x: 0.0625, y: 0, z: 0.125}
+    - {x: 0.1875, y: 0, z: 0.125}
+    - {x: 0.0625, y: 1, z: 0.125}
+    - {x: 0.1875, y: 1, z: 0.125}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: -1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0, y: 1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    - {x: -0.12403473, y: -0.99227786, z: 0}
+    - {x: 0.70710677, y: 0, z: 0.70710677}
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: 0.99227786, z: 0.12403473}
+    bounds:
+      m_Center: {x: 0.125, y: 0.5, z: 0.0625}
+      m_Extent: {x: 0.0625, y: 0.5, z: 0.0625}
+  - mesh: {fileID: 4300000, guid: a2a945a3543d999428de54300c2895ba, type: 2}
+    vertices:
+    - {x: 0.0625, y: 1.5, z: 1.875}
+    - {x: 0.1875, y: 1.5, z: 1.875}
+    - {x: 0.0625, y: 2.5, z: 1.875}
+    - {x: 0.1875, y: 2.5, z: 1.875}
+    - {x: 0.0625, y: 1.5, z: 2}
+    - {x: 0.1875, y: 1.5, z: 2}
+    - {x: 0.0625, y: 2.5, z: 2}
+    - {x: 0.1875, y: 2.5, z: 2}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: -1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0, y: 1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    - {x: -0.12403473, y: -0.99227786, z: 0}
+    - {x: 0.70710677, y: 0, z: 0.70710677}
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: 0.99227786, z: 0.12403473}
+    bounds:
+      m_Center: {x: 0.125, y: 2, z: 1.9375}
+      m_Extent: {x: 0.0625, y: 0.5, z: 0.0625}
+  - mesh: {fileID: 4300000, guid: 90c322303cdb03d4e947b6be333063d5, type: 2}
+    vertices:
+    - {x: 0.0625, y: 0.9, z: 0}
+    - {x: 0.1875, y: 0.9, z: 0}
+    - {x: 0.0625, y: 1, z: 0}
+    - {x: 0.1875, y: 1, z: 0}
+    - {x: 0.0625, y: 2.4, z: 2}
+    - {x: 0.1875, y: 2.4, z: 2}
+    - {x: 0.0625, y: 2.5, z: 2}
+    - {x: 0.1875, y: 2.5, z: 2}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -0.8, z: 0.6}
+    - {x: -1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0, y: 1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    - {x: -0.7808687, y: -0.6246951, z: 0}
+    - {x: 0.049937617, y: 0.59925145, z: 0.7990019}
+    - {x: 0, y: -0.6, z: -0.8}
+    - {x: 0, y: 0.62469506, z: 0.78086877}
+    bounds:
+      m_Center: {x: 0.125, y: 1.7, z: 1}
+      m_Extent: {x: 0.0625, y: 0.8, z: 1}
+  roofAttachment: 0
+  material: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
+  authoringPrefab: {fileID: 5458148509471059331, guid: 1ded546a13d48ea46ba915ceb658d790, type: 3}
+  maxHealth: 100

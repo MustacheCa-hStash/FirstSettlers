@@ -1,0 +1,19 @@
+{
+  "models": [
+    {
+      "tag": "W22",
+      "file": "W22_FullStoreyStair_1.25Wx3Hx4D.fbx",
+      "triangles": 240,
+      "parts": 20,
+      "allFaceUVsValid": true
+    },
+    {
+      "tag": "W24",
+      "file": "W24_StairHandrail_0.25Wx2.5Hx2D.fbx",
+      "triangles": 36,
+      "parts": 3,
+      "allFaceUVsValid": true
+    }
+  ],
+  "existingObjectsPreserved": 271
+}

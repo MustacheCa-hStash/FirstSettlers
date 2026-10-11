@@ -14,6 +14,7 @@ public struct BuildPreview
     public Vector3Int StairFitNudge;
     public bool RoofContinuesFromBelow;
     public BuildResolvedState Resolved;
+    public ulong StairAimTarget;
     public BuildPlacementFailure Failure;
     public ulong BlockingPieceId;
     public Collider BlockingCollider;
@@ -50,6 +51,8 @@ public static class BuildPlacement
             Bounds bounds = target.Definition.LocalBounds;
             Vector3 point = BuildGeometry.LocalPoint(targetFrame, hit);
             Vector3 localNormal = Quaternion.Inverse(BuildGeometry.Rotation(target.WorldYawStep)) * normal;
+            if(BuildStairPlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,out var stairPreview))return stairPreview;
+            preview.StairAimTarget=target.Id;
             if(BuildGablePlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,out var gablePreview))return gablePreview;
             if(BuildSocketPlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,preferTopAttachment,out var socketPreview))return socketPreview;
             Vector3 origin;

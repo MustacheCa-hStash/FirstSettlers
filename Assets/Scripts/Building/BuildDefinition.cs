@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public enum BuildPartKind { Wall, Floor, Foundation, Corner, Stair, Roof }
+public enum BuildPartKind { Wall, Floor, Foundation, Corner, Stair, Roof, Handrail }
 public enum WallPlacementMode { Panel, Infill, Surface }
 public enum RoofAttachmentMode { None, Gable, Beam }
 public enum GableSlope { None, Rising, Falling }

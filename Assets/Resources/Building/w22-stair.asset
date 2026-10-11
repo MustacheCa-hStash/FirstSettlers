@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: w22-stair
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.wood.w22-full-storey-stair
+  displayName: W22 full-storey wood stair
+  kind: 4
+  wallPlacementMode: 0
+  sizeUnits: {x: 5, y: 12, z: 16}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: 0, y: 0, z: 0}
+  jointSockets: []
+  stackRiseUnits: 0
+  wallEndInsetUnits: 0
+  mesh: {fileID: -7135803234723070770, guid: dde545d9bda042e39d619654fd4f0074, type: 3}
+  solidBoxes: []
+  wallOpenings: []
+  gableSlope: 0
+  flipVariant: {fileID: 0}
+  gableRoofSeamMesh: {fileID: 0}
+  uvVariants: []
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 4300000, guid: d7daf3d1c4b995b44a66d6680518f7a8, type: 2}
+  occupiedVolumes:
+  - mesh: {fileID: 4300000, guid: d7daf3d1c4b995b44a66d6680518f7a8, type: 2}
+    vertices:
+    - {x: 0, y: 0, z: 0}
+    - {x: 0, y: 3, z: 4}
+    - {x: 0, y: 0, z: 4}
+    - {x: 1.25, y: 0, z: 0}
+    - {x: 1.25, y: 3, z: 4}
+    - {x: 1.25, y: 0, z: 4}
+    faceAxes:
+    - {x: -1, y: 0, z: 0}
+    - {x: 0, y: -0.8, z: 0.6}
+    - {x: 0, y: 0, z: 1}
+    - {x: 0, y: -1, z: 0}
+    edgeAxes:
+    - {x: 0, y: 0, z: 1}
+    - {x: 0, y: 1, z: 0}
+    - {x: 0, y: -0.6, z: -0.8}
+    - {x: 0.24253562, y: 0.5820855, z: 0.776114}
+    - {x: -1, y: 0, z: 0}
+    - {x: -0.3846154, y: 0.9230769, z: 0}
+    - {x: -0.298275, y: 0, z: 0.95448}
+    bounds:
+      m_Center: {x: 0.625, y: 1.5, z: 2}
+      m_Extent: {x: 0.625, y: 1.5, z: 2}
+  roofAttachment: 0
+  material: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
+  authoringPrefab: {fileID: 345690647492694524, guid: fe20b6e755977404d9e23ad9a1aed118, type: 3}
+  maxHealth: 100

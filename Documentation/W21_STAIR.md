@@ -1,5 +1,8 @@
 # W21 half-storey wood stair
 
+Current placement and terrain rules are documented in [W22/W24 and stair attachments](W22_W24_STAIRS.md).
+They supersede the historical placement rules below; W21's dimensions remain unchanged.
+
 W21 is linked as the **seventh** build option, after the original six. The uploaded visual model and the smooth walking collider are separate assets.
 
 ## Dimensions and orientation
