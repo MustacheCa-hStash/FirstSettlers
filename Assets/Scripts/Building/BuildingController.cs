@@ -134,7 +134,7 @@ public sealed class BuildingController : MonoBehaviour
         nudge += BuildGeometry.ViewRelativeNudge(command.Nudge, viewCamera.transform.rotation, gridYaw);
         var preview = BuildPlacement.Solve(selected, aimPoint, aimNormal, target,
             target != null ? world.Session.Frame(target.OwnFrameId) : null, worldHeading, contextTurn, nudge, ray.origin, preferTop);
-        if (guided) preview.Hint = "Sky guide · " + preview.Hint;
+        if (guided) preview.Hint = (selected.kind==BuildPartKind.Stair && target?.Definition.kind==BuildPartKind.Stair?"Underside guide · ":"Sky guide · ") + preview.Hint;
         world.Validate(ref preview);
         // Nudges cannot extend an interaction into arbitrary distant construction.
         if (BuildGeometry.Distance(selected.LocalBounds, preview.Origin, preview.WorldYaw, ray.origin) > reach)
@@ -184,7 +184,10 @@ public sealed class BuildingController : MonoBehaviour
         out BuildPieceRecord nextTarget, out bool guided)
     {
         direct = nextTarget = null; guided = false;
-        if (Physics.Raycast(ray, out var hit, reach, GameplayLayers.SolidSurfaceMask, QueryTriggerInteraction.Ignore))
+        bool physicalHit=Physics.Raycast(ray,out var hit,reach,GameplayLayers.SolidSurfaceMask,QueryTriggerInteraction.Ignore);
+        if(selected.kind==BuildPartKind.Stair && TryStairUnderside(ray,physicalHit?hit:(RaycastHit?)null,out var underside,out point,out normal))
+        {direct=nextTarget=underside;guided=true;skyGuide=default;return true;}
+        if (physicalHit)
         {
             point = hit.point; normal = hit.normal;
             direct = hit.collider.GetComponentInParent<BuildGameplayProxy>()?.Record;
@@ -212,6 +215,27 @@ public sealed class BuildingController : MonoBehaviour
             nextTarget = target; guided = true; return true;
         }
         point = normal = default; skyGuide = default; return false;
+    }
+    private bool TryStairUnderside(Ray ray,RaycastHit? obstruction,out BuildPieceRecord stair,out Vector3 point,out Vector3 normal)
+    {
+        stair=null;point=normal=default;
+        var end=ray.GetPoint(reach);var bounds=new Bounds((ray.origin+end)*.5f,Vector3.zero);bounds.Encapsulate(ray.origin);bounds.Encapsulate(end);bounds.Expand(.04f);
+        world.Session.Query(bounds,candidates);float best=reach;
+        var blocker=obstruction.HasValue?obstruction.Value.collider.GetComponentInParent<BuildGameplayProxy>():null;
+        foreach(var p in candidates)
+        {
+            if(p.Definition.kind!=BuildPartKind.Stair || !BuildStairPlacement.BelowSlope(p,ray.origin))continue;
+            var q=BuildGeometry.Rotation(p.WorldYawStep);var inverse=Quaternion.Inverse(q);var origin=inverse*(ray.origin-p.Origin);var direction=inverse*ray.direction;var b=p.Definition.LocalBounds;
+            float slope=b.size.y/b.size.z,start=origin.y-b.min.y-slope*(origin.z-b.min.z),denominator=direction.y-slope*direction.z;
+            // A ray originating inside the walking wedge cannot hit that collider with Physics.Raycast.
+            // Intersect its sloping reference from below for aiming only, never for movement collision.
+            if(start>=-.02f || denominator<=.0001f)continue;
+            float distance=-start/denominator;if(distance<0 || distance>best)continue;var local=origin+direction*distance;
+            if(local.x<b.min.x-.01f || local.x>b.max.x+.01f || local.z<b.min.z-.01f || local.z>b.max.z+.01f)continue;
+            if(obstruction.HasValue && obstruction.Value.distance<distance-.01f && (blocker==null || blocker.Record!=p))continue;
+            best=distance;stair=p;point=ray.GetPoint(distance);normal=q*new Vector3(0,-1,slope).normalized;
+        }
+        return stair!=null;
     }
     private bool TryJointCorner(Ray ray, Vector3 hit, Vector3 hitNormal, float hitDistance, BuildPieceRecord wall,
         out BuildPieceRecord corner, out Vector3 point, out Vector3 normal, out bool guided)

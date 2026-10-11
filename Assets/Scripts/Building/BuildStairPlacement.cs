@@ -19,7 +19,8 @@ public static class BuildStairPlacement
         }
         else if(target.Definition.kind==BuildPartKind.Stair)
         {
-            bool down=n.y<-.5f;Vector3 socket=down?BuildStairAttachment.LowLocal(target.Definition):BuildStairAttachment.HighLocal(target.Definition);
+            bool down=n.y<-.5f || n.y<.5f && viewer.HasValue && BelowSlope(target,viewer.Value);
+            Vector3 socket=down?BuildStairAttachment.LowLocal(target.Definition):BuildStairAttachment.HighLocal(target.Definition);
             origin=socket-BuildGeometry.Rotation(yaw)*(down?BuildStairAttachment.HighLocal(d):BuildStairAttachment.LowLocal(d));
             hint=down?"Continue stair downward from toe":"Continue stair upward from high end";
         }
@@ -48,6 +49,12 @@ public static class BuildStairPlacement
         else return false;
         int heading=BuildGeometry.Turn(target.WorldYawStep+yaw);Vector3 world=target.Origin+q*(origin+(Vector3)nudge*BuildGeometry.Unit);
         preview=new BuildPreview{Definition=d,Origin=world,WorldYaw=heading,Frame=new BuildGridFrame{Origin=world,YawStep=(byte)heading},Hint=hint,StairAimTarget=target.Id};return true;
+    }
+    public static bool BelowSlope(BuildPieceRecord stair,Vector3 viewer)
+    {
+        var local=Quaternion.Inverse(BuildGeometry.Rotation(stair.WorldYawStep))*(viewer-stair.Origin);var b=stair.Definition.LocalBounds;
+        float height=b.min.y+Mathf.Clamp(local.z-b.min.z,0,b.size.z)*b.size.y/b.size.z;
+        return local.y<height-.03f;
     }
     private static int Edge(Bounds b,Vector3 p,Vector3 n)
     {

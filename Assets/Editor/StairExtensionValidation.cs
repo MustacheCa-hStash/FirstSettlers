@@ -21,6 +21,8 @@ public static class StairExtensionValidation
     {
         check=assertion;
         for(int yaw=0;yaw<8;yaw++)foreach(var stair in new[]{c.Find(W21StairSetup.ContentId),c.Find(StairExtensionSetup.W22Id)})Fixture(c,stair,yaw);
+        for(int yaw=0;yaw<8;yaw++)foreach(var fixedDefinition in new[]{c.Find(W21StairSetup.ContentId),c.Find(StairExtensionSetup.W22Id)})
+            foreach(var selectedDefinition in new[]{c.Find(W21StairSetup.ContentId),c.Find(StairExtensionSetup.W22Id)})ControllerUnderside(c,fixedDefinition,selectedDefinition,yaw);
         Debug.Log("STAIR EXTENSION PASS: all headings; floor/roof underside and downward mixed-flight snaps; left/right segment handrails; real TerrainCollider and marked terrain embedding; buried toe/ground start/fully buried rejection; exposed high-end continuation; external obstacle retention.");
     }
     private static BuildPreview At(BuildDefinition d,BuildGridFrame f,Vector3 local)
@@ -28,6 +30,40 @@ public static class StairExtensionValidation
         var origin=f.Origin+BuildGeometry.Rotation(f.YawStep)*local;return new BuildPreview{Definition=d,Origin=origin,WorldYaw=f.YawStep,Frame=new BuildGridFrame{Origin=origin,YawStep=f.YawStep}};
     }
     private static void Stream(BuildWorld w)=>typeof(BuildWorld).GetMethod("LateUpdate",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(w,null);
+    private static void ControllerUnderside(BuildCatalog c,BuildDefinition fixedDefinition,BuildDefinition selectedDefinition,int yaw)
+    {
+        var host=new GameObject("Actual stair underside aim fixture");host.transform.position=new Vector3(14000+yaw*20,100,14000);var world=host.AddComponent<BuildWorld>();world.enabled=false;
+        var f=world.Session.CreateFrame(host.transform.position,yaw);var q=BuildGeometry.Rotation(yaw);var fields=BindingFlags.Instance|BindingFlags.NonPublic;
+        var cameraObject=new GameObject("Underside aim camera");var camera=cameraObject.AddComponent<Camera>();camera.enabled=false;camera.nearClipPlane=.01f;
+        var controller=host.AddComponent<BuildingController>();controller.enabled=false;
+        try
+        {
+            world.Session.Add(c.presets[2],f,default,0,true);world.Session.Add(c.presets[0],f,default,0,false);world.Session.Add(c.presets[1],f,new Vector3Int(0,12,0),0,false);
+            var fixedFrame=world.Session.CreateFrame(f.Origin+q*new Vector3(1.375f,3,0),yaw);var fixedStair=world.Session.Add(fixedDefinition,fixedFrame,default,0,false);C(fixedStair.Supported,"Controller fixture stair unsupported");
+            typeof(BuildingController).GetField("viewCamera",fields).SetValue(controller,camera);typeof(BuildingController).GetMethod("Start",fields).Invoke(controller,null);
+            controller.enabled=true;controller.Toggle();controller.Select(selectedDefinition);
+            Stream(world);
+            foreach(bool inside in new[]{false,true})
+            {
+                Vector3 local=inside?new Vector3(.625f,.25f,1.25f):new Vector3(-1,.45f,1.25f);Vector3 direction=q*(inside?Vector3.up:Vector3.right);
+                camera.transform.position=fixedStair.Origin+q*local;camera.transform.rotation=Quaternion.LookRotation(direction,q*Vector3.forward);Physics.SyncTransforms();
+                typeof(BuildingController).GetMethod("LateUpdate",fields).Invoke(controller,null);var preview=controller.Preview;
+                C(preview.Definition==selectedDefinition && preview.StairAimTarget==fixedStair.Id,"Actual underside ray lost target: inside="+inside+" yaw="+yaw);
+                C(preview.Hint.Contains("downward"),"Actual underside ray suggested upward flight: inside="+inside+" hint="+preview.Hint);
+                C(preview.Valid,"Actual underside preview rejected: "+preview.Message);
+                Near(BuildStairAttachment.High(new BuildPieceRecord{Definition=preview.Definition,Origin=preview.Origin,WorldYawStep=(byte)preview.WorldYaw}),BuildStairAttachment.Low(fixedStair),"Controller downward socket mismatch");
+            }
+            camera.transform.position=fixedStair.Origin+q*new Vector3(.625f,fixedDefinition.LocalBounds.size.y+1,1.25f);
+            camera.transform.rotation=Quaternion.LookRotation(Vector3.down,q*Vector3.forward);Physics.SyncTransforms();
+            typeof(BuildingController).GetMethod("LateUpdate",fields).Invoke(controller,null);
+            C(controller.Preview.StairAimTarget==fixedStair.Id && controller.Preview.Hint.Contains("upward") && controller.Preview.Valid,"Top aim no longer continues upward");
+            camera.transform.position=fixedStair.Origin+q*new Vector3(.625f,.25f,1.25f);camera.transform.rotation=Quaternion.LookRotation(Vector3.up,q*Vector3.forward);
+            var blocker=GameObject.CreatePrimitive(PrimitiveType.Cube);blocker.layer=GameplayLayers.WorldSolid;blocker.transform.localScale=Vector3.one*.15f;blocker.transform.position=camera.transform.position+Vector3.up*.25f;
+            try{Physics.SyncTransforms();typeof(BuildingController).GetMethod("LateUpdate",fields).Invoke(controller,null);C(controller.Preview.StairAimTarget!=fixedStair.Id,"Underside guide aimed through an obstruction");}
+            finally{Object.DestroyImmediate(blocker);Physics.SyncTransforms();}
+        }
+        finally{Object.DestroyImmediate(cameraObject);Object.DestroyImmediate(host);Physics.SyncTransforms();}
+    }
     private static void Fixture(BuildCatalog c,BuildDefinition d,int yaw)
     {
         var host=new GameObject("Stair terrain fixture");host.transform.position=new Vector3(51000+yaw*40,100,51000);var w=host.AddComponent<BuildWorld>();w.enabled=false;w.Focus=host.transform;

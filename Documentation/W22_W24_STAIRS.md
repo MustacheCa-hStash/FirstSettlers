@@ -33,6 +33,10 @@ leaving the space between them open. Only the stair ramp gets SmoothWalkSurface.
   beneath a nominal roof box.
 - Aim beneath an existing stair: the new flight's high end meets the fixed flight's
   low toe. It continues downward with the same slope; W21/W22 can be mixed.
+  A side hit from beneath the walking slope also counts as underside aim. If the
+  camera ray starts inside the solid walking wedge, an aiming-only slope guide
+  recovers the intended stair target. Intervening obstacles keep their priority;
+  the physical walking collider is unchanged. Top-face aim continues upward.
 - Aim at the stair top/end: continue upward from its high end as before.
 - Top-surface floor placement retains its existing footprint fitting.
 
@@ -118,3 +122,10 @@ options installed. Front/back rendered views were inspected and are saved in
 
 Restart Play mode to load the new catalog and attachment behavior. The user's
 saved scene was not opened or rewritten.
+
+Underside aiming correction: **32,376 installed-asset checks** passed, including
+64 real controller camera rays from beside/beneath and inside the stair wedge,
+all W21/W22 source/selected combinations at eight headings. Separate camera checks
+preserve upward top-face continuation and prevent aiming through a blocker. The
+previous synthetic hit-normal checks did not cover the actual side-face/inside-
+collider aiming failure; this regression now runs through BuildingController.
