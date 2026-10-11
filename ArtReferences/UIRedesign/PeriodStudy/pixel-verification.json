@@ -1,0 +1,92 @@
+[
+  {
+    "style": "quiet",
+    "background": 1,
+    "name": "Autumn meadow",
+    "file": "quiet-background-01.png",
+    "width": 3316,
+    "height": 1848,
+    "unchangedOutsideOverlay": 2222745,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "style": "quiet",
+    "background": 2,
+    "name": "Green forest",
+    "file": "quiet-background-02.png",
+    "width": 3321,
+    "height": 1839,
+    "unchangedOutsideOverlay": 2239884,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "style": "quiet",
+    "background": 3,
+    "name": "Summer lakeside",
+    "file": "quiet-background-03.png",
+    "width": 3310,
+    "height": 1843,
+    "unchangedOutsideOverlay": 2213572,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "style": "quiet",
+    "background": 4,
+    "name": "Autumn lakeside",
+    "file": "quiet-background-04.png",
+    "width": 3315,
+    "height": 1837,
+    "unchangedOutsideOverlay": 2232333,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "style": "quiet",
+    "background": 5,
+    "name": "Mountain meadow",
+    "file": "quiet-background-05.png",
+    "width": 3307,
+    "height": 1831,
+    "unchangedOutsideOverlay": 2223912,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "style": "papyrus",
+    "background": 1,
+    "name": "Autumn meadow",
+    "file": "papyrus-background-01.png",
+    "width": 3316,
+    "height": 1848,
+    "unchangedOutsideOverlay": 2152810,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "style": "wax-tablets",
+    "background": 1,
+    "name": "Autumn meadow",
+    "file": "wax-tablets-background-01.png",
+    "width": 3316,
+    "height": 1848,
+    "unchangedOutsideOverlay": 1960889,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "style": "hide-bronze",
+    "background": 1,
+    "name": "Autumn meadow",
+    "file": "hide-bronze-background-01.png",
+    "width": 3316,
+    "height": 1848,
+    "unchangedOutsideOverlay": 2151850,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "style": "stone-pillars",
+    "background": 1,
+    "name": "Autumn meadow",
+    "file": "stone-pillars-background-01.png",
+    "width": 3316,
+    "height": 1848,
+    "unchangedOutsideOverlay": 2157983,
+    "changedOutsideOverlay": 0
+  }
+]

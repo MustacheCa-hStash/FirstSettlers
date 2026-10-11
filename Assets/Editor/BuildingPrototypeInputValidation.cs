@@ -217,7 +217,26 @@ public static class BuildingPrototypeInputValidation
                 case 31:Read();controller.Select(controller.World.Catalog.Find(OpeningWallSetup.GableId));Queue(Key.R);break;
                 case 32:
                     Read();Require(!PendingCommand().Flip,"Picker-held R replayed slope flip");
-                    Debug.Log("BUILDING INPUT PASS: native B/E/Escape/F8/F9/R, gable representation flip/held/menu guards, picker capture/look, arrow repeat and diagnostics; empty synthetic scene only.");Finish(null);break;
+                    controller.OpenMenu();Queue();break;
+                case 33:Read();Queue(Key.R);break;
+                case 34:
+                    Read();Require(controller.MenuOpen&&Selected().contentId==OpeningWallSetup.GableId,"Menu R committed placement");
+                    var menuView=(BuildMenuView)typeof(BuildingController).GetField("view",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(controller);
+                    Require(menuView.Highlighted.contentId==OpeningWallSetup.FallingId,"Menu R did not stage the falling slope");
+                    Queue(Key.R);break;
+                case 35:
+                    Read();
+                    var heldMenu=(BuildMenuView)typeof(BuildingController).GetField("view",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(controller);
+                    Require(heldMenu.Highlighted.contentId==OpeningWallSetup.FallingId,"Held menu R repeated its flip");
+                    Queue();break;
+                case 36:Read();Queue(Key.Enter);break;
+                case 37:
+                    Read();Require(!controller.MenuOpen&&Selected().contentId==OpeningWallSetup.FallingId,"Enter did not confirm the staged slope");
+                    Require(controller.GameplayCursorRequested&&!Cursor.visible,"Menu confirmation lost cursor capture");
+                    controller.OpenMenu();Queue(Key.Enter);break;
+                case 38:
+                    Read();Require(controller.MenuOpen,"Held Enter confirmed again after reopening the menu");
+                    Debug.Log("BUILDING INPUT PASS: native B/E/Escape/F8/F9/R/Enter, staged menu flip/confirmation, placement flip/held/menu guards, picker capture/look, arrow repeat and diagnostics; empty synthetic scene only.");Finish(null);break;
             }
         }
         catch (Exception ex) { Finish(ex); }

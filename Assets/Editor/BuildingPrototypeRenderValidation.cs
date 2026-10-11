@@ -169,7 +169,7 @@ public static class BuildingPrototypeRenderValidation
                 if(button.worldBound.xMin<menu.worldBound.xMin || button.worldBound.xMax>menu.worldBound.xMax)
                     throw new InvalidOperationException("Preset button horizontal overflow.");
             SavePixels(target, $".utmp/building-prototype/menu-{width}x{height}.png");
-            var buttons=menu.Query<Button>().ToList();
+            var buttons=menu.Query<Button>(className:"build-preset").ToList();
             scroll.ScrollTo(buttons[buttons.Count-1]);
             for(int i=0;i<3;i++)
             {

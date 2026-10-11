@@ -849,7 +849,7 @@ public static class BuildingPrototypeValidation
             view.SetState(true, true);
             var document = root.GetComponentInChildren<UIDocument>();
             Check(document.rootVisualElement.Q<VisualElement>("build-menu").style.display.value == DisplayStyle.Flex &&
-                document.rootVisualElement.Query<Button>().ToList().Count == catalog.presets.Length, "Picker layout/preset population failed.");
+                document.rootVisualElement.Query<Button>(className:"build-preset").ToList().Count == catalog.presets.Length, "Picker layout/preset population failed.");
             view.SetState(true, false); view.Show("Plain wall", "Ready", true);
             Check(document.rootVisualElement.Q<Label>("build-status").text == "Ready" &&
                 document.rootVisualElement.Q<VisualElement>("build-hud").pickingMode == PickingMode.Ignore, "Placement HUD failed or captures input.");

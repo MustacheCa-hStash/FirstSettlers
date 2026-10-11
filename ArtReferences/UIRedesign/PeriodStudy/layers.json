@@ -1,0 +1,27 @@
+[
+  {
+    "key": "quiet",
+    "name": "Quiet overlay",
+    "file": "quiet-ui-layer.png"
+  },
+  {
+    "key": "papyrus",
+    "name": "Papyrus & ink",
+    "file": "papyrus-ui-layer.png"
+  },
+  {
+    "key": "wax-tablets",
+    "name": "Wax tablets",
+    "file": "wax-tablets-ui-layer.png"
+  },
+  {
+    "key": "hide-bronze",
+    "name": "Hide & bronze",
+    "file": "hide-bronze-ui-layer.png"
+  },
+  {
+    "key": "stone-pillars",
+    "name": "Stone & pillars",
+    "file": "stone-pillars-ui-layer.png"
+  }
+]

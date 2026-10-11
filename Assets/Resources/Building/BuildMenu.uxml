@@ -1,16 +1,44 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
   <Style src="BuildMenu.uss" />
   <ui:VisualElement name="build-menu" class="build-menu">
-    <ui:Label text="BUILD" class="build-title" />
-    <ui:Label text="Choose a component" class="build-subtitle" />
-    <ui:ScrollView name="build-presets" class="build-presets" mode="Vertical" horizontal-scroller-visibility="Hidden" />
-    <ui:Label text="Start with a foundation. Add walls, then fill their corners." class="build-note" />
-    <ui:Label text="B / Esc · Close" class="build-note" />
+    <ui:VisualElement class="build-workspace">
+      <ui:VisualElement class="build-category-panel stone-panel">
+        <ui:VisualElement class="stone-pillar pillar-left" picking-mode="Ignore" />
+        <ui:Label text="BUILD" class="build-title stone-heading" />
+        <ui:Label text="Ordinary wood kit" class="build-subtitle" />
+        <ui:VisualElement name="build-categories" class="build-categories" />
+      </ui:VisualElement>
+      <ui:VisualElement class="build-grid-panel stone-panel">
+        <ui:Label name="build-count" class="build-count" />
+        <ui:ScrollView name="build-presets" class="build-presets" mode="Vertical" horizontal-scroller-visibility="Hidden" />
+      </ui:VisualElement>
+      <ui:VisualElement class="build-detail-panel stone-panel">
+        <ui:VisualElement class="stone-pillar pillar-right" picking-mode="Ignore" />
+        <ui:Label name="build-detail-name" class="build-detail-name stone-heading" />
+        <ui:Label name="build-detail-size" class="build-detail-size" />
+        <ui:Image name="build-detail-image" class="build-detail-image" scale-mode="ScaleToFit" picking-mode="Ignore" />
+        <ui:Label name="build-detail-description" class="build-detail-description" />
+        <ui:Label name="build-slope" class="build-slope" />
+        <ui:Button name="build-flip" text="R · Flip slope" class="build-flip" />
+        <ui:Label text="Q / E or wheel · Turn 45°" class="build-control" />
+        <ui:Label text="0.25 m placement grid" class="build-control" />
+        <ui:Button name="build-choose" text="Choose piece" class="build-choose stone-heading" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement class="build-bottom">
+      <ui:VisualElement class="build-quick-panel stone-panel">
+        <ui:Label text="Quick pieces" class="build-quick-title" />
+        <ui:VisualElement name="build-quick-pieces" class="build-quick-pieces" />
+      </ui:VisualElement>
+      <ui:VisualElement class="build-footer stone-panel">
+        <ui:Label text="Enter · Choose     B / Esc · Exit" />
+      </ui:VisualElement>
+    </ui:VisualElement>
   </ui:VisualElement>
-  <ui:VisualElement name="build-hud" class="build-hud">
-    <ui:Label name="build-heading" class="build-title" />
+  <ui:VisualElement name="build-hud" class="build-hud stone-panel">
+    <ui:Label name="build-heading" class="build-hud-title stone-heading" />
     <ui:Label name="build-status" class="build-status" />
     <ui:Label text="Left click · Place     Right click · Remove     Q / E or wheel · Turn 45°" class="build-note" />
-    <ui:Label text="Arrows · Nudge relative to view (hold to repeat)     PgUp / PgDn · Height     Tab · Components     B / Esc · Exit" class="build-note" />
+    <ui:Label text="Arrows · Nudge (hold to repeat)     PgUp / PgDn · Height     Tab · Components     B / Esc · Exit" class="build-note" />
   </ui:VisualElement>
 </ui:UXML>

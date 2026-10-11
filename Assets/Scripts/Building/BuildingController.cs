@@ -62,8 +62,12 @@ public sealed class BuildingController : MonoBehaviour
         MenuOpen = true; pending = default;
         skyGuide = default;
         GameplayCursorRequested = false; cursorCaptureFrames = 0;
-        Cursor.lockState = CursorLockMode.None; Cursor.visible = true; view?.SetState(true, true);
+        Cursor.lockState = CursorLockMode.None; Cursor.visible = true;
+        if (selected != null) view?.SetSelection(selected);
+        view?.SetState(true, true);
     }
+    public void FlipMenuSlope() => view?.FlipSelection();
+    public void ConfirmMenuSelection() => view?.ConfirmSelection();
     public void Select(BuildDefinition definition)
     {
         if (!Active || definition == null) return;
@@ -120,7 +124,7 @@ public sealed class BuildingController : MonoBehaviour
         {
             world.ClearPreview();
             Preview = default; target = null; nudge = default; skyGuide = default;
-            view.Show(selected.displayName, "Aim at ground or a building within reach", false); return;
+            view.Show(BuildUiContent.Name(selected), "Aim at ground or a building within reach", false); return;
         }
         bool preferTop = nextTarget == target && Preview.TopAttachment;
         if (nextTarget != target) { target = nextTarget; contextTurn = 0; nudge = default; }
@@ -140,14 +144,14 @@ public sealed class BuildingController : MonoBehaviour
         {
             world.Remove(direct.Id); target = null; nudge = default; Preview = default;
             skyGuide = default;
-            view.Show(selected.displayName, "Piece removed · detached pieces have 3 seconds to regain support", true); return;
+            view.Show(BuildUiContent.Name(selected), "Piece removed · detached pieces have 3 seconds to regain support", true); return;
         }
         if (command.Place && Time.frameCount > suppressPlaceUntil && preview.Valid)
         {
             world.Commit(preview); suppressPlaceUntil = Time.frameCount;
         }
         Preview = preview;
-        view.Show(selected.displayName + " · " + (preview.WorldYaw * 45) + "°"+(selected.flipVariant!=null?" · R: flip slope":""),
+        view.Show(BuildUiContent.Name(selected) + " · " + (preview.WorldYaw * 45) + "°"+(selected.flipVariant!=null?" · R: flip slope":""),
             preview.Valid ? preview.Message+" · "+(preview.Warning!=BuildPlacementWarning.None?preview.WarningMessage:preview.Hint) : preview.Message,
             preview.Valid,preview.Valid && preview.Warning!=BuildPlacementWarning.None);
         DrawPreviewMesh(preview.VisualMesh,preview);

@@ -1,0 +1,34 @@
+[
+  {
+    "screen": "pack",
+    "file": "pack-on-original-meadow.png",
+    "width": 3316,
+    "height": 1848,
+    "comparedOutsideOverlay": 1527564,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "screen": "storage",
+    "file": "storage-on-original-meadow.png",
+    "width": 3316,
+    "height": 1848,
+    "comparedOutsideOverlay": 1720531,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "screen": "crafting",
+    "file": "crafting-on-original-meadow.png",
+    "width": 3316,
+    "height": 1848,
+    "comparedOutsideOverlay": 1326458,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "screen": "hotbar",
+    "file": "hotbar-on-original-meadow.png",
+    "width": 3316,
+    "height": 1848,
+    "comparedOutsideOverlay": 5844784,
+    "changedOutsideOverlay": 0
+  }
+]
