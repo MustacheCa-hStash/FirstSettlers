@@ -14,7 +14,7 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
-  m_Fog: 1
+  m_Fog: 0
   m_FogColor: {r: 0.5176471, g: 0.65882355, b: 0.9529412, a: 1}
   m_FogMode: 1
   m_FogDensity: 0.01
@@ -119,6 +119,74 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &9167398
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9167400}
+  - component: {fileID: 9167399}
+  m_Layer: 0
+  m_Name: Distant Fog Layer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &9167399
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9167398}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d22be17e999bfc4aa5b21883c00834f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DistantFogLayer
+  startDistance: 600
+  distanceFeather: 477.5
+  maxDistance: 5000
+  density: 0.0036
+  bottomHeight: -45
+  topHeight: 200
+  heightFeather: 48.7
+  billowHeight: 70
+  clearHeights: {x: 150, y: 250.1}
+  noiseTexture: {fileID: 11700000, guid: b6737e4938b76134ba8b4997057e3066, type: 2}
+  noiseTileSize: 350
+  noiseStrength: 1
+  detailStrength: 0.293
+  wind: {x: 2, y: 0, z: 0.7}
+  shading: 0.692
+  followDayNightColor: 0
+  fogColor: {r: 0.72156864, g: 0.76862746, b: 0.8, a: 1}
+  resolution: 2
+  steps: 32
+  dithering: 0.7
+  showInSceneView: 1
+  world: {fileID: 830849843}
+  fogWater: 1
+  fallbackWaterHeight: 14.4
+--- !u!4 &9167400
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9167398}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &81284297
 GameObject:
   m_ObjectHideFlags: 0
@@ -892,7 +960,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 14567
+  worldSeed: 14566
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -1537,7 +1605,7 @@ Transform:
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 100, z: 0}
+  m_LocalPosition: {x: -244, y: 100, z: 366}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2205,3 +2273,4 @@ SceneRoots:
   - {fileID: 454788146}
   - {fileID: 1578603182}
   - {fileID: 1971578342}
+  - {fileID: 9167400}

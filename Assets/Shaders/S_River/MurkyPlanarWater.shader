@@ -173,5 +173,31 @@ Shader "FirstSettlers/Murky Planar Water"
             }
             ENDHLSL
         }
+        // Coverage only. The fog pass obtains surface distance from the shared water Y.
+        Pass
+        {
+            Name "DistantFogWaterMask"
+            Tags { "LightMode" = "DistantFogWaterMask" }
+            Blend One Zero
+            ZWrite Off
+            HLSLPROGRAM
+            #pragma target 3.0
+            #pragma vertex MaskVert
+            #pragma fragment MaskFrag
+            #pragma multi_compile_instancing
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            struct MaskAttributes { float4 positionOS : POSITION; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct MaskVaryings { float4 positionCS : SV_POSITION; UNITY_VERTEX_OUTPUT_STEREO };
+            MaskVaryings MaskVert(MaskAttributes input)
+            {
+                MaskVaryings output;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                return output;
+            }
+            half4 MaskFrag(MaskVaryings input) : SV_Target { return 1; }
+            ENDHLSL
+        }
     }
 }

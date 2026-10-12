@@ -93,6 +93,7 @@ public class WorldManager : MonoBehaviour
     private static WorldManager treeSeasonOwner;
     private float appliedTreeAutumnAmount = -1f;
     public Transform Viewer => viewer;
+    public float GlobalWaterHeight => globalWaterY;
     public TreeRegistry Trees => chunkManager?.Trees;
     public bool ShowTreeExclusionRadiusGizmos => showTreeExclusionRadiusGizmos;
     public TreeGameplayManager TreeGameplay => chunkManager?.TreeGameplay;
