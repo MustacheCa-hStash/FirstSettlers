@@ -1,0 +1,24 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="Inventory.uss" />
+    <ui:VisualElement name="inventory-window" class="inventory-window inventory-stone">
+        <ui:VisualElement class="inventory-pillar inventory-pillar-left" picking-mode="Ignore" />
+        <ui:VisualElement class="inventory-pillar inventory-pillar-right" picking-mode="Ignore" />
+        <ui:VisualElement name="inventory-armor" class="inventory-armor" />
+        <ui:Image name="inventory-character" class="inventory-character" picking-mode="Ignore" />
+        <ui:VisualElement name="inventory-offhand" class="inventory-offhand" />
+        <ui:Label name="inventory-crafting-title" text="Crafting" class="inventory-crafting-title" picking-mode="Ignore" />
+        <ui:VisualElement name="inventory-crafting" class="inventory-crafting" />
+        <ui:VisualElement name="inventory-craft-arrow" class="inventory-craft-arrow" picking-mode="Ignore" />
+        <ui:VisualElement name="inventory-output" class="inventory-output" />
+        <ui:Button name="inventory-book" class="inventory-book" focusable="false" />
+        <ui:VisualElement name="inventory-backpack" class="inventory-backpack" />
+        <ui:VisualElement class="inventory-divider" picking-mode="Ignore" />
+        <ui:VisualElement name="inventory-hotbar" class="inventory-hotbar" />
+    </ui:VisualElement>
+    <ui:VisualElement name="inventory-hud" class="inventory-hud" picking-mode="Ignore">
+        <ui:VisualElement name="hud-offhand" class="hud-offhand inventory-stone" picking-mode="Ignore" />
+        <ui:VisualElement class="hud-rail inventory-stone" picking-mode="Ignore">
+            <ui:VisualElement name="hud-hotbar" class="hud-hotbar" picking-mode="Ignore" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

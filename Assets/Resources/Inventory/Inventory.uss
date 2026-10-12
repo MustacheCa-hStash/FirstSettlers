@@ -1,0 +1,59 @@
+.inventory-stone {
+    background-image: url("../Building/UI/StonePanel.png");
+    background-color: rgb(224,215,192);
+    -unity-background-image-tint-color: white;
+    -unity-slice-left: 68; -unity-slice-right: 68;
+    -unity-slice-top: 68; -unity-slice-bottom: 68;
+    -unity-slice-scale: 0.3px;
+}
+.inventory-window { position: absolute; width: 704px; height: 648px; color: rgb(31,40,43); }
+.inventory-pillar {
+    position: absolute; top: -4px; bottom: -4px; width: 34px;
+    background-image: url("../Building/UI/StonePillar.png");
+    -unity-slice-top: 110; -unity-slice-bottom: 135;
+    -unity-slice-left: 0; -unity-slice-right: 0; -unity-slice-scale: 0.28px;
+}
+.inventory-pillar-left { left: -3px; }
+.inventory-pillar-right { right: -3px; }
+.inventory-slot {
+    width: 68px; height: 68px; flex-shrink: 0; margin-right: 2px; margin-bottom: 2px;
+    padding: 2px; border-width: 1px; border-radius: 3px;
+    border-top-color: rgb(138,123,99); border-left-color: rgb(138,123,99);
+    border-bottom-color: rgb(246,239,218); border-right-color: rgb(246,239,218);
+    background-color: rgb(181,164,134);
+}
+.inventory-slot-surface {
+    flex-grow: 1; background-color: rgb(216,203,174); border-radius: 1px;
+    background-image: url("../Building/UI/StonePanel.png");
+    -unity-background-image-tint-color: rgb(239,232,218);
+    -unity-slice-left: 100; -unity-slice-right: 100;
+    -unity-slice-top: 100; -unity-slice-bottom: 100; -unity-slice-scale: 0.025px;
+}
+.inventory-slot.selected { border-width: 2px; padding: 1px; border-color: rgb(247,243,222); background-color: rgb(43,63,72); }
+.inventory-slot.selected .inventory-slot-surface { background-image: none; background-color: rgb(72,105,123); }
+.inventory-armor { position: absolute; left: 38px; top: 28px; width: 70px; height: 280px; }
+.inventory-character {
+    position: absolute; left: 110px; top: 28px; width: 190px; height: 278px;
+    background-color: rgb(35,39,39); border-radius: 2px; border-width: 2px;
+    border-top-color: rgb(129,117,96); border-left-color: rgb(129,117,96);
+    border-bottom-color: rgb(245,237,216); border-right-color: rgb(245,237,216);
+}
+.inventory-offhand { position: absolute; left: 304px; top: 238px; }
+.inventory-crafting-title { position: absolute; left: 392px; top: 26px; margin: 0; font-size: 27px; }
+.inventory-crafting { position: absolute; left: 392px; top: 68px; width: 140px; height: 140px; flex-direction: row; flex-wrap: wrap; }
+.inventory-craft-arrow { position: absolute; left: 548px; top: 119px; width: 37px; height: 37px; }
+.inventory-output { position: absolute; left: 602px; top: 103px; }
+.inventory-book {
+    position: absolute; left: 434px; top: 236px; width: 56px; height: 56px; margin: 0; padding: 5px;
+    background-color: rgb(220,208,183); border-width: 1px; border-radius: 3px;
+    border-top-color: rgb(142,127,103); border-left-color: rgb(142,127,103);
+    border-bottom-color: rgb(247,239,218); border-right-color: rgb(247,239,218);
+}
+.inventory-book:hover, .inventory-book:active, .inventory-book:focus { background-color: rgb(220,208,183); }
+.inventory-backpack { position: absolute; left: 38px; top: 326px; width: 630px; height: 210px; flex-direction: row; flex-wrap: wrap; }
+.inventory-divider { position: absolute; left: 32px; right: 32px; top: 542px; height: 3px; background-color: rgb(174,157,129); border-bottom-width: 1px; border-bottom-color: rgb(246,237,215); }
+.inventory-hotbar { position: absolute; left: 38px; top: 554px; height: 70px; flex-direction: row; }
+.inventory-hud { position: absolute; width: 756px; height: 88px; }
+.hud-offhand { position: absolute; left: 0; top: 0; width: 80px; height: 88px; padding: 10px 6px; -unity-slice-scale: 0.15px; }
+.hud-rail { position: absolute; left: 92px; top: 0; width: 664px; height: 88px; -unity-slice-scale: 0.15px; }
+.hud-hotbar { position: absolute; left: 18px; top: 10px; flex-direction: row; }

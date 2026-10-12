@@ -1,0 +1,56 @@
+[
+  {
+    "key": "inventory-compact",
+    "name": "Compact inventory",
+    "file": "inventory-compact-on-original-meadow.png",
+    "width": 3316,
+    "height": 1848,
+    "comparedOutsideOverlay": 3206665,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "key": "inventory-character",
+    "name": "Character-led inventory",
+    "file": "inventory-character-on-original-meadow.png",
+    "width": 3316,
+    "height": 1848,
+    "comparedOutsideOverlay": 2291955,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "key": "inventory-split",
+    "name": "Split-panel inventory",
+    "file": "inventory-split-on-original-meadow.png",
+    "width": 3316,
+    "height": 1848,
+    "comparedOutsideOverlay": 2844467,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "key": "hotbar-carved",
+    "name": "Carved stone rail",
+    "file": "hotbar-carved-on-original-meadow.png",
+    "width": 3316,
+    "height": 1848,
+    "comparedOutsideOverlay": 5895636,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "key": "hotbar-tiles",
+    "name": "Separated stone tiles",
+    "file": "hotbar-tiles-on-original-meadow.png",
+    "width": 3316,
+    "height": 1848,
+    "comparedOutsideOverlay": 5948033,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "key": "hotbar-slate",
+    "name": "Slate inset",
+    "file": "hotbar-slate-on-original-meadow.png",
+    "width": 3316,
+    "height": 1848,
+    "comparedOutsideOverlay": 5903470,
+    "changedOutsideOverlay": 0
+  }
+]

@@ -44,7 +44,7 @@
 .build-quick-piece:hover { background-color: rgba(66,96,113,0.12); }
 .build-quick-piece.selected { background-color: rgba(66,96,113,0.16); border-color: rgb(72,105,123); }
 .build-footer { padding: 15px; flex-shrink: 0; font-size: 14px; }
-.build-hud { position: absolute; left: 20%; right: 20%; bottom: 22px; padding: 18px 24px; align-items: center; color: rgb(31,40,43); }
+.build-hud { position: absolute; left: 20%; right: 20%; bottom: 118px; padding: 18px 24px; align-items: center; color: rgb(31,40,43); }
 .build-hud-title { font-size: 23px; margin-bottom: 5px; -unity-font-style: bold; white-space: normal; }
 .build-status { font-size: 17px; color: rgb(46,91,50); white-space: normal; -unity-text-align: middle-center; }
 .build-error { color: rgb(151,46,30); }

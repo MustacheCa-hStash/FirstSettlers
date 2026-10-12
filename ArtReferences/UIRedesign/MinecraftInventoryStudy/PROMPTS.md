@@ -1,0 +1,46 @@
+# Minecraft-structured inventory design prompts
+
+October 11, 2026. Built-in ImageGen, one separate call per inventory/hotbar variation. The implemented stone-and-pillars menu was supplied as a style reference. Original world screenshots were not regenerated. The generated tile-hotbar image also contained an unsolicited upper inventory; only its requested nine-slot row and separate offhand were extracted for the final gameplay mockup. All generated source images remain in the tool's output folder; final layers and composites are saved here.
+
+## Shared prompt
+
+Use case: ui-mockup. First Settlers UI design proposal based on Minecraft SURVIVAL INVENTORY FUNCTIONAL STRUCTURE, rendered as a transparent UI layer for deterministic compositing onto unchanged original gameplay screenshots.
+Style reference image: approved stone-and-pillars interface. Preserve warm pale limestone, subtle incised square-corner motifs, restrained narrow pillar edge accents, slate-blue selection, moderate serif headings and plain legible body type. Matte low-poly item artwork. Serious restrained interface, no goofy lettering, no ornate imperial symbols, no glossy gold.
+Output wide 16:9 transparent canvas. Generate ONLY interface and contained character depiction. Absolutely no world/background, trees, sky, grass, blur, vignette or global darkening sheet. All outer margins and gaps genuinely transparent alpha. Clean panel surfaces with no game scenery baked in.
+FUNCTIONS FIXED FOR EVERY INVENTORY VARIANT:
+1. EXACTLY 27 backpack slots in NINE COLUMNS and THREE ROWS. Each row has nine individual equal cells.
+2. EXACTLY nine separate hotbar inventory slots, ONE horizontal row of NINE cells below backpack, clearly separated with a gap. These are real inventory slots, not item shortcuts.
+3. EXACTLY four dedicated armor slots: head, chest, legs, feet. Four distinguishable small silhouette placeholders or icons, not duplicated gear. Put them vertically by the character.
+4. ONE separate offhand slot containing one plain wooden shield. Main hand is active hotbar slot; no extra main-hand equipment slot.
+5. A clearly FRONT-FACING full-body player depiction, simple stylized low-poly human wearing a modest leather cap, brown tunic, trousers and leather boots, holding the active stone axe and the wooden shield. Not Minecraft block character, not photoreal person, not mannequin, not heroic knight or fantasy costume. Character artwork is illustrative of the proposed player preview.
+6. Integrated personal crafting with EXACTLY FOUR input slots in a 2×2 grid, an arrow, and ONE output slot. Example two plank icons vertically in left column, right column empty; output four sticks with count 4. Output is taken by clicking that cell; do not add Craft button or recipe quantity controls.
+7. No permanent selected-item inspector, descriptions, durability-stat panels, category sidebar, sorting controls, equip/unequip buttons or separate crafting page.
+8. Information can appear in small hover tooltips only. Stack amounts are inside item slots at bottom-right. Durability is a slim green bar underneath tool/armor icon, exact numerical durability only in a tooltip. Nonstackable items and stacks of one show NO count.
+9. No hotkey labels inside slots: NEVER show 1–9 as slot-binding labels. The ONLY numbers visible in cells are actual stack amounts. No key guidance plaques, instructions footer, I/Pack/B/Build hints or keyboard badges.
+Sample items: backpack first row Wood 32, Stone 16, Fiber 12, Rope 4, Reeds 18, Flint 7, Hide 3, Meat 2, Grain 8; other 18 backpack cells empty. Hotbar order from left: Stone axe (no count, durability68%), Wooden hammer (no count, durability84%), Torch12 (stackable, no durability), Wood20, Stone24, Berries8, Rope2, Empty, Empty. Hotbar axe selected slate-blue. Offhand shield and four armor items are physically separate from backpack/hotbar. Do not repeat hotbar tools as extra backpack items. Keep identical hotbar ordering and item counts in every mockup.
+For GAMEPLAY HOTBAR variants, generate ONLY the specified hotbar and offhand interface, not the inventory, armor slots, character depiction or crafting. Use same nine items/order/counts above and same rules forbidding hotkey labels or hints. No vitals, minimap, XP, quest tracker, item-description panel or persistent item-name plaque. Offhand is separate square left of the nine-slot row with a small gap.
+
+## Compact inventory
+
+INVENTORY VARIANT COMPACT. A centered compact unified pale stone inventory window occupying x20%-80%, y12%-89%, with a thin pillar at each outer edge. Top section: four armor slots vertically at top-left, front-facing full-body character beside them, offhand shield cell to the character's lower-right. Top-right personal 2×2 crafting and output. Below, EXACT 9-column × 3-row backpack, then a visually separated same-width 9-cell hotbar below. Every backpack/hotbar cell same size and all nine columns aligned. Main storage area dominates lower half; top equipment/crafting leaves useful breathing room. Small heading Inventory and small Crafting caption only, no extra labels. Show ONE small dark slate hover tooltip positioned near the selected axe at bottom-left, outside grid cells: Stone axe / Durability 68 / 100 / Lashed stone head. Tooltip is floating, not an inspector panel. No close/hotkey guidance. Strongly familiar functional arrangement, modest panel width so world can remain visible around it.
+
+## Character-led inventory
+
+INVENTORY VARIANT CHARACTER-LED. A wide centered stone window x12%-88%, y10%-91%. Left approximately 30% is a tall full-body FRONT view of the same player, with exactly four armor slots down the left side aligned to head/chest/legs/feet and a separate offhand shield cell at lower-right of the character. Right approximately 66% holds personal 2×2 crafting + arrow/output across its upper area, then EXACT NINE-column THREE-row backpack, then separated NINE-cell hotbar matching backpack width. Player depiction larger than compact variant, enough to see gear clearly. Use a very subtle slate inset behind character and pale stone beneath grids; pillars slender outer edges, no huge temple frame. No tooltip currently visible, no inspector or buttons. Small Inventory and Crafting headings, clean item cells. All 27 backpack cells must be distinct even with the narrow 9-column region.
+
+## Split-panel inventory
+
+INVENTORY VARIANT SPLIT PANELS. Three separate pale limestone slabs with clear transparent gaps, composition x16%-84%, y10%-91%. Upper-left slab contains front-facing player model, four vertically ordered armor slots and a single offhand shield cell. Upper-right smaller slab contains ONLY 2×2 personal crafting + arrow + output; small Crafting caption. Lower slab spans both upper slabs and contains EXACT NINE-column THREE-row backpack plus a gap and separate NINE-cell hotbar. The lower storage slab is the visual anchor; no giant header. Only two very slender outer pillar details on upper gear/crafting edges, lower panel simple stone rim. The hotbar is defined by a slightly deeper slate inset instead of a bold divider. No tooltip visible. No static item description, action buttons, hotkeys or guidance. The three open panels expose original world through gaps after compositing.
+
+## Carved stone rail
+
+GAMEPLAY HOTBAR VARIANT CARVED STONE RAIL. UI ONLY at bottom-center x25%-75%, y88%-98% of transparent canvas. One slim continuous pale limestone rail with exactly nine inset cells; separate offhand shield cell to its LEFT, separated by half a slot of clear transparent gap. Keep same cell size, clean repeated geometry, only tiny incised square motif in two outer rail corners. Selected axe cell is slate-blue fill with thin light border. Stack counts dark ink bottom-right, tools slim green durability at bottom. NO slot key numbers, NO instructions plaques, NO item-name label, NO hotbar title. Nothing else on canvas. Enough margin below so it feels anchored but never touches screen edge.
+
+## Separated stone tiles
+
+GAMEPLAY HOTBAR VARIANT SEPARATED STONE TILES. UI ONLY bottom-center x25%-75%, y88%-98%. Exactly nine individual pale limestone square tiles in one horizontal row with very small genuinely transparent gaps. No continuous shelf behind them. Separate offhand shield square left with a larger gap. Very quiet rim and subtle texture, selected axe has a clear slate-blue outline and short blue bottom marker, preserving pale fill. Stack counts charcoal bottom-right; tool durability green slim under icon. Match item order and counts. No pillars, captions, keyboard labels or instruction text. Nothing outside these ten tiles.
+
+## Slate inset hotbar
+
+GAMEPLAY HOTBAR VARIANT SLATE INSET. UI ONLY bottom-center x25%-75%, y88%-98%. Narrow warm limestone outer frame, exactly nine dark slate-grey inset cells, thin dividers and modest incised end caps. Separate matching shield slot to left with transparent gap. Selected axe slot brighter slate blue and an ivory thin selection rim. Soft warm model thumbnails on dark surfaces, stack counts ivory bottom-right, tool durability slim green against subdued neutral tracks. No glossy bevels, no gold, no huge ornaments. No numbers marking slot hotkeys, no item-name caption, no extra hotkey guide. Only nine-slot row plus one offhand tile on whole transparent canvas.
+

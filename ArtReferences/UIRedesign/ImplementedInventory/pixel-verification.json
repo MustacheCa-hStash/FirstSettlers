@@ -1,0 +1,16 @@
+[
+  {
+    "key": "inventory",
+    "width": 3316,
+    "height": 1848,
+    "comparedOutsideOverlay": 4786196,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "key": "hotbar",
+    "width": 3316,
+    "height": 1848,
+    "comparedOutsideOverlay": 5932732,
+    "changedOutsideOverlay": 0
+  }
+]

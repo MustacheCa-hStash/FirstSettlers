@@ -1,62 +1,87 @@
-# Inventory proposal and stone-theme mockups
+# Inventory and hotbar plan: Minecraft behavior, stone-and-pillars presentation
 
-October 10, 2026. Proposed design, not an implemented inventory system. The existing stone-and-pillars building menu is the visual reference. The next implementation should start with the inventory core and Pack + hotbar, followed by containers and crafting.
+October 11, 2026. The user's revised direction follows Minecraft's survival inventory and hotbar functions with stone-and-pillars artwork. The approved A/slender-pillars layout now has an empty UI implementation; item ownership, transactions and persistence remain planned. See [INVENTORY_UI.md](INVENTORY_UI.md) for current controls and integration. This supersedes the earlier 24-slot/shortcut-hotbar proposal.
 
-## Screens
+## Functional baseline
 
-[Overview](../ArtReferences/UIRedesign/InventoryStudy/inventory-overview.png)
-
-| Screen | Layout and behavior |
+| Area | Model |
 | --- | --- |
-| [Pack and equipment](../ArtReferences/UIRedesign/InventoryStudy/pack-on-original-meadow.png) | Equipment/navigation left, 6 × 4 carried-item grid middle, selected-item information and actions right, nine quick slots below |
-| [Storage transfer](../ArtReferences/UIRedesign/InventoryStudy/storage-on-original-meadow.png) | Carried items and chest side by side, explicit transfer/split controls, the same hotbar below |
-| [Crafting](../ArtReferences/UIRedesign/InventoryStudy/crafting-on-original-meadow.png) | Categories left, recipes middle, selected output/ingredients/station/quantity right |
-| [Hotbar during play](../ArtReferences/UIRedesign/InventoryStudy/hotbar-on-original-meadow.png) | Compact nine-slot limestone shelf, selected-item name, counts and separate tool durability; I/B hints |
+| Backpack | 27 actual slots, displayed as nine columns × three rows |
+| Hotbar | Nine additional actual inventory slots, not bindings to backpack stacks |
+| Main hand | The currently selected hotbar slot; no extra main-hand equipment slot |
+| Armor | Four dedicated slots: head, chest, legs, feet |
+| Offhand | One dedicated item slot, represented beside the gameplay hotbar when occupied |
+| Personal crafting | Four actual ingredient slots in a 2×2 grid and one computed output preview |
+| Item information | Hover tooltip; no permanent inspector or item-description panel |
 
-Reuse the existing StonePanel and StonePillar artwork, Georgia headings, Segoe UI body type, slate-blue selection and fine geometric corner motifs. Pillars belong at modal outer edges. Compact gameplay elements use a shallow stone rim, keeping the world visible. Inventory cells use a quiet outline to distinguish occupied and empty slots; the selected cell is slate blue. Item artwork should eventually be rendered from authored item meshes/materials using the building thumbnail workflow.
+The backpack plus hotbar provide **36 carried slots**, with armor and offhand stored separately. Moving an axe from the backpack to the hotbar transfers that item instance rather than leaving a duplicate in its old slot. Equipping armor or moving an item to offhand likewise changes its slot ownership.
 
-Start with **24 carried slots**, **two equipment references** (main hand/off hand), and **nine hotbar bindings** as a testable first capacity. Capacity and item limits belong in game data so they can change after playtesting. Avoid introducing weight/hunger/armor statistics before the corresponding game rules exist.
+Reference: [Minecraft's official personal-crafting guide](https://www.minecraft.net/en-us/article/how-craft) shows the four-cell input and output. [Microsoft's Minecraft EquipmentSlot reference](https://learn.microsoft.com/en-us/minecraft/creator/scriptapi/minecraft/server/equipmentslot?view=minecraft-bedrock-stable) states that player mainhand is the active hotbar slot.
 
-## Delivery order
+## Visual proposals
 
-1. **Inventory core and item content.** Item definitions, carried instances/stacks, add/remove/move/swap/split/merge, capacity checks, change events and save-ready stable IDs.
-2. **Pack and hotbar.** The first usable screen, selected-item detail, drag/drop plus click controls, sorting, two equipment references and quick-slot assignment. A temporary pickup fixture can exercise the loop before harvesting is connected.
-3. **Storage.** A container owns the same inventory model; the transfer screen binds two owners to the same slot component. Add explicit container interaction and capacity-aware transfer.
-4. **Crafting.** Recipe definitions and transactional spending/output, quantity, shortages and station conditions. Begin with backpack ingredients; add nearby storage later with an explicit ingredient-source rule.
-5. **World integration and persistence.** Connect actual pickups/harvesting, item use, container persistence and player saves. Introduce building material costs only after this economy is usable and balanced.
+[Inventory comparison](../ArtReferences/UIRedesign/MinecraftInventoryStudy/inventory-comparisons.png) and [hotbar close-ups](../ArtReferences/UIRedesign/MinecraftInventoryStudy/hotbar-comparisons.png).
 
-## Item model
+- **Compact inventory:** familiar upper equipment/character/crafting region, with 27 slots and a separate hotbar aligned below. Recommended starting layout because slot relationships are clear and the window leaves useful world space around it.
+- **Character-led inventory:** a larger frontal player preview and gear slots on the left; crafting and backpack on the right. Useful if visible equipment changes are a major part of progression.
+- **Split panels:** separated equipment/crafting slabs above a lower storage slab, echoing the building UI's floating stone panels.
 
-Create a separate ItemDefinition ScriptableObject with stable ID, display name, icon, category, stack limit and optional equipment/tool metadata. Runtime carried data owns quantity and item-instance ID; tools also own durability. Static definitions never store a player's quantity or current durability.
+Gameplay hotbar choices:
 
-WorldObjectDefinition currently describes world identity and tree-generation authoring data. Keep it distinct from inventory definitions. A world tree can resolve a harvesting result to a wood item definition through a drop/interaction rule, rather than putting inventory stacks into the tree's datacard.
+- **Carved stone rail:** shared light limestone frame, recessed cells, slate-blue selected fill. Strongest continuity with the building menu.
+- **Separate stone tiles:** lighter framing, transparent gaps, outline selection. Keeps the world more visible and makes each cell distinct.
+- **Slate inset:** dark cell interiors, ivory stack numbers and a light selection rim. Recommended counterpart to Compact if icon contrast is the priority.
 
-An inventory container owns ordered slots and the item instances in them. A service performs validated moves, swaps, splitting and merging, then emits state changes. The views render that state and submit commands; they never alter quantities directly. Preserve total quantities across container transfer. A failed operation leaves both owners unchanged and reports a useful reason.
+Use pillars at inventory-window edges, with compact rim/corner motifs on the gameplay hotbar. Avoid adding a temple-scale frame to the HUD. Slot sizes and UI scale can be tuned together without changing capacity or transfer rules.
 
-The mock equipment panel displays the same axe instance already carried in the pack. Equipping and assigning a hotbar slot must not clone it. For tools, equipment/hotbar binding should use the stable item-instance ID. For stackable materials and consumables, a hotbar binding can use the item type and resolve the carried total, remaining stable when stacks move or merge. Transferring an item away updates or clears affected equipment/quick-slot references according to the ownership rule. Counts in the gameplay hotbar include carried items, not everything stored in nearby chests.
+## Icon and tooltip rules
 
-Persist item definition IDs, quantities, tool-instance IDs/durability, slot positions and equipment/quick-slot references in a versioned player/container record. Establish that serialization shape in the core; wire it to the game's eventual save owner once persistence is introduced. Never save raw Unity object pointers as item identity.
+Stack count sits at the item icon's lower-right. Hide a count of one and omit counts for nonstackable tools/armor. Durability is a short bar along the slot's bottom edge, with space reserved so it never collides with the count. Production bars derive from current/max durability and can remain hidden for an undamaged item, following the intended Minecraft-style behavior.
 
-## Interactions and input
+Counts and bars are **live UI overlays**, not permanently painted into the item sprite. Use the same icon/overlay component in backpack, hotbar, armor, offhand and crafting. Keep item icon identity and slot ordering consistent across every view.
 
-**I** opens the pack, **Esc/I** closes it. This avoids E, which already turns build previews. **1–9** selects quick slots during normal gameplay. The wheel can cycle quick slots outside building; during placement it continues rotating pieces. Inside a menu it scrolls the appropriate list. A single local input/menu coordinator owns these mode decisions.
+A small tooltip shows the name, exact durability and relevant item information on hover. It follows the pointer with a small offset, clamps to the screen and does not cover the hovered slot. Keyboard focus can expose the same information. No persistent item-description column, equip/unequip buttons, hotbar title plaque, I/B guide, or numeric key labels inside the hotbar cells. Number-key and wheel selection can still operate without drawing those bindings on screen. The selected slot uses a rim/fill so selection does not rely on a number or durability color.
 
-Opening inventory pauses placement input and clears its ghost. Closing it restores the prior building selection/context and cursor state. Switching between Pack and Crafting keeps one modal focus owner. Returning to a build catalog preserves its free cursor; returning to gameplay recaptures the hidden cursor and suppresses recentering deltas, as the building menu already does.
+## Character preview
 
-Use drag/drop for moving and assigning, with equivalent click selection and explicit actions. Shift-click transfers a full stack when another destination container is visible. Right-click offers a quantity-aware split. In a single pack view, quick move can mean assigning to a quick slot or moving to the available equipment target; the label should be context-specific in implementation. Sort is explicit and preserves stable item bindings. Ordinary closing/reopening preserves selection and manual slot ordering.
+The current UI uses a blank Image in the character nook, as requested. Later, render the actual equipped player from the front into a small RenderTexture while inventory is visible. Reuse the actual rig/assets; illustrated mockup people are placeholders. The preview can reflect armor, selected hotbar item and offhand. Keep its camera separate from the world and disable it when the menu closes.
 
-The query HUD should offer pickup/container/harvest prompts only when an implemented interaction resolver supplies those actions. The existing identification result or a breakability flag alone does not execute harvesting. Add actual world actions as part of world integration, with input routes consistent with the selected tool and active menu.
+## Inventory operations and state
 
-## Crafting rules
+Create ItemDefinition assets for ID, name, icon/model, item-specific stack limit, equipment eligibility and durability limits. Runtime ItemStack/instance records contain quantity, durability and stable instance identity.
 
-Recipe definitions supply output, ingredients and station requirement. The service computes availability, output capacity and maximum quantity from current inventory state. The panel displays available/required counts, the exact shortfall, station conditions and ingredient source. The main button explains its disabled state through adjacent text: missing resources, missing station, or no output capacity.
+A PlayerInventory owns the 27 backpack slots, nine hotbar slots, four armor slots, offhand and active hotbar index. A carried cursor stack and the four crafting inputs are also owned state; opening or closing UI must not create or delete them. Mainhand reads the active hotbar slot rather than a second equipped-item record.
 
-Validate the complete craft before spending ingredients, and commit ingredient removal and output addition together. Quantity changes recompute all requirements. A stale selection or a container change triggers another availability check before commit. When nearby storage is introduced, label it and define its reach; the interface should never conceal where materials are being consumed.
+All moves, swaps, splitting, merging, quick transfers and equipment changes go through one validated service. Views issue commands and observe changes. Preserve quantities and item instance IDs across operations. Save slot positions, active hotbar index, equipped items and relevant instance state by stable IDs rather than Unity object pointers.
 
-## Sample data and mockup limits
+Target familiar interactions: left-click pick up/place/merge/swap; right-click split a stack or place a single item; drag distribute; shift-click quick transfer; double-click collect compatible items up to the stack limit; number-key swap between a hovered inventory cell and the corresponding hotbar slot. Armor accepts the appropriate item type. Offhand swapping exchanges it with the selected hotbar slot. Define destination priority consistently for quick transfers and partial-stack merges.
 
-The illustrated pack contains 12 occupied slots: wood 20, stone 16, fiber 6, rope 4, berries 8, meat 2, stone axe 1, wooden hammer 1, torch 1, flint 7, hide 3 and reeds 12. The chest contains wood 32, stone 40, fiber 18 and rope 6. A sample hammer costs 4 wood + 2 fiber, making three the ingredient-limited maximum with that carried supply. The torch example is short one resin; cooked meat needs a campfire. These costs, items and stations are illustrative design content, not balanced or implemented game features.
+## Integrated 2×2 crafting
 
-ImageGen illustrates appearance and density. Item placements/artwork differ slightly between the generated screens, and durability tracks are illustrative rather than exact proportional renderings. Real screens must bind one canonical model, preserve slot positions across views and derive every number and bar from state. A normal production inventory view should not pin an unrelated recipe requirement unless the player explicitly pins it.
+Crafting lives in the inventory's upper section. Place actual items in four input cells; match the pattern to a recipe; display the available result in the output cell. Clicking the output consumes one craft and places that result on the carried cursor or into the receiving slot. Shift-taking can craft repeatedly up to ingredient and destination capacity. There is no separate Craft button or quantity selector on this personal grid.
 
-All four full-resolution composites use the exact same original autumn screenshot at 3316 × 1848. The background was not regenerated, resized, cropped, dimmed or recolored. Pixel verification found zero changes wherever overlay alpha is zero; the overview uses reduced previews. Transparent layers, [prompts](../ArtReferences/UIRedesign/InventoryStudy/PROMPTS.md), [compositing script](../ArtReferences/UIRedesign/InventoryStudy/compose.cjs) and [verification](../ArtReferences/UIRedesign/InventoryStudy/pixel-verification.json) are saved with the mockups. No runtime game files were edited for this design request.
+Validate ingredient consumption and output delivery together so insufficient output capacity cannot consume inputs. Return unused crafting ingredients and the cursor-held stack safely when the menu closes, with an explicit world-drop fallback if no inventory capacity remains. Larger crafting grids can belong to future workstations, rather than changing personal crafting behavior.
+
+The mock recipe uses two planks vertically to show four sticks in the output. Values and art are illustrative. The sample separately contains wood 32 in the backpack, wood 20 in the hotbar and one plank in each of two crafting cells; those are separate physical stacks, not repeated labels for one item.
+
+## Input and existing building integration
+
+A single LocalPlayerMenus instance, attached automatically by LocalPlayerInput, owns the active local menu. Tab opens/closes inventory. Inventory releases the cursor and suppresses look and world interactions while keeping locomotion active. Opening inventory exits building and clears the ghost. B or another registered menu replaces inventory. Closing any menu returns to gameplay, with look-delta suppression after cursor capture; there is no previous-menu/build-context restoration.
+
+Number keys 1–9 currently select the empty hotbar cell in both gameplay and inventory views. The selected cell has a blue background; unselected cells are warm stone. No key labels are drawn. Tab now belongs to inventory rather than the old placement catalog shortcut. Wheel selection is deferred; building placement retains Q/E and wheel rotation, and no build commands are submitted while a menu owns input.
+
+Retain the building component catalog and its quick-piece strip as definition selection. Do not treat those ten component definitions as extra carried inventory slots or fabricate building-item stacks to fill the pack.
+
+## Implementation sequence
+
+1. **Core and slot operations:** item content, 36 carried slots, dedicated armor/offhand, active hotbar selection, cursor-held stacks and stable save representation. Verify conservation, stack limits and equipment rules.
+2. **Personal inventory and hotbar:** shared slot/tooltip component, selected-item display, cursor/focus handling, armor/offhand transfers and a front-facing character preview. Match the approved layout.
+3. **2×2 crafting:** input slots, recipe matching, output preview/take and item-preserving close behavior.
+4. **World pickups/use and storage:** connect real interaction actions, item use and container screens using the same slot service and transaction rules.
+5. **Persistence and economy:** wire player/container save ownership, introduce workstations and building material costs when gameplay content is ready.
+
+## Deliverables and limits
+
+The [six proposals](../ArtReferences/UIRedesign/MinecraftInventoryStudy/README.md) use the original autumn screenshot unchanged outside the UI, confirmed by pixel checks. Full-size files retain native dimensions; the hotbar comparison board is explicitly a close-up. Slot counts and required groups were visually reviewed. Generated character/icon artwork varies slightly; production must render canonical assets and exact runtime values.
+
+Built-in ImageGen supplied the original mockup artwork. [Prompts](../ArtReferences/UIRedesign/MinecraftInventoryStudy/PROMPTS.md), foreground layers, compositing code and verification are saved with the mockups. That initial design phase did not change runtime code. The subsequently approved empty A/slender-pillars implementation and actual Unity captures are described in [INVENTORY_UI.md](INVENTORY_UI.md). Earlier mockups and their original plan remain in InventoryStudy for provenance.

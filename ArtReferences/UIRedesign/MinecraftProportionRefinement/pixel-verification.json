@@ -1,0 +1,50 @@
+[
+  {
+    "variant": "inventory-thin-pillars",
+    "background": "C:\\Users\\samee\\GitProjects\\FirstSettlers\\ArtReferences\\UIRedesign\\PeriodStudy\\Backgrounds\\source-01.png",
+    "width": 3316,
+    "height": 1848,
+    "panel": {
+      "left": 1058,
+      "top": 379,
+      "width": 1200,
+      "height": 1090
+    },
+    "screenWidthPercent": 36.18817852834741,
+    "screenHeightPercent": 58.98268398268398,
+    "pixelsComparedOutsideOverlay": 4871618,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "variant": "inventory-quiet-stone",
+    "background": "C:\\Users\\samee\\GitProjects\\FirstSettlers\\ArtReferences\\UIRedesign\\PeriodStudy\\Backgrounds\\source-01.png",
+    "width": 3316,
+    "height": 1848,
+    "panel": {
+      "left": 1058,
+      "top": 369,
+      "width": 1200,
+      "height": 1111
+    },
+    "screenWidthPercent": 36.18817852834741,
+    "screenHeightPercent": 60.11904761904761,
+    "pixelsComparedOutsideOverlay": 4846278,
+    "changedOutsideOverlay": 0
+  },
+  {
+    "variant": "hotbar-slate-warm-stone",
+    "background": "C:\\Users\\samee\\GitProjects\\FirstSettlers\\ArtReferences\\UIRedesign\\PeriodStudy\\Backgrounds\\source-01.png",
+    "width": 3316,
+    "height": 1848,
+    "panel": {
+      "left": 929,
+      "top": 1638,
+      "width": 1459,
+      "height": 173
+    },
+    "screenWidthPercent": 43.99879372738239,
+    "screenHeightPercent": 9.36147186147186,
+    "pixelsComparedOutsideOverlay": 5890540,
+    "changedOutsideOverlay": 0
+  }
+]

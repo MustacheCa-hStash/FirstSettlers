@@ -19,8 +19,16 @@ public sealed class LocalPlayerInput : MonoBehaviour
         Debug = 8192, Freeze = 16384, Flip = 32768, Confirm = 65536 }
     private BuildButton heldBuildButtons;
     private int suppressLookFrames;
-    public void SetBuilding(BuildingController controller) => building = controller;
+    public LocalPlayerMenus Menus { get; private set; }
+    public bool WorldInteractionAllowed => Menus == null || !Menus.BlocksWorldInteraction;
+    public void SetBuilding(BuildingController controller) { building = controller; Menus?.SetBuilding(controller); }
     public void SuppressLookAfterCursorCapture() => suppressLookFrames = 2;
+
+    private void Awake()
+    {
+        Menus = GetComponent<LocalPlayerMenus>() ?? gameObject.AddComponent<LocalPlayerMenus>();
+        Menus.SetBuilding(building);
+    }
 
     private void OnEnable()
     {
@@ -50,13 +58,19 @@ public sealed class LocalPlayerInput : MonoBehaviour
         BuildButton pressed = held & ~heldBuildButtons;
         heldBuildButtons = held;
         bool Pressed(BuildButton button) => (pressed & button) != 0;
-        if (building != null && keyboard != null)
+        if (keyboard != null)
         {
-            if (Pressed(BuildButton.Toggle)) building.Toggle();
-            else if (Pressed(BuildButton.Cancel) && building.Active) building.Exit();
-            else if (Pressed(BuildButton.Picker) && building.Active) building.OpenMenu();
-            if (Pressed(BuildButton.Debug)) building.CycleColliderDebug();
-            if (Pressed(BuildButton.Freeze)) building.ToggleDebugFreeze();
+            if (Pressed(BuildButton.Toggle) && building != null) building.Toggle();
+            else if (Pressed(BuildButton.Picker)) Menus.ToggleInventory();
+            else if (Pressed(BuildButton.Cancel))
+            {
+                if (building != null && building.Active) building.Exit();
+                else if (Menus.IsOpen) Menus.CloseActive();
+            }
+            if (Pressed(BuildButton.Debug)) building?.CycleColliderDebug();
+            if (Pressed(BuildButton.Freeze)) building?.ToggleDebugFreeze();
+            for (int i = 0; i < 9; i++)
+                if (keyboard[(Key)((int)Key.Digit1 + i)].wasPressedThisFrame) Menus.SelectHotbar(i);
         }
         if (building != null && building.MenuOpen)
         {
@@ -64,6 +78,12 @@ public sealed class LocalPlayerInput : MonoBehaviour
             if (Pressed(BuildButton.Confirm)) building.ConfirmMenuSelection();
             ResetNudgeRepeat();
             motor.Simulate(default, Time.deltaTime);
+            return;
+        }
+        if (Menus.IsOpen)
+        {
+            ResetNudgeRepeat();
+            motor.Simulate(Menus.AllowsMovement ? ReadMovement(keyboard) : default, Time.deltaTime);
             return;
         }
         if (suppressLookFrames > 0) suppressLookFrames--;
@@ -98,6 +118,12 @@ public sealed class LocalPlayerInput : MonoBehaviour
             building.Submit(new BuildInputCommand(turn, nudge, Pressed(BuildButton.Place), Pressed(BuildButton.Remove), Pressed(BuildButton.Flip)));
         }
         else ResetNudgeRepeat();
+        motor.Simulate(ReadMovement(keyboard), Time.deltaTime);
+    }
+
+    private static CharacterMoveCommand ReadMovement(Keyboard keyboard)
+    {
+        if (keyboard == null) return default;
         Vector2 move = new Vector2(
             (keyboard.dKey.isPressed ? 1f : 0f) - (keyboard.aKey.isPressed ? 1f : 0f),
             (keyboard.wKey.isPressed ? 1f : 0f) - (keyboard.sKey.isPressed ? 1f : 0f));
@@ -105,13 +131,12 @@ public sealed class LocalPlayerInput : MonoBehaviour
         if (move.sqrMagnitude > 1f)
             move.Normalize();
 
-        var command = new CharacterMoveCommand(
+        return new CharacterMoveCommand(
             move,
             keyboard.leftShiftKey.isPressed,
             keyboard.leftCtrlKey.isPressed,
             keyboard.spaceKey.wasPressedThisFrame);
 
-        motor.Simulate(command, Time.deltaTime);
     }
     private void ResetNudgeRepeat() => leftNudge = rightNudge = forwardNudge = backNudge = default;
     private void OnApplicationFocus(bool focused) { if (!focused) ResetNudgeRepeat(); }

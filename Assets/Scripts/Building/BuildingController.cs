@@ -24,6 +24,7 @@ public sealed class BuildingController : MonoBehaviour
     private Vector3Int nudge;
     private BuildInputCommand pending;
     private LocalPlayerInput input;
+    private LocalPlayerMenus menus;
     private int cursorCaptureFrames;
     public bool GameplayCursorRequested { get; private set; }
     public bool Active { get; private set; }
@@ -41,6 +42,7 @@ public sealed class BuildingController : MonoBehaviour
         world.Camera = viewCamera;
         world.Focus = GetComponentInParent<CharacterMotor>()?.transform ?? transform;
         input = GetComponent<LocalPlayerInput>();
+        menus = input?.Menus;
         if (input != null) input.SetBuilding(this);
         if (world.Catalog == null || world.Catalog.presets == null || world.Catalog.presets.Length == 0)
         { Debug.LogError("Building prototype catalog is missing.", this); enabled = false; return; }
@@ -59,6 +61,7 @@ public sealed class BuildingController : MonoBehaviour
     {
         world?.ClearPreview();
         if (!Active) return;
+        menus?.Open(this, () => Close(false));
         MenuOpen = true; pending = default;
         skyGuide = default;
         GameplayCursorRequested = false; cursorCaptureFrames = 0;
@@ -72,6 +75,7 @@ public sealed class BuildingController : MonoBehaviour
     {
         if (!Active || definition == null) return;
         selected = definition; MenuOpen = false; nudge = default; contextTurn = 0; target = null; pending = default;
+        menus?.Close(this, false);
         skyGuide = default; Preview = default;
         if (definition.IsWallInfill && viewCamera != null) worldHeading = BuildPlacement.FacingYaw(-viewCamera.transform.forward);
         suppressPlaceUntil = Time.frameCount + 1;
@@ -83,12 +87,14 @@ public sealed class BuildingController : MonoBehaviour
         world?.ClearPreview();
         bool wasActive = Active;
         Active = false; MenuOpen = false; pending = default; target = null; Preview = default; view?.SetState(false, false);
+        menus?.Close(this, false);
         skyGuide = default;
         if (capture && wasActive) RequestGameplayCursor();
         else if (!capture) { GameplayCursorRequested = false; cursorCaptureFrames = 0; }
     }
     private void RequestGameplayCursor()
     {
+        if (menus != null && menus.IsOpen) return;
         GameplayCursorRequested = true;
         // The picker callback or Editor Escape handling can release capture later in the same frame.
         // Repeat briefly after the transition, rather than continually fighting window/UI focus.
@@ -102,7 +108,7 @@ public sealed class BuildingController : MonoBehaviour
     }
     private void RestoreCursorCapture()
     {
-        if (cursorCaptureFrames <= 0 || MenuOpen || !Application.isFocused) return;
+        if (cursorCaptureFrames <= 0 || MenuOpen || (menus != null && menus.IsOpen) || !Application.isFocused) return;
         cursorCaptureFrames--;
         Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false;
     }
@@ -117,7 +123,7 @@ public sealed class BuildingController : MonoBehaviour
     {
         RestoreCursorCapture();
         var command = pending; pending = default;
-        if (!Active || MenuOpen || selected == null || viewCamera == null) return;
+        if (!Active || MenuOpen || (menus != null && menus.BlocksWorldInteraction) || selected == null || viewCamera == null) return;
         if(command.Flip && selected.flipVariant!=null){selected=selected.flipVariant;world.ClearPreview();}
         var ray = viewCamera.ViewportPointToRay(new Vector3(.5f, .5f, 0));
         if (!TryResolveAim(ray, out var aimPoint, out var aimNormal, out var direct, out var nextTarget, out bool guided))

@@ -9,7 +9,7 @@ The building picker now uses the approved limestone-and-pillars style: three sep
 - **Enter** confirms the highlighted definition and returns to placement. Keyboard focus highlights a component too; **double-click** a catalog tile to select it immediately. The Choose piece button remains available.
 - For half-gables, **Flip slope / R** changes the staged variant and its thumbnail. It does not commit a world piece or change the active placement definition until confirmed.
 - The **Quick pieces** strip selects a catalog component and enters placement immediately. It is a shortcut strip for the current kit, not inventory or persisted custom favorites.
-- During placement, existing left-click place, right-click remove, Q/E/wheel rotation, arrow nudges, Page Up/Down height and R slope flip are preserved. **Tab** reopens the catalog with the active definition selected.
+- During placement, existing left-click place, right-click remove, Q/E/wheel rotation, arrow nudges, Page Up/Down height and R slope flip are preserved. **Tab** now exits building and opens inventory. Use B to exit building and B again to open the catalog. Menus replace one another without restoring a previous menu when closed.
 
 Catalog order/grouping is presentation-only. It does not change the preset array, stable content IDs, component geometry, meshes, materials, snapping, collision, support or persistence. The half-gable remains one catalog entry with two linked representations. Its category is Roofs even though its physical definition kind is Wall. Dimensions consistently read **width × height × depth** from LocalBounds; the roof numbers describe its structural width/rise/run.
 
