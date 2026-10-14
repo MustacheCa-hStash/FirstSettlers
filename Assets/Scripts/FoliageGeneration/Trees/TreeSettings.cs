@@ -189,9 +189,24 @@ public class TreeSettings
     [Tooltip("Grass exclusion radius around instantiated forest rocks.")]
     public float rockGrassExclusionRadius = 1.25f;
 
-    [Header("Forest Rock Rendering")]
-    [Tooltip("Circular chunk radius for forest rock GameObjects.")]
+    [Header("Rock Rendering and Pooled Physics")]
+    [Tooltip("Circular chunk radius for instanced rock visuals. Independent of physical collider range.")]
     public int gameObjectRockChunkRingRadius = 3;
+    public bool enableRockRendering = true;
+    public bool enableRockColliders = true;
+    [Min(0)] public float rockShadowDistance = 140;
+
+    [Min(1f)] public float rockColliderActivationRadius = 28f;
+    [Min(1f)] public float rockColliderReleaseRadius = 36f;
+    [Min(1)] public int rockColliderActivationsPerFrame = 8;
+    [Min(1)] public int maxActiveRockColliders = 256;
+    [Min(0)] public int maxPooledRockColliders = 64;
+    [Header("Snow Rocks")]
+    public GameObject[] snowRockPrefabs;
+    public GameObject[] snowLargeRockPrefabs;
+    [Min(0)] public int maxSnowRocksPerChunk = 6;
+    public Vector2 snowRockUniformScaleRange = new Vector2(.8f, 1.4f);
+    public Vector2 snowLargeRockUniformScaleRange = new Vector2(.85f, 1.3f);
 
     [Header("Tree Rendering")]
     public bool castTreeShadows = true;

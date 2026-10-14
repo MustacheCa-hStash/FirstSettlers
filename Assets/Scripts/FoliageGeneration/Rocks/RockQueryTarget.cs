@@ -27,6 +27,13 @@ public sealed class RockQueryTarget : QueryTarget
         data = new RockQueryData(placement);
     }
 
+    public void Release() { InvalidateIdentity(); data = null; }
+    public void CopyAuthoring(RockQueryTarget source)
+    {
+        if (source == null) { displayName = "Rock"; icon = null; definition = null; breakable = true; return; }
+        displayName = source.displayName; icon = source.icon; definition = source.definition; breakable = source.breakable;
+    }
+
     public override bool TryGetInfo(out QueryTargetInfo info)
     {
         info = default;

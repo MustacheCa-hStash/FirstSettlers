@@ -18,6 +18,8 @@ public struct WorldFeatureGenerationSettings
     public Vector2 grasslandLargeRockUniformScaleRange;
     public Vector2 grasslandRockPitchRange;
     public int maxGrasslandTreesPerChunk;
+    public int maxSnowRocksPerChunk, snowRockPrefabCount, snowLargeRockPrefabCount;
+    public Vector2 snowRockUniformScaleRange, snowLargeRockUniformScaleRange;
 
     public static bool IsGrasslandTree(WorldFeatureVariant variant) => TreeSpeciesCatalog.IsGrassland(variant);
 
@@ -72,6 +74,11 @@ public struct WorldFeatureGenerationSettings
         grasslandRockUniformScaleRange = new Vector2(60f, 95f),
         grasslandLargeRockUniformScaleRange = new Vector2(95f, 135f),
         grasslandRockPitchRange = new Vector2(-12f, 12f),
-        maxGrasslandTreesPerChunk = 8
+        maxGrasslandTreesPerChunk = 8,
+        maxSnowRocksPerChunk = 6,
+        snowRockPrefabCount = 3,
+        snowLargeRockPrefabCount = 3,
+        snowRockUniformScaleRange = new Vector2(.8f, 1.4f),
+        snowLargeRockUniformScaleRange = new Vector2(.85f, 1.3f)
     };
 }

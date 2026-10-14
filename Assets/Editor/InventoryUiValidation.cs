@@ -45,7 +45,7 @@ public static class InventoryUiValidation
         Directory.CreateDirectory(Captures);
         foreach (var size in new[] { new Vector2Int(1280,720),new Vector2Int(1920,1080),new Vector2Int(3840,2160),new Vector2Int(1024,768) })
             Render(size.x, size.y);
-        Debug.Log("INVENTORY UI PASS: empty 27+9/armor/offhand/2x2/output, blank character, centered inert book, synced blue selection, passive HUD and four-resolution rendering.");
+        Debug.Log("INVENTORY UI PASS: empty layout, centered inert book, synced blue selection, passive HUD, independent live GUI scales, anchors and screen fit at four resolutions.");
     }
 
     private static void Render(int width, int height)
@@ -103,6 +103,19 @@ public static class InventoryUiValidation
             foreach(var node in hud.Query<VisualElement>().ToList())Require(node.pickingMode==PickingMode.Ignore,"HUD intercepts a world pointer");
             Require(hud.worldBound.xMin>=0 && hud.worldBound.xMax<=width && hud.worldBound.yMax<=height,"Hotbar overflow");
             Save(target,$"hotbar-{width}x{height}.png");
+            float defaultHudWidth = hud.worldBound.width;
+            view.SetGuiScale(.75f, 1.5f); view.SetState(true,true); Draw();
+            var scaledWindow = root.Q("inventory-window").worldBound;
+            Require(Mathf.Abs(scaledWindow.width - window.width * .75f)<1,"Inventory GUI scale did not apply independently");
+            Require(Mathf.Abs(hud.worldBound.width - defaultHudWidth * 1.5f)<1,"Hotbar GUI scale did not apply independently");
+            Require(Mathf.Abs(scaledWindow.center.x-width*.5f)<1 && Mathf.Abs(scaledWindow.center.y-height*.5f)<1,"Scaled inventory lost its center anchor");
+            Require(Mathf.Abs(hud.worldBound.yMax-height*.98f)<1,"Scaled hotbar lost its bottom margin");
+            Require(view.HotbarClearanceFraction*height > height-hud.worldBound.yMin,"Building readout clearance did not follow hotbar scale");
+            Require(Mathf.Abs(book.worldBound.center.x-root.Q("inventory-crafting").worldBound.center.x)<1,"Scaling moved book away from crafting center");
+            view.SetGuiScale(2,2); Draw();
+            scaledWindow = root.Q("inventory-window").worldBound;
+            Require(scaledWindow.xMin>=0 && scaledWindow.yMin>=0 && scaledWindow.xMax<=width && scaledWindow.yMax<=height,"Maximum inventory scale overflowed screen");
+            Require(hud.worldBound.xMin>=0 && hud.worldBound.xMax<=width && hud.worldBound.yMax<=height,"Maximum hotbar scale overflowed screen");
         }
         finally { view?.Dispose(); Object.DestroyImmediate(host); target.Release(); Object.DestroyImmediate(target); }
     }

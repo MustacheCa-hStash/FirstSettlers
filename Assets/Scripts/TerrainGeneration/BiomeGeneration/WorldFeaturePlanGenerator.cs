@@ -101,6 +101,7 @@ public static class WorldFeaturePlanGenerator
             settings);
 
         BuildRockInfluenceMap(plan, chunkSize);
+        AddSnowRocks(plan, chunkCoord, chunkSize, seed, biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, settings);
 
         AddForestTrees(
             plan,
@@ -235,6 +236,7 @@ public static class WorldFeaturePlanGenerator
         }
         AddForestBoulders(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
         AddGrasslandRocks(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
+        AddSnowRocks(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
         AddForestTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, settings, PrepareTree);
         AddGrasslandTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, settings, PrepareTree);
         AddTaigaSpruceTrees(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
@@ -346,6 +348,49 @@ public static class WorldFeaturePlanGenerator
                 fields.DampShadeMap[x, z] = dampShade;
                 fields.UnderstoryDensityMap[x, z] = understory;
             }
+        }
+    }
+
+    private static void AddSnowRocks(WorldFeaturePlan plan, ChunkCoord coord, int chunkSize, int seed,
+        BiomeType[,] biomes, SurfaceType[,] surfaces, float[,] slopes, float[,] rivers,
+        WorldFeatureGenerationSettings settings, System.Action<int, int> prepare = null)
+    {
+        int max = Mathf.Max(0, settings.maxSnowRocksPerChunk), placed = 0;
+        // Reuse the forest-boulder candidates' terrain samples. The old independent 6x6 grid
+        // forced 36 extra height/slope/climate samples in every distant-tree chunk, including warm biomes.
+        const int cells = BoulderCandidateCellsPerAxis;
+        float cellSize = chunkSize / (float)cells;
+        int offset = Mathf.Abs(Hash(seed, coord.x, coord.z, 6211)) % (cells*cells);
+        for (int c = 0; c < cells*cells && placed < max; c++)
+        {
+            int shuffled = (c*5+offset) % (cells*cells);
+            int cellX=shuffled%cells,cellZ=shuffled/cells;
+            int locationHash = Hash(seed, coord.x, coord.z, cellX, cellZ, 6201);
+            int hash = Hash(seed, coord.x, coord.z, shuffled, 9283);
+            float x = Mathf.Clamp((cellX + Hash01(locationHash+17))*cellSize, 4, chunkSize-4);
+            float z = Mathf.Clamp((cellZ + Hash01(locationHash+31))*cellSize, 4, chunkSize-4);
+            int px = Mathf.Clamp(Mathf.RoundToInt(x), 0, chunkSize)+1;
+            int pz = Mathf.Clamp(Mathf.RoundToInt(z), 0, chunkSize)+1;
+            prepare?.Invoke(px, pz);
+            if (biomes[px,pz] != BiomeType.Snow ||
+                (surfaces[px,pz] != SurfaceType.Snow && surfaces[px,pz] != SurfaceType.Rock) ||
+                slopes[px,pz] > 38 || rivers[px,pz] > .12f) continue;
+            // Broad patches and sparse scatter, with both small stones and occasional anchor boulders.
+            float patch = Mathf.PerlinNoise((coord.x*chunkSize+x+seed%997)*.009f,
+                (coord.z*chunkSize+z-seed%991)*.009f);
+            if (Hash01(hash+53) > Mathf.Lerp(.25f,.75f,patch)) continue;
+            bool large = Hash01(hash+67) < .28f;
+            Vector2 range = large ? settings.snowLargeRockUniformScaleRange : settings.snowRockUniformScaleRange;
+            float scale = Mathf.Max(.1f, Mathf.Lerp(Mathf.Min(range.x,range.y), Mathf.Max(range.x,range.y),Hash01(hash+79)));
+            float radius = large ? 3.4f*scale : 1.5f*scale;
+            if (IntersectsExistingPlacement(plan,x,z,radius)) continue;
+            int count = Mathf.Max(1, large ? settings.snowLargeRockPrefabCount : settings.snowRockPrefabCount);
+            int index = Mathf.Min(count-1, Mathf.FloorToInt(Hash01(hash+89)*count));
+            plan.Placements.Add(new WorldFeaturePlacement(WorldFeatureType.Boulder,
+                large ? WorldFeatureVariant.SnowLargeBoulder : WorldFeatureVariant.SnowBoulder,
+                x,z,Quaternion.Euler(Mathf.Lerp(-8,8,Hash01(hash+113)),Hash01(hash+97)*360,0),
+                Vector3.one*scale,radius,radius+5,index));
+            placed++;
         }
     }
 

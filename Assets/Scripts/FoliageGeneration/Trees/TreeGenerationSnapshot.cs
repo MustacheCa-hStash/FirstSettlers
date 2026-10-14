@@ -47,6 +47,11 @@ public static class TreeGenerationSnapshot
         settings.grasslandLargeRockUniformScaleRange = treeSettings.grasslandLargeRockUniformScaleRange;
         settings.grasslandRockPitchRange = treeSettings.grasslandRockPitchRange;
         settings.maxGrasslandTreesPerChunk = Mathf.Max(0, treeSettings.maxGrasslandTreesPerChunk);
+        settings.maxSnowRocksPerChunk = Mathf.Max(0, treeSettings.maxSnowRocksPerChunk);
+        settings.snowRockPrefabCount = treeSettings.snowRockPrefabs?.Length > 0 ? treeSettings.snowRockPrefabs.Length : 3;
+        settings.snowLargeRockPrefabCount = treeSettings.snowLargeRockPrefabs?.Length > 0 ? treeSettings.snowLargeRockPrefabs.Length : 3;
+        settings.snowRockUniformScaleRange = treeSettings.snowRockUniformScaleRange;
+        settings.snowLargeRockUniformScaleRange = treeSettings.snowLargeRockUniformScaleRange;
 
         return settings;
     }

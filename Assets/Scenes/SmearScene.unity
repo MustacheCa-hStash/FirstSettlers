@@ -151,17 +151,17 @@ MonoBehaviour:
   startDistance: 600
   distanceFeather: 477.5
   maxDistance: 5000
-  density: 0.0036
-  bottomHeight: -45
-  topHeight: 200
-  heightFeather: 48.7
+  density: 0.0029
+  bottomHeight: -125
+  topHeight: 220
+  heightFeather: 20
   billowHeight: 70
-  clearHeights: {x: 150, y: 250.1}
+  clearHeights: {x: 300, y: 370}
   noiseTexture: {fileID: 11700000, guid: b6737e4938b76134ba8b4997057e3066, type: 2}
-  noiseTileSize: 350
+  noiseTileSize: 800
   noiseStrength: 1
   detailStrength: 0.293
-  wind: {x: 2, y: 0, z: 0.7}
+  wind: {x: 5, y: 0, z: 0.7}
   shading: 0.692
   followDayNightColor: 0
   fogColor: {r: 0.72156864, g: 0.76862746, b: 0.8, a: 1}
@@ -960,7 +960,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 14566
+  worldSeed: 14567
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -1354,30 +1354,22 @@ MonoBehaviour:
     blackberryBushPrefab: {fileID: 0}
     fallbackBushPrefab: {fileID: 2095120421312505866, guid: 90b14277c549b58408d186345b97dfbe, type: 3}
     forestRockPrefabs:
-    - {fileID: 919132149155446097, guid: dc2508ff42e555c4f89101aed2b38924, type: 3}
-    - {fileID: 919132149155446097, guid: 796e9dfc171fec2408ad08917eac7250, type: 3}
-    - {fileID: 919132149155446097, guid: f1473192a114b2540928d90dc73d736b, type: 3}
-    - {fileID: 919132149155446097, guid: 48f37dcb64d335f42a79c8989710a856, type: 3}
-    - {fileID: 919132149155446097, guid: 63119c7758858084d87fd43bcbed4df4, type: 3}
+    - {fileID: 6034849157884935470, guid: fad617a10ca24664580eb05405b0c77d, type: 3}
+    - {fileID: 7872396082669303978, guid: a17d0e27046322e4a87a43134f4bdd19, type: 3}
+    - {fileID: 4888243907507547804, guid: d688fa0ac4736ba4cb5dbd653ccf70d6, type: 3}
+    - {fileID: 2244469234222405335, guid: c3f7f29e9dd49194a948828129f86580, type: 3}
+    - {fileID: 7195537692603938683, guid: 816382842ff39bc42b968c067ebc4f90, type: 3}
+    - {fileID: 1018398041371658018, guid: 178ee9a95dd1be84d8d03d5604b60291, type: 3}
     forestRockFallbackPrefab: {fileID: 0}
     grasslandRockPrefabs:
-    - {fileID: 919132149155446097, guid: dc2508ff42e555c4f89101aed2b38924, type: 3}
-    - {fileID: 919132149155446097, guid: 796e9dfc171fec2408ad08917eac7250, type: 3}
-    - {fileID: 919132149155446097, guid: f1473192a114b2540928d90dc73d736b, type: 3}
-    - {fileID: 919132149155446097, guid: 48f37dcb64d335f42a79c8989710a856, type: 3}
-    - {fileID: 919132149155446097, guid: 63119c7758858084d87fd43bcbed4df4, type: 3}
+    - {fileID: 8143393053609213255, guid: 8b868bbdc702c9e4f86fc78304d44efc, type: 3}
+    - {fileID: 4497479508384655788, guid: d18268f257976844c9706367a6eb6d93, type: 3}
+    - {fileID: 5541208895939988957, guid: 6aa5c8678ef773444ba69fa9d02b3a68, type: 3}
     grasslandRockFallbackPrefab: {fileID: 0}
     grasslandLargeRockPrefabs:
-    - {fileID: 5215091863491764800, guid: f4ca189b8839d594d9aae73c01c7cd61, type: 3}
-    - {fileID: 8603439171818855941, guid: f0908a49e8aa556478046637fbc14c31, type: 3}
-    - {fileID: 5617976445590795783, guid: 0add64e772f338c42ad3bcc8ac9aa8fd, type: 3}
-    - {fileID: 869278148090617415, guid: 68e7b7c990b8b614c93b262890ce4864, type: 3}
-    - {fileID: 4141125598104437029, guid: 4b70e7cd7b1c904439856e001ae6451c, type: 3}
-    - {fileID: 6023063466888445313, guid: 716bba450967d284c942936f54ec23d2, type: 3}
-    - {fileID: 5918946592282660831, guid: 86c68384a88305141a9eb3e14d76ef56, type: 3}
-    - {fileID: 1998103615296109997, guid: d858c33e836a3f746a9238e50687a2b0, type: 3}
-    - {fileID: 84383437243448747, guid: 298768191928dee44af9681b94d34074, type: 3}
-    - {fileID: 8050534036156293782, guid: fcff478c2eedf3b4ca05fa36f505f20b, type: 3}
+    - {fileID: 2675817657140658245, guid: 350791ea3ee9e4649996085d71b7d583, type: 3}
+    - {fileID: 3862683304946002644, guid: 599b50f6d53ddc34ca18e1f19ece1234, type: 3}
+    - {fileID: 4232927202736571705, guid: f892c41872fd7434ba565ae8e5345b1b, type: 3}
     grasslandLargeRockFallbackPrefab: {fileID: 0}
     mapleTreeBillboardPrefab: {fileID: 5258689384055247090, guid: f94da246162a5e540b5f14769fba84c6, type: 3}
     sugarMapleTreeBillboardPrefab: {fileID: 945252319243332136, guid: fcba833031280554cb9faba4505d52b7, type: 3}
@@ -1424,15 +1416,34 @@ MonoBehaviour:
     treeGameObjectWarmRetainExtraRings: 2
     gameObjectBushChunkRingRadius: 3
     maxForestRocksPerChunk: 2
-    forestRockUniformScaleRange: {x: 80, y: 100}
+    forestRockUniformScaleRange: {x: 0.8, y: 1.25}
     forestRockPitchRange: {x: -15, y: 15}
     maxGrasslandTreesPerChunk: 6
     maxGrasslandRocksPerChunk: 5
-    grasslandRockUniformScaleRange: {x: 60, y: 95}
-    grasslandLargeRockUniformScaleRange: {x: 95, y: 135}
+    grasslandRockUniformScaleRange: {x: 0.8, y: 1.4}
+    grasslandLargeRockUniformScaleRange: {x: 0.85, y: 1.3}
     grasslandRockPitchRange: {x: -12, y: 12}
     rockGrassExclusionRadius: 1.25
     gameObjectRockChunkRingRadius: 6
+    enableRockRendering: 1
+    enableRockColliders: 1
+    rockShadowDistance: 140
+    rockColliderActivationRadius: 28
+    rockColliderReleaseRadius: 36
+    rockColliderActivationsPerFrame: 8
+    maxActiveRockColliders: 256
+    maxPooledRockColliders: 64
+    snowRockPrefabs:
+    - {fileID: 285106282080361137, guid: 97c8564f02929c44ead2a72733adb045, type: 3}
+    - {fileID: 2558893250634486057, guid: 1b2abaa81815b8b40a1ca83caa5e8378, type: 3}
+    - {fileID: 1253701803623885732, guid: b2a3758f8b7ecd14ba98384497846f02, type: 3}
+    snowLargeRockPrefabs:
+    - {fileID: 2403171835996999284, guid: 3effa75230cf02b42863dd2407705e63, type: 3}
+    - {fileID: 3859864444890046111, guid: 179ea9849148adc4096da1b55dad71ec, type: 3}
+    - {fileID: 2602532256353914285, guid: 83c65654f8903f24b8ae0c85eab2a30c, type: 3}
+    maxSnowRocksPerChunk: 6
+    snowRockUniformScaleRange: {x: 0.8, y: 1.4}
+    snowLargeRockUniformScaleRange: {x: 0.85, y: 1.3}
     castTreeShadows: 1
     receiveTreeShadows: 1
   showTreeExclusionRadiusGizmos: 0
@@ -1968,6 +1979,8 @@ MonoBehaviour:
   motor: {fileID: 1578603183}
   look: {fileID: 2001000022}
   building: {fileID: 2002000002}
+  inventoryGuiScale: 1
+  hotbarGuiScale: 0.75
   repeatArrowNudges: 1
   nudgeRepeatDelay: 0.3
   nudgeRepeatInterval: 0.1

@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: M_DaisyWeeds
-  m_Shader: {fileID: 4800000, guid: 8cb21d7c25d146038246c3c38c5b5d61, type: 3}
+  m_Shader: {fileID: 4800000, guid: 344e7d59eb4f4b44a500ecb51fc185fb, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -17,25 +17,29 @@ Material:
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 1
   m_CustomRenderQueue: 2450
-  stringTagMap:
-    RenderType: TransparentCutout
+  stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: e3d9093070de02645887a33d62d1613e, type: 3}
+        m_Texture: {fileID: 2800000, guid: f0da9a0df48c4382ae7dac5c4fad0d7d, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AmbientStrength: 0.679
-    - _Cutoff: 0.25
+    - _AmbientStrength: 0.18
+    - _Cutoff: 0.45
+    - _InstanceTintStrength: 0.12
     - _MaskSoftness: 0.186
+    - _NormalUpBlend: 0.2
     - _RedThreshold: 0.115
+    - _WindStrength: 0.018
     m_Colors:
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _FlowerColor: {r: 0.52, g: 0.24, b: 0.78, a: 1}
-    - _StemColor: {r: 0.18, g: 0.48, b: 0.15, a: 1}
+    - _FlowerPetalColor: {r: 1, g: 1, b: 1, a: 1}
+    - _StemColor: {r: 0.28, g: 0.43, b: 0.09, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

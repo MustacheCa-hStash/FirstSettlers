@@ -8,6 +8,11 @@ public sealed class LocalPlayerInput : MonoBehaviour
     [SerializeField] private CharacterMotor motor;
     [SerializeField] private FirstPersonLook look;
     [SerializeField] private BuildingController building;
+    [Header("GUI Scale")]
+    [Tooltip("Inventory size relative to the original layout. 1 = default. Large sizes are limited to fit the screen.")]
+    [SerializeField, Range(InventoryView.MinGuiScale, InventoryView.MaxGuiScale)] private float inventoryGuiScale = 1;
+    [Tooltip("Gameplay hotbar size, including offhand. Does not change the row inside inventory. 1 = default.")]
+    [SerializeField, Range(InventoryView.MinGuiScale, InventoryView.MaxGuiScale)] private float hotbarGuiScale = 1;
     [Header("Building arrow nudges")]
     [SerializeField] private bool repeatArrowNudges = true;
     [SerializeField, Min(0)] private float nudgeRepeatDelay = .3f;
@@ -19,6 +24,7 @@ public sealed class LocalPlayerInput : MonoBehaviour
         Debug = 8192, Freeze = 16384, Flip = 32768, Confirm = 65536 }
     private BuildButton heldBuildButtons;
     private int suppressLookFrames;
+    private bool guiScaleDirty;
     public LocalPlayerMenus Menus { get; private set; }
     public bool WorldInteractionAllowed => Menus == null || !Menus.BlocksWorldInteraction;
     public void SetBuilding(BuildingController controller) { building = controller; Menus?.SetBuilding(controller); }
@@ -28,6 +34,28 @@ public sealed class LocalPlayerInput : MonoBehaviour
     {
         Menus = GetComponent<LocalPlayerMenus>() ?? gameObject.AddComponent<LocalPlayerMenus>();
         Menus.SetBuilding(building);
+        ApplyGuiScale();
+    }
+
+    private void OnValidate()
+    {
+        inventoryGuiScale = InventoryView.ClampGuiScale(inventoryGuiScale);
+        hotbarGuiScale = InventoryView.ClampGuiScale(hotbarGuiScale);
+        // OnValidate can run during deserialization; apply UI changes on the player update thread.
+        guiScaleDirty = true;
+    }
+
+    public void SetGuiScale(float inventoryScale, float hotbarScale)
+    {
+        inventoryGuiScale = InventoryView.ClampGuiScale(inventoryScale);
+        hotbarGuiScale = InventoryView.ClampGuiScale(hotbarScale);
+        ApplyGuiScale();
+    }
+
+    private void ApplyGuiScale()
+    {
+        Menus?.SetGuiScale(inventoryGuiScale, hotbarGuiScale);
+        guiScaleDirty = false;
     }
 
     private void OnEnable()
@@ -47,6 +75,7 @@ public sealed class LocalPlayerInput : MonoBehaviour
 
     private void Update()
     {
+        if (guiScaleDirty) ApplyGuiScale();
         if (motor == null || look == null)
         {
             ResetNudgeRepeat();

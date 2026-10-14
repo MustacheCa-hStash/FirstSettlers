@@ -9,6 +9,7 @@ using Unity.Profiling;
 
 public static class FoliageGenerator
 {
+    private static readonly ProfilerMarker RockConversionMarker = new("FS.Rocks.ConvertPlacement");
     private static ChunkRecord.NativeTerrainData.Lease TryAcquireTerrainMaps(ChunkRecord record)
     {
         ChunkRecord.NativeTerrainData data = record.NativeData;
@@ -1983,6 +1984,7 @@ public static class FoliageGenerator
         float worldScale,
         float meshHeightMultiplier)
     {
+        using var marker = RockConversionMarker.Auto();
         if (record.FoliageData == null)
         {
             record.FoliageData = new ChunkFoliageData();
@@ -2017,7 +2019,11 @@ public static class FoliageGenerator
             int paddedX = mapX + 1;
             int paddedZ = mapZ + 1;
 
-            if (record.SurfaceTypeMap[paddedX, paddedZ] != SurfaceType.Grass)
+            bool snowRock = placement.variant == WorldFeatureVariant.SnowBoulder ||
+                placement.variant == WorldFeatureVariant.SnowLargeBoulder;
+            var rockSurface = record.SurfaceTypeMap[paddedX, paddedZ];
+            if (snowRock ? rockSurface != SurfaceType.Snow && rockSurface != SurfaceType.Rock
+                : rockSurface != SurfaceType.Grass)
                 continue;
 
             float height = SampleHeightBilinear(
@@ -2033,13 +2039,25 @@ public static class FoliageGenerator
 
             foliageData.rockInstances.Add(new RockInstanceData(
                 finalLocalPosition,
-                placement.rotation,
+                RockTerrainRotation(record.HeightMap, placement, chunkSize, meshHeightMultiplier),
                 placement.scale,
                 placement.variant,
                 placement.prefabIndex));
         }
 
         foliageData.rocksGenerated = true;
+    }
+
+    private static Quaternion RockTerrainRotation(float[,] heights, WorldFeaturePlacement placement,
+        int chunkSize, float heightMultiplier)
+    {
+        // Uniform worldScale cancels from height/run. Seat the base on the local terrain plane;
+        // authored yaw and modest pitch still supply variation, and both rendering and physics use this rotation.
+        float dx = (SampleHeightBilinear(heights, placement.sampleX + .5f, placement.sampleZ, chunkSize) -
+            SampleHeightBilinear(heights, placement.sampleX - .5f, placement.sampleZ, chunkSize)) * heightMultiplier;
+        float dz = (SampleHeightBilinear(heights, placement.sampleX, placement.sampleZ + .5f, chunkSize) -
+            SampleHeightBilinear(heights, placement.sampleX, placement.sampleZ - .5f, chunkSize)) * heightMultiplier;
+        return Quaternion.FromToRotation(Vector3.up, new Vector3(-dx, 1, -dz).normalized) * placement.rotation;
     }
 
     private static bool IsInsideTreeExclusion(

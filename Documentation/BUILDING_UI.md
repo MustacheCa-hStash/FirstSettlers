@@ -2,6 +2,14 @@
 
 The building picker now uses the approved limestone-and-pillars style: three separate panels, serif headings, clear sans-serif body text, slate-blue selection, functional categories, actual-mesh thumbnails and a selected-piece detail view. The world stays visible between and around the panels. The placement HUD shares the limestone artwork and retains the existing placement messages and valid/warning/error states.
 
+October 12 compact layout: the normal catalog footprint is about 30% smaller through narrower bounds, tighter panel padding/category rows, shorter thumbnail tiles and a slimmer quick-piece strip. All text, content, font sizes and existing responsive font rules are retained. Catalog scrolling keeps every component reachable; the placement HUD is unchanged.
+
+The catalog is centered horizontally and vertically using symmetric viewport margins. The normal and compact responsive layouts both retain that center when the viewport or PanelSettings GUI scale changes; the normal layout keeps its compact 66% × 68% footprint.
+
+Centering was validated at all four resolutions with PanelSettings GUI scales of 0.75, 1.0 and 1.25. [Centered Unity preview](../ArtReferences/UIRedesign/ImplementedBuilding/catalog-centered-on-original-meadow.png) shows the current placement over the original meadow screenshot.
+
+The compact layout passed the existing render/interaction suite at 1280×720, 1920×1080, 3840×2160 and 1024×768. All twelve current catalog tiles fit in the 1080p default view. [Compact Unity preview](../ArtReferences/UIRedesign/ImplementedBuilding/catalog-compact-on-original-meadow.png) uses the original meadow background and a real Unity UI capture; earlier previews are retained.
+
 ## Controls
 
 - **B** opens building; **B / Esc** exits.

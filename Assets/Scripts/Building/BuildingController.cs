@@ -25,6 +25,7 @@ public sealed class BuildingController : MonoBehaviour
     private BuildInputCommand pending;
     private LocalPlayerInput input;
     private LocalPlayerMenus menus;
+    private float hudBottomInset;
     private int cursorCaptureFrames;
     public bool GameplayCursorRequested { get; private set; }
     public bool Active { get; private set; }
@@ -34,6 +35,11 @@ public sealed class BuildingController : MonoBehaviour
     public Camera ViewCamera => viewCamera;
     public void CycleColliderDebug() => world?.ColliderDebug.CycleMode();
     public void ToggleDebugFreeze() => world?.ColliderDebug.ToggleFreeze();
+    public void SetHudBottomInset(float fraction)
+    {
+        hudBottomInset = fraction;
+        if (fraction > 0) view?.SetHudBottomInset(fraction);
+    }
 
     private void Start()
     {
@@ -47,6 +53,7 @@ public sealed class BuildingController : MonoBehaviour
         if (world.Catalog == null || world.Catalog.presets == null || world.Catalog.presets.Length == 0)
         { Debug.LogError("Building prototype catalog is missing.", this); enabled = false; return; }
         view = new BuildMenuView(world.Catalog, transform, Select);
+        if (hudBottomInset > 0) view.SetHudBottomInset(hudBottomInset);
     }
     public void Toggle()
     {

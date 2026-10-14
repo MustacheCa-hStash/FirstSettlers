@@ -1,0 +1,29 @@
+{
+  "triangles": 168,
+  "vertices": 86,
+  "materials": 1,
+  "bounds_blender_xyz_m": [
+    0.7599999904632568,
+    0.3152610808610916,
+    0.29142916202545166
+  ],
+  "bounds_unity_xyz_m": [
+    0.7599999904632568,
+    0.29142916202545166,
+    0.3152610808610916
+  ],
+  "atlas_regions": [
+    "D: bark",
+    "E: left cut",
+    "F: right cut"
+  ],
+  "texture": "Assets/Textures/Buildings/Wood/ordinary-wood-trim-meadow-timber.png",
+  "checks": {
+    "closed_manifold": true,
+    "outward_winding": true,
+    "padded_atlas_UVs": true,
+    "FBX_roundtrip_triangles": true,
+    "FBX_roundtrip_metres": true
+  },
+  "unity_runtime_validation": false
+}

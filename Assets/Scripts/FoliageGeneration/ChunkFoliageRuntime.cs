@@ -56,13 +56,18 @@ public class ChunkFoliageRuntime
     public GameObject blueberryBushPrefab, raspberryBushPrefab, strawberryBushPrefab, blackberryBushPrefab, fallbackBushPrefab;
     public GameObject[] forestRockPrefabs, grasslandRockPrefabs, grasslandLargeRockPrefabs;
     public GameObject forestRockFallbackPrefab, grasslandRockFallbackPrefab, grasslandLargeRockFallbackPrefab;
+    public GameObject[] snowRockPrefabs, snowLargeRockPrefabs;
+    public RockColliderPool RockPool;
+    public RockWorldRenderer RockRenderer;
+    private RockRenderSet rockRenderSet;
+    public int RockInstanceCount => rockRenderSet?.InstanceCount ?? 0;
     private List<FlowerRenderBatch> flowerRenderBatches = new();
     private List<Matrix4x4[]> lilyPadRenderBatches = new(), cattailRenderBatches = new();
     private List<CloverRenderBatch> cloverRenderBatches = new();
     private List<GrassRenderBatch> dandelionRenderBatches = new();
     private readonly MaterialPropertyBlock flowerPropertyBlock = new(), cloverPropertyBlock = new(), dandelionPropertyBlock = new();
-    private GameObject bushGameObjectRoot, rockGameObjectRoot;
-    private List<GameObject> bushGameObjects = new(), rockGameObjects = new();
+    private GameObject bushGameObjectRoot;
+    private List<GameObject> bushGameObjects = new();
     private bool hasCurrentBushRepresentation, hasCurrentRockRepresentation;
     private bool hasBuiltFlowerRenderData, hasBuiltLilyPadRenderData, hasBuiltCattailRenderData, hasBuiltCloverRenderData, hasBuiltDandelionRenderData;
     public int GpuFlowerInstanceCount => CountFlowerInstances();
@@ -122,36 +127,21 @@ public class ChunkFoliageRuntime
     }
     internal IEnumerator<bool> BuildRocksIncrementally(List<RockInstanceData> instances)
     {
-        GameObject staging = new GameObject("Rocks_Staging");
-        staging.SetActive(false); staging.transform.SetParent(root, false);
-        var objects = new List<GameObject>();
-        bool published = false;
-        try
+        var staging = new RockRenderSet();
+        foreach (var instance in instances)
         {
+            staging.Add(GetRockPrefab(instance.variant, instance.prefabIndex), instance, root);
             yield return true;
-            foreach (var instance in instances)
-            {
-                GameObject prefab = GetRockPrefab(instance.variant, instance.prefabIndex);
-                if (prefab != null)
-                {
-                    GameObject body = Object.Instantiate(prefab, staging.transform);
-                    objects.Add(body);
-                    body.layer = GameplayLayers.WorldSolid;
-                    GameplayLayers.AssignPhysicalColliders(body, GameplayLayers.WorldSolid);
-                    body.transform.localPosition = instance.localPosition;
-                    body.transform.localRotation = instance.localRotation;
-                    body.transform.localScale = instance.localScale;
-                    var query = body.GetComponent<RockQueryTarget>() ?? body.AddComponent<RockQueryTarget>();
-                    query.Initialize(instance); ConfigureSpawnedRendererCulling(body);
-                }
-                yield return true;
-            }
-            ClearRockGameObjects();
-            rockGameObjectRoot = staging; rockGameObjects = objects;
-            staging.name = "ForestRock_GameObjects"; staging.SetActive(true);
-            hasCurrentRockRepresentation = true; published = true;
         }
-        finally { if (!published && staging != null) DestroyObjectRoot(staging); }
+        if (RockRenderer == null)
+        {
+            using var batches = staging.FinishIncrementally();
+            while (batches.MoveNext()) yield return true;
+        }
+        ClearRockGameObjects();
+        rockRenderSet = staging; RockPool?.Register(staging);
+        staging.Enabled = rangeVisible; RockRenderer?.Register(staging);
+        hasCurrentRockRepresentation = true;
     }
     private static void DestroyObjectRoot(GameObject value)
     {
@@ -180,6 +170,7 @@ public class ChunkFoliageRuntime
     public void SetVisible(bool visible)
     {
         rangeVisible = visible;
+        if (rockRenderSet != null) rockRenderSet.Enabled = visible;
         ApplyVisibility();
     }
 
@@ -240,8 +231,11 @@ public class ChunkFoliageRuntime
 
     public bool HasRockGameObjects()
     {
-        return rockGameObjects.Count > 0;
+        // Kept for callers of the legacy API: generated rendering now owns instance data only.
+        return RockInstanceCount > 0;
     }
+
+    public void DrawRocks() => rockRenderSet?.Draw(isVisible, rangeVisible && shadowCasterVisible);
 
     public void AccumulateFlowerRenderStats(ref WorldRenderStatsDebugInfo stats)
     {
@@ -285,7 +279,8 @@ public class ChunkFoliageRuntime
 
     public void AccumulateRockGameObjectRenderStats(ref WorldRenderStatsDebugInfo stats)
     {
-        AccumulateGameObjectStats(rockGameObjects, ref stats.RockGameObjects);
+        // Preserve the debug bucket while reporting the actual instanced geometry.
+        rockRenderSet?.Accumulate(ref stats.RockGameObjects);
     }
 
     private bool CacheGrassRenderBatches(
@@ -599,8 +594,9 @@ public class ChunkFoliageRuntime
 
     public void ClearRockGameObjects()
     {
-        if (rockGameObjectRoot != null) DestroyObjectRoot(rockGameObjectRoot);
-        rockGameObjectRoot = null; rockGameObjects = new(); hasCurrentRockRepresentation = false;
+        RockPool?.Unregister(rockRenderSet);
+        RockRenderer?.Unregister(rockRenderSet);
+        rockRenderSet = null; hasCurrentRockRepresentation = false;
     }
 
     public void ClearFlowerBatches()
@@ -866,7 +862,12 @@ public class ChunkFoliageRuntime
         GameObject[] prefabs;
         GameObject fallbackPrefab;
 
-        if (variant == WorldFeatureVariant.GrasslandLargeBoulder)
+        if (variant == WorldFeatureVariant.SnowBoulder || variant == WorldFeatureVariant.SnowLargeBoulder)
+        {
+            prefabs = variant == WorldFeatureVariant.SnowBoulder ? snowRockPrefabs : snowLargeRockPrefabs;
+            fallbackPrefab = null;
+        }
+        else if (variant == WorldFeatureVariant.GrasslandLargeBoulder)
         {
             prefabs = grasslandLargeRockPrefabs;
             fallbackPrefab = grasslandLargeRockFallbackPrefab;

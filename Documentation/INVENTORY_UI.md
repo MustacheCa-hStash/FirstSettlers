@@ -12,6 +12,16 @@ The approved A/slender-pillars design is implemented with Unity UI Toolkit. The 
 
 The gameplay hotbar includes a blank offhand square and ignores pointer picking. It is hidden while any menu is open. The building placement readout sits above it to avoid overlap.
 
+## GUI scale
+
+Select the player's **LocalPlayerInput** component in Unity and expand **GUI Scale**. **Inventory GUI Scale** and **Hotbar GUI Scale** are separate sliders from 0.5 to 2.0; 1.0 preserves the original size. They update live in Play mode. Set them outside Play mode and save the scene/prefab to retain your preferred defaults.
+
+Inventory scale changes the whole inventory, including its assignment row. Hotbar scale changes the gameplay HUD and offhand square independently. Both preserve proportions and square slots. Inventory stays centered, the HUD keeps its bottom margin, and oversized settings stop at the screen's available space. Scaling also updates on viewport resize. The building readout moves above the resized hotbar.
+
+For a future options menu, call `LocalPlayerInput.SetGuiScale(inventoryScale, hotbarScale)` to apply both values immediately. The serialized player fields store authored defaults; there is no additional runtime settings/save file in this prototype.
+
+October 12 validation: runtime/editor compilation and actual UI Toolkit checks passed at all four resolutions, including independent inventory/hotbar scaling, preserved center/bottom anchors, book alignment and maximum-scale containment.
+
 ## Runtime and assets
 
 LocalPlayerInput automatically attaches LocalPlayerMenus to its own object; existing player scenes do not need edits. Restart Play mode after Unity imports the files. Each local menu owner creates one InventoryView and a cloned PanelSettings, and disposes them with the owner. The shared building panel resource is not modified.

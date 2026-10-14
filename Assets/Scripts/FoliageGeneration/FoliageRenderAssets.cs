@@ -12,15 +12,29 @@ public sealed class FoliageRenderAssets
     private readonly CloverSettings cloverSettings;
     private readonly DandelionSettings dandelionSettings;
     private readonly TreeSettings treeSettings;
+    public RockColliderPool RockPool { get; set; }
+    public RockWorldRenderer RockRenderer { get; set; }
+    private readonly GameObject[] defaultSnowRocks = new GameObject[3], defaultSnowBoulders = new GameObject[3];
     public FoliageRenderAssets(WorldFoliageConfiguration settings)
     {
         grassSettings = settings.Grass; flowerSettings = settings.Flowers; lilyPadSettings = settings.LilyPads;
         cattailSettings = settings.Cattails; cloverSettings = settings.Clover; dandelionSettings = settings.Dandelions; treeSettings = settings.Trees;
-        ResolveGrassRenderAssets(); ResolveFlowerRenderAssets(); ResolveLilyPadRenderAssets(); ResolveCattailRenderAssets();
+        ResolveGrassRenderAssets(); ResolveFlowerRenderAssets(); ResolveDaisyWeedRenderAssets(); ResolveLilyPadRenderAssets(); ResolveCattailRenderAssets();
         ResolveCloverRenderAssets(); ResolveDandelionRenderAssets(); ResolveTreeRenderAssets();
+        var small = new[] { "Pebble", "Fieldstone", "FlatStone" };
+        var large = new[] { "RoundBoulder", "SplitBoulder", "LongBoulder" };
+        for (int i = 0; i < 3; i++)
+        {
+            defaultSnowRocks[i] = Resources.Load<GameObject>("Rocks/" + small[i] + "_Snow");
+            defaultSnowBoulders[i] = Resources.Load<GameObject>("Rocks/" + large[i] + "_Snow");
+        }
     }
     public void ApplyTo(ChunkFoliageRuntime runtime)
     {
+        runtime.RockPool = RockPool;
+        runtime.RockRenderer = RockRenderer;
+        runtime.snowRockPrefabs = treeSettings?.snowRockPrefabs?.Length > 0 ? treeSettings.snowRockPrefabs : defaultSnowRocks;
+        runtime.snowLargeRockPrefabs = treeSettings?.snowLargeRockPrefabs?.Length > 0 ? treeSettings.snowLargeRockPrefabs : defaultSnowBoulders;
         runtime.flowerMesh = flowerMesh;
         runtime.flowerMaterial = flowerMaterial;
         runtime.tallFlowerMesh = tallFlowerMesh;
@@ -284,6 +298,17 @@ public sealed class FoliageRenderAssets
         cattailMaterial.enableInstancing = true;
     }
 
+    private void ResolveDaisyWeedRenderAssets()
+    {
+        if (flowerSettings?.daisyWeedPrefab == null) return;
+        var filter = flowerSettings.daisyWeedPrefab.GetComponentInChildren<MeshFilter>();
+        var renderer = filter != null ? filter.GetComponent<MeshRenderer>() : null;
+        if (filter?.sharedMesh == null || renderer?.sharedMaterial == null)
+        { Debug.LogError("Daisy weed prefab needs a mesh and material."); return; }
+        daisyWeedMesh = filter.sharedMesh; daisyWeedMaterial = renderer.sharedMaterial;
+        daisyWeedMaterial.enableInstancing = true;
+    }
+
     private void ResolveCloverRenderAssets()
     {
         string instanceDataPropertyName = cloverSettings == null ||
@@ -307,24 +332,6 @@ public sealed class FoliageRenderAssets
                 if (cloverSettings.cloverClumpPrefabs[i] != null)
                     prefabs.Add(cloverSettings.cloverClumpPrefabs[i]);
             }
-        }
-
-        if (flowerSettings.daisyWeedPrefab != null)
-        {
-            MeshFilter meshFilter = flowerSettings.daisyWeedPrefab.GetComponentInChildren<MeshFilter>();
-            MeshRenderer meshRenderer = flowerSettings.daisyWeedPrefab.GetComponentInChildren<MeshRenderer>();
-            if (meshFilter == null || meshFilter.sharedMesh == null)
-                Debug.LogError("Daisy weed prefab missing MeshFilter or mesh.");
-            else
-                daisyWeedMesh = meshFilter.sharedMesh;
-
-            if (meshRenderer != null && meshRenderer.sharedMaterial != null)
-            {
-                daisyWeedMaterial = meshRenderer.sharedMaterial;
-                daisyWeedMaterial.enableInstancing = true;
-            }
-            else
-                Debug.LogError("Daisy weed prefab missing MeshRenderer or material.");
         }
 
         if (prefabs.Count == 0 && cloverSettings.cloverClumpPrefab != null)

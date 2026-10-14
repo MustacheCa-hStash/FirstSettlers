@@ -19,7 +19,7 @@ public static class FoliagePublicationValidation
         foreach (var kind in new[] { FoliagePublicationKind.Flower, FoliagePublicationKind.Clover,
             FoliagePublicationKind.Dandelion, FoliagePublicationKind.LilyPad, FoliagePublicationKind.Cattail }) ValidateGround(kind);
         ValidateInvalidation(); ValidateObjects(); ValidateQueue();
-        Debug.Log("FOLIAGE PUBLICATION PASS: sliced final batches, atomic replacement, empty completion, transforms/variation, invalidation, inactive object staging, cancellation and exhausted-budget progress.");
+        Debug.Log("FOLIAGE PUBLICATION PASS: sliced final batches, atomic replacement, empty completion, transforms/variation, invalidation, rock data staging without objects, cancellation and exhausted-budget progress.");
     }
     private sealed class Fixture : IDisposable
     {
@@ -125,15 +125,15 @@ public static class FoliagePublicationValidation
             using (var work = f.Work(FoliagePublicationKind.Rock))
             {
                 work.Advance(); work.Advance();
-                Check(f.Root.GetComponentsInChildren<BoxCollider>(true).Length == 1 && f.Root.GetComponentsInChildren<BoxCollider>().Length == 0,
-                    "Object staging activated incomplete collision or built more than one object.");
+                Check(f.Root.GetComponentsInChildren<BoxCollider>(true).Length == 0 && f.Target.RockInstanceCount == 0,
+                    "Rock staging created objects or published incomplete instance data.");
                 f.Record.FoliageData.ClearRocks(); Check(work.Advance() && !work.Published, "Changed rocks published stale objects.");
             }
             Check(f.Root.GetComponentsInChildren<BoxCollider>(true).Length == 0, "Cancellation leaked staging objects.");
             for (int i = 0; i < 30; i++) f.Record.FoliageData.rockInstances.Add(new RockInstanceData(new Vector3(i,0,0),Quaternion.identity,Vector3.one,WorldFeatureVariant.Boulder,0));
             f.Record.FoliageData.rocksGenerated = true;
             using var complete = f.Work(FoliagePublicationKind.Rock); Drain(complete);
-            Check(f.Root.GetComponentsInChildren<BoxCollider>().Length == 30 && f.Target.HasCurrentRockRepresentation(), "Completed objects were not activated.");
+            Check(f.Root.GetComponentsInChildren<BoxCollider>().Length == 0 && f.Target.RockInstanceCount == 30 && f.Target.HasCurrentRockRepresentation(), "Rock instances were not published without objects.");
         }
         finally { Object.DestroyImmediate(prefab); }
     }

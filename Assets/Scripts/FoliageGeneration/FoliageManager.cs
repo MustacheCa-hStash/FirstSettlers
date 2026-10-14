@@ -75,6 +75,8 @@ public class FoliageManager
 
         placement = new FoliagePlacementService(generation, settings.Trees, treeRegistry);
         assets = new FoliageRenderAssets(settings);
+        rockPool = new RockColliderPool(treeSettings); assets.RockPool = rockPool;
+        rockRenderer = new RockWorldRenderer(treeSettings); assets.RockRenderer = rockRenderer;
         publicationScheduler = new FoliagePublicationScheduler(grassSettings, assets, IsFoliageBatchWorkStillWanted);
         discoveryScheduler = new FoliageDiscoveryScheduler(generation, settings, assets, placement, publicationScheduler, IsGroundFoliageGenerationStillWanted);
         grassStream = new GrassStream(grassSettings, cloverSettings, treeSettings, worldSeed, chunkSize, worldScale, meshHeightMultiplier, PrepareStreamingGrass, () => IsCloverSystemEnabled() && assets.HasCloverRenderAssets());
@@ -87,6 +89,12 @@ public class FoliageManager
     private readonly FoliagePlacementService placement;
     private readonly FoliageRenderAssets assets;
     private readonly GrassStream grassStream;
+    private readonly RockColliderPool rockPool;
+    private readonly RockWorldRenderer rockRenderer;
+    public string RockPerformanceSummary => $"Rocks: {rockRenderer.ResidentInstances} resident, {rockRenderer.VisibleGeometry.instances} visible, " +
+        $"{rockRenderer.VisibleGeometry.vertices} visible vertices / {rockRenderer.VisibleGeometry.triangles} triangles, " +
+        $"{rockRenderer.ShadowGeometry.instances} offscreen shadow instances, {rockRenderer.DrawCalls} submissions; " +
+        $"{rockPool.ActiveCount} active / {rockPool.PooledCount} pooled colliders; last scan {rockPool.LastScanEntries} records.";
     public void UpdateGrassStreaming(ChunkManager manager, List<ChunkCoord> activeCoords, Vector3 viewer, Camera camera)
     {
         RefreshCloverRangeWork(activeCoords);
@@ -113,6 +121,8 @@ public class FoliageManager
         grassStream.Dispose();
         discoveryScheduler.Dispose();
         publicationScheduler.Dispose();
+        rockPool.Dispose();
+        rockRenderer.Dispose();
         pendingTreeRepresentationWork.Clear(); queuedTreeRepresentationWork.Clear();
         pendingFoliageManagementWork.Clear(); queuedFoliageManagementWork.Clear();
         deferredFoliageManagementRetries.Clear(); RecordFoliageQueueSnapshot(0);
@@ -179,6 +189,8 @@ public class FoliageManager
 
             ProcessPendingFoliageBatchWork(chunkManager, viewerCoord, viewerGlobalSubChunk, workBudgetStart, foregroundBudgetMs);
             ProcessPendingTreeRepresentationWork(chunkManager, viewerCoord, workBudgetStart, foregroundBudgetMs);
+            rockPool.Update(cloverViewerPosition, Time.realtimeSinceStartupAsDouble);
+            rockRenderer.Draw(cloverViewerPosition, renderCamera);
 
             using (DrawFoliageOnlyMarker.Auto())
             {
@@ -218,8 +230,9 @@ public class FoliageManager
         bool useClover = IsWithinCloverRenderRange(viewerCoord, coord);
         bool useDandelions = IsWithinDandelionRenderRange(viewerCoord, coord);
         bool useTrees = IsWithinTreeRenderRange(viewerCoord, coord);
+        bool useRocks = IsWithinRockRenderRange(viewerCoord, coord);
 
-        if (!(useFlowers || useLilyPads || useCattails || useClover || useDandelions || useTrees))
+        if (!(useFlowers || useLilyPads || useCattails || useClover || useDandelions || useTrees || useRocks))
             return;
 
         if (useClover && assets.HasCloverRenderAssets())
@@ -616,9 +629,8 @@ public class FoliageManager
             if (useBushes)
                 runtime.FoliageRuntime.AccumulateBushGameObjectRenderStats(ref stats);
 
-            if (useRocks)
-                runtime.FoliageRuntime.AccumulateRockGameObjectRenderStats(ref stats);
         }
+        stats.RockGameObjects = rockRenderer.VisibleGeometry;
     }
 
     private void EnsureTreesGenerated(ChunkRecord record) => placement.EnsureTreesGenerated(record);

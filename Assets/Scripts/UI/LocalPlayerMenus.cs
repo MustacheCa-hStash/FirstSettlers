@@ -25,10 +25,18 @@ public sealed class LocalPlayerMenus : MonoBehaviour
     {
         input = GetComponent<LocalPlayerInput>();
         view = new InventoryView(transform, SelectHotbar);
+        view.HotbarClearanceChanged += clearance => building?.SetHudBottomInset(clearance);
         RefreshView();
     }
 
-    public void SetBuilding(BuildingController controller) { building = controller; RefreshView(); }
+    public void SetBuilding(BuildingController controller)
+    {
+        building = controller;
+        if (view != null) building?.SetHudBottomInset(view.HotbarClearanceFraction);
+        RefreshView();
+    }
+
+    public void SetGuiScale(float inventoryScale, float hotbarScale) => view?.SetGuiScale(inventoryScale, hotbarScale);
 
     public void ToggleInventory()
     {

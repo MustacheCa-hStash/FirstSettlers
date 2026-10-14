@@ -25,6 +25,7 @@ public sealed class BuildMenuView : IDisposable
     private string lastHeading,lastStatus;
     private bool visible,disposed;
     public BuildDefinition Highlighted=>highlighted;
+    public void SetHudBottomInset(float fraction) => hud.style.bottom = Length.Percent(fraction * 100);
 
     public BuildMenuView(BuildCatalog catalog,Transform parent,Action<BuildDefinition> select)
     {

@@ -1,0 +1,68 @@
+[
+  {
+    "name": "Pebble",
+    "metres": [
+      0.65,
+      0.5,
+      0.36
+    ],
+    "triangles": 320,
+    "lodTriangles": 112,
+    "hullTriangles": 64
+  },
+  {
+    "name": "Fieldstone",
+    "metres": [
+      1.05,
+      0.76,
+      0.65
+    ],
+    "triangles": 320,
+    "lodTriangles": 112,
+    "hullTriangles": 66
+  },
+  {
+    "name": "FlatStone",
+    "metres": [
+      1.45,
+      1.0,
+      0.47
+    ],
+    "triangles": 320,
+    "lodTriangles": 112,
+    "hullTriangles": 68
+  },
+  {
+    "name": "RoundBoulder",
+    "metres": [
+      2.8,
+      2.35,
+      2.15
+    ],
+    "triangles": 768,
+    "lodTriangles": 268,
+    "hullTriangles": 64
+  },
+  {
+    "name": "SplitBoulder",
+    "metres": [
+      3.65,
+      2.6,
+      2.65
+    ],
+    "triangles": 768,
+    "lodTriangles": 268,
+    "hullTriangles": 58
+  },
+  {
+    "name": "LongBoulder",
+    "metres": [
+      4.2,
+      2.25,
+      1.8
+    ],
+    "triangles": 768,
+    "lodTriangles": 268,
+    "hullTriangles": 62
+  }
+]

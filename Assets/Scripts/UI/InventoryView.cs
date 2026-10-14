@@ -7,6 +7,7 @@ using UnityEngine.UIElements;
 public sealed class InventoryView : IDisposable
 {
     public const int BackpackSlots = 27, HotbarSlots = 9, ArmorSlots = 4;
+    public const float MinGuiScale = .5f, MaxGuiScale = 2f;
     private readonly GameObject host;
     private readonly PanelSettings settings;
     private readonly VisualElement root, window, hud;
@@ -14,8 +15,12 @@ public sealed class InventoryView : IDisposable
     private readonly VisualElement[] gameplayHotbar = new VisualElement[HotbarSlots];
     private readonly Action<int> select;
     private bool disposed;
+    private float inventoryGuiScale = 1, hotbarGuiScale = 1;
+    private Vector2 viewportSize;
     public VisualElement Root => root;
     public PanelSettings PanelSettings => settings;
+    public float HotbarClearanceFraction { get; private set; }
+    public event Action<float> HotbarClearanceChanged;
 
     public InventoryView(Transform parent, Action<int> select)
     {
@@ -89,12 +94,32 @@ public sealed class InventoryView : IDisposable
     private void Fit(Vector2 size)
     {
         if (size.x <= 0 || size.y <= 0) return;
+        viewportSize = size;
         float scale = Mathf.Min(size.x / 1920f, size.y / 1080f);
-        window.style.scale = hud.style.scale = new Scale(new Vector3(scale, scale, 1));
+        // Account for projecting pillar edges as well as the panel; keep a small screen margin.
+        float windowScale = Mathf.Min(scale * inventoryGuiScale, size.x * .96f / 710, size.y * .96f / 656);
+        float hudScale = Mathf.Min(scale * hotbarGuiScale, size.x * .96f / 756, size.y * .96f / 88);
+        window.style.scale = new Scale(new Vector3(windowScale, windowScale, 1));
+        hud.style.scale = new Scale(new Vector3(hudScale, hudScale, 1));
         window.style.left = (size.x - 704) * .5f; window.style.top = (size.y - 648) * .5f;
         hud.style.left = (size.x - 756) * .5f;
         // Transform origin is center; offset the unscaled frame to keep a 2% bottom margin.
-        hud.style.top = size.y - size.y * .02f - 88 * (1 + scale) * .5f;
+        hud.style.top = size.y - size.y * .02f - 88 * (1 + hudScale) * .5f;
+        float clearance = .02f + (88 * hudScale + 8 * scale) / size.y;
+        if (!Mathf.Approximately(clearance, HotbarClearanceFraction))
+        {
+            HotbarClearanceFraction = clearance;
+            HotbarClearanceChanged?.Invoke(clearance);
+        }
+    }
+
+    public static float ClampGuiScale(float value) => float.IsFinite(value) ? Mathf.Clamp(value, MinGuiScale, MaxGuiScale) : 1;
+
+    public void SetGuiScale(float inventoryScale, float hotbarScale)
+    {
+        inventoryGuiScale = ClampGuiScale(inventoryScale);
+        hotbarGuiScale = ClampGuiScale(hotbarScale);
+        Fit(viewportSize);
     }
 
     public void SetSelection(int index)

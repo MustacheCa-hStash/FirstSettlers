@@ -193,6 +193,13 @@ public static class BuildStoneUiAuthoring
             Require(stairsShown==3,"Stairs filter must include W21/W22/W24");
             view.SetSelection(gable);view.Filter(0);Draw();
             var menu=root.Q<VisualElement>("build-menu");
+            void CheckCentered()
+            {
+                Require(Mathf.Abs(menu.worldBound.center.x-root.worldBound.center.x)<.5f &&
+                    Mathf.Abs(menu.worldBound.center.y-root.worldBound.center.y)<.5f,
+                    "Build menu is not centered in the viewport");
+            }
+            CheckCentered();
             foreach(var stone in root.Query<VisualElement>(className:"stone-panel").ToList())
                 Require(stone.resolvedStyle.backgroundImage.texture==Resources.Load<Texture2D>("Building/UI/StonePanel"),"Stone panel lost its background texture: "+string.Join(",",stone.GetClasses()));
             foreach(var pillar in root.Query<VisualElement>(className:"stone-pillar").ToList())
@@ -209,6 +216,17 @@ public static class BuildStoneUiAuthoring
             var last=presets[presets.Count-1].worldBound;
             Require(last.yMax<=scroll.contentViewport.worldBound.yMax+.5f&&last.yMin>=scroll.contentViewport.worldBound.yMin-.5f,"Last component unreachable");
             Save(target,$"{Captures}/catalog-bottom-{width}x{height}.png");
+            // Panel GUI scale changes logical viewport dimensions and can switch responsive layouts.
+            float originalScale=catalog.panel.scale;
+            foreach(float guiScale in new[]{.75f,1.25f})
+            {
+                catalog.panel.scale=guiScale;
+                typeof(PanelSettings).GetMethod("ApplyPanelSettings",Methods).Invoke(catalog.panel,null);
+                Draw();CheckCentered();
+            }
+            catalog.panel.scale=originalScale;
+            typeof(PanelSettings).GetMethod("ApplyPanelSettings",Methods).Invoke(catalog.panel,null);
+            Draw();CheckCentered();
             view.SetState(true,false);view.Show("Half-gable · 45°","Supported · ready to place",true);Draw();
             Require(root.Q<VisualElement>("build-hud").pickingMode==PickingMode.Ignore,"HUD captures world input");
             Save(target,$"{Captures}/placement-{width}x{height}.png");

@@ -127,8 +127,9 @@ public static class QueryTargetValidation
         var root = new GameObject("Target test rock root"); root.transform.position = new Vector3(21000, 0, 21000);
         var prefab = new GameObject("Target test rock source"); prefab.SetActive(false);
         var child = new GameObject("Physical shape"); child.transform.SetParent(prefab.transform, false); child.AddComponent<BoxCollider>();
+        using var rockPool = new RockColliderPool(new TreeSettings { rockColliderActivationsPerFrame = 32 });
         var runtime = new ChunkFoliageRuntime { root = root.transform, forestRockPrefabs = new[] { prefab },
-            grasslandRockPrefabs = new[] { prefab }, grasslandLargeRockPrefabs = new[] { prefab } };
+            grasslandRockPrefabs = new[] { prefab }, grasslandLargeRockPrefabs = new[] { prefab }, RockPool = rockPool };
         var placements = new List<RockInstanceData>
         {
             new(Vector3.zero, Quaternion.identity, Vector3.one, WorldFeatureVariant.Boulder, 0),
@@ -138,7 +139,9 @@ public static class QueryTargetValidation
         try
         {
             runtime.RebuildRockGameObjects(placements, root.transform);
-            var targets = root.GetComponentsInChildren<RockQueryTarget>(true);
+            for (int frame = 0; frame < 4; frame++) rockPool.Update(root.transform.position, frame);
+            var targets = Object.FindObjectsByType<RockQueryTarget>().Where(t => t.Data != null && t.Data.IsGenerated)
+                .OrderBy(t => t.Data.Placement.Value.localPosition.x).ToArray();
             Check(targets.Length == 3, "Generated rock variants do not each have one target provider.");
             Check(prefab.GetComponent<RockQueryTarget>() == null, "Spawn registration modified the source rock prefab.");
             for (int i = 0; i < targets.Length; i++)
