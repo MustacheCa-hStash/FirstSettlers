@@ -53,7 +53,7 @@ public static class WattleWallSetup
         }
         material.shader = Shader.Find(SplitPlankWallSetup.ShaderName);
         if (material.shader == null) throw new InvalidOperationException("Matte wood shader is missing.");
-        material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(SplitPlankWallSetup.TexturePath));
+        material.SetTexture("_BaseMap", opaqueWood.GetTexture("_BaseMap") ?? WoodSurfaceSetup.ActiveTexture);
         material.SetFloat("_AlphaClip", 1);
         material.SetFloat("_Cull", (float)CullMode.Off);
         material.EnableKeyword("_ALPHATEST_ON");

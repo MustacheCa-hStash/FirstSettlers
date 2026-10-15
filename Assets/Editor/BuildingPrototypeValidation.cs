@@ -68,7 +68,7 @@ public static class BuildingPrototypeValidation
                     definition.contentId == SplitPlankWallSetup.InfillContentId ? "Two-plank infill wall" : "Split-plank wood wall";
                 Check(definition.displayName == name, "The authored wood wall picker name is wrong.");
                 Check(definition.material.shader.name == SplitPlankWallSetup.ShaderName, "The wall does not use matte wood lighting.");
-                Check(definition.material.GetTexture("_BaseMap") == AssetDatabase.LoadAssetAtPath<Texture2D>(SplitPlankWallSetup.TexturePath), "The wood atlas is missing.");
+                Check(definition.material.GetTexture("_BaseMap") == WoodSurfaceSetup.ActiveTexture, "The selected wood atlas is missing.");
                 Check(definition.mesh.subMeshCount == 1 && definition.mesh.vertexCount > 24, "The imported wall geometry is missing.");
                 Check(definition.authoringPrefab.GetComponent<MeshFilter>().sharedMesh == definition.mesh, "The authoring and runtime wall meshes differ.");
             }
@@ -129,7 +129,7 @@ public static class BuildingPrototypeValidation
             for (int i = 0; i < expected.Length; ++i) Check(expected[i] == actual[i], "Wattle UV0 changed while baking transforms.");
             var vertices = wattle.mesh.vertices; var triangles = wattle.mesh.triangles;
             var atlas = new Texture2D(2,2,TextureFormat.RGBA32,false);
-            atlas.LoadImage(System.IO.File.ReadAllBytes(SplitPlankWallSetup.TexturePath));
+            atlas.LoadImage(System.IO.File.ReadAllBytes(AssetDatabase.GetAssetPath(WoodSurfaceSetup.ActiveTexture)));
             int lower = 0, upper = 0;
             int railTriangles = 0;
             for (int i = 0; i < triangles.Length; i += 3)

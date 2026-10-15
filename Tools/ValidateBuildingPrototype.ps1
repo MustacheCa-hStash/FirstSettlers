@@ -65,6 +65,7 @@ try {
     $buildingOwned += @(Get-Item 'Assets/Scripts/PlayerMovement/SmoothWalkSurface.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/BuildStoneUiAuthoring.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/StoneKitSetup.cs','Assets/Editor/StoneKitValidation.cs')
+    $buildingOwned += @(Get-Item 'Assets/Editor/WoodSurfaceSetup.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/InventoryUiValidation.cs')
     $buildingOwned += @(Get-Item 'Assets/Scripts/UI/LocalPlayerMenus.cs','Assets/Scripts/UI/InventoryView.cs')
     $buildingOwned += @(Get-ChildItem 'Assets/Resources/Inventory' -File -Recurse | Where-Object { $_.Extension -ne '.meta' })
@@ -104,7 +105,7 @@ try {
     foreach ($buildingName in 'BuildingPrototypeSetup','BuildingPrototypeValidation','BuildingPrototypeRenderValidation','BuildingPrototypeInputValidation','SplitPlankWallSetup','WattleWallSetup','WattleWallValidation','BuildingShadowValidation','BayPostSetup','W21StairSetup','W21StairValidation','ThatchRoofSetup','ThatchRoofValidation','FloorFramingSetup','BuildCollisionAuthoring','BuildFramingValidation','BuildColliderDebugValidation','BuildIntersectionRegressionValidation','ModularWoodSetup','ModularWoodValidation') {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
     }
-    foreach ($buildingName in 'OpeningWallSetup','OpeningWallValidation','StairExtensionSetup','StairExtensionValidation','StoneKitSetup','StoneKitValidation','SquareInfillSetup','SquareInfillValidation') {
+    foreach ($buildingName in 'OpeningWallSetup','OpeningWallValidation','StairExtensionSetup','StairExtensionValidation','StoneKitSetup','StoneKitValidation','SquareInfillSetup','SquareInfillValidation','WoodSurfaceSetup') {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
     }
     Copy-Item -LiteralPath 'Assets/Editor/BuildStoneUiAuthoring.cs','Assets/Editor/BuildStoneUiAuthoring.cs.meta' -Destination "$buildingProject/Assets/Editor" -Force

@@ -1,5 +1,9 @@
 # FirstSettlers Work Notes
 
+## October 15: household furnishings concept catalog
+
+Added the [F01–F24 furniture and household catalog](ArtReferences/IronAgeFurniture/README.md), matching the illustrated stone and wood sheets: seating, tables, sleeping platform, baskets/chest, textiles, pottery, tableware and small craft/decorative props, plus a furnished shelter study. The guide records proposed modeling sizes, fit with current 4 m bays, period references and future placement needs. These are concept references; runtime furniture assets are not implemented.
+
 ## October 15: shared height sampling cap of six
 
 Detailed terrain, far heights, and the height sampling inside far control-map generation now share a fixed cap of **six simultaneous sampling tasks**. Short waves take turns across requests so those requests cannot multiply the limit. Request limits stay unchanged. Waiting occurs on producer threads; the Unity job workers remain available for other work such as Forward+ lighting. Sampling outputs matched the pre-change reference byte for byte, concurrency peaked at six across four producers, and compilation plus streaming/ownership/lifetime checks passed. Terrain may arrive later under load; route frame-time improvement still needs measurement. See [implementation, profiler labels and validation](Documentation/STREAMING_SCHEDULING.md#height-sampling-concurrency-cap).

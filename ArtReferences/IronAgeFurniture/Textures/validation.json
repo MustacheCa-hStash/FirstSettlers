@@ -1,0 +1,59 @@
+{
+  "source_size": [
+    1254,
+    1254
+  ],
+  "source_sha256": "70c70bb0de432b2ba8202897c1e1db433aa6b2a910e3a6ee6278191d40353d7d",
+  "opaque": true,
+  "new_texture_count": 1,
+  "preview_faces_with_checked_atlas_uvs": 2264,
+  "edges": {
+    "A": {
+      "u_edge_mean_abs_difference_0_1": 0.09545,
+      "v_edge_mean_abs_difference_0_1": 0.07958
+    },
+    "B": {
+      "u_edge_mean_abs_difference_0_1": 0.09632,
+      "v_edge_mean_abs_difference_0_1": 0.10994
+    },
+    "C": {
+      "u_edge_mean_abs_difference_0_1": 0.13128,
+      "v_edge_mean_abs_difference_0_1": 0.06018
+    },
+    "D": {
+      "u_edge_mean_abs_difference_0_1": 0.02648,
+      "v_edge_mean_abs_difference_0_1": 0.03871
+    },
+    "E": {
+      "u_edge_mean_abs_difference_0_1": 0.04834,
+      "v_edge_mean_abs_difference_0_1": 0.06779
+    },
+    "F": {
+      "u_edge_mean_abs_difference_0_1": 0.09324,
+      "v_edge_mean_abs_difference_0_1": 0.12564
+    },
+    "G": {
+      "u_edge_mean_abs_difference_0_1": 0.04823,
+      "v_edge_mean_abs_difference_0_1": 0.0198
+    },
+    "H": {
+      "u_edge_mean_abs_difference_0_1": 0.01885,
+      "v_edge_mean_abs_difference_0_1": 0.0267
+    },
+    "I": {
+      "u_edge_mean_abs_difference_0_1": 0.04542,
+      "v_edge_mean_abs_difference_0_1": 0.02941
+    },
+    "J": {
+      "u_edge_mean_abs_difference_0_1": 0.03811,
+      "v_edge_mean_abs_difference_0_1": 0.0276
+    },
+    "K": {
+      "u_edge_mean_abs_difference_0_1": 0.04392,
+      "v_edge_mean_abs_difference_0_1": 0.03992
+    }
+  },
+  "extruded_gutters": false,
+  "source_pixels_modified": false,
+  "scope": "Temporary material proof meshes only; no furnishing/game asset implementation or Unity verification."
+}

@@ -1,0 +1,334 @@
+{
+  "texture": "household-trim-albedo.png",
+  "source_size": [
+    1254,
+    1254
+  ],
+  "coordinate_origin_pixels": "top-left; approximate material-transition allocations, half-open",
+  "coordinate_origin_uv": "bottom-left; inclusive texel centres",
+  "safe_inset_pixels": 12,
+  "inset_type": "inset sampling guard only; no extruded gutters",
+  "source_unmodified": true,
+  "seamless": false,
+  "regions": [
+    {
+      "id": "A",
+      "name": "Closed willow weave",
+      "allocation_pixels_top_left": [
+        0,
+        0,
+        627,
+        314
+      ],
+      "safe_content_pixels_top_left": [
+        12,
+        12,
+        615,
+        302
+      ],
+      "uv_texel_centres": [
+        0.009968102073365232,
+        0.7595693779904307,
+        0.49003189792663476,
+        0.9900318979266348
+      ],
+      "kind": "patch",
+      "nominal_sample_metres": [
+        0.75,
+        0.375
+      ],
+      "use": "F08–F10 basket bodies and lids",
+      "repeat_verified": false
+    },
+    {
+      "id": "B",
+      "name": "Bound rush",
+      "allocation_pixels_top_left": [
+        627,
+        0,
+        1254,
+        314
+      ],
+      "safe_content_pixels_top_left": [
+        639,
+        12,
+        1242,
+        302
+      ],
+      "uv_texel_centres": [
+        0.5099681020733652,
+        0.7595693779904307,
+        0.9900318979266348,
+        0.9900318979266348
+      ],
+      "kind": "patch",
+      "nominal_sample_metres": [
+        0.75,
+        0.375
+      ],
+      "use": "F11 rush mat",
+      "repeat_verified": false
+    },
+    {
+      "id": "C",
+      "name": "Oatmeal wool",
+      "allocation_pixels_top_left": [
+        0,
+        314,
+        627,
+        628
+      ],
+      "safe_content_pixels_top_left": [
+        12,
+        326,
+        615,
+        616
+      ],
+      "uv_texel_centres": [
+        0.009968102073365232,
+        0.509170653907496,
+        0.49003189792663476,
+        0.7396331738437001
+      ],
+      "kind": "patch",
+      "nominal_sample_metres": [
+        0.375,
+        0.1875
+      ],
+      "use": "F12/F22 plain textile; F21 close crop on wool geometry",
+      "repeat_verified": false
+    },
+    {
+      "id": "D",
+      "name": "Buff clay",
+      "allocation_pixels_top_left": [
+        627,
+        314,
+        1254,
+        628
+      ],
+      "safe_content_pixels_top_left": [
+        639,
+        326,
+        1242,
+        616
+      ],
+      "uv_texel_centres": [
+        0.5099681020733652,
+        0.509170653907496,
+        0.9900318979266348,
+        0.7396331738437001
+      ],
+      "kind": "patch",
+      "nominal_sample_metres": [
+        0.5,
+        0.25
+      ],
+      "use": "F13–F15 pottery; F21 whorl",
+      "repeat_verified": false
+    },
+    {
+      "id": "E",
+      "name": "Striped wool border",
+      "allocation_pixels_top_left": [
+        0,
+        628,
+        1254,
+        766
+      ],
+      "safe_content_pixels_top_left": [
+        12,
+        640,
+        1242,
+        754
+      ],
+      "uv_texel_centres": [
+        0.009968102073365232,
+        0.3991228070175439,
+        0.9900318979266348,
+        0.4892344497607656
+      ],
+      "kind": "strip",
+      "nominal_sample_metres": [
+        2,
+        0.22
+      ],
+      "use": "F12 cover edges; F22 cloth stripes",
+      "repeat_verified": false
+    },
+    {
+      "id": "F",
+      "name": "Bound willow rim",
+      "allocation_pixels_top_left": [
+        0,
+        766,
+        1254,
+        839
+      ],
+      "safe_content_pixels_top_left": [
+        12,
+        778,
+        1242,
+        827
+      ],
+      "uv_texel_centres": [
+        0.009968102073365232,
+        0.34090909090909094,
+        0.9900318979266348,
+        0.3791866028708134
+      ],
+      "kind": "strip",
+      "nominal_sample_metres": [
+        1.5,
+        0.085
+      ],
+      "use": "F08–F10 rim/handle wrapping",
+      "repeat_verified": false
+    },
+    {
+      "id": "G",
+      "name": "Incised clay band",
+      "allocation_pixels_top_left": [
+        0,
+        839,
+        1254,
+        941
+      ],
+      "safe_content_pixels_top_left": [
+        12,
+        851,
+        1242,
+        929
+      ],
+      "uv_texel_centres": [
+        0.009968102073365232,
+        0.25956937799043067,
+        0.9900318979266348,
+        0.32097288676236047
+      ],
+      "kind": "strip",
+      "nominal_sample_metres": [
+        1.5,
+        0.12
+      ],
+      "use": "F13 jar shoulder; optional F15 rim",
+      "repeat_verified": false
+    },
+    {
+      "id": "H",
+      "name": "Bone",
+      "allocation_pixels_top_left": [
+        0,
+        941,
+        313,
+        1254
+      ],
+      "safe_content_pixels_top_left": [
+        12,
+        953,
+        301,
+        1242
+      ],
+      "uv_texel_centres": [
+        0.009968102073365232,
+        0.009968102073365182,
+        0.23963317384370017,
+        0.2396331738437002
+      ],
+      "kind": "patch",
+      "nominal_sample_metres": [
+        0.15,
+        0.15
+      ],
+      "use": "F23 weaving comb",
+      "repeat_verified": false
+    },
+    {
+      "id": "I",
+      "name": "Smoke-darkened clay",
+      "allocation_pixels_top_left": [
+        313,
+        941,
+        627,
+        1254
+      ],
+      "safe_content_pixels_top_left": [
+        325,
+        953,
+        615,
+        1242
+      ],
+      "uv_texel_centres": [
+        0.2595693779904306,
+        0.009968102073365182,
+        0.49003189792663476,
+        0.2396331738437002
+      ],
+      "kind": "patch",
+      "nominal_sample_metres": [
+        0.3,
+        0.3
+      ],
+      "use": "F14 lower body and inner cavity",
+      "repeat_verified": false
+    },
+    {
+      "id": "J",
+      "name": "Cold ash / packed clay",
+      "allocation_pixels_top_left": [
+        627,
+        941,
+        941,
+        1254
+      ],
+      "safe_content_pixels_top_left": [
+        639,
+        953,
+        929,
+        1242
+      ],
+      "uv_texel_centres": [
+        0.5099681020733652,
+        0.009968102073365182,
+        0.7404306220095693,
+        0.2396331738437002
+      ],
+      "kind": "patch",
+      "nominal_sample_metres": [
+        1,
+        1
+      ],
+      "use": "F19 hearth centre",
+      "repeat_verified": false
+    },
+    {
+      "id": "K",
+      "name": "Dusty sage",
+      "allocation_pixels_top_left": [
+        941,
+        941,
+        1254,
+        1254
+      ],
+      "safe_content_pixels_top_left": [
+        953,
+        953,
+        1242,
+        1242
+      ],
+      "uv_texel_centres": [
+        0.7603668261562998,
+        0.009968102073365182,
+        0.9900318979266348,
+        0.2396331738437002
+      ],
+      "kind": "patch",
+      "nominal_sample_metres": [
+        0.1,
+        0.1
+      ],
+      "use": "F24 small modeled herb leaves",
+      "repeat_verified": false
+    }
+  ]
+}

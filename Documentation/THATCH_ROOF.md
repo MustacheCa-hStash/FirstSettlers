@@ -85,6 +85,8 @@ visuals have 62 triangles; the Blender construction geometry is unchanged.
 
 ## UV repair
 
+The roof's timber regions now follow the active `SplitPlankWood` texture (currently Meadow Timber). **Tools → Building → Match Wattle and Roof to Active Wood Texture** updates wattle's material and repacks only the roof's wood colour cells, retaining its woven substrate, thatch pixels and entire alpha mask. Roof rebuilds perform this synchronization too. The roof still uses its combined atlas, so its UVs, thatch mapping, material GUID and model geometry stay intact. `WoodSurfaceSetup` performs deterministic downsampling into the existing upper-left atlas quarter and excludes the woven subcell.
+
 The successful broad-face fibre direction and density are retained. To allow
 two texture repeats across a single quad, the existing reeds are packed twice
 across the lower half of the same 2048² roof atlas. No new artwork was generated.

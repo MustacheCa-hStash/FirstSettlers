@@ -102,7 +102,7 @@ public static class SplitPlankWallSetup
     public static void Apply(BuildDefinition wall)
     {
         var model = ModularWoodSetup.Import(ModelPath);
-        var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(TexturePath);
+        var texture = WoodSurfaceSetup.ActiveTexture;
         var shader = Shader.Find(ShaderName);
         if (model == null || texture == null || shader == null)
             throw new InvalidOperationException("Split-plank model, trim atlas or matte shader is missing.");

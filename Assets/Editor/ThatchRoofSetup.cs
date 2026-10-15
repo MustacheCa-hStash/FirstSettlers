@@ -36,6 +36,7 @@ public static class ThatchRoofSetup
         if(!File.Exists(ModelPath)) return result;
         Directory.CreateDirectory(".utmp/building-prototype");
         AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+        WoodSurfaceSetup.UpdateRoofTimber(WoodSurfaceSetup.ActiveTexture);
         var textureImporter=(TextureImporter)AssetImporter.GetAtPath(TexturePath);
         textureImporter.sRGBTexture=true;textureImporter.alphaSource=TextureImporterAlphaSource.FromInput;
         textureImporter.alphaIsTransparency=true;textureImporter.mipmapEnabled=true;
