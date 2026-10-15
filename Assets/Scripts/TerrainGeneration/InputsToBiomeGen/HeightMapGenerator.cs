@@ -1,5 +1,6 @@
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
@@ -139,10 +140,13 @@ public static partial class HeightMapGenerator
 
         try
         {
-            finalHeights = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-            mountainMasks = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-            riverMasks = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-            slopes = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            // Shared admission can delay any caller across frames. These arrays are always
+            // explicitly released after the last dependent job, including public helper calls.
+            Allocator scratchAllocator = Allocator.Persistent;
+            finalHeights = new NativeArray<float>(sampleCount, scratchAllocator, NativeArrayOptions.UninitializedMemory);
+            mountainMasks = new NativeArray<float>(sampleCount, scratchAllocator, NativeArrayOptions.UninitializedMemory);
+            riverMasks = new NativeArray<float>(sampleCount, scratchAllocator, NativeArrayOptions.UninitializedMemory);
+            slopes = new NativeArray<float>(sampleCount, scratchAllocator, NativeArrayOptions.UninitializedMemory);
 
             HeightFieldSampleJob sampleJob = new HeightFieldSampleJob
             {
@@ -161,7 +165,7 @@ public static partial class HeightMapGenerator
                 riverMasks = riverMasks
             };
 
-            JobHandle sampleHandle = sampleJob.Schedule(sampleCount, 64);
+            TerrainHeightSamplingScheduler.Run(sampleJob, sampleCount);
 
             HeightSlopeJob slopeJob = new HeightSlopeJob
             {
@@ -172,7 +176,7 @@ public static partial class HeightMapGenerator
                 slopes = slopes
             };
 
-            JobHandle slopeHandle = slopeJob.Schedule(sampleCount, 64, sampleHandle);
+            JobHandle slopeHandle = slopeJob.Schedule(sampleCount, 64);
             slopeHandle.Complete();
 
             if (retainNativeMaps)
@@ -666,8 +670,10 @@ public static partial class HeightMapGenerator
     }
 
     [BurstCompile]
-    private struct HeightFieldSampleJob : IJobParallelFor
+    private struct HeightFieldSampleJob : ITerrainHeightSamplingBatchJob
     {
+        public int SampleOffset { get; set; }
+        public int SampleCount { get; set; }
         public int width;
         public int height;
         public int chunkSize;
@@ -678,11 +684,20 @@ public static partial class HeightMapGenerator
         public float waterLevel;
         public float mountainHorizontalScale;
         public WorldErosionSettings erosion;
-        [WriteOnly] public NativeArray<float> finalHeights;
-        [WriteOnly] public NativeArray<float> mountainMasks;
-        [WriteOnly] public NativeArray<float> riverMasks;
+        // Each iteration writes its own disjoint 64-sample block rather than the iteration index.
+        // Container lifetime/write-dependency safety remains enabled between completed waves.
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float> finalHeights;
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float> mountainMasks;
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float> riverMasks;
 
-        public void Execute(int index)
+        public void Execute(int batchIndex)
+        {
+            int start = SampleOffset + batchIndex * TerrainHeightSamplingScheduler.SamplesPerBatch;
+            int end = math.min(SampleCount, start + TerrainHeightSamplingScheduler.SamplesPerBatch);
+            for (int index = start; index < end; index++) Sample(index);
+        }
+
+        private void Sample(int index)
         {
             int x = index / height;
             int z = index - x * height;

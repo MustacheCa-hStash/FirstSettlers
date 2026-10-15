@@ -1,18 +1,62 @@
+using System;
+using Unity.Profiling;
 using UnityEngine;
 
 public static class TerrainControlMapBuilder
 {
     private const byte SnowDustingSnowWeight = 64;
     private const byte SnowDustingGrassWeight = 255 - SnowDustingSnowWeight;
+    private static readonly ProfilerMarker BuildMarker = new("FS.Streaming.Worker.ControlMapBuild");
+    private static readonly ProfilerMarker ScratchMarker = new("FS.Streaming.Worker.ControlMapScratch");
 
     public static ControlMapPixelData BuildRaw(SurfaceType[,] surfaceTypeMap, GroundCoverType[,] groundCoverMap,
         Unity.Mathematics.float2[,] mountainSnow = null,
         float mountainSnowRenderCoverageGamma = MountainSnow.DefaultRenderCoverageGamma,
-        ForestStructureFields forestStructure = null, BiomeType[,] biomeMap = null, byte[,] forestMembership = null)
+        ForestStructureFields forestStructure = null, BiomeType[,] biomeMap = null, byte[,] forestMembership = null,
+        TerrainControlMapScratchPool scratchPool = null)
     {
+        using var buildScope = BuildMarker.Auto();
         int width = surfaceTypeMap.GetLength(0);
         int height = surfaceTypeMap.GetLength(1);
-        ControlMapPixelData controlMap = new ControlMapPixelData(width, height, 3);
+        ControlMapPixelData controlMap = null;
+        ControlMapPixelData blended;
+        bool poolOwned = false;
+        try
+        {
+            using (ScratchMarker.Auto())
+            {
+                controlMap = scratchPool == null
+                    ? new ControlMapPixelData(width, height, 3)
+                    : scratchPool.Rent(width, height, out poolOwned);
+                // Material writes leave unused maps/channels untouched, so every reuse starts clean.
+                if (poolOwned)
+                    foreach (var map in controlMap.Maps) Array.Clear(map, 0, map.Length);
+            }
+            FillPaddedWeights(controlMap, surfaceTypeMap, groundCoverMap, forestStructure, biomeMap, forestMembership);
+            blended = BlendPaddedWeights(controlMap);
+        }
+        finally
+        {
+            if (poolOwned && controlMap != null) scratchPool.Return(controlMap);
+        }
+
+        if (mountainSnow != null)
+            for (int z = 0; z < blended.Height; z++)
+                for (int x = 0; x < blended.Width; x++)
+                {
+                    int index = z * blended.Width + x;
+                    MountainSnow.Apply(ref blended.Maps[0][index], ref blended.Maps[1][index],
+                        mountainSnow[x + 1, z + 1], mountainSnowRenderCoverageGamma);
+                }
+        return blended;
+    }
+
+    private static void FillPaddedWeights(ControlMapPixelData controlMap, SurfaceType[,] surfaceTypeMap,
+        GroundCoverType[,] groundCoverMap, ForestStructureFields forestStructure, BiomeType[,] biomeMap,
+        byte[,] forestMembership)
+    {
+        int width = controlMap.Width;
+        int height = controlMap.Height;
 
         for (int z = 0; z < height; z++)
         {
@@ -60,17 +104,6 @@ public static class TerrainControlMapBuilder
                 }
             }
         }
-
-        ControlMapPixelData blended = BlendPaddedWeights(controlMap);
-        if (mountainSnow != null)
-            for (int z = 0; z < blended.Height; z++)
-                for (int x = 0; x < blended.Width; x++)
-                {
-                    int index = z * blended.Width + x;
-                    MountainSnow.Apply(ref blended.Maps[0][index], ref blended.Maps[1][index],
-                        mountainSnow[x + 1, z + 1], mountainSnowRenderCoverageGamma);
-                }
-        return blended;
     }
 
     private static ControlMapPixelData BlendPaddedWeights(ControlMapPixelData source)

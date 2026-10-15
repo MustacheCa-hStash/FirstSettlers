@@ -1,0 +1,69 @@
+{
+  "models": [
+    {
+      "components": 68,
+      "triangles": 2960,
+      "faces": 1748,
+      "uvTrianglesChecked": 2960,
+      "closedComponents": true,
+      "allFaceUVsValid": true,
+      "distinctComponentCrops": 68,
+      "tag": "S02",
+      "files": [
+        "S02_CoursedRubbleWall_4x3x0.50.fbx",
+        "S02_CoursedRubbleWall_4x3x0.50_UV1.fbx",
+        "S02_CoursedRubbleWall_4x3x0.50_UV2.fbx"
+      ]
+    },
+    {
+      "components": 17,
+      "triangles": 716,
+      "faces": 422,
+      "uvTrianglesChecked": 716,
+      "closedComponents": true,
+      "allFaceUVsValid": true,
+      "distinctComponentCrops": 17,
+      "tag": "S03",
+      "files": [
+        "S03_StonePier_0.50x3x0.50.fbx",
+        "S03_StonePier_0.50x3x0.50_UV1.fbx",
+        "S03_StonePier_0.50x3x0.50_UV2.fbx"
+      ]
+    },
+    {
+      "components": 37,
+      "triangles": 2168,
+      "faces": 1221,
+      "uvTrianglesChecked": 2168,
+      "closedComponents": true,
+      "allFaceUVsValid": true,
+      "distinctComponentCrops": 37,
+      "tag": "S04",
+      "files": [
+        "S04_FlagstoneFloor_4x0.25x4.fbx",
+        "S04_FlagstoneFloor_4x0.25x4_UV1.fbx",
+        "S04_FlagstoneFloor_4x0.25x4_UV2.fbx"
+      ]
+    },
+    {
+      "components": 6,
+      "triangles": 264,
+      "faces": 156,
+      "uvTrianglesChecked": 264,
+      "closedComponents": true,
+      "allFaceUVsValid": true,
+      "distinctComponentCrops": 6,
+      "tag": "S06",
+      "files": [
+        "S06_WallCap_4x0.25x0.50.fbx",
+        "S06_WallCap_4x0.25x0.50_UV1.fbx",
+        "S06_WallCap_4x0.25x0.50_UV2.fbx"
+      ]
+    }
+  ],
+  "texture": "Assets\\Textures\\Buildings\\Stone\\PaintedStone_Albedo.png",
+  "textureSHA256": "48883edea5b8b0f30068e5a0056643b1d3398e42762842d4d120739a17d5b999",
+  "source": "ArtReferences/StoneBuildKit/Models/StoneBuildKit.blend",
+  "uvMethod": "Per-face planar projection; equal scale on both projected axes, seeded offsets/rotation/mirroring; three layout variants",
+  "allFacesIncludingHiddenAndBevels": true
+}

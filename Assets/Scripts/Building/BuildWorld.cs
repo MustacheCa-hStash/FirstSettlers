@@ -88,7 +88,7 @@ public sealed class BuildWorld : MonoBehaviour
         preview.Warning=BuildPlacementWarning.None;preview.WarningPieceId=0;preview.WarningMessage=null;
         buildingRenderer?.SetPreview(null);
         DebugPreview=preview;
-        preview.Grounded=preview.Definition.kind==BuildPartKind.Foundation && Grounded(preview);
+        preview.Grounded=(preview.Definition.kind==BuildPartKind.Foundation || preview.Definition.canGroundOnTerrain) && Grounded(preview);
         var candidate=new BuildPieceRecord{Id=ulong.MaxValue,Definition=preview.Definition,Origin=preview.Origin,
             WorldYawStep=(byte)preview.WorldYaw,Grounded=preview.Grounded};
         candidate.WorldBounds=BuildSession.IndexBounds(preview.Definition,candidate.Origin,candidate.WorldYawStep);
@@ -119,7 +119,7 @@ public sealed class BuildWorld : MonoBehaviour
         var all=new List<BuildPieceRecord>(Session.Pieces.Values){candidate};
         var supported=cached?previewSupported:BuildSupportState.Resolve(all,states,p=>Session.NeighboursFor(p,candidate));
         previewStates=states;previewSupported=supported;previewRevision=Session.Revision;previewDefinition=preview.Definition;previewOrigin=preview.Origin;previewYaw=preview.WorldYaw;previewGrounded=preview.Grounded;
-        if(!supported.Contains(candidate.Id)){Reject(ref preview,BuildPlacementFailure.Support,"Needs a grounded foundation or supported piece");return;}
+        if(!supported.Contains(candidate.Id)){Reject(ref preview,BuildPlacementFailure.Support,preview.Definition.requiresFullBearing?"Needs foundation coverage beneath the complete paving tile":"Needs a grounded foundation or supported piece");return;}
         foreach(var piece in Session.Pieces.Values)if(piece.Supported && !supported.Contains(piece.Id))
         {Reject(ref preview,BuildPlacementFailure.Support,"Would remove support from an existing piece",piece);return;}
         Bounds local=state.Bounds;
@@ -172,6 +172,13 @@ public sealed class BuildWorld : MonoBehaviour
     public static bool IsGround(Collider collider) => collider != null && (collider is TerrainCollider || collider.GetComponent<WorldGroundSurface>() != null);
     private static bool Grounded(BuildPreview preview)
     {
+        if(preview.Definition.canGroundOnTerrain)
+        {
+            var sections=preview.Definition.solidBoxes;
+            if(sections==null || sections.Length==0)return GroundSection(preview,preview.Definition.LocalBounds);
+            foreach(var section in sections)if(!GroundSection(preview,section))return false;
+            return true;
+        }
         Bounds b = preview.Definition.LocalBounds;
         for (int i = 0; i < 5; i++)
         {
@@ -181,6 +188,19 @@ public sealed class BuildWorld : MonoBehaviour
             Vector3 bottom = preview.Origin + BuildGeometry.Rotation(preview.WorldYaw) * p;
             if (Physics.Raycast(bottom + Vector3.up * .3f, Vector3.down, out var hit, .65f, GameplayLayers.SolidSurfaceMask, QueryTriggerInteraction.Ignore)
                 && IsGround(hit.collider) && hit.point.y - bottom.y >= -.04f && hit.point.y - bottom.y <= .251f && hit.normal.y >= .5f) return true;
+        }
+        return false;
+    }
+    private static bool GroundSection(BuildPreview preview,Bounds section)
+    {
+        // Sample actual feet, never the middle of a gate opening. Keep the foundation's shallow-seat tolerance.
+        var q=BuildGeometry.Rotation(preview.WorldYaw);
+        for(int i=0;i<5;i++)
+        {
+            Vector3 p=i==0?section.center:new Vector3(i%2==0?section.max.x-.05f:section.min.x+.05f,0,i<3?section.min.z+.05f:section.max.z-.05f);
+            p.y=section.min.y;Vector3 bottom=preview.Origin+q*p;
+            if(Physics.Raycast(bottom+Vector3.up*.3f,Vector3.down,out var hit,.65f,GameplayLayers.SolidSurfaceMask,QueryTriggerInteraction.Ignore)
+                && IsGround(hit.collider) && hit.point.y-bottom.y>=-.04f && hit.point.y-bottom.y<=.251f && hit.normal.y>=.5f)return true;
         }
         return false;
     }

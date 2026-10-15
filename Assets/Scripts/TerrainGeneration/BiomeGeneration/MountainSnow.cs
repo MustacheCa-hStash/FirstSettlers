@@ -57,11 +57,12 @@ public static class MountainSnow
         int width = heights.GetLength(0), depth = heights.GetLength(1);
         var result = new float2[width, depth];
         var context = HeightMapGenerator.CreateSamplingContext(seed, water.WaterLevel, mountainScale, erosion);
-        using var terrainStorage = new NativeArray<float4>(width * depth, Allocator.TempJob);
-        using var climateStorage = new NativeArray<float2>(width * depth, Allocator.TempJob);
+        // The terrain request invokes this on a worker; job completion can exceed four frames.
+        using var terrainStorage = new NativeArray<float4>(width * depth, Allocator.Persistent);
+        using var climateStorage = new NativeArray<float2>(width * depth, Allocator.Persistent);
         var terrain = terrainStorage;
         var climate = climateStorage;
-        using var output = new NativeArray<float2>(width * depth, Allocator.TempJob);
+        using var output = new NativeArray<float2>(width * depth, Allocator.Persistent);
         float2 origin = new float2(coord.x * chunkSize, coord.z * chunkSize);
         for (int x = 0; x < width; x++)
             for (int z = 0; z < depth; z++)

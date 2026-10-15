@@ -89,18 +89,20 @@ public class FoliageManager
     private readonly FoliagePlacementService placement;
     private readonly FoliageRenderAssets assets;
     private readonly GrassStream grassStream;
+    private int foregroundWorkCursor;
+    private WorldStreamingBudget streamingBudget;
     private readonly RockColliderPool rockPool;
     private readonly RockWorldRenderer rockRenderer;
     public string RockPerformanceSummary => $"Rocks: {rockRenderer.ResidentInstances} resident, {rockRenderer.VisibleGeometry.instances} visible, " +
         $"{rockRenderer.VisibleGeometry.vertices} visible vertices / {rockRenderer.VisibleGeometry.triangles} triangles, " +
         $"{rockRenderer.ShadowGeometry.instances} offscreen shadow instances, {rockRenderer.DrawCalls} submissions; " +
         $"{rockPool.ActiveCount} active / {rockPool.PooledCount} pooled colliders; last scan {rockPool.LastScanEntries} records.";
-    public void UpdateGrassStreaming(ChunkManager manager, List<ChunkCoord> activeCoords, Vector3 viewer, Camera camera)
+    public void UpdateGrassStreaming(ChunkManager manager, List<ChunkCoord> activeCoords, Vector3 viewer, Camera camera, WorldStreamingBudget frameBudget = null)
     {
         RefreshCloverRangeWork(activeCoords);
         grassStream.Update(manager, activeCoords, viewer, camera, camera != null ? grassGpuPlanes : null,
             assets.GrassMesh, assets.GrassMaterial, assets.BillboardGrassMesh, assets.BillboardGrassMaterial,
-            assets.ForestGrassMesh, assets.ForestGrassMaterial, assets.ForestFarGrassMesh, assets.ForestFarGrassMaterial);
+            assets.ForestGrassMesh, assets.ForestGrassMaterial, assets.ForestFarGrassMesh, assets.ForestFarGrassMaterial, frameBudget);
     }
     private void RefreshCloverRangeWork(List<ChunkCoord> activeCoords)
     {
@@ -126,6 +128,18 @@ public class FoliageManager
         pendingTreeRepresentationWork.Clear(); queuedTreeRepresentationWork.Clear();
         pendingFoliageManagementWork.Clear(); queuedFoliageManagementWork.Clear();
         deferredFoliageManagementRetries.Clear(); RecordFoliageQueueSnapshot(0);
+    }
+
+    internal bool CanReleaseChunkData(ChunkRecord record) =>
+        !discoveryScheduler.IsReading(record) && !grassStream.IsReading(record);
+
+    internal void ForgetChunkData(ChunkCoord coord)
+    {
+        discoveryScheduler.ForgetChunk(coord); publicationScheduler.ForgetChunk(coord); grassStream.ForgetChunk(coord);
+        pendingFoliageManagementWork.RemoveAll(item => item.ChunkCoord == coord);
+        queuedFoliageManagementWork.Remove(coord); deferredFoliageManagementRetries.RemoveAll(item => item == coord);
+        pendingTreeRepresentationWork.RemoveAll(item => item.ChunkCoord == coord); queuedTreeRepresentationWork.Remove(coord);
+        // Tree registry placement/state ownership is deliberately retained.
     }
 
     private void RecordFoliageQueueSnapshot(int treeRepresentationWorkCount = -1)
@@ -165,7 +179,7 @@ public class FoliageManager
         ChunkCoord viewerCoord,
         SubChunkCoord viewerGlobalSubChunk,
         List<ChunkCoord> orderedActiveCoords,
-        Camera renderCamera = null,Vector3? viewerPosition = null)
+        Camera renderCamera = null,Vector3? viewerPosition = null, WorldStreamingBudget frameBudget = null)
     {
         using (DrawVisibleFoliageEveryFrameMarker.Auto())
         {
@@ -180,15 +194,27 @@ public class FoliageManager
                         grassFrustum[i].normal.z, grassFrustum[i].distance);
             }
             long stageStart = TerrainGenerationProfiler.GetTimestamp();
-            long workBudgetStart = TerrainGenerationProfiler.GetTimestamp();
-            float foregroundBudgetMs = Mathf.Max(0f, grassSettings.foregroundFoliageWorkBudgetMsPerFrame);
-
-            PruneStaleFoliageQueues(chunkManager, viewerCoord, viewerGlobalSubChunk);
-            ProcessPendingFoliageManagementWork(chunkManager, viewerCoord, viewerGlobalSubChunk, workBudgetStart, foregroundBudgetMs);
-            ProcessPendingGroundFoliageGenerationWork(chunkManager, viewerCoord, workBudgetStart, foregroundBudgetMs);
-
-            ProcessPendingFoliageBatchWork(chunkManager, viewerCoord, viewerGlobalSubChunk, workBudgetStart, foregroundBudgetMs);
-            ProcessPendingTreeRepresentationWork(chunkManager, viewerCoord, workBudgetStart, foregroundBudgetMs);
+            streamingBudget = frameBudget;
+            using (frameBudget?.Measure(WorldStreamingPhase.Foliage))
+            {
+                long workBudgetStart = TerrainGenerationProfiler.GetTimestamp();
+                float foregroundBudgetMs = Mathf.Max(0f, grassSettings.foregroundFoliageWorkBudgetMsPerFrame);
+                PruneStaleFoliageQueues(chunkManager, viewerCoord, viewerGlobalSubChunk);
+                // Rotate first service so one expensive step cannot monopolize every frame.
+                int first = foregroundWorkCursor;
+                foregroundWorkCursor = (foregroundWorkCursor + 1) % 4;
+                for (int offset = 0; offset < 4; offset++)
+                {
+                    if (frameBudget != null && !frameBudget.HasRemaining) break;
+                    switch ((first + offset) % 4)
+                    {
+                        case 0: ProcessPendingFoliageManagementWork(chunkManager, viewerCoord, viewerGlobalSubChunk, workBudgetStart, foregroundBudgetMs); break;
+                        case 1: discoveryScheduler.Update(chunkManager, viewerCoord, workBudgetStart, foregroundBudgetMs, frameBudget); break;
+                        case 2: publicationScheduler.Update(chunkManager, viewerCoord, workBudgetStart, foregroundBudgetMs, frameBudget); break;
+                        case 3: ProcessPendingTreeRepresentationWork(chunkManager, viewerCoord, workBudgetStart, foregroundBudgetMs); break;
+                    }
+                }
+            }
             rockPool.Update(cloverViewerPosition, Time.realtimeSinceStartupAsDouble);
             rockRenderer.Draw(cloverViewerPosition, renderCamera);
 
@@ -727,8 +753,8 @@ public class FoliageManager
         RecordFoliageQueueSnapshot(pendingTreeRepresentationWork.Count);
     }
 
-    private static bool HasFoliageWorkBudgetRemaining(long localStart, float localMs, long sharedStart, float sharedMs) =>
-        FoliageWorkBudget.HasRemaining(localStart, localMs, sharedStart, sharedMs);
+    private bool HasFoliageWorkBudgetRemaining(long localStart, float localMs, long sharedStart, float sharedMs) =>
+        (streamingBudget == null || streamingBudget.HasRemaining) && FoliageWorkBudget.HasRemaining(localStart, localMs, sharedStart, sharedMs);
 
     private void PruneStaleFoliageQueues(
         ChunkManager chunkManager,

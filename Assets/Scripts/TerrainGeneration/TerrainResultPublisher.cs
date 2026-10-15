@@ -7,6 +7,13 @@ public sealed class TerrainResultPublisher
 {
     private readonly TerrainRequestManager terrainRequestManager;
     private readonly TerrainPublicationBudget budget;
+    private readonly WorldStreamingBudget streamingBudget;
+    private readonly Func<int> frameIndex;
+    private int submissionFrame;
+    private bool hasSubmissionFrame;
+    private int submittedControlMapSets;
+    public int SubmittedControlMapSets => submittedControlMapSets;
+    private bool dataFirst;
     private readonly Func<ChunkCoord, ChunkRecord> findNormal;
     private readonly Func<FarTerrainPatchKey, FarTerrainTileRecord> findFar;
     private readonly Func<FarTerrainRequestResult, bool> stillWanted;
@@ -14,11 +21,13 @@ public sealed class TerrainResultPublisher
     private readonly Action<FarTerrainPatchKey> wakeFar;
     public TerrainResultPublisher(TerrainRequestManager requests, TerrainPublicationBudget budget,
         Func<ChunkCoord, ChunkRecord> findNormal, Func<FarTerrainPatchKey, FarTerrainTileRecord> findFar,
-        Func<FarTerrainRequestResult, bool> stillWanted, Action<ChunkCoord> wakeNormal, Action<FarTerrainPatchKey> wakeFar)
+        Func<FarTerrainRequestResult, bool> stillWanted, Action<ChunkCoord> wakeNormal, Action<FarTerrainPatchKey> wakeFar, WorldStreamingBudget streamingBudget = null,
+        Func<int> frameIndex = null)
     {
         terrainRequestManager = requests; this.budget = budget.Sanitized();
+        this.frameIndex = frameIndex ?? (() => Time.frameCount);
         this.findNormal = findNormal; this.findFar = findFar; this.stillWanted = stillWanted;
-        this.wakeNormal = wakeNormal; this.wakeFar = wakeFar;
+        this.wakeNormal = wakeNormal; this.wakeFar = wakeFar; this.streamingBudget = streamingBudget;
     }
     private static readonly ProfilerMarker ProcessCompletedRequestsMarker = new ProfilerMarker("FS.Streaming.ProcessCompletedRequests");
     private static readonly ProfilerMarker ApplyTerrainDataResultsMarker = new ProfilerMarker("FS.Streaming.ApplyTerrainDataResults");
@@ -29,12 +38,24 @@ public sealed class TerrainResultPublisher
     private static readonly ProfilerMarker ApplyColliderResultMarker = new ProfilerMarker("FS.Streaming.ApplyColliderResult");
     private static readonly ProfilerMarker ApplyFarTerrainResultsMarker = new ProfilerMarker("FS.Streaming.ApplyFarTerrainResults");
     private static readonly ProfilerMarker ApplyFarTerrainResultMarker = new ProfilerMarker("FS.Streaming.ApplyFarTerrainResult");
+    private static readonly ProfilerMarker CreateTerrainMeshMarker = new("FS.Streaming.Publication.CreateTerrainMesh");
+    private static readonly ProfilerMarker CreateWaterMeshMarker = new("FS.Streaming.Publication.CreateWaterMesh");
+    private static readonly ProfilerMarker CreateColliderMeshMarker = new("FS.Streaming.Publication.CreateColliderMesh");
+    private static readonly ProfilerMarker CreateControlMapsMarker = new("FS.Streaming.Publication.CreateControlMaps");
+    private static readonly ProfilerMarker UploadControlMapMarker = new("FS.Streaming.Publication.UploadOneControlMap");
+    private static readonly ProfilerMarker DeferControlMapsMarker = new("FS.Streaming.Publication.DeferControlMapsForSubmissionLimit");
     public void Update()
     {
+        using var streamingScope = streamingBudget?.Measure(WorldStreamingPhase.Results);
         using var processCompletedRequestsScope = ProcessCompletedRequestsMarker.Auto();
+        int frame = frameIndex();
+        if (!hasSubmissionFrame || submissionFrame != frame)
+        {
+            hasSubmissionFrame = true; submissionFrame = frame; submittedControlMapSets = 0;
+        }
         long totalStart = TerrainGenerationProfiler.GetTimestamp();
-        long categoryStart = totalStart;
         bool processedAnyRequest = false;
+        ApplyFailures();
 
         TerrainGenerationProfiler.RecordQueueSnapshot(
             terrainRequestManager.ActiveTerrainDataJobCount,
@@ -46,6 +67,65 @@ public sealed class TerrainResultPublisher
             terrainRequestManager.CompletedMeshResultCount,
             terrainRequestManager.CompletedColliderResultCount);
 
+        ApplyColliders(totalStart, ref processedAnyRequest);
+        dataFirst = !dataFirst;
+        if (dataFirst)
+        {
+            ApplyTerrainData(totalStart, ref processedAnyRequest);
+            ApplyLodMeshes(totalStart, ref processedAnyRequest);
+        }
+        else
+        {
+            ApplyLodMeshes(totalStart, ref processedAnyRequest);
+            ApplyTerrainData(totalStart, ref processedAnyRequest);
+        }
+        ApplyFarTerrain(totalStart, ref processedAnyRequest);
+
+        if (processedAnyRequest)
+        {
+            TerrainGenerationProfiler.Record(
+                TerrainGenerationProfileStage.MainProcessCompletedRequestsTotal,
+                totalStart);
+        }
+    }
+
+    private void ApplyFailures()
+    {
+        // Workers report failure as data; Unity objects and record state remain main-thread owned.
+        for (int count = 0; count < 8 && (streamingBudget == null || streamingBudget.HasRemaining) &&
+            terrainRequestManager.TryDequeueFailure(out var failure); count++)
+        {
+            if (failure.Macro)
+            {
+                var patch = new FarTerrainPatchKey(failure.Coord, failure.PatchSize);
+                var tile = findFar(patch);
+                if (tile?.IsRequestCurrent(failure.Version) != true) continue;
+                tile.CancelRequest(failure.Version); wakeFar(patch); continue;
+            }
+            var record = findNormal(failure.Coord);
+            if (record == null) continue;
+            switch (failure.Kind)
+            {
+                case TerrainRequestKind.Data:
+                    if (!record.IsTerrainDataRequestCurrent(failure.Version)) continue;
+                    record.CancelTerrainDataRequest(failure.Version); break;
+                case TerrainRequestKind.Far:
+                    if (!record.IsFarTerrainRequestCurrent(failure.Version)) continue;
+                    record.CancelFarTerrainRequest(failure.Version); break;
+                case TerrainRequestKind.Lod:
+                    if (!record.IsMeshRequestCurrent(failure.Lod, failure.Version)) continue;
+                    record.CancelMeshRequest(failure.Lod, failure.Version); break;
+                case TerrainRequestKind.Collider:
+                    if (!record.IsColliderRequestCurrent(failure.Version)) continue;
+                    record.CancelColliderRequest(failure.Version); break;
+            }
+            wakeNormal(failure.Coord);
+        }
+    }
+
+    private void ApplyTerrainData(long totalStart, ref bool processedAnyRequest)
+    {
+        long categoryStart = TerrainGenerationProfiler.GetTimestamp();
         using (ApplyTerrainDataResultsMarker.Auto())
         {
             int terrainDataResultsApplied = 0;
@@ -56,50 +136,70 @@ public sealed class TerrainResultPublisher
                        budget.TotalMs,
                        categoryStart,
                        budget.TerrainDataMs) &&
-                   terrainRequestManager.TryDequeueTerrainDataResult(out TerrainDataRequestResult terrainResult))
+                   terrainRequestManager.TryPeekTerrainDataResult(out var next))
             {
+                // Only the main thread consumes/retires these queues. Inspect before dequeue so a
+                // quota deferral needs neither a second holding queue nor an ownership transfer.
+                ChunkRecord record = findNormal(next.ChunkCoord);
+                bool current = record != null && record.IsTerrainDataRequestCurrent(next.RequestVersion);
+                if (current && !CanSubmitControlMaps(next.ControlMapsRawData)) break;
+                if (!terrainRequestManager.TryDequeueTerrainDataResult(out TerrainDataRequestResult terrainResult)) break;
                 using (terrainResult)
                 {
-                    ChunkRecord record = findNormal(terrainResult.ChunkCoord);
-                    if (record == null)
+                    terrainDataResultsApplied++;
+                    if (!current)
                         continue;
 
                     using (ApplyTerrainDataResultMarker.Auto())
                     {
                         processedAnyRequest = true;
-                        terrainDataResultsApplied++;
-                        long stageStart = TerrainGenerationProfiler.GetTimestamp();
-                        Texture2D[] controlMaps = CreateControlMapTextures(terrainResult.ControlMapsRawData);
-                        TerrainGenerationProfiler.Record(
-                            TerrainGenerationProfileStage.MainTerrainControlMapTextureCreate,
-                            stageStart);
 
-                        bool completed = record.TryCompleteTerrainDataRequest(
-                            terrainResult.RequestVersion,
-                            terrainResult.HeightMap,
-                            terrainResult.SlopeMap,
-                            terrainResult.MoistureMap,
-                            terrainResult.TemperatureMap,
-                            terrainResult.BiomeMap,
-                            terrainResult.SurfaceTypeMap,
-                            terrainResult.WaterStateMap,
-                            terrainResult.GroundCoverMap,
-                            terrainResult.WorldFeaturePlan,
-                            terrainResult.RiverMaskMap,
-                            controlMaps,
-                            terrainResult.NativeData);
-
-                        if (completed)
+                        Texture2D[] controlMaps = null;
+                        bool completed = false;
+                        try
                         {
-                            terrainResult.TransferNativeOwnership();
-                            wakeNormal(record.ChunkCoord);
+                            long stageStart = TerrainGenerationProfiler.GetTimestamp();
+                            controlMaps = CreateControlMapTextures(terrainResult.ControlMapsRawData);
+                            TerrainGenerationProfiler.Record(
+                                TerrainGenerationProfileStage.MainTerrainControlMapTextureCreate,
+                                stageStart);
+
+                            completed = record.TryCompleteTerrainDataRequest(
+                                terrainResult.RequestVersion,
+                                terrainResult.HeightMap,
+                                terrainResult.SlopeMap,
+                                terrainResult.MoistureMap,
+                                terrainResult.TemperatureMap,
+                                terrainResult.BiomeMap,
+                                terrainResult.SurfaceTypeMap,
+                                terrainResult.WaterStateMap,
+                                terrainResult.GroundCoverMap,
+                                terrainResult.WorldFeaturePlan,
+                                terrainResult.RiverMaskMap,
+                                controlMaps,
+                                terrainResult.NativeData);
+
+                            if (completed)
+                            {
+                                terrainResult.TransferNativeOwnership();
+                                wakeNormal(record.ChunkCoord);
+                            }
                         }
+                        catch
+                        {
+                            if (!completed) record.CancelTerrainDataRequest(terrainResult.RequestVersion);
+                            throw;
+                        }
+                        finally { if (!completed) DestroyFarTerrainAssets(null, controlMaps, null); }
                     }
                 }
             }
         }
+    }
 
-        categoryStart = TerrainGenerationProfiler.GetTimestamp();
+    private void ApplyLodMeshes(long totalStart, ref bool processedAnyRequest)
+    {
+        long categoryStart = TerrainGenerationProfiler.GetTimestamp();
         using (ApplyLodMeshResultsMarker.Auto())
         {
             int lodMeshResultsApplied = 0;
@@ -112,40 +212,54 @@ public sealed class TerrainResultPublisher
                        budget.LodMeshMs) &&
                    terrainRequestManager.TryDequeueMeshResult(out MeshRequestResult meshResult))
             {
+                lodMeshResultsApplied++;
                 ChunkRecord record = findNormal(meshResult.ChunkCoord);
-                    if (record == null)
+                if (record == null || !record.IsMeshRequestCurrent(meshResult.LOD, meshResult.RequestVersion))
                     continue;
 
                 using (ApplyLodMeshResultMarker.Auto())
                 {
                     processedAnyRequest = true;
-                    lodMeshResultsApplied++;
-                    long stageStart = TerrainGenerationProfiler.GetTimestamp();
-                    Mesh terrainMesh = meshResult.TerrainMeshData.CreateMesh();
-                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainLODTerrainMeshCreate, stageStart);
 
-                    stageStart = TerrainGenerationProfiler.GetTimestamp();
-                    Mesh waterMesh = meshResult.WaterMeshData.CreateMesh();
-                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainWaterMeshCreate, stageStart);
-
-                    bool completed = record.TryCompleteMeshRequest(
-                        meshResult.LOD,
-                        meshResult.RequestVersion,
-                        terrainMesh,
-                        waterMesh
-                    );
-
-                    if (completed)
-                        wakeNormal(record.ChunkCoord);
-                    else
+                    Mesh terrainMesh = null, waterMesh = null;
+                    bool completed = false;
+                    try
                     {
-                        DestroyLODMeshAssets(terrainMesh, waterMesh);
+                        long stageStart = TerrainGenerationProfiler.GetTimestamp();
+                        using (CreateTerrainMeshMarker.Auto()) terrainMesh = meshResult.TerrainMeshData.CreateMesh();
+                        TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainLODTerrainMeshCreate, stageStart);
+
+                        stageStart = TerrainGenerationProfiler.GetTimestamp();
+                        using (CreateWaterMeshMarker.Auto()) waterMesh = meshResult.WaterMeshData.CreateMesh();
+                        TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainWaterMeshCreate, stageStart);
+
+                        completed = record.TryCompleteMeshRequest(
+                            meshResult.LOD,
+                            meshResult.RequestVersion,
+                            terrainMesh,
+                            waterMesh
+                        );
+
+                        if (completed)
+                        {
+                            record.RefreshDisplayedLOD(meshResult.LOD);
+                            wakeNormal(record.ChunkCoord);
+                        }
                     }
+                    catch
+                    {
+                        if (!completed) record.CancelMeshRequest(meshResult.LOD, meshResult.RequestVersion);
+                        throw;
+                    }
+                    finally { if (!completed) DestroyLODMeshAssets(terrainMesh, waterMesh); }
                 }
             }
         }
+    }
 
-        categoryStart = TerrainGenerationProfiler.GetTimestamp();
+    private void ApplyColliders(long totalStart, ref bool processedAnyRequest)
+    {
+        long categoryStart = TerrainGenerationProfiler.GetTimestamp();
         using (ApplyColliderResultsMarker.Auto())
         {
             int colliderResultsApplied = 0;
@@ -158,31 +272,45 @@ public sealed class TerrainResultPublisher
                        budget.ColliderMs) &&
                    terrainRequestManager.TryDequeueColliderResult(out ColliderRequestResult colliderResult))
             {
+                colliderResultsApplied++;
                 ChunkRecord record = findNormal(colliderResult.ChunkCoord);
-                    if (record == null)
+                if (record == null || !record.IsColliderRequestCurrent(colliderResult.RequestVersion))
                     continue;
 
                 using (ApplyColliderResultMarker.Auto())
                 {
                     processedAnyRequest = true;
-                    colliderResultsApplied++;
-                    long stageStart = TerrainGenerationProfiler.GetTimestamp();
-                    Mesh colliderMesh = colliderResult.ColliderMeshData.CreateMesh();
-                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainColliderMeshCreate, stageStart);
 
-                    bool completed = record.TryCompleteColliderRequest(
-                        colliderResult.RequestVersion,
-                        colliderMesh
-                    );
+                    Mesh colliderMesh = null;
+                    bool completed = false;
+                    try
+                    {
+                        long stageStart = TerrainGenerationProfiler.GetTimestamp();
+                        using (CreateColliderMeshMarker.Auto()) colliderMesh = colliderResult.ColliderMeshData.CreateMesh();
+                        TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainColliderMeshCreate, stageStart);
 
-                    if (completed)
-                        wakeNormal(record.ChunkCoord);
+                        completed = record.TryCompleteColliderRequest(
+                            colliderResult.RequestVersion,
+                            colliderMesh
+                        );
+
+                        if (completed)
+                            wakeNormal(record.ChunkCoord);
+                    }
+                    catch
+                    {
+                        if (!completed) record.CancelColliderRequest(colliderResult.RequestVersion);
+                        throw;
+                    }
+                    finally { if (!completed) TerrainAssetOwner.Destroy(colliderMesh); }
                 }
             }
         }
+    }
 
-        categoryStart = TerrainGenerationProfiler.GetTimestamp();
-
+    private void ApplyFarTerrain(long totalStart, ref bool processedAnyRequest)
+    {
+        long categoryStart = TerrainGenerationProfiler.GetTimestamp();
         using (ApplyFarTerrainResultsMarker.Auto())
         {
             int farTerrainResultsApplied = 0;
@@ -194,50 +322,59 @@ public sealed class TerrainResultPublisher
                        budget.TotalMs,
                        categoryStart,
                        budget.FarTerrainMs) &&
-                   terrainRequestManager.TryDequeueFarTerrainResult(out FarTerrainRequestResult farTerrainResult))
+                   terrainRequestManager.TryPeekFarTerrainResult(out var next))
             {
-                if (!stillWanted(farTerrainResult))
+                bool wanted = stillWanted(next);
+                if (wanted && !CanSubmitControlMaps(next.ControlMapsRawData)) break;
+                if (!terrainRequestManager.TryDequeueFarTerrainResult(out FarTerrainRequestResult farTerrainResult)) break;
+                farTerrainResultsApplied++;
+                if (!wanted)
                     continue;
 
                 using (ApplyFarTerrainResultMarker.Auto())
                 {
                     processedAnyRequest = true;
-                    farTerrainResultsApplied++;
-                    long stageStart = TerrainGenerationProfiler.GetTimestamp();
-                    Texture2D[] controlMaps = CreateControlMapTextures(farTerrainResult.ControlMapsRawData);
-                    TerrainGenerationProfiler.Record(
-                        TerrainGenerationProfileStage.MainFarControlMapTextureCreate,
-                        stageStart);
+                    Texture2D[] controlMaps = null;
+                    Mesh terrainMesh = null, waterMesh = null;
+                    bool accepted = false;
+                    try
+                    {
+                        long stageStart = TerrainGenerationProfiler.GetTimestamp();
+                        controlMaps = CreateControlMapTextures(farTerrainResult.ControlMapsRawData);
+                        TerrainGenerationProfiler.Record(
+                            TerrainGenerationProfileStage.MainFarControlMapTextureCreate,
+                            stageStart);
 
-                    stageStart = TerrainGenerationProfiler.GetTimestamp();
-                    Mesh terrainMesh = farTerrainResult.TerrainMeshData.CreateMesh();
-                    TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainFarTerrainMeshCreate, stageStart);
+                        stageStart = TerrainGenerationProfiler.GetTimestamp();
+                        using (CreateTerrainMeshMarker.Auto()) terrainMesh = farTerrainResult.TerrainMeshData.CreateMesh();
+                        TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.MainFarTerrainMeshCreate, stageStart);
 
-                    Mesh waterMesh = farTerrainResult.WaterMeshData != null && farTerrainResult.WaterMeshData.VertexCount > 0
-                        ? farTerrainResult.WaterMeshData.CreateMesh() : null;
-                    bool accepted = TryCompleteFarTerrainResult(farTerrainResult, terrainMesh, controlMaps, waterMesh);
-                    if (!accepted)
-                    {
-                        DestroyFarTerrainAssets(terrainMesh, controlMaps, waterMesh);
+                        if (farTerrainResult.WaterMeshData != null && farTerrainResult.WaterMeshData.VertexCount > 0)
+                            using (CreateWaterMeshMarker.Auto()) waterMesh = farTerrainResult.WaterMeshData.CreateMesh();
+                        accepted = TryCompleteFarTerrainResult(farTerrainResult, terrainMesh, controlMaps, waterMesh);
+                        if (accepted && farTerrainResult.IsMacroTile)
+                        {
+                            wakeFar(new FarTerrainPatchKey(
+                                farTerrainResult.ChunkCoord, farTerrainResult.PatchSizeInChunks));
+                        }
+                        else if (accepted)
+                        {
+                            wakeNormal(farTerrainResult.ChunkCoord);
+                        }
                     }
-                    else if (farTerrainResult.IsMacroTile)
+                    catch
                     {
-                        wakeFar(new FarTerrainPatchKey(
-                            farTerrainResult.ChunkCoord, farTerrainResult.PatchSizeInChunks));
+                        if (!accepted)
+                        {
+                            if (farTerrainResult.IsMacroTile)
+                                findFar(new FarTerrainPatchKey(farTerrainResult.ChunkCoord, farTerrainResult.PatchSizeInChunks))?.CancelRequest(farTerrainResult.RequestVersion);
+                            else findNormal(farTerrainResult.ChunkCoord)?.CancelFarTerrainRequest(farTerrainResult.RequestVersion);
+                        }
+                        throw;
                     }
-                    else
-                    {
-                        wakeNormal(farTerrainResult.ChunkCoord);
-                    }
+                    finally { if (!accepted) DestroyFarTerrainAssets(terrainMesh, controlMaps, waterMesh); }
                 }
             }
-        }
-
-        if (processedAnyRequest)
-        {
-            TerrainGenerationProfiler.Record(
-                TerrainGenerationProfileStage.MainProcessCompletedRequestsTotal,
-                totalStart);
         }
     }
 
@@ -262,19 +399,19 @@ public sealed class TerrainResultPublisher
     private static void DestroyLODMeshAssets(Mesh terrainMesh, Mesh waterMesh)
     {
         if (terrainMesh != null)
-            UnityEngine.Object.Destroy(terrainMesh);
+            TerrainAssetOwner.Destroy(terrainMesh);
 
         if (waterMesh != null)
-            UnityEngine.Object.Destroy(waterMesh);
+            TerrainAssetOwner.Destroy(waterMesh);
     }
 
     private static void DestroyFarTerrainAssets(Mesh terrainMesh, Texture2D[] controlMaps, Mesh waterMesh)
     {
         if (terrainMesh != null)
-            UnityEngine.Object.Destroy(terrainMesh);
+            TerrainAssetOwner.Destroy(terrainMesh);
 
         if (waterMesh != null)
-            UnityEngine.Object.Destroy(waterMesh);
+            TerrainAssetOwner.Destroy(waterMesh);
 
         if (controlMaps == null)
             return;
@@ -282,11 +419,11 @@ public sealed class TerrainResultPublisher
         for (int i = 0; i < controlMaps.Length; i++)
         {
             if (controlMaps[i] != null)
-                UnityEngine.Object.Destroy(controlMaps[i]);
+                TerrainAssetOwner.Destroy(controlMaps[i]);
         }
     }
 
-    private static bool CanApplyMoreResults(
+    private bool CanApplyMoreResults(
         int appliedCount,
         int maxCount,
         long frameStart,
@@ -294,6 +431,7 @@ public sealed class TerrainResultPublisher
         long categoryStart,
         float categoryBudgetMs)
     {
+        if (streamingBudget != null && !streamingBudget.HasRemaining) return false;
         if (appliedCount >= maxCount)
             return false;
 
@@ -306,23 +444,42 @@ public sealed class TerrainResultPublisher
         return true;
     }
 
+    private bool CanSubmitControlMaps(ControlMapPixelData rawData)
+    {
+        // Empty and obsolete results don't spend a texture-submission slot.
+        if (rawData?.Maps == null || rawData.Maps.Length == 0 ||
+            submittedControlMapSets < budget.ControlMapSetsPerFrame) return true;
+        using (DeferControlMapsMarker.Auto()) return false;
+    }
+
     private Texture2D[] CreateControlMapTextures(ControlMapPixelData rawData)
     {
+        using var controlMapsScope = CreateControlMapsMarker.Auto();
         if (rawData == null || rawData.Maps == null || rawData.Maps.Length == 0)
             return null;
 
+        // Reserve before creating the first texture. Failed/partial attempts still consume the
+        // slot: cleanup doesn't undo graphics commands already submitted in this frame.
+        submittedControlMapSets++;
         Texture2D[] textures = new Texture2D[rawData.Maps.Length];
 
-        for (int i = 0; i < rawData.Maps.Length; i++)
+        try
         {
-            Texture2D tex = new Texture2D(rawData.Width, rawData.Height, TextureFormat.RGBA32, false, true);
-            tex.filterMode = FilterMode.Bilinear;
-            tex.wrapMode = TextureWrapMode.Clamp;
-            tex.SetPixels32(rawData.Maps[i]);
-            tex.Apply(false, false);
-            textures[i] = tex;
-        }
+            for (int i = 0; i < rawData.Maps.Length; i++)
+            {
+                using var uploadScope = UploadControlMapMarker.Auto();
+                if (rawData.Maps[i] == null || rawData.Maps[i].Length != rawData.Width * rawData.Height)
+                    throw new ArgumentException("Control-map pixel buffer does not match its dimensions.", nameof(rawData));
+                Texture2D tex = new Texture2D(rawData.Width, rawData.Height, TextureFormat.RGBA32, false, true);
+                textures[i] = tex;
+                tex.filterMode = FilterMode.Bilinear;
+                tex.wrapMode = TextureWrapMode.Clamp;
+                tex.SetPixels32(rawData.Maps[i]);
+                tex.Apply(false, false);
+            }
 
-        return textures;
+            return textures;
+        }
+        catch { DestroyFarTerrainAssets(null, textures, null); throw; }
     }
 }

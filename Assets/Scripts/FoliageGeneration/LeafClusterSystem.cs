@@ -269,5 +269,7 @@ public sealed class LeafClusterSystem : IDisposable
         foreach (Plane plane in planes) if (plane.GetDistanceToPoint(position) < -radius) return false;
         return true;
     }
+    internal void ForgetChunk(ChunkCoord coord)
+    { resident.Remove(coord); cpuTiles.Remove(coord); wanted.Remove(coord); gpu?.Remove(coord); }
     public void Dispose() { gpu?.Dispose(); gpu = null; cpuTiles.Clear(); resident.Clear(); wanted.Clear(); eviction.Clear(); }
 }

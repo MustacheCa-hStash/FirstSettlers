@@ -20,7 +20,9 @@ public static class BuildSocketPlacement
         else if(selectedPost && post)
         {
             int side=Side(n);
-            origin=upper?new Vector3(0,b.min.y+target.Definition.StackRise,0):BuildGeometry.Rotation(side)*Vector3.back*.25f;
+            var offset=BuildGeometry.Rotation(side)*Vector3.back;
+            float spacing=(Mathf.Abs(offset.x)*(b.size.x+d.LocalBounds.size.x)+Mathf.Abs(offset.z)*(b.size.z+d.LocalBounds.size.z))*.5f;
+            origin=upper?new Vector3(0,b.min.y+target.Definition.StackRise,0):offset*spacing;
             hint=upper?"Stack post":"Adjacent post";
         }
         else if(selectedPost && target.Definition.kind is BuildPartKind.Floor or BuildPartKind.Foundation)
@@ -30,7 +32,22 @@ public static class BuildSocketPlacement
         }
         else if(selectedWall && wall)
         {
-            if(upper){origin=new Vector3(0,b.min.y+target.Definition.StackRise,0);hint="Stack full-height wall";}
+            // A short rectangular panel fills beside a triangle at its base, never above
+            // the triangle's empty bounding-box corner. Its own top remains rectangular.
+            if(d.IsWallInfill && target.Definition.IsHalfGable)
+            {
+                origin=n.y<-.6f?new Vector3(PanelAlong(d,b,point.x),b.min.y-d.LocalBounds.max.y,0):new Vector3(point.x<b.center.x?-d.LocalBounds.size.x:b.max.x,b.min.y,0);
+                hint=n.y<-.6f?"Infill underneath gable":"Infill beside gable at base level";
+            }
+            else if((d.IsWallInfill || target.Definition.IsWallInfill) && n.y<-.6f)
+            {
+                origin=new Vector3(PanelAlong(d,b,point.x),b.min.y-d.LocalBounds.max.y,0);hint="Wall infill underneath";
+            }
+            else if(upper)
+            {
+                origin=new Vector3(d.IsWallInfill?PanelAlong(d,b,point.x):0,b.min.y+target.Definition.StackRise,0);
+                hint=d.IsWallInfill?"Square infill on wall top":"Stack wall";
+            }
             else
             {
                 bool left=point.x<b.center.x;
@@ -64,5 +81,7 @@ public static class BuildSocketPlacement
         preview=new BuildPreview{Definition=d,Origin=world,WorldYaw=worldYaw,Frame=new BuildGridFrame{Origin=world,YawStep=(byte)worldYaw},Hint=hint,TopAttachment=top};
         return true;
     }
+    private static float PanelAlong(BuildDefinition d,Bounds target,float hitX)
+        =>Mathf.Clamp(Mathf.Floor((hitX-target.min.x)/d.LocalBounds.size.x)*d.LocalBounds.size.x+target.min.x,target.min.x,Mathf.Max(target.min.x,target.max.x-d.LocalBounds.size.x));
     private static int Side(Vector3 n)=>Mathf.Abs(n.x)>Mathf.Abs(n.z)?n.x>0?6:2:n.z>0?4:0;
 }

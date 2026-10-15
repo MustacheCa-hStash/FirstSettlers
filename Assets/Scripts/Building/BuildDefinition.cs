@@ -30,6 +30,12 @@ public sealed class BuildDefinition : ScriptableObject
     public float WallEndInset => Mathf.Max(0, wallEndInsetUnits) * BuildGeometry.Unit;
     public float WallBaySpan => LocalBounds.size.x + 2 * WallEndInset;
     public Mesh mesh;
+    [Tooltip("Keep the imported mesh and its UVs intact instead of generating timber fitting or bearing geometry.")]
+    public bool preserveAuthoredMesh;
+    [Tooltip("Requires foundation or solid paving coverage beneath the complete footprint; side contact cannot support this piece.")]
+    public bool requiresFullBearing;
+    [Tooltip("This piece may ground directly on terrain. Each authored solid section needs foot contact; apertures never count as bearing.")]
+    public bool canGroundOnTerrain;
     [Tooltip("Authored solid sections around wall openings. Empty uses the full logical box unless convex volumes are supplied.")]
     public Bounds[] solidBoxes;
     [Tooltip("Clear apertures which generated junction framing must preserve.")]

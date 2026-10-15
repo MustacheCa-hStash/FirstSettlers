@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: s04-flagstone-floor
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.stone.s04-flagstone-floor
+  displayName: S04 flagstone ground floor
+  kind: 1
+  wallPlacementMode: 0
+  sizeUnits: {x: 16, y: 1, z: 16}
+  minimumUnits: {x: 0, y: -1, z: 0}
+  boundsOffset: {x: 0, y: 0, z: 0}
+  jointSockets: []
+  stackRiseUnits: 1
+  wallEndInsetUnits: 0
+  mesh: {fileID: -3837240734012748676, guid: 82c4339ecff6ec24ea2708fd65cf2a02, type: 3}
+  preserveAuthoredMesh: 1
+  requiresFullBearing: 1
+  solidBoxes: []
+  wallOpenings: []
+  gableSlope: 0
+  flipVariant: {fileID: 0}
+  gableRoofSeamMesh: {fileID: 0}
+  uvVariants:
+  - {fileID: -3837240734012748676, guid: 82c4339ecff6ec24ea2708fd65cf2a02, type: 3}
+  - {fileID: 3234451264097128901, guid: d4b007cd15e60ba48af54600711f9d51, type: 3}
+  - {fileID: -484320493012004278, guid: f5cab93397be4da4cb8e1d8b9cebfa8d, type: 3}
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes: []
+  roofAttachment: 0
+  material: {fileID: 2100000, guid: 4d2d86430550b0d46bc1ecb21a9425c3, type: 2}
+  authoringPrefab: {fileID: 5004566817795999635, guid: 40de0b5dfe4dc3f43b4f98111f7f088f, type: 3}
+  maxHealth: 100

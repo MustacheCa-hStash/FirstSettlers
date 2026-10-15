@@ -27,6 +27,8 @@ public sealed class BuildResolution : IDisposable
     private BuildResolvedState Floor(BuildPieceRecord p,IReadOnlyList<BuildPieceRecord> pieces)
     {
         var core=BuildTrimUV.Core(p);int variation=BuildTrimUV.Variation(p.Origin,p.WorldYawStep,p.Definition.uvVariants?.Length??0);
+        if(p.Definition.preserveAuthoredMesh)
+            return new BuildResolvedState{mesh=core,boxes=new[]{p.Definition.LocalBounds},key="authored:"+variation};
         var cuts=new List<Bounds>();bool invalid=false;
         foreach(var other in pieces)
         {
@@ -115,7 +117,7 @@ public sealed class BuildResolution : IDisposable
             else boxes.Add(d.LocalBounds);
         }
         var headers=new List<Bounds>();
-        if(d.kind is BuildPartKind.Wall or BuildPartKind.Corner or BuildPartKind.Roof)
+        if(!d.preserveAuthoredMesh && d.kind is BuildPartKind.Wall or BuildPartKind.Corner or BuildPartKind.Roof)
         {
             Bounds foot=d.kind==BuildPartKind.Roof?new Bounds(new Vector3(2,-Band*.5f,.125f),new Vector3(4,Band,.25f)):
                 Box(new Vector3(d.LocalBounds.min.x,-Band,d.LocalBounds.min.z),new Vector3(d.LocalBounds.max.x,0,d.LocalBounds.max.z));

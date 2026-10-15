@@ -38,7 +38,7 @@ public static class BuildPlacement
             // Seed origins, including height, are on the world lattice. Terrain footing may embed by < one unit.
             Vector3 centreOffset = BuildGeometry.Rotation(worldHeading) * new Vector3(definition.LocalBounds.center.x, 0, definition.LocalBounds.center.z);
             Vector3 point = hit - centreOffset;
-            point.y = definition.kind == BuildPartKind.Foundation
+            point.y = definition.kind == BuildPartKind.Foundation || definition.canGroundOnTerrain
                 ? Mathf.Floor(hit.y / BuildGeometry.Unit) * BuildGeometry.Unit - definition.LocalBounds.min.y
                 : Mathf.Ceil(hit.y / BuildGeometry.Unit) * BuildGeometry.Unit - definition.LocalBounds.min.y;
             Vector3 origin = (Vector3)BuildGeometry.Ticks(point) * BuildGeometry.Unit;

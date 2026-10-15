@@ -90,6 +90,15 @@ public sealed class BuildSession : IDisposable
     public void RecomputeSupport()
     {
         using var scope = SupportMarker.Auto();
+        bool fullBearing=false;foreach(var p in pieces.Values)fullBearing|=p.Definition.requiresFullBearing;
+        if(fullBearing)
+        {
+            var list=new List<BuildPieceRecord>(pieces.Values);var states=new Dictionary<ulong,BuildResolvedState>();
+            foreach(var p in list)states.Add(p.Id,p.Resolved);
+            var supported=BuildSupportState.Resolve(list,states,p=>NeighboursFor(p));
+            foreach(var p in list)p.Supported=supported.Contains(p.Id);
+            return;
+        }
         supportQueue.Clear();
         foreach (var piece in pieces.Values)
         {

@@ -61,6 +61,13 @@ public sealed class FoliageDiscoveryScheduler : IDisposable
         activeGroundGeneration?.Dispose(); activeGroundGeneration = null; activeGroundRecord = null;
         pendingGroundFoliageGenerationWork.Clear(); queuedGroundFoliageGenerationWork.Clear();
     }
+
+    internal bool IsReading(ChunkRecord record) => ReferenceEquals(activeGroundRecord, record);
+    internal void ForgetChunk(ChunkCoord coord)
+    {
+        pendingGroundFoliageGenerationWork.RemoveAll(item => item.Key.ChunkCoord == coord);
+        queuedGroundFoliageGenerationWork.RemoveWhere(key => key.ChunkCoord == coord);
+    }
     private readonly struct GroundFoliageGenerationWorkItem
     {
         public readonly GroundFoliageGenerationWorkKey Key;
@@ -121,8 +128,9 @@ public sealed class FoliageDiscoveryScheduler : IDisposable
         IChunkLookup chunkManager,
         ChunkCoord viewerCoord,
         long sharedBudgetStart,
-        float sharedBudgetMs)
+        float sharedBudgetMs, WorldStreamingBudget frameBudget = null)
     {
+        if (frameBudget != null && !frameBudget.HasRemaining) return;
         using var processGroundFoliageGenerationScope = ProcessGroundFoliageGenerationMarker.Auto();
 
         int maxGenerations = Mathf.Max(1, grassSettings.maxGroundFoliageGenerationsPerFrame);
@@ -130,7 +138,7 @@ public sealed class FoliageDiscoveryScheduler : IDisposable
         long frameStart = TerrainGenerationProfiler.GetTimestamp();
         int started = 0;
         // One resident discovery job bounds native memory and prevents worker flooding.
-        // Always make one step of progress even when earlier foreground work used its budget.
+        // One step progresses past a local limit, provided the world allowance admitted this pass.
         do
         {
             if (activeGroundGeneration == null)
@@ -173,7 +181,15 @@ public sealed class FoliageDiscoveryScheduler : IDisposable
                 queuedGroundFoliageGenerationWork.Add(activeGroundKey);
                 started++;
             }
-            if (activeGroundGeneration.MoveNext())
+            bool advanced;
+            try { advanced = activeGroundGeneration.MoveNext(); }
+            catch
+            {
+                activeGroundGeneration.Dispose(); activeGroundGeneration = null; activeGroundRecord = null;
+                queuedGroundFoliageGenerationWork.Remove(activeGroundKey);
+                throw;
+            }
+            if (advanced)
             {
                 if (!activeGroundGeneration.Current) break; // Waiting: never Complete on the main thread.
             }
@@ -193,7 +209,7 @@ public sealed class FoliageDiscoveryScheduler : IDisposable
                     }
                 }
             }
-        } while (FoliageWorkBudget.HasRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs));
+        } while ((frameBudget == null || frameBudget.HasRemaining) && FoliageWorkBudget.HasRemaining(frameStart, budgetMs, sharedBudgetStart, sharedBudgetMs));
 
     }
 }

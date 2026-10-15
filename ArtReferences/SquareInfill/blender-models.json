@@ -1,0 +1,25 @@
+{
+  "models": [
+    {
+      "file": "SquareInfill_2x2x0.25.fbx",
+      "components": 11,
+      "triangles": 132,
+      "closedComponents": true,
+      "allFaceUVsValid": true
+    },
+    {
+      "file": "SquareInfill_JunctionPost_2m.fbx",
+      "components": 1,
+      "triangles": 12,
+      "closedComponents": true,
+      "allFaceUVsValid": true
+    }
+  ],
+  "preservedExistingObjects": 296,
+  "dimensions": [
+    2,
+    2,
+    0.25
+  ],
+  "atlas": "existing ordinary wood trim"
+}

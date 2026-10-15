@@ -1,6 +1,6 @@
 # Ordinary stone: S01–S24 build catalog
 
-Concept catalog for First Settlers, matching the W## wooden component sheets. This delivery contains illustrated design sheets and a dimension specification only. All S## entries are proposals; meshes, textures, prefabs, build definitions, placement code and scene assets are outside this pass.
+Concept catalog for First Settlers, matching the W## wooden component sheets. The catalog originated as illustrated design sheets and a dimension specification. **S02, S03, S04, S06, S07 and S12 now have Blender models, complete varied UVs, FBX exports and Unity building integration**; see the [initial implementation guide](../../Documentation/STONE_BUILD_KIT.md) and [S07/S12 boundary wall guide](../../Documentation/STONE_BOUNDARY_WALLS.md). S12's wooden gate is deferred; its opening is empty. Other S## entries remain proposals. The saved world scene has not been changed by this work.
 
 - [01: Core masonry](01-core-masonry.png) — S01–S06
 - [02: Walls and openings](02-walls-and-openings.png) — S07–S12
@@ -9,6 +9,8 @@ Concept catalog for First Settlers, matching the W## wooden component sheets. Th
 - [05: Guards and landscape supports](05-guards-and-supports-v2.png) — S21–S24
 - [Exact generation prompts](GENERATION_PROMPTS.md)
 - [Painted stone trim-sheet proposal](Textures/README.md)
+- [Implemented S02/S03/S04/S06 model preview](Models/stone-kit-overview.png)
+- [S07 low wall and S12 empty gate preview](Boundary/S07-S12-overview.png)
 
 ## Visual direction
 
@@ -48,7 +50,7 @@ Dimensions are metres. Wall sizes are width × height × thickness. Stairs use w
 | S09 | Timber-lintel doorway | 4.00 W × 3.00 H × 0.50 D | Stone + wood; centred 1.25 W × 2.25 H clear aperture, with rough timber lintel seated into masonry. |
 | S10 | Pegged plank door | 1.20 W × 2.20 H × 0.08 D | Wood; 0.025 m nominal clearance on each side/top/bottom inside S09. Fitted pivot hardware requires later detailing. |
 | S11 | Shutter opening wall | 4.00 W × 3.00 H × 0.50 D | Stone + wood; centred 1.00 W × 0.75 H clear opening, sill 1.25 m above base. Timber lintel, stone sill, fitted wooden shutter; no glass. |
-| S12 | Yard gate bay | 4.00 W × 1.25 H × 0.50 D | Stone + wood; two low masonry wings around a centred 1.25 m clear gate opening. Fitted wooden gate leaf 1.20 W × 1.15 H × 0.08 D, bottom 0.05 m above base. |
+| S12 | Yard gate bay | 4.00 W × 1.25 H × 0.50 D | Implemented as two low masonry wings around a centred 1.25 m clear opening, with no gate or wooden components. A future fitted gate may use the original proposed 1.20 W × 1.15 H × 0.08 D leaf, bottom 0.05 m above base. |
 | S13 | Timber-and-thatch roof half | 2.00 run × 4.00 ridge length; 2.00 rise | Wood + thatch; reuse W roof vocabulary. 45° structural slope, 2.83 m slope line. Two halves cover a 4 m bay. Cover thickness/overhang are separate visual extents. |
 | S14 | Timber upper floor | 4.00 × 4.00; 0.25 deep | Wood; reuse full framed W04 floor and its stairwell variant. Beam ends bear into wall-top band. Proposed stone-aware fitting keeps the interior clear and supported. |
 | S15 | Stone half-gable | 2.00 base × 2.00 rise × 0.50 D | Stone; rising/falling triangular halves form 4 m-wide, 2 m-high gable. One catalog option with mirrored orientation, like current W15. |

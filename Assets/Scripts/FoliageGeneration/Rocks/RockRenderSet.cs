@@ -1,10 +1,12 @@
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>One streamed chunk of immutable instance matrices. No per-rock visual GameObjects.</summary>
 public sealed class RockRenderSet
 {
+    private static readonly ProfilerMarker FinishBatchMarker = new("FS.Streaming.Foliage.Publication.Rock.FinishBatch");
     public readonly struct Visual
     {
         public readonly Mesh Mesh, DistantMesh;
@@ -88,10 +90,13 @@ public sealed class RockRenderSet
         foreach (var group in staging)
             for (int start = 0; start < group.Value.Count; start += 1023)
             {
-                int count = Mathf.Min(1023, group.Value.Count - start);
-                var matrices = new Matrix4x4[count]; group.Value.CopyTo(start, matrices, 0, count);
-                batches.Add(new Batch { Mesh = group.Key.Item1, Material = group.Key.Item2,
-                    Submesh = group.Key.Item3, Matrices = matrices });
+                using (FinishBatchMarker.Auto())
+                {
+                    int count = Mathf.Min(1023, group.Value.Count - start);
+                    var matrices = new Matrix4x4[count]; group.Value.CopyTo(start, matrices, 0, count);
+                    batches.Add(new Batch { Mesh = group.Key.Item1, Material = group.Key.Item2,
+                        Submesh = group.Key.Item3, Matrices = matrices });
+                }
                 yield return true;
             }
         staging.Clear();

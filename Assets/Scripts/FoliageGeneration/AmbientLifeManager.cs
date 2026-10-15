@@ -1076,6 +1076,14 @@ public sealed class AmbientLifeManager : IDisposable
         return ToUnitFloat(state);
     }
 
+    internal void ForgetChunk(ChunkCoord coord)
+    {
+        activeChunks.Remove(coord); desiredChunks.Remove(coord);
+        pendingTransfers.RemoveAll(transfer => transfer.Source == coord || transfer.Destination == coord);
+        // Temporary hotspot scratch is rebuilt by the next habitat query.
+        hotspotCells.Clear(); sortedCells.Clear();
+    }
+
     public void Dispose()
     {
         activeChunks.Clear();

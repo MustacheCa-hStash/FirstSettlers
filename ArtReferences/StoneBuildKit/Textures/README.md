@@ -1,5 +1,7 @@
 # Painted stone trim-sheet proposal
 
+Implementation update: S02/S03/S04/S06 now use individually modeled stones with varied UV crops of the approved joint-free painted stone texture. The labelled board below remains a proposal; its masonry seams and labels are not applied to those meshes. See the [model and import guide](../../../Documentation/STONE_BUILD_KIT.md).
+
 [View the labelled proposal](painted-stone-trim-proposal.png).
 
 Soft matte warm grey, taupe and restrained slate, with broad painted patches and minimal surface noise. This follows the project's selected [painted rock surface](../../Rocks/README.md) and pairs with its active Meadow Timber wood atlas. The catalog's ink/gouache construction drawings are presentation references; this trim proposal follows the quieter in-game surface style.

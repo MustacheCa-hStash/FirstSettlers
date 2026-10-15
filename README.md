@@ -1,5 +1,39 @@
 # FirstSettlers Work Notes
 
+## October 15: shared height sampling cap of six
+
+Detailed terrain, far heights, and the height sampling inside far control-map generation now share a fixed cap of **six simultaneous sampling tasks**. Short waves take turns across requests so those requests cannot multiply the limit. Request limits stay unchanged. Waiting occurs on producer threads; the Unity job workers remain available for other work such as Forward+ lighting. Sampling outputs matched the pre-change reference byte for byte, concurrency peaked at six across four producers, and compilation plus streaming/ownership/lifetime checks passed. Terrain may arrive later under load; route frame-time improvement still needs measurement. See [implementation, profiler labels and validation](Documentation/STREAMING_SCHEDULING.md#height-sampling-concurrency-cap).
+
+## October 14: terrain texture submission cap
+
+Terrain publication now submits at most **one complete control-map set per frame** by default (currently three textures), shared by near and far terrain. This limits bursts of graphics work even when main-thread submission fits the time budget. Extra current results remain queued with their native ownership intact; obsolete results can still be discarded, and collider/LOD publication continues. Adjust **Max Control Map Sets Submitted Per Frame** under World Manager's Terrain Streaming Budgets and restart Play Mode to apply. SmearScene is set to one. See [behavior, tradeoffs and validation](Documentation/STREAMING_SCHEDULING.md#terrain-texture-submission-cap).
+
+## October 14: foliage setup and grass draw diagnostics
+
+Foliage `CreateWork` and grass `Draw` now expose their internal setup and native operations: transform reads, object/iterator construction, material capability checks, buffer creation/replay/uploads, culling setup/dispatch/count copies, and GPU or CPU fallback draw submission. **Profiler Modules → First Settlers Grass** adds nine per-frame path/resource counters. This is instrumentation only. Runtime/editor/player compilation and isolated production-marker/counter observations plus existing foliage, grass-culling and shared-streaming checks passed. See [marker map and capture instructions](Documentation/STREAMING_SCHEDULING.md#foliage-setup-and-grass-drawing-breakdown).
+
+## October 14: foliage publication stage markers
+
+A captured 4.87 ms main-thread publication slice now has explicit kind and stage markers beneath `FS.Streaming.Foliage.PublishSlice`. `FS.Streaming.Foliage.Publication.*` separates input validation, grouping, batch allocation, transforms, commit/disposal, bush instantiation/setup/activation and rock construction/registration. Samples close before iterator yields; budgets and scheduling behavior are unchanged. See [capture instructions and marker map](Documentation/STREAMING_SCHEDULING.md#foliage-publication-spike-diagnosis).
+
+## October 14: terrain resource ownership cleanup
+
+Normal and macro terrain records now release generated meshes/textures, native ownership and managed inputs on disposal; replacements release obsolete assets safely across shared slots. Explicit inactive-chunk retirement protects coverage/handoffs and active foliage/grass readers, removes consumer references/results and keeps tree registry placements/states intact. Session-wide request tokens reject results for recreated records, worker failures clear matching request flags, and shutdown drains every result category while rejecting late completions. Publication cleans up partially created resources on failure. Automatic cache eviction and tree placement unloading remain deferred. See [terrain ownership and validation](Documentation/TERRAIN_OWNERSHIP.md).
+
+## October 14: bounded control-map scratch reuse
+
+Normal terrain-data workers now reuse the three padded control-map pixel buffers through a per-request-manager pool capped by the terrain worker limit. Buffers are cleared before reuse and returned after blending, including failures; output arrays remain independently owned. This avoids about 201 KiB of temporary pixel payload per normal chunk after warmup, at a maximum retained scratch cost of about 0.79 MiB with four workers. Different dimensions and excess borrowers use fresh scratch without growing the pool. Added `FS.Streaming.Worker.ControlMapBuild` and `ControlMapScratch` profiler markers. Compilation, byte-for-byte reuse/concurrency/lifecycle checks, streaming regressions and real terrain requests passed; warmed allocation events fell from 10 to 5 per build. GC-pause improvement remains unmeasured. See [GC pressure investigation](Documentation/GC_PRESSURE_INVESTIGATION.md).
+
+## October 14: terrain-worker allocation lifetime correction
+
+A supplied profiler/Console trace identified a TempJob mountain-mask buffer surviving seven frames in a terrain-data worker. Normal terrain-request scratch buffers now allow multi-frame lifetimes with explicit cleanup; mountain-mask and ecology inputs are released after their last consuming job. Height/climate retained-map scratch and snow scratch follow the same worker-safe ownership. Runtime/editor/player compilation, real-worker lifetime checks and streaming regressions passed. A separate far-geometry spacing assertion also failed with original allocation code; details are in the report. No automatic/incremental GC policy was changed. See [GC pressure investigation and capture plan](Documentation/GC_PRESSURE_INVESTIGATION.md) for allocation/retention findings and the tradeoffs of manual collection scheduling.
+
+## October 14: shared conservative streaming allowance
+
+Added a 2 ms shared main-thread allowance for terrain result publication, runtime/content work, foliage scheduling, and grass completion/uploads/dispatch. Content, foliage and grass reserve portions of that allowance; unused capacity returns to later phases. Collision results and attachment precede visual LOD work. Rotating first service prevents fixed-order queue starvation, completed-result backpressure slows dispatch when publication falls behind, and obsolete results are rejected before allocating Unity assets. Grass completion now visits active jobs rather than every resident tile. F3 reports measured streaming time, peak and overruns.
+
+The limit remains soft: indivisible Unity operations and required reconciliation can overrun, while rendering, grass reconciliation, distant content, ambient/gameplay updates and worker execution remain outside the measured pool. Tighter budgets trade faster content arrival for more restrained main-thread work. Runtime/editor/player C# compilation and the isolated Unity scheduling, architecture, foliage, grass and Inspector regressions passed; live-world FPS remains unmeasured. See [scheduling, validation and tuning](Documentation/STREAMING_SCHEDULING.md). Restart Play Mode after import to apply the new configuration.
+
 ## October 9: player-relative building arrows and hold repeat
 
 Arrows now map to the closest forward/right axes of the active build grid relative to the player's horizontal view: Down brings the preview closer, Up moves it away, and Left/Right follow the player's sides. Each individual arrow moves one 0.25 m grid step. Holds repeat after 0.3 seconds at 0.1-second intervals; LocalPlayerInput exposes a repeat toggle and timing settings. Menu/focus/disabled-input transitions clear holds, and opposing arrows cancel. Page Up/Down remain vertical tap controls. Runtime/editor compilation, direction/repeat correctness checks and native input regressions passed; see [building guide](Documentation/BUILDING_PROTOTYPE.md).

@@ -19,7 +19,10 @@ public static class BuildUiContent
         "build.prototype.foundation"=>0, "build.prototype.floor"=>1, "build.prototype.wall"=>2,
         "build.prototype.corner"=>3, "build.wood.wattle-wall"=>4, "build.wood.w21-half-storey-stair"=>5,
         "build.wood.thatch-roof-panel"=>6, "build.wood.w09-doorway"=>7, "build.wood.w11-shutter-wall"=>8,
-        "build.wood.w15-gable-rising"=>9, "build.wood.w22-full-storey-stair"=>10, "build.wood.w24-stair-handrail"=>11, _=>12
+        "build.wood.w15-gable-rising"=>9, "build.wood.w22-full-storey-stair"=>10, "build.wood.w24-stair-handrail"=>11,
+        "build.wood.square-infill"=>12,
+        "build.stone.s02-coursed-wall"=>13, "build.stone.s03-pier"=>14, "build.stone.s04-flagstone-floor"=>15, "build.stone.s06-wall-cap"=>16,
+        "build.stone.s07-low-wall"=>17, "build.stone.s12-gate-bay"=>18, _=>19
     };
     public static string Dimensions(BuildDefinition d)
     { Vector3 s=d.LocalBounds.size; return $"{s.x:0.##} × {s.y:0.##} × {s.z:0.##} m"; }
@@ -37,6 +40,13 @@ public static class BuildUiContent
         "build.wood.w09-doorway"=>"Wall with a 1.25 × 2.25 m clear doorway.",
         "build.wood.w11-shutter-wall"=>"Wall with a 1 × 0.75 m window opening.",
         "build.wood.w15-gable-rising" or "build.wood.w15-gable-falling"=>"A triangular half-gable. Flip its slope to fit either side of the roof.",
+        "build.wood.square-infill"=>"A 2 × 2 m wall panel. Fills rectangular gaps between gables, stacks, or continues sideways.",
+        "build.stone.s02-coursed-wall"=>"Coursed stone wall. Full 4 m span and 3 m storey.",
+        "build.stone.s03-pier"=>"A freestanding 3 m stone pier for timber bearing and exposed supports.",
+        "build.stone.s04-flagstone-floor"=>"Stone paving on solid bedding. Requires foundation coverage beneath the whole tile.",
+        "build.stone.s06-wall-cap"=>"A row of rough capstones. Adds 0.25 m above a wall top.",
+        "build.stone.s07-low-wall"=>"Low rubble boundary wall. Seats directly on terrain or a supported building.",
+        "build.stone.s12-gate-bay"=>"Low stone wings around an empty 1.25 m gate opening. Both wings can seat directly on terrain.",
         _=>"Choose this component, then aim at a surface to place it."
     };
 }

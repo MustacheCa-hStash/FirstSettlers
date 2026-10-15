@@ -69,6 +69,8 @@ public class WorldManager : MonoBehaviour
     [SerializeField] int maxActiveMeshJobs = 4;
     [SerializeField] int maxActiveColliderJobs = 2;
     [SerializeField] int maxTerrainDataResultsAppliedPerFrame = 2;
+    [Tooltip("Maximum complete terrain control-map sets submitted per frame, shared by near and far terrain. Each set currently contains three textures. Limits queued graphics work independently of CPU time. Minimum 1; restart Play Mode after changing.")]
+    [SerializeField, Min(1)] int maxControlMapSetsSubmittedPerFrame = 1;
     [SerializeField] int maxFarTerrainResultsAppliedPerFrame = 1;
     [SerializeField] int maxLODMeshResultsAppliedPerFrame = 12;
     [SerializeField] int maxColliderResultsAppliedPerFrame = 2;
@@ -85,6 +87,11 @@ public class WorldManager : MonoBehaviour
     [SerializeField] float farTerrainApplyBudgetMsPerFrame = 0.25f;
     [SerializeField] float lodMeshApplyBudgetMsPerFrame = 0.75f;
     [SerializeField] float colliderApplyBudgetMsPerFrame = 0.25f;
+    [Tooltip("Shared soft allowance for result publication, runtime/content work, foliage scheduling and grass completion/uploads. 0 disables the shared limit. Drawing, required reconciliation and background workers are excluded. Restart Play Mode after changing.")]
+    [SerializeField, Min(0)] float streamingBudgetMsPerFrame = 2f;
+    [SerializeField, Min(0)] float streamingContentReserveMs = .5f;
+    [SerializeField, Min(0)] float streamingFoliageReserveMs = .35f;
+    [SerializeField, Min(0)] float streamingGrassReserveMs = .15f;
 
     private ChunkManager chunkManager;
     private PlanarWaterReflection planarWaterReflection;
@@ -97,6 +104,7 @@ public class WorldManager : MonoBehaviour
     public TreeRegistry Trees => chunkManager?.Trees;
     public bool ShowTreeExclusionRadiusGizmos => showTreeExclusionRadiusGizmos;
     public TreeGameplayManager TreeGameplay => chunkManager?.TreeGameplay;
+    public string StreamingBudgetSummary => chunkManager?.StreamingBudgetSummary ?? "Streaming: world not running";
     public int TerrainGenerationRevision { get; private set; }
     public bool SimulateTreeSeason => simulateTreeSeason;
     public float TreeSeasonAutumnAmount => treeSeasonAutumnAmount;
@@ -215,9 +223,15 @@ public class WorldManager : MonoBehaviour
             LodMesh = maxActiveMeshJobs,
             Collider = maxActiveColliderJobs
         },
+        Streaming = new WorldStreamingConfiguration
+        {
+            TotalMs = streamingBudgetMsPerFrame, ContentReserveMs = streamingContentReserveMs,
+            FoliageReserveMs = streamingFoliageReserveMs, GrassReserveMs = streamingGrassReserveMs
+        },
         Publication = new TerrainPublicationBudget
         {
             TerrainDataCount = maxTerrainDataResultsAppliedPerFrame,
+            ControlMapSetsPerFrame = maxControlMapSetsSubmittedPerFrame,
             FarTerrainCount = maxFarTerrainResultsAppliedPerFrame,
             LodMeshCount = maxLODMeshResultsAppliedPerFrame,
             ColliderCount = maxColliderResultsAppliedPerFrame,

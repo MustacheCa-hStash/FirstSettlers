@@ -9,13 +9,13 @@ public class ChunkRecord : System.IDisposable
         private readonly object lifetimeLock = new object();
         private int readerCount;
         private bool ownerReleased;
-        private readonly float[,] sourceHeightMap;
-        private readonly float[,] sourceSlopeMap;
-        private readonly BiomeType[,] sourceBiomeMap;
-        private readonly SurfaceType[,] sourceSurfaceMap;
-        private readonly GroundCoverType[,] sourceGroundCoverMap;
-        private readonly Unity.Mathematics.float4[,] sourceForestFloorMap;
-        private readonly byte[,] sourceForestMembershipMap;
+        private float[,] sourceHeightMap;
+        private float[,] sourceSlopeMap;
+        private BiomeType[,] sourceBiomeMap;
+        private SurfaceType[,] sourceSurfaceMap;
+        private GroundCoverType[,] sourceGroundCoverMap;
+        private Unity.Mathematics.float4[,] sourceForestFloorMap;
+        private byte[,] sourceForestMembershipMap;
 
         public sealed class Lease : System.IDisposable
         {
@@ -95,35 +95,40 @@ public class ChunkRecord : System.IDisposable
             sourceGroundCoverMap = groundCoverMap;
             sourceForestFloorMap = forestFloorMap;
             sourceForestMembershipMap = forestMembershipMap;
-            ForestMembershipMap = forestMembershipMap == null ? new NativeArray<byte>(0, Allocator.Persistent) : CopyMap(forestMembershipMap, out _, out _);
-            ForestGrassMap = CopyForestGrass(forestFloorMap);
-            HeightMap = CopyFloatMap(heightMap, out int heightWidth, out int heightHeight);
-            HeightMapWidth = heightWidth;
-            HeightMapHeight = heightHeight;
+            try
+            {
+                ForestMembershipMap = forestMembershipMap == null ? new NativeArray<byte>(0, Allocator.Persistent) : CopyMap(forestMembershipMap, out _, out _);
+                ForestGrassMap = CopyForestGrass(forestFloorMap);
+                HeightMap = CopyFloatMap(heightMap, out int heightWidth, out int heightHeight);
+                HeightMapWidth = heightWidth;
+                HeightMapHeight = heightHeight;
 
-            SlopeMap = CopyFloatMap(slopeMap, out int slopeWidth, out int slopeHeight);
-            SlopeMapWidth = slopeWidth;
-            SlopeMapHeight = slopeHeight;
+                SlopeMap = CopyFloatMap(slopeMap, out int slopeWidth, out int slopeHeight);
+                SlopeMapWidth = slopeWidth;
+                SlopeMapHeight = slopeHeight;
 
-            BiomeMap = CopyMap(biomeMap, out int biomeWidth, out int biomeHeight);
-            BiomeMapWidth = biomeWidth;
-            BiomeMapHeight = biomeHeight;
+                BiomeMap = CopyMap(biomeMap, out int biomeWidth, out int biomeHeight);
+                BiomeMapWidth = biomeWidth;
+                BiomeMapHeight = biomeHeight;
 
-            SurfaceTypeMap = CopyMap(surfaceTypeMap, out int surfaceWidth, out int surfaceHeight);
-            SurfaceTypeMapWidth = surfaceWidth;
-            SurfaceTypeMapHeight = surfaceHeight;
+                SurfaceTypeMap = CopyMap(surfaceTypeMap, out int surfaceWidth, out int surfaceHeight);
+                SurfaceTypeMapWidth = surfaceWidth;
+                SurfaceTypeMapHeight = surfaceHeight;
 
-            WaterStateMap = CopyMap(waterStateMap, out int waterWidth, out int waterHeight);
-            WaterStateMapWidth = waterWidth;
-            WaterStateMapHeight = waterHeight;
+                WaterStateMap = CopyMap(waterStateMap, out int waterWidth, out int waterHeight);
+                WaterStateMapWidth = waterWidth;
+                WaterStateMapHeight = waterHeight;
 
-            GroundCoverMap = CopyMap(groundCoverMap, out int groundWidth, out int groundHeight);
-            GroundCoverMapWidth = groundWidth;
-            GroundCoverMapHeight = groundHeight;
+                GroundCoverMap = CopyMap(groundCoverMap, out int groundWidth, out int groundHeight);
+                GroundCoverMapWidth = groundWidth;
+                GroundCoverMapHeight = groundHeight;
 
-            RiverMaskMap = CopyFloatMap(riverMaskMap, out int riverWidth, out int riverHeight);
-            RiverMaskMapWidth = riverWidth;
-            RiverMaskMapHeight = riverHeight;
+                RiverMaskMap = CopyFloatMap(riverMaskMap, out int riverWidth, out int riverHeight);
+                RiverMaskMapWidth = riverWidth;
+                RiverMaskMapHeight = riverHeight;
+            }
+            catch { DisposeArrays(); throw; }
+
         }
 
         // Takes ownership of persistent job outputs after terrain generation completes.
@@ -143,9 +148,13 @@ public class ChunkRecord : System.IDisposable
             sourceGroundCoverMap = groundCoverMap;
             sourceForestFloorMap = forestFloorMap;
             sourceForestMembershipMap = forestMembershipMap;
-            ForestMembershipMap = forestMembershipMap == null ? new NativeArray<byte>(0, Allocator.Persistent) : CopyMap(forestMembershipMap, out _, out _);
-            ForestGrassMap = CopyForestGrass(forestFloorMap);
-            HeightMap = heights; SlopeMap = slopes; BiomeMap = biomes;
+            try
+            {
+                ForestMembershipMap = forestMembershipMap == null ? new NativeArray<byte>(0, Allocator.Persistent) : CopyMap(forestMembershipMap, out _, out _);
+                ForestGrassMap = CopyForestGrass(forestFloorMap);
+            }
+            catch { if (ForestMembershipMap.IsCreated) ForestMembershipMap.Dispose(); if (ForestGrassMap.IsCreated) ForestGrassMap.Dispose(); throw; }
+                    HeightMap = heights; SlopeMap = slopes; BiomeMap = biomes;
             SurfaceTypeMap = surfaces; WaterStateMap = waters;
             GroundCoverMap = covers; RiverMaskMap = rivers;
             HeightMapWidth = heightMap?.GetLength(0) ?? 0; HeightMapHeight = heightMap?.GetLength(1) ?? 0;
@@ -241,12 +250,19 @@ public class ChunkRecord : System.IDisposable
             if (RiverMaskMap.IsCreated) RiverMaskMap.Dispose();
             if (ForestGrassMap.IsCreated) ForestGrassMap.Dispose();
             if (ForestMembershipMap.IsCreated) ForestMembershipMap.Dispose();
+            HeightMap = SlopeMap = RiverMaskMap = default;
+            BiomeMap = default; SurfaceTypeMap = default; WaterStateMap = default; GroundCoverMap = default;
+            ForestGrassMap = default; ForestMembershipMap = default;
+            sourceHeightMap = sourceSlopeMap = null; sourceBiomeMap = null; sourceSurfaceMap = null;
+            sourceGroundCoverMap = null; sourceForestFloorMap = null; sourceForestMembershipMap = null;
         }
     }
 
     public float[,] FarTreeHeightGrid { get; private set; }
     public Mesh FarTerrainWaterMesh { get; private set; }
     private ChunkCoord chunkCoord;
+    private readonly TerrainAssetOwner generatedAssets = new();
+    private bool disposed;
     private ChunkRuntime activeRuntime;
     private float[,] heightMap;
     private float[,] slopeMap;
@@ -363,8 +379,9 @@ public class ChunkRecord : System.IDisposable
 
     public int BeginColliderRequest()
     {
+        ThrowIfDisposed();
         colliderRequestInFlight = true;
-        colliderRequestVersion++;
+        colliderRequestVersion = TerrainRequestIdentity.Next();
         return colliderRequestVersion;
     }
 
@@ -376,13 +393,16 @@ public class ChunkRecord : System.IDisposable
         }
     }
 
+    public bool IsColliderRequestCurrent(int version) => !disposed && colliderRequestInFlight && version == colliderRequestVersion;
+
     public bool TryCompleteColliderRequest(int requestVersion, Mesh mesh)
     {
-        if (!colliderRequestInFlight || requestVersion != colliderRequestVersion)
+        if (!IsColliderRequestCurrent(requestVersion))
             return false;
 
         colliderRequestInFlight = false;
 
+        generatedAssets.Replace(colliderMesh, mesh);
         colliderMesh = mesh;
         colliderReady = true;
 
@@ -397,6 +417,7 @@ public class ChunkRecord : System.IDisposable
 
     public void ClearColliderMesh()
     {
+        generatedAssets.Replace(colliderMesh, (Mesh)null);
         colliderMesh = null;
         colliderReady = false;
     }
@@ -414,30 +435,38 @@ public class ChunkRecord : System.IDisposable
 
     public void StoreLODTerrainMesh(int lod, Mesh terrainMesh)
     {
+        ThrowIfDisposed();
+        LODTerrainMeshes.TryGetValue(lod, out var previous);
+        generatedAssets.Replace(previous, terrainMesh);
         LODTerrainMeshes[lod] = terrainMesh;
     }
 
     public void StoreLODWaterMesh(int lod, Mesh waterMesh)
     {
+        ThrowIfDisposed();
+        LODWaterMeshes.TryGetValue(lod, out var previous);
+        generatedAssets.Replace(previous, waterMesh);
         LODWaterMeshes[lod] = waterMesh;
     }
 
 
     public void ClearLODTerrainMeshes()
     {
+        foreach (var mesh in LODTerrainMeshes.Values) generatedAssets.Replace(mesh, (Mesh)null);
         LODTerrainMeshes.Clear();
     }
 
     public void ClearLODWaterMeshes()
     {
+        foreach (var mesh in LODWaterMeshes.Values) generatedAssets.Replace(mesh, (Mesh)null);
         LODWaterMeshes.Clear();
     }
 
 
     public void ClearAllLODMeshes()
     {
-        LODTerrainMeshes.Clear();
-        LODWaterMeshes.Clear();
+        ClearLODTerrainMeshes();
+        ClearLODWaterMeshes();
     }
 
     public void SetActiveRuntime(ChunkRuntime activeRuntime)
@@ -452,7 +481,8 @@ public class ChunkRecord : System.IDisposable
 
     public int BeginTerrainDataRequest()
     {
-        terrainDataRequestVersion++;
+        ThrowIfDisposed();
+        terrainDataRequestVersion = TerrainRequestIdentity.Next();
         terrainDataRequestInFlight = true;
         return terrainDataRequestVersion;
     }
@@ -465,18 +495,24 @@ public class ChunkRecord : System.IDisposable
         }
     }
 
+    public bool IsTerrainDataRequestCurrent(int version) => !disposed && terrainDataRequestInFlight && version == terrainDataRequestVersion;
+
     public bool TryCompleteTerrainDataRequest(int requestVersion, float[,] returnedHeightMap,
         float[,] returnedSlopeMap,
-        float[,] returnedMoistureMap, float[,] returnedTemperatureMap, BiomeType[,] returnedBiomeMap, 
+        float[,] returnedMoistureMap, float[,] returnedTemperatureMap, BiomeType[,] returnedBiomeMap,
         SurfaceType[,] returnedSurfaceTypeMap, WaterState[,] returnedWaterStateMap,
         GroundCoverType[,] returnedGroundCoverMap, WorldFeaturePlan returnedWorldFeaturePlan, float[,] returnedRiverMaskMap,
         Texture2D[] returnedControlMapData,
         NativeTerrainData retainedNativeData = null)
     {
-        if (!terrainDataRequestInFlight) 
+        if (!IsTerrainDataRequestCurrent(requestVersion))
             return false;
-        if (requestVersion != terrainDataRequestVersion) 
-            return false;
+
+        // Construct fallible native storage before changing accepted ownership or managed inputs.
+        var nextNative = retainedNativeData ?? new NativeTerrainData(returnedHeightMap, returnedSlopeMap,
+            returnedBiomeMap, returnedSurfaceTypeMap, returnedWaterStateMap, returnedGroundCoverMap, returnedRiverMaskMap,
+            returnedWorldFeaturePlan?.ForestStructure.FloorEcologyMap, returnedWorldFeaturePlan?.ForestMembershipMap);
+        generatedAssets.Replace(controlMapData, returnedControlMapData);
 
         heightMap = returnedHeightMap;
         slopeMap = returnedSlopeMap;
@@ -489,10 +525,8 @@ public class ChunkRecord : System.IDisposable
         worldFeaturePlan = returnedWorldFeaturePlan;
         riverMaskMap = returnedRiverMaskMap;
         controlMapData = returnedControlMapData;
-        nativeTerrainData?.Dispose();
-        nativeTerrainData = retainedNativeData ?? new NativeTerrainData(
-            heightMap, slopeMap, biomeMap, surfaceTypeMap, waterStateMap, groundCoverMap, riverMaskMap,
-            worldFeaturePlan?.ForestStructure.FloorEcologyMap, worldFeaturePlan?.ForestMembershipMap);
+        if (!ReferenceEquals(nativeTerrainData, nextNative)) nativeTerrainData?.Dispose();
+        nativeTerrainData = nextNative;
 
         terrainDataRequestInFlight = false;
         return true;
@@ -500,7 +534,8 @@ public class ChunkRecord : System.IDisposable
 
     public int BeginFarTerrainRequest()
     {
-        farTerrainRequestVersion++;
+        ThrowIfDisposed();
+        farTerrainRequestVersion = TerrainRequestIdentity.Next();
         farTerrainRequestInFlight = true;
         return farTerrainRequestVersion;
     }
@@ -515,7 +550,7 @@ public class ChunkRecord : System.IDisposable
 
     public bool IsFarTerrainRequestCurrent(int requestVersion)
     {
-        return farTerrainRequestInFlight && farTerrainRequestVersion == requestVersion;
+        return !disposed && farTerrainRequestInFlight && farTerrainRequestVersion == requestVersion;
     }
 
     public bool TryCompleteFarTerrainRequest(
@@ -523,12 +558,11 @@ public class ChunkRecord : System.IDisposable
         Mesh returnedFarTerrainMesh,
         Texture2D[] returnedFarTerrainControlMapData, Mesh returnedWaterMesh = null, float[,] heightGrid = null)
     {
-        if (!farTerrainRequestInFlight)
+        if (!IsFarTerrainRequestCurrent(requestVersion))
             return false;
 
-        if (requestVersion != farTerrainRequestVersion)
-            return false;
-
+        generatedAssets.Replace(farTerrainMesh, FarTerrainWaterMesh, returnedFarTerrainMesh, returnedWaterMesh);
+        generatedAssets.Replace(farTerrainControlMapData, returnedFarTerrainControlMapData);
         farTerrainMesh = returnedFarTerrainMesh;
         FarTerrainWaterMesh = returnedWaterMesh;
         FarTreeHeightGrid = heightGrid;
@@ -552,10 +586,8 @@ public class ChunkRecord : System.IDisposable
 
     public int BeginMeshRequest(int lod)
     {
-        int nextVersion = 1;
-
-        if (meshRequestVersionsByLOD.TryGetValue(lod, out int currentVersion))
-            nextVersion = currentVersion + 1;
+        ThrowIfDisposed();
+        int nextVersion = TerrainRequestIdentity.Next();
 
         meshRequestVersionsByLOD[lod] = nextVersion;
         meshRequestsInFlight.Add(lod);
@@ -571,6 +603,9 @@ public class ChunkRecord : System.IDisposable
             meshRequestsInFlight.Remove(lod);
     }
 
+    public bool IsMeshRequestCurrent(int lod, int version) => !disposed && meshRequestsInFlight.Contains(lod) &&
+        meshRequestVersionsByLOD.TryGetValue(lod, out int current) && current == version;
+
     public bool TryCompleteMeshRequest(int lod, int requestVersion, Mesh terrainMesh, Mesh waterMesh)
     {
         if (!meshRequestsInFlight.Contains(lod))
@@ -582,16 +617,52 @@ public class ChunkRecord : System.IDisposable
         if (currentVersion != requestVersion)
             return false;
 
-        LODTerrainMeshes[lod] = terrainMesh;
-        LODWaterMeshes[lod] = waterMesh;
+        LODTerrainMeshes.TryGetValue(lod, out var oldTerrain);
+        LODWaterMeshes.TryGetValue(lod, out var oldWater);
+        generatedAssets.Replace(oldTerrain, oldWater, terrainMesh, waterMesh);
+        LODTerrainMeshes[lod] = terrainMesh; LODWaterMeshes[lod] = waterMesh;
         meshRequestsInFlight.Remove(lod);
         return true;
     }
 
-    public void Dispose()
+    internal void RefreshDisplayedLOD(int lod)
     {
-        nativeTerrainData?.Dispose();
-        nativeTerrainData = null;
+        if (activeRuntime?.IsShowingLOD(lod) == true)
+            activeRuntime.SetMeshes(LODTerrainMeshes[lod], LODWaterMeshes[lod], lod);
     }
 
+    public void Dispose()
+    {
+        if (disposed) return;
+        disposed = true;
+        ReleaseGeneratedData();
+    }
+
+    /// <summary>Coordinator must detach runtimes/consumers first. Tree registry placements are independent.</summary>
+    internal void ReleaseGeneratedData()
+    {
+        InvalidateRequests();
+        nativeTerrainData?.Dispose();
+        nativeTerrainData = null;
+        generatedAssets.Dispose();
+        heightMap = slopeMap = moistureMap = temperatureMap = riverMaskMap = null;
+        biomeMap = ownershipSource = null; dominantBiome = null;
+        surfaceTypeMap = null; waterStateMap = null; groundCoverMap = null; worldFeaturePlan = null;
+        controlMapData = farTerrainControlMapData = null;
+        foliageData = null; butterflyData = beeData = null;
+        farTerrainMesh = FarTerrainWaterMesh = colliderMesh = null; FarTreeHeightGrid = null;
+        LODTerrainMeshes.Clear(); LODWaterMeshes.Clear();
+        colliderReady = colliderDesired = farTerrainReady = false;
+    }
+
+    internal void InvalidateRequests()
+    {
+        terrainDataRequestInFlight = farTerrainRequestInFlight = colliderRequestInFlight = false;
+        meshRequestsInFlight.Clear(); meshRequestVersionsByLOD.Clear();
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (disposed) throw new System.ObjectDisposedException(nameof(ChunkRecord));
+    }
 }

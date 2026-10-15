@@ -1,0 +1,6 @@
+{
+    "name": "FirstSettlers.Profiling",
+    "rootNamespace": "FirstSettlers.Profiling",
+    "allowUnsafeCode": true,
+    "autoReferenced": true
+}

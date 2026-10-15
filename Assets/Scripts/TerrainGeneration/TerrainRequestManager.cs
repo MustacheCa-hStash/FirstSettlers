@@ -15,9 +15,11 @@ public class TerrainRequestManager : System.IDisposable
     private readonly Queue<FarTerrainRequestResult> completedFarTerrainResults = new Queue<FarTerrainRequestResult>();
     private readonly Queue<MeshRequestResult> completedMeshResults = new Queue<MeshRequestResult>();
     private readonly Queue<ColliderRequestResult> completedColliderResults = new();
+    private readonly Queue<TerrainRequestFailure> failedRequests = new();
+    private readonly object failuresLock = new();
 
     private readonly object terrainDataResultsLock = new object();
-    private bool disposed;
+    private volatile bool disposed;
     private readonly object farTerrainResultsLock = new object();
     private readonly object meshResultsLock = new object();
     private readonly object colliderResultsLock = new();
@@ -35,6 +37,7 @@ public class TerrainRequestManager : System.IDisposable
     private readonly float mountainHorizontalScale;
     private readonly WorldErosionSettings erosion;
     private readonly float mountainSnowRenderCoverageGamma;
+    private readonly TerrainControlMapScratchPool controlMapScratchPool;
 
     public int CompletedTerrainDataResultCount
     {
@@ -94,6 +97,7 @@ public class TerrainRequestManager : System.IDisposable
         this.maxActiveFarTerrainJobs = Mathf.Max(1, maxActiveFarTerrainJobs);
         this.maxActiveMeshJobs = Mathf.Max(1, maxActiveMeshJobs);
         this.maxActiveColliderJobs = Mathf.Max(1, maxActiveColliderJobs);
+        controlMapScratchPool = new TerrainControlMapScratchPool(this.maxActiveTerrainDataJobs);
     }
 
     public bool RequestTerrainData(
@@ -108,12 +112,13 @@ public class TerrainRequestManager : System.IDisposable
         WorldFeatureGenerationSettings worldFeatureGenerationSettings,
         float meshHeightMultiplier = 200f)
     {
-        if (Interlocked.CompareExchange(ref activeTerrainDataJobs, 0, 0) >= maxActiveTerrainDataJobs)
+        if (disposed || CompletedTerrainDataResultCount >= Mathf.Max(2, maxActiveTerrainDataJobs * 2) ||
+            Interlocked.CompareExchange(ref activeTerrainDataJobs, 0, 0) >= maxActiveTerrainDataJobs)
             return false;
 
         Interlocked.Increment(ref activeTerrainDataJobs);
 
-        ThreadPool.QueueUserWorkItem(_ =>
+        return QueueWorker(_ =>
         {
             NativeArray<float> generatedHeights = default;
             NativeArray<float> generatedSlopes = default;
@@ -181,7 +186,9 @@ public class TerrainRequestManager : System.IDisposable
                     nativeMoistures = generatedMoistures; generatedMoistures = default;
                     nativeTemperatures = generatedTemperatures; generatedTemperatures = default;
                     nativeSlopes = generatedSlopes; generatedSlopes = default;
-                    nativeMountainMasks = TerrainMapNativeUtility.CopyFloatMapToNative(mountainMaskMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+                    // A ThreadPool request has no four-frame deadline. Scratch buffers remain
+                    // explicitly owned here and are released after their last consuming job.
+                    nativeMountainMasks = TerrainMapNativeUtility.CopyFloatMapToNative(mountainMaskMap, Allocator.Persistent, out unusedMapWidth, out unusedMapHeight);
                     nativeRiverMasks = generatedRiverMasks; generatedRiverMasks = default;
 
                     stageStart = TerrainGenerationProfiler.GetTimestamp();
@@ -198,6 +205,7 @@ public class TerrainRequestManager : System.IDisposable
                         Allocator.Persistent,
                         out nativeBiomes);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainBiomeMap, stageStart);
+                    nativeMountainMasks.Dispose();
 
                     stageStart = TerrainGenerationProfiler.GetTimestamp();
                     SurfaceType[,] surfaceTypeMap = SurfaceMapGenerator.GenerateSurfaceTypeMap(
@@ -239,13 +247,13 @@ public class TerrainRequestManager : System.IDisposable
                         waterSettings.WaterLevel, mountainMaskMap);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainWorldFeaturePlan, stageStart);
 
-                    nativeCanopyDensities = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.CanopyDensityMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
-                    nativeLocalMoistureAdjustments = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.LocalMoistureAdjustmentMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
-                    nativeClearings = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.ClearingMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
-                    nativeRockInfluences = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.RockInfluenceMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
-                    nativeTreeLitterBalances = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.TreeLitterBalanceMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
-                    nativeDampShades = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.DampShadeMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
-                    nativeOrganicFloorIntents = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.OrganicFloorIntentMap, Allocator.TempJob, out unusedMapWidth, out unusedMapHeight);
+                    nativeCanopyDensities = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.CanopyDensityMap, Allocator.Persistent, out unusedMapWidth, out unusedMapHeight);
+                    nativeLocalMoistureAdjustments = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.LocalMoistureAdjustmentMap, Allocator.Persistent, out unusedMapWidth, out unusedMapHeight);
+                    nativeClearings = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.ClearingMap, Allocator.Persistent, out unusedMapWidth, out unusedMapHeight);
+                    nativeRockInfluences = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.RockInfluenceMap, Allocator.Persistent, out unusedMapWidth, out unusedMapHeight);
+                    nativeTreeLitterBalances = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.TreeLitterBalanceMap, Allocator.Persistent, out unusedMapWidth, out unusedMapHeight);
+                    nativeDampShades = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.DampShadeMap, Allocator.Persistent, out unusedMapWidth, out unusedMapHeight);
+                    nativeOrganicFloorIntents = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.ForestStructure.OrganicFloorIntentMap, Allocator.Persistent, out unusedMapWidth, out unusedMapHeight);
 
                     stageStart = TerrainGenerationProfiler.GetTimestamp();
                     GroundCoverType[,] groundCoverMap = GroundCoverMapGenerator.GenerateGroundCoverMap(
@@ -269,6 +277,13 @@ public class TerrainRequestManager : System.IDisposable
                         Allocator.Persistent,
                         out nativeGroundCovers);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainGroundCoverMap, stageStart);
+                    nativeCanopyDensities.Dispose();
+                    nativeLocalMoistureAdjustments.Dispose();
+                    nativeClearings.Dispose();
+                    nativeRockInfluences.Dispose();
+                    nativeTreeLitterBalances.Dispose();
+                    nativeDampShades.Dispose();
+                    nativeOrganicFloorIntents.Dispose();
 
                     stageStart = TerrainGenerationProfiler.GetTimestamp();
                     var mountainSnow = MountainSnow.Generate(finalHeightMap, mountainMaskMap, riverMaskMap,
@@ -278,7 +293,7 @@ public class TerrainRequestManager : System.IDisposable
                         groundCoverMap,
                         mountainSnow,
                         mountainSnowRenderCoverageGamma,
-                        worldFeaturePlan.ForestStructure, biomeMap, worldFeaturePlan.ForestMembershipMap);
+                        worldFeaturePlan.ForestStructure, biomeMap, worldFeaturePlan.ForestMembershipMap, controlMapScratchPool);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainControlMapBuild, stageStart);
 
                     retainedNativeData = new ChunkRecord.NativeTerrainData(
@@ -333,6 +348,7 @@ public class TerrainRequestManager : System.IDisposable
             }
             catch (System.Exception ex)
             {
+                ReportFailure(TerrainRequestKind.Data, chunkCoord, requestVersion);
                 Debug.LogError($"TerrainData request failed for chunk={chunkCoord}, version={requestVersion}\n{ex}");
             }
             finally
@@ -344,9 +360,7 @@ public class TerrainRequestManager : System.IDisposable
                 if (generatedTemperatures.IsCreated) generatedTemperatures.Dispose();
                 Interlocked.Decrement(ref activeTerrainDataJobs);
             }
-        });
-
-        return true;
+        }, ref activeTerrainDataJobs);
     }
 
     public bool RequestFarTerrainData(
@@ -366,12 +380,13 @@ public class TerrainRequestManager : System.IDisposable
         float climatePersistence = 0.5f,
         float climateLacunarity = 2f)
     {
-        if (Interlocked.CompareExchange(ref activeFarTerrainJobs, 0, 0) >= maxActiveFarTerrainJobs)
+        if (disposed || CompletedFarTerrainResultCount >= Mathf.Max(2, maxActiveFarTerrainJobs * 2) ||
+            Interlocked.CompareExchange(ref activeFarTerrainJobs, 0, 0) >= maxActiveFarTerrainJobs)
             return false;
 
         Interlocked.Increment(ref activeFarTerrainJobs);
 
-        ThreadPool.QueueUserWorkItem(_ =>
+        return QueueWorker(_ =>
         {
             try
             {
@@ -398,7 +413,7 @@ public class TerrainRequestManager : System.IDisposable
 
                 lock (farTerrainResultsLock)
                 {
-                    completedFarTerrainResults.Enqueue(result);
+                    if (!disposed) completedFarTerrainResults.Enqueue(result);
                 }
             }
             catch (ThreadAbortException)
@@ -406,26 +421,26 @@ public class TerrainRequestManager : System.IDisposable
             }
             catch (System.Exception ex)
             {
+                ReportFailure(TerrainRequestKind.Far, chunkCoord, requestVersion, patchSize: patchSizeInChunks, macro: isMacroTile);
                 Debug.LogError($"Far terrain request failed for chunk={chunkCoord}, version={requestVersion}\n{ex}");
             }
             finally
             {
                 Interlocked.Decrement(ref activeFarTerrainJobs);
             }
-        });
-
-        return true;
+        }, ref activeFarTerrainJobs);
     }
 
     public bool RequestLODMesh(ChunkCoord chunkCoord, int lod, int requestVersion, ChunkRecord.NativeTerrainData nativeData, float meshHeightMultiplier,
         int stepIncrement, float worldScale)
     {
+        if (disposed || CompletedMeshResultCount >= Mathf.Max(2, maxActiveMeshJobs * 2) ||
+            Interlocked.CompareExchange(ref activeMeshJobs, 0, 0) >= maxActiveMeshJobs)
+            return false;
+
         stepIncrement = Mathf.Min(stepIncrement, erosion.maxMeshSpacing);
         int meshChunkSize = nativeData.HeightMapWidth - 3;
         while (stepIncrement > 1 && meshChunkSize % stepIncrement != 0) stepIncrement--;
-        if (Interlocked.CompareExchange(ref activeMeshJobs, 0, 0) >= maxActiveMeshJobs)
-            return false;
-
         ChunkRecord.NativeTerrainData.Lease nativeLease = nativeData.AcquireLease();
         if (nativeLease == null)
             return false;
@@ -442,14 +457,13 @@ public class TerrainRequestManager : System.IDisposable
             stepIncrement,
             worldScale);
 
-        if (!ThreadPool.UnsafeQueueUserWorkItem(ProcessLODMeshRequest, workItem))
+        try
         {
-            nativeLease.Dispose();
-            Interlocked.Decrement(ref activeMeshJobs);
-            return false;
+            if (ThreadPool.UnsafeQueueUserWorkItem(ProcessLODMeshRequest, workItem)) return true;
         }
-
-        return true;
+        catch { nativeLease.Dispose(); Interlocked.Decrement(ref activeMeshJobs); throw; }
+        nativeLease.Dispose(); Interlocked.Decrement(ref activeMeshJobs);
+        return false;
     }
 
     private static void ProcessLODMeshRequest(object state)
@@ -488,11 +502,12 @@ public class TerrainRequestManager : System.IDisposable
 
             lock (workItem.Manager.meshResultsLock)
             {
-                workItem.Manager.completedMeshResults.Enqueue(result);
+                if (!workItem.Manager.disposed) workItem.Manager.completedMeshResults.Enqueue(result);
             }
         }
         catch (System.Exception ex)
         {
+            workItem.Manager.ReportFailure(TerrainRequestKind.Lod, workItem.ChunkCoord, workItem.RequestVersion, workItem.LOD);
             Debug.LogError(
                 $"Mesh request failed for chunk={workItem.ChunkCoord}, lod={workItem.LOD}, version={workItem.RequestVersion}\n{ex}");
         }
@@ -543,12 +558,13 @@ public class TerrainRequestManager : System.IDisposable
         float meshHeightMultiplier,
         float worldScale)
     {
-        if (Interlocked.CompareExchange(ref activeColliderJobs, 0, 0) >= maxActiveColliderJobs)
+        if (disposed || CompletedColliderResultCount >= Mathf.Max(2, maxActiveColliderJobs * 2) ||
+            Interlocked.CompareExchange(ref activeColliderJobs, 0, 0) >= maxActiveColliderJobs)
             return false;
 
         Interlocked.Increment(ref activeColliderJobs);
 
-        ThreadPool.QueueUserWorkItem(_ =>
+        return QueueWorker(_ =>
         {
             try
             {
@@ -573,20 +589,19 @@ public class TerrainRequestManager : System.IDisposable
 
                 lock (colliderResultsLock)
                 {
-                    completedColliderResults.Enqueue(result);
+                    if (!disposed) completedColliderResults.Enqueue(result);
                 }
             }
             catch (System.Exception ex)
             {
+                ReportFailure(TerrainRequestKind.Collider, chunkCoord, requestVersion);
                 Debug.LogError($"Collider request failed for chunk={chunkCoord}, version={requestVersion}\n{ex}");
             }
             finally
             {
                 Interlocked.Decrement(ref activeColliderJobs);
             }
-        });
-
-        return true;
+        }, ref activeColliderJobs);
     }
 
     public void WaitForActiveRequestsToFinish(int timeoutMilliseconds = 2000)
@@ -600,6 +615,26 @@ public class TerrainRequestManager : System.IDisposable
         }
     }
 
+
+    // Borrowed queue heads for main-thread publication admission only. Peeking transfers no ownership;
+    // deferred results stay in the existing queues for retirement/shutdown to dispose normally.
+    internal bool TryPeekTerrainDataResult(out TerrainDataRequestResult result)
+    {
+        lock (terrainDataResultsLock)
+        {
+            result = completedTerrainDataResults.Count > 0 ? completedTerrainDataResults.Peek() : null;
+            return result != null;
+        }
+    }
+
+    internal bool TryPeekFarTerrainResult(out FarTerrainRequestResult result)
+    {
+        lock (farTerrainResultsLock)
+        {
+            result = completedFarTerrainResults.Count > 0 ? completedFarTerrainResults.Peek() : null;
+            return result != null;
+        }
+    }
 
     public bool TryDequeueTerrainDataResult(out TerrainDataRequestResult result)
     {
@@ -622,8 +657,58 @@ public class TerrainRequestManager : System.IDisposable
         {
             if (disposed) return;
             disposed = true;
+            controlMapScratchPool.Dispose();
             while (completedTerrainDataResults.Count > 0)
                 completedTerrainDataResults.Dequeue().Dispose();
+        }
+        lock (farTerrainResultsLock) completedFarTerrainResults.Clear();
+        lock (meshResultsLock) completedMeshResults.Clear();
+        lock (colliderResultsLock) completedColliderResults.Clear();
+        lock (failuresLock) failedRequests.Clear();
+    }
+
+    internal void DiscardChunkResults(ChunkCoord coord)
+    {
+        lock (terrainDataResultsLock) Discard(completedTerrainDataResults, r => r.ChunkCoord == coord, r => r.Dispose());
+        lock (farTerrainResultsLock) Discard(completedFarTerrainResults, r => !r.IsMacroTile && r.ChunkCoord == coord);
+        lock (meshResultsLock) Discard(completedMeshResults, r => r.ChunkCoord == coord);
+        lock (colliderResultsLock) Discard(completedColliderResults, r => r.ChunkCoord == coord);
+        lock (failuresLock) Discard(failedRequests, r => !r.Macro && r.Coord == coord);
+    }
+
+    internal void DiscardFarResults(FarTerrainPatchKey patch)
+    {
+        lock (farTerrainResultsLock) Discard(completedFarTerrainResults,
+            r => r.IsMacroTile && r.ChunkCoord == patch.Origin && r.PatchSizeInChunks == patch.SizeInChunks);
+        lock (failuresLock) Discard(failedRequests, r => r.Macro && r.Coord == patch.Origin && r.PatchSize == patch.SizeInChunks);
+    }
+
+    private static bool QueueWorker(WaitCallback callback, ref int activeCount)
+    {
+        try { if (ThreadPool.QueueUserWorkItem(callback)) return true; }
+        catch { Interlocked.Decrement(ref activeCount); throw; }
+        Interlocked.Decrement(ref activeCount); return false;
+    }
+
+    private void ReportFailure(TerrainRequestKind kind, ChunkCoord coord, int version, int lod = 0, int patchSize = 1, bool macro = false)
+    {
+        lock (failuresLock)
+            if (!disposed) failedRequests.Enqueue(new TerrainRequestFailure(kind, coord, version, lod, patchSize, macro));
+    }
+
+    internal bool TryDequeueFailure(out TerrainRequestFailure failure)
+    {
+        lock (failuresLock) return failedRequests.TryDequeue(out failure);
+    }
+
+    private static void Discard<T>(Queue<T> queue, System.Predicate<T> matches, System.Action<T> release = null)
+    {
+        int count = queue.Count;
+        for (int i = 0; i < count; i++)
+        {
+            var result = queue.Dequeue();
+            if (matches(result)) release?.Invoke(result);
+            else queue.Enqueue(result);
         }
     }
 

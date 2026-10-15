@@ -42,6 +42,7 @@ public static class ModularWoodValidation
             var c=Resources.Load<BuildCatalog>("Building/PrototypeCatalog");Check(Application.isPlaying,"Validation must run in Play mode");
             GameplayLifetime(c);
             OpeningWallValidation.Runtime(c,Check);
+            SquareInfillValidation.Runtime(c,Check);
             StairExtensionValidation.Runtime(c,Check);
             var walls=new[]{c.presets[0],c.Find(WattleWallSetup.ContentId)};
             for(int yaw=0;yaw<8;yaw++)
@@ -61,7 +62,9 @@ public static class ModularWoodValidation
     }
     private static void Assets(BuildCatalog c)
     {
-        Check(c.presets.Length==12 && c.Find(SplitPlankWallSetup.InfillContentId)==null,"Removed infill still in menu or catalog changed unexpectedly");
+        int stoneCount=0;foreach(var d in c.presets)if(d.contentId.StartsWith("build.stone."))stoneCount++;
+        Check(c.presets.Length==13+stoneCount && c.Find(SplitPlankWallSetup.InfillContentId)==null,"Removed legacy infill still in menu or wood catalog changed unexpectedly");
+        SquareInfillValidation.Assets(c,Check);
         OpeningWallValidation.Assets(c,Check);
         StairExtensionValidation.Assets(c,Check);
         var wall=c.presets[0];var floor=c.presets[1];var post=c.presets[3];var wattle=c.Find(WattleWallSetup.ContentId);
@@ -79,6 +82,7 @@ public static class ModularWoodValidation
         Near(post.LocalBounds.size,new Vector3(.25f,3,.25f),"Post physics size");Near(post.mesh.bounds.size,new Vector3(.26f,3.003f,.26f),"Post visual relief");
         Check(floor.uvVariants.Length==3 && floor.floorOpeningUvVariants.Length==3,"Floor UV layouts missing");
         var all=new List<Mesh>{wall.mesh,wattle.mesh};all.AddRange(post.uvVariants);all.AddRange(floor.uvVariants);all.AddRange(floor.floorOpeningUvVariants);
+        all.Add(c.Find(SquareInfillSetup.Id).mesh);all.AddRange(c.Find(SquareInfillSetup.Id).jointCoverVariants);
         foreach(var id in new[]{OpeningWallSetup.DoorId,OpeningWallSetup.WindowId,OpeningWallSetup.GableId,OpeningWallSetup.FallingId})all.Add(c.Find(id).mesh);
         all.Add(c.Find(OpeningWallSetup.GableId).gableRoofSeamMesh);all.Add(c.Find(OpeningWallSetup.FallingId).gableRoofSeamMesh);
         all.Add(c.Find(StairExtensionSetup.W22Id).mesh);all.Add(c.Find(StairExtensionSetup.W24Id).mesh);
@@ -268,6 +272,15 @@ public static class ModularWoodValidation
             s.Add(c.presets[1],f,new Vector3Int(0,12,16),0,false);
             Capture("w22-with-handrails",new Vector3(7,6,-7),new Vector3(1.5f,1.9f,2.5f),3.9f);
             Capture("w22-back",new Vector3(-5,5,9),new Vector3(.625f,1.5f,2),3.1f);
+            foreach(ulong id in new List<ulong>(s.Pieces.Keys))s.Remove(id);
+            for(int i=0;i<2;i++)s.Add(c.presets[0],f,new Vector3Int(i*16,0,0),0,true);
+            s.Add(c.Find(OpeningWallSetup.GableId),f,new Vector3Int(0,12,0),0,false);
+            s.Add(c.Find(OpeningWallSetup.FallingId),f,new Vector3Int(24,12,0),0,false);
+            for(int i=1;i<=2;i++)s.Add(c.Find(SquareInfillSetup.Id),f,new Vector3Int(i*8,12,0),0,false);
+            s.Add(c.Find(OpeningWallSetup.GableId),f,new Vector3Int(8,20,0),0,false);
+            s.Add(c.Find(OpeningWallSetup.FallingId),f,new Vector3Int(16,20,0),0,false);
+            Capture("square-infill-wide-gable-front",new Vector3(4,4,-15),new Vector3(4,3.5f,0),4.2f);
+            Capture("square-infill-wide-gable-back",new Vector3(4,4,15),new Vector3(4,3.5f,0),4.2f);
         }finally{RenderPipelineManager.beginCameraRendering-=submit;GraphicsSettings.defaultRenderPipeline=old;QualitySettings.renderPipeline=quality;RenderTexture.active=active;target.Release();Object.DestroyImmediate(target);Object.DestroyImmediate(camObj);Object.DestroyImmediate(lightObj);}
     }
 }

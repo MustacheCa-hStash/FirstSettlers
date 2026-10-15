@@ -15,6 +15,10 @@ public sealed class FoliagePublicationScheduler : IDisposable
     private FoliageBatchWorkKey activePublicationKey;
     private static readonly ProfilerMarker ProcessFoliageBatchQueueMarker = new("FS.Streaming.Foliage.ProcessBatchQueue");
     private static readonly ProfilerMarker PublicationSliceMarker = new("FS.Streaming.Foliage.PublishSlice");
+    private static readonly ProfilerMarker CreateMarker = new("FS.Streaming.Foliage.Publication.CreateWork");
+    private static readonly ProfilerMarker PreflightMarker = new("FS.Streaming.Foliage.Publication.Preflight");
+    private static readonly ProfilerMarker ReadAssetsMarker = new("FS.Streaming.Foliage.Publication.Setup.ReadRenderAssets");
+    private static readonly ProfilerMarker ConstructMarker = new("FS.Streaming.Foliage.Publication.Setup.AllocateAndConstruct");
     public int PendingCount => pendingFoliageBatchWork.Count;
     public int ActiveCount => activePublication != null ? 1 : 0;
     public FoliagePublicationScheduler(GrassSettings budgets, FoliageRenderAssets assets,
@@ -46,6 +50,16 @@ public sealed class FoliagePublicationScheduler : IDisposable
     {
         activePublication?.Dispose(); activePublication = null;
         pendingFoliageBatchWork.Clear(); queuedFoliageBatchWork.Clear();
+    }
+
+    internal void ForgetChunk(ChunkCoord coord)
+    {
+        if (activePublication != null && activePublication.Record.ChunkCoord == coord)
+        {
+            activePublication.Dispose(); activePublication = null;
+        }
+        pendingFoliageBatchWork.RemoveAll(item => item.Key.ChunkCoord == coord);
+        queuedFoliageBatchWork.RemoveWhere(key => key.ChunkCoord == coord);
     }
     private readonly struct FoliageBatchWorkItem
     {
@@ -103,14 +117,15 @@ public sealed class FoliagePublicationScheduler : IDisposable
 
     }
 
-    public void Update(IChunkLookup chunkManager, ChunkCoord viewerCoord, long sharedBudgetStart, float sharedBudgetMs)
+    public void Update(IChunkLookup chunkManager, ChunkCoord viewerCoord, long sharedBudgetStart, float sharedBudgetMs, WorldStreamingBudget frameBudget = null)
     {
+        if (frameBudget != null && !frameBudget.HasRemaining) return;
         using var scope = ProcessFoliageBatchQueueMarker.Auto();
         long started = TerrainGenerationProfiler.GetTimestamp();
         float budget = Mathf.Max(0f, grassSettings.renderBatchRebuildBudgetMsPerFrame);
         int completed = 0, attempted = 0;
         int cap = Mathf.Max(1, grassSettings.maxRenderBatchRebuildsPerFrame);
-        // Always advance one bounded slice, so generation cannot starve publication.
+        // Advance one bounded slice once admitted by the world allowance. The owner rotates first service.
         do
         {
             if (activePublication == null)
@@ -126,14 +141,26 @@ public sealed class FoliagePublicationScheduler : IDisposable
                 activePublicationKey = item.Key;
                 var local = item.Key.WorkType == FoliagePublicationKind.LilyPad ? assets.LilyPadMeshLocalMatrix :
                     item.Key.WorkType == FoliagePublicationKind.Cattail ? assets.CattailMeshLocalMatrix : Matrix4x4.identity;
-                activePublication = new FoliagePublication(record, runtime, item.Key.WorkType,
-                    assets.GetCloverRenderAssetCount(), local);
+                using (CreateMarker.Auto())
+                {
+                    int cloverCount;
+                    using (ReadAssetsMarker.Auto()) cloverCount = assets.GetCloverRenderAssetCount();
+                    // Includes object allocation/type initialization as well as the constructor's child scopes.
+                    using (ConstructMarker.Auto())
+                        activePublication = new FoliagePublication(record, runtime, item.Key.WorkType, cloverCount, local);
+                }
             }
             var work = activePublication;
-            var currentRecord = chunkManager.GetChunkRecord(work.Record.ChunkCoord);
-            var currentRuntime = chunkManager.GetChunkRuntime(currentRecord);
-            bool current = work.Matches(currentRecord, currentRuntime, assets.GetCloverRenderAssetCount()) &&
-                stillWanted(currentRecord, viewerCoord, activePublicationKey.WorkType);
+            ChunkRecord currentRecord;
+            ChunkRuntime currentRuntime;
+            bool current;
+            using (PreflightMarker.Auto())
+            {
+                currentRecord = chunkManager.GetChunkRecord(work.Record.ChunkCoord);
+                currentRuntime = chunkManager.GetChunkRuntime(currentRecord);
+                current = work.Matches(currentRecord, currentRuntime, assets.GetCloverRenderAssetCount()) &&
+                    stillWanted(currentRecord, viewerCoord, activePublicationKey.WorkType);
+            }
             bool finished;
             try
             {
@@ -153,7 +180,7 @@ public sealed class FoliagePublicationScheduler : IDisposable
                     Enqueue(currentRecord, activePublicationKey.WorkType);
                 if (++completed >= cap) break;
             }
-        } while (FoliageWorkBudget.HasRemaining(started, budget, sharedBudgetStart, sharedBudgetMs));
+        } while ((frameBudget == null || frameBudget.HasRemaining) && FoliageWorkBudget.HasRemaining(started, budget, sharedBudgetStart, sharedBudgetMs));
 
     }
 }

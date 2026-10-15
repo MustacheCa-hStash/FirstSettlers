@@ -32,7 +32,12 @@ public static class GrassStreamingValidation
         state.DisplayVersion = 1; state.DesiredVersion = 2;
         Check(state.NeedsData && state.DisplayVersion == 1, "Replacement erased displayed version.");
     }
-    private static void ValidateStreaming()
+    public static void ValidateSharedStreaming()
+    {
+        ValidateStreaming(new WorldStreamingBudget(new WorldStreamingConfiguration { TotalMs = .1f }));
+        Debug.Log("SHARED GRASS PASS: completion/upload/dispatch convergence, cache, invalidation and empty replacement with a 0.1 ms shared allowance.");
+    }
+    private static void ValidateStreaming(WorldStreamingBudget frameBudget = null)
     {
         var record = BillboardGrassStreamingValidation.CreateRecord();
         var root = new GameObject("stream regression");
@@ -52,7 +57,12 @@ public static class GrassStreamingValidation
         }
         using (var stream = new GrassStream(settings,null,null,1234,16,1,10,Prepare,()=>false))
         {
-            void Tick() => stream.Update(manager,coords,Vector3.zero,null,null,null,null,null,null);
+            void Tick()
+            {
+                frameBudget?.BeginFrame();
+                try { stream.Update(manager,coords,Vector3.zero,null,null,null,null,null,null, frameBudget: frameBudget); }
+                finally { frameBudget?.EndFrame(); }
+            }
             void Drain(int expected)
             {
                 var timeout = System.Diagnostics.Stopwatch.StartNew();

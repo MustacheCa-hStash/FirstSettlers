@@ -123,9 +123,10 @@ public static class FarTerrainGenerator
 
         try
         {
-            heights = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-            mountainMasks = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-            riverMasks = new NativeArray<float>(sampleCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            // Admission is shared with normal terrain and can span more than four frames.
+            heights = new NativeArray<float>(sampleCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            mountainMasks = new NativeArray<float>(sampleCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            riverMasks = new NativeArray<float>(sampleCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
 
             FarHeightGridSampleJob job = new FarHeightGridSampleJob
             {
@@ -143,8 +144,7 @@ public static class FarTerrainGenerator
                 riverMasks = riverMasks
             };
 
-            JobHandle handle = job.Schedule(sampleCount, 64);
-            handle.Complete();
+            TerrainHeightSamplingScheduler.Run(job, sampleCount);
 
             CopyNativeGridToManaged(heights, heightGrid);
             CopyNativeGridToManaged(mountainMasks, mountainMaskGrid);
@@ -465,11 +465,11 @@ public static class FarTerrainGenerator
 
         try
         {
-            moistureOffsets = ClimateGenerator.CreateOctaveOffsets(seed + 1000, safeClimateOctaves, Allocator.TempJob);
-            temperatureOffsets = ClimateGenerator.CreateOctaveOffsets(seed + 2000, safeClimateOctaves, Allocator.TempJob);
-            controlMap0 = new NativeArray<Color32>(pixelCount, Allocator.TempJob, NativeArrayOptions.ClearMemory);
-            controlMap1 = new NativeArray<Color32>(pixelCount, Allocator.TempJob, NativeArrayOptions.ClearMemory);
-            controlMap2 = new NativeArray<Color32>(pixelCount, Allocator.TempJob, NativeArrayOptions.ClearMemory);
+            moistureOffsets = ClimateGenerator.CreateOctaveOffsets(seed + 1000, safeClimateOctaves, Allocator.Persistent);
+            temperatureOffsets = ClimateGenerator.CreateOctaveOffsets(seed + 2000, safeClimateOctaves, Allocator.Persistent);
+            controlMap0 = new NativeArray<Color32>(pixelCount, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+            controlMap1 = new NativeArray<Color32>(pixelCount, Allocator.Persistent, NativeArrayOptions.ClearMemory);
+            controlMap2 = new NativeArray<Color32>(pixelCount, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
             FarControlMapBuildJob job = new FarControlMapBuildJob
             {
@@ -495,8 +495,7 @@ public static class FarTerrainGenerator
                 controlMap2 = controlMap2
             };
 
-            JobHandle handle = job.Schedule(pixelCount, 64);
-            handle.Complete();
+            TerrainHeightSamplingScheduler.Run(job, pixelCount);
 
             controlMap0.CopyTo(controlMaps.Maps[0]);
             controlMap1.CopyTo(controlMaps.Maps[1]);
@@ -594,8 +593,10 @@ public static class FarTerrainGenerator
     }
 
     [BurstCompile]
-    private struct FarHeightGridSampleJob : IJobParallelFor
+    private struct FarHeightGridSampleJob : ITerrainHeightSamplingBatchJob
     {
+        public int SampleOffset { get; set; }
+        public int SampleCount { get; set; }
         public int resolution;
         public int chunkSize;
         public int chunkX;
@@ -606,11 +607,18 @@ public static class FarTerrainGenerator
         public int riverSeed;
         public float waterLevel;
 
-        [WriteOnly] public NativeArray<float> heights;
-        [WriteOnly] public NativeArray<float> mountainMasks;
-        [WriteOnly] public NativeArray<float> riverMasks;
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float> heights;
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float> mountainMasks;
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float> riverMasks;
 
-        public void Execute(int index)
+        public void Execute(int batchIndex)
+        {
+            int start = SampleOffset + batchIndex * TerrainHeightSamplingScheduler.SamplesPerBatch;
+            int end = math.min(SampleCount, start + TerrainHeightSamplingScheduler.SamplesPerBatch);
+            for (int index = start; index < end; index++) Sample(index);
+        }
+
+        private void Sample(int index)
         {
             int x = index / resolution;
             int z = index - x * resolution;
@@ -792,8 +800,10 @@ public static class FarTerrainGenerator
     }
 
     [BurstCompile]
-    private struct FarControlMapBuildJob : IJobParallelFor
+    private struct FarControlMapBuildJob : ITerrainHeightSamplingBatchJob
     {
+        public int SampleOffset { get; set; }
+        public int SampleCount { get; set; }
         public float heightMultiplier;
         private const byte SnowDustingSnowWeight = 64;
         private const byte SnowDustingGrassWeight = 255 - SnowDustingSnowWeight;
@@ -816,11 +826,18 @@ public static class FarTerrainGenerator
         [ReadOnly] public NativeArray<float2> moistureOffsets;
         [ReadOnly] public NativeArray<float2> temperatureOffsets;
 
-        [WriteOnly] public NativeArray<Color32> controlMap0;
-        [WriteOnly] public NativeArray<Color32> controlMap1;
-        [WriteOnly] public NativeArray<Color32> controlMap2;
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<Color32> controlMap0;
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<Color32> controlMap1;
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<Color32> controlMap2;
 
-        public void Execute(int pixelIndex)
+        public void Execute(int batchIndex)
+        {
+            int start = SampleOffset + batchIndex * TerrainHeightSamplingScheduler.SamplesPerBatch;
+            int end = math.min(SampleCount, start + TerrainHeightSamplingScheduler.SamplesPerBatch);
+            for (int index = start; index < end; index++) Sample(index);
+        }
+
+        private void Sample(int pixelIndex)
         {
             int z = pixelIndex / controlMapResolution;
             int x = pixelIndex - z * controlMapResolution;

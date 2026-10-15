@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -42,6 +43,17 @@ public struct CloverRenderBatch
 
 public class ChunkFoliageRuntime
 {
+    private static readonly ProfilerMarker BushStagingMarker = new("FS.Streaming.Foliage.Publication.Bush.CreateStaging");
+    private static readonly ProfilerMarker BushInstantiateMarker = new("FS.Streaming.Foliage.Publication.Bush.Instantiate");
+    private static readonly ProfilerMarker BushSetupMarker = new("FS.Streaming.Foliage.Publication.Bush.SetupInstance");
+    private static readonly ProfilerMarker BushClearMarker = new("FS.Streaming.Foliage.Publication.Bush.ClearPrevious");
+    private static readonly ProfilerMarker BushActivateMarker = new("FS.Streaming.Foliage.Publication.Bush.Activate");
+    private static readonly ProfilerMarker BushDiscardMarker = new("FS.Streaming.Foliage.Publication.Bush.DiscardStaging");
+    private static readonly ProfilerMarker RockStagingMarker = new("FS.Streaming.Foliage.Publication.Rock.CreateStaging");
+    private static readonly ProfilerMarker RockAddMarker = new("FS.Streaming.Foliage.Publication.Rock.AddInstance");
+    private static readonly ProfilerMarker RockClearMarker = new("FS.Streaming.Foliage.Publication.Rock.ClearPrevious");
+    private static readonly ProfilerMarker RockColliderMarker = new("FS.Streaming.Foliage.Publication.Rock.RegisterColliders");
+    private static readonly ProfilerMarker RockRendererMarker = new("FS.Streaming.Foliage.Publication.Rock.RegisterRenderer");
     public Transform root;
     private bool rangeVisible, renderVisible = true, shadowCasterVisible = true;
     public bool isVisible;
@@ -94,9 +106,14 @@ public class ChunkFoliageRuntime
     }
     internal IEnumerator<bool> BuildBushesIncrementally(List<BerryBushInstanceData> instances)
     {
-        GameObject staging = new GameObject("BerryBush_Staging");
-        staging.SetActive(false); staging.transform.SetParent(root, false);
-        var objects = new List<GameObject>();
+        GameObject staging;
+        List<GameObject> objects;
+        using (BushStagingMarker.Auto())
+        {
+            staging = new GameObject("BerryBush_Staging");
+            staging.SetActive(false); staging.transform.SetParent(root, false);
+            objects = new();
+        }
         bool published = false;
         try
         {
@@ -106,31 +123,40 @@ public class ChunkFoliageRuntime
                 GameObject prefab = GetBushPrefab(instance.variant);
                 if (prefab != null)
                 {
-                    GameObject body = Object.Instantiate(prefab, staging.transform);
+                    GameObject body;
+                    using (BushInstantiateMarker.Auto()) body = Object.Instantiate(prefab, staging.transform);
                     objects.Add(body); // Cancellation owns it even if setup throws.
-                    GameplayLayers.AssignPhysicalColliders(body, GameplayLayers.WorldSolid);
-                    body.transform.localPosition = instance.localPosition;
-                    body.transform.localRotation = instance.localRotation;
-                    body.transform.localScale = instance.localScale;
-                    var bush = body.GetComponent<BerryBushRuntime>() ?? body.AddComponent<BerryBushRuntime>();
-                    bush.Initialize(instance, BerryBushManager.Instance);
-                    ConfigureSpawnedRendererCulling(body);
+                    using (BushSetupMarker.Auto())
+                    {
+                        GameplayLayers.AssignPhysicalColliders(body, GameplayLayers.WorldSolid);
+                        body.transform.localPosition = instance.localPosition;
+                        body.transform.localRotation = instance.localRotation;
+                        body.transform.localScale = instance.localScale;
+                        var bush = body.GetComponent<BerryBushRuntime>() ?? body.AddComponent<BerryBushRuntime>();
+                        bush.Initialize(instance, BerryBushManager.Instance);
+                        ConfigureSpawnedRendererCulling(body);
+                    }
                 }
                 yield return true;
             }
-            ClearBushGameObjects();
+            using (BushClearMarker.Auto()) ClearBushGameObjects();
             bushGameObjectRoot = staging; bushGameObjects = objects;
-            staging.name = "BerryBush_GameObjects"; staging.SetActive(true);
+            using (BushActivateMarker.Auto()) { staging.name = "BerryBush_GameObjects"; staging.SetActive(true); }
             hasCurrentBushRepresentation = true; published = true;
         }
-        finally { if (!published && staging != null) DestroyObjectRoot(staging); }
+        finally
+        {
+            if (!published && staging != null)
+                using (BushDiscardMarker.Auto()) DestroyObjectRoot(staging);
+        }
     }
     internal IEnumerator<bool> BuildRocksIncrementally(List<RockInstanceData> instances)
     {
-        var staging = new RockRenderSet();
+        RockRenderSet staging;
+        using (RockStagingMarker.Auto()) staging = new();
         foreach (var instance in instances)
         {
-            staging.Add(GetRockPrefab(instance.variant, instance.prefabIndex), instance, root);
+            using (RockAddMarker.Auto()) staging.Add(GetRockPrefab(instance.variant, instance.prefabIndex), instance, root);
             yield return true;
         }
         if (RockRenderer == null)
@@ -138,9 +164,11 @@ public class ChunkFoliageRuntime
             using var batches = staging.FinishIncrementally();
             while (batches.MoveNext()) yield return true;
         }
-        ClearRockGameObjects();
-        rockRenderSet = staging; RockPool?.Register(staging);
-        staging.Enabled = rangeVisible; RockRenderer?.Register(staging);
+        using (RockClearMarker.Auto()) ClearRockGameObjects();
+        rockRenderSet = staging;
+        using (RockColliderMarker.Auto()) RockPool?.Register(staging);
+        staging.Enabled = rangeVisible;
+        using (RockRendererMarker.Auto()) RockRenderer?.Register(staging);
         hasCurrentRockRepresentation = true;
     }
     private static void DestroyObjectRoot(GameObject value)

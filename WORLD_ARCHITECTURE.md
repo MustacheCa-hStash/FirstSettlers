@@ -13,6 +13,7 @@ Updated October 6, 2026.
 | Workers | Terrain, far terrain, LOD and collider concurrency limits |
 | Publication | Per-category completion counts/time budgets and total apply budget |
 | Content | Visible-content, visibility-check and far-content budgets |
+| Streaming | Shared main-thread allowance and reserved content/foliage/grass capacity |
 | Rendering | Terrain/water materials, shadow flags and horizon settings |
 | Scene | Viewer, viewer camera and chunk parent |
 | Foliage | Authored grass, ground plants, trees, ambient life and forest scatter settings |
@@ -55,4 +56,6 @@ Run **Tools > Terrain > Validate World Architecture (synthetic)**. It checks spe
 
 Runtime/editor/player C# compilation and the isolated synthetic Unity suite passed. Log: `.utmp/foliage-optimization/architecture-validation-final.log`. No saved scene, camera audit, Play mode or live performance benchmark was used. Existing obsolete-API warnings remain.
 
-World-data eviction, complete generated-resource disposal and worker failure/cancellation improvements remain separate work from this composition refactor.
+The shared streaming allowance, collision-first scheduling, backlog backpressure and measurement boundaries are described in [Streaming scheduling](Documentation/STREAMING_SCHEDULING.md).
+
+Generated-resource disposal, guarded explicit data retirement, request identity/failure handling and shutdown cleanup are now described in [Terrain ownership](Documentation/TERRAIN_OWNERSHIP.md). Automatic world-data eviction and tree placement unloading remain deferred.

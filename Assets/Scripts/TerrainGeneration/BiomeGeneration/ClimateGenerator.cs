@@ -125,7 +125,8 @@ public static class ClimateGenerator
 
         try
         {
-            octaveOffsets = CreateOctaveOffsets(seed, noiseOctaves, Allocator.TempJob);
+            octaveOffsets = CreateOctaveOffsets(seed, noiseOctaves,
+                retainNativeMap ? Allocator.Persistent : Allocator.TempJob);
             samples = new NativeArray<float>(size * size,
                 retainNativeMap ? Allocator.Persistent : Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 

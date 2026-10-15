@@ -1,0 +1,42 @@
+{
+  "models": [
+    {
+      "components": 31,
+      "triangles": 852,
+      "faces": 306,
+      "uvTrianglesChecked": 852,
+      "allFaceUVsValid": true,
+      "closedComponents": true,
+      "distinctComponentCrops": 31,
+      "tag": "S07",
+      "files": [
+        "S07_LowRubbleWall_4x1.25x0.50.fbx",
+        "S07_LowRubbleWall_4x1.25x0.50_UV1.fbx",
+        "S07_LowRubbleWall_4x1.25x0.50_UV2.fbx"
+      ]
+    },
+    {
+      "components": 22,
+      "triangles": 584,
+      "faces": 212,
+      "uvTrianglesChecked": 584,
+      "allFaceUVsValid": true,
+      "closedComponents": true,
+      "distinctComponentCrops": 22,
+      "tag": "S12",
+      "files": [
+        "S12_EmptyGateBay_4x1.25x0.50.fbx",
+        "S12_EmptyGateBay_4x1.25x0.50_UV1.fbx",
+        "S12_EmptyGateBay_4x1.25x0.50_UV2.fbx"
+      ]
+    }
+  ],
+  "gateOpening": {
+    "minX": 1.375,
+    "maxX": 2.625,
+    "clearWidth": 1.25,
+    "clearHeight": 1.25,
+    "noGateOrWoodenParts": true
+  },
+  "allFacesIncludingHidden": true
+}

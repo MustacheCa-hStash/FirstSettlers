@@ -72,6 +72,7 @@ public static class BuildStoneUiAuthoring
         foreach(var atlas in font.atlasTextures)if(atlas!=null)AssetDatabase.AddObjectToAsset(atlas,font);
         EditorUtility.SetDirty(font);
     }
+    public static void BakeThumbnail(BuildDefinition definition)=>Thumbnail(definition);
     private static void Thumbnail(BuildDefinition definition)
     {
         if(definition.mesh==null||definition.material==null)throw new InvalidOperationException("Missing component render data: "+definition.contentId);

@@ -1,7 +1,9 @@
 using UnityEngine;
 
-public class FarTerrainTileRecord
+public class FarTerrainTileRecord : System.IDisposable
 {
+    private readonly TerrainAssetOwner generatedAssets = new();
+    private bool disposed;
     public float[,] FarTreeHeightGrid { get; private set; }
     public Mesh WaterMesh { get; private set; }
     private readonly FarTerrainPatchKey patchKey;
@@ -26,7 +28,8 @@ public class FarTerrainTileRecord
 
     public int BeginRequest()
     {
-        requestVersion++;
+        if (disposed) throw new System.ObjectDisposedException(nameof(FarTerrainTileRecord));
+        requestVersion = TerrainRequestIdentity.Next();
         requestInFlight = true;
         return requestVersion;
     }
@@ -39,14 +42,16 @@ public class FarTerrainTileRecord
 
     public bool IsRequestCurrent(int version)
     {
-        return requestInFlight && requestVersion == version;
+        return !disposed && requestInFlight && requestVersion == version;
     }
 
     public bool TryCompleteRequest(int version, Mesh returnedTerrainMesh, Texture2D[] returnedControlMapData, Mesh returnedWaterMesh = null, float[,] heightGrid = null)
     {
-        if (!requestInFlight || requestVersion != version)
+        if (!IsRequestCurrent(version))
             return false;
 
+        generatedAssets.Replace(terrainMesh, WaterMesh, returnedTerrainMesh, returnedWaterMesh);
+        generatedAssets.Replace(controlMapData, returnedControlMapData);
         terrainMesh = returnedTerrainMesh;
         WaterMesh = returnedWaterMesh;
         FarTreeHeightGrid = heightGrid;
@@ -60,5 +65,19 @@ public class FarTerrainTileRecord
     {
         mesh = terrainMesh;
         return HasTerrain;
+    }
+
+    public void Dispose()
+    {
+        if (disposed) return;
+        disposed = true;
+        ReleaseGeneratedData();
+    }
+
+    internal void ReleaseGeneratedData()
+    {
+        requestInFlight = ready = false;
+        generatedAssets.Dispose();
+        terrainMesh = WaterMesh = null; controlMapData = null; FarTreeHeightGrid = null;
     }
 }

@@ -744,24 +744,29 @@ public class MeshData
     public Mesh CreateMesh()
     {
         Mesh mesh = new Mesh();
-
-        if (vertexList != null)
+        try
         {
-            mesh.SetVertices(vertexList);
-            mesh.SetNormals(normalList);
-            mesh.SetUVs(0, uvList);
-            mesh.SetColors(colorList);
-        }
-        else
-        {
-            mesh.vertices = vertices;
-            mesh.normals = normals;
-            mesh.uv = uvs;
-            mesh.colors = colors;
-        }
 
-        mesh.SetTriangles(triangles, 0);
-        mesh.RecalculateBounds();
-        return mesh;
+            if (vertexList != null)
+            {
+                mesh.SetVertices(vertexList);
+                mesh.SetNormals(normalList);
+                mesh.SetUVs(0, uvList);
+                mesh.SetColors(colorList);
+            }
+            else
+            {
+                mesh.vertices = vertices;
+                mesh.normals = normals;
+                mesh.uv = uvs;
+                mesh.colors = colors;
+            }
+
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateBounds();
+            return mesh;
+
+        }
+        catch { TerrainAssetOwner.Destroy(mesh); throw; }
     }
 }

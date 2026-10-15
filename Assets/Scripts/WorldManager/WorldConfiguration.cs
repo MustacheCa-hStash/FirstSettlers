@@ -8,9 +8,30 @@ public sealed class WorldConfiguration
     public TerrainWorkerLimits Workers = TerrainWorkerLimits.Default;
     public TerrainPublicationBudget Publication = TerrainPublicationBudget.Default;
     public TerrainContentBudget Content = TerrainContentBudget.Default;
+    public WorldStreamingConfiguration Streaming = WorldStreamingConfiguration.Default;
     public WorldRenderingConfiguration Rendering;
     public WorldSceneReferences Scene;
     public WorldFoliageConfiguration Foliage = WorldFoliageConfiguration.Default;
+}
+
+public struct WorldStreamingConfiguration
+{
+    public float TotalMs, ContentReserveMs, FoliageReserveMs, GrassReserveMs;
+    public WorldStreamingConfiguration Sanitized()
+    {
+        var value = this;
+        value.TotalMs = Mathf.Max(0, TotalMs);
+        value.ContentReserveMs = Mathf.Max(0, ContentReserveMs);
+        value.FoliageReserveMs = Mathf.Max(0, FoliageReserveMs);
+        value.GrassReserveMs = Mathf.Max(0, GrassReserveMs);
+        float sum = value.ContentReserveMs + value.FoliageReserveMs + value.GrassReserveMs;
+        // Keep at least half the allowance available to result consumption.
+        float scale = sum > 0 && value.TotalMs > 0 ? Mathf.Min(1, value.TotalMs * .5f / sum) : 1;
+        value.ContentReserveMs *= scale; value.FoliageReserveMs *= scale; value.GrassReserveMs *= scale;
+        return value;
+    }
+    public static WorldStreamingConfiguration Default => new()
+    { TotalMs = 2, ContentReserveMs = .5f, FoliageReserveMs = .35f, GrassReserveMs = .15f };
 }
 
 public struct WorldGenerationConfiguration
@@ -46,16 +67,18 @@ public struct TerrainWorkerLimits
 public struct TerrainPublicationBudget
 {
     public int TerrainDataCount, FarTerrainCount, LodMeshCount, ColliderCount;
+    public int ControlMapSetsPerFrame;
     public float TotalMs, TerrainDataMs, FarTerrainMs, LodMeshMs, ColliderMs;
     public TerrainPublicationBudget Sanitized() => new()
     {
         TerrainDataCount = Mathf.Max(1, TerrainDataCount), FarTerrainCount = Mathf.Max(1, FarTerrainCount),
         LodMeshCount = Mathf.Max(1, LodMeshCount), ColliderCount = Mathf.Max(1, ColliderCount),
+        ControlMapSetsPerFrame = Mathf.Max(1, ControlMapSetsPerFrame),
         TotalMs = Mathf.Max(0, TotalMs), TerrainDataMs = Mathf.Max(0, TerrainDataMs), FarTerrainMs = Mathf.Max(0, FarTerrainMs),
         LodMeshMs = Mathf.Max(0, LodMeshMs), ColliderMs = Mathf.Max(0, ColliderMs)
     };
     public static TerrainPublicationBudget Default => new()
-    { TerrainDataCount = 2, FarTerrainCount = 1, LodMeshCount = 12, ColliderCount = 2,
+    { TerrainDataCount = 2, FarTerrainCount = 1, LodMeshCount = 12, ColliderCount = 2, ControlMapSetsPerFrame = 1,
       TotalMs = 3, TerrainDataMs = .75f, FarTerrainMs = .25f, LodMeshMs = .75f, ColliderMs = .25f };
 }
 public struct TerrainContentBudget

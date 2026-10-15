@@ -284,13 +284,18 @@ public class WaterMeshData
     public Mesh CreateMesh()
     {
         Mesh mesh = new Mesh();
-        mesh.indexFormat = vertices.Count > 65535 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
-        mesh.vertices = vertices.ToArray();
-        mesh.uv = uvs.ToArray();
-        mesh.triangles = triangles.ToArray();
-        mesh.colors = colors.ToArray();
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-        return mesh;
+        try
+        {
+            mesh.indexFormat = vertices.Count > 65535 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
+            mesh.vertices = vertices.ToArray();
+            mesh.uv = uvs.ToArray();
+            mesh.triangles = triangles.ToArray();
+            mesh.colors = colors.ToArray();
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+
+        }
+        catch { TerrainAssetOwner.Destroy(mesh); throw; }
     }
 }

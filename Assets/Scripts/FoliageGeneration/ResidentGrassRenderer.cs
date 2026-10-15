@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Unity.Profiling;
+using FirstSettlers.Profiling;
 
 // One resident arena per chunk, with fixed subchunk slots and separate biome/LOD draws.
 // Uploading a completed subchunk never repacks/reuploads its neighbors.
@@ -12,6 +13,38 @@ public sealed class ResidentGrassRenderer : IDisposable
     private static readonly ProfilerMarker PrepareMarker = new ProfilerMarker("FS.Streaming.Grass.PrepareUploadInstances");
     private static readonly ProfilerMarker SetDataMarker = new ProfilerMarker("FS.Streaming.Grass.UploadSetData");
     private static readonly ProfilerMarker ResizeMarker = new ProfilerMarker("FS.Streaming.Grass.ReleaseForSlotGrowth");
+    private static readonly ProfilerMarker DrawChunkMarker = new("FS.Streaming.Grass.Draw.Chunk");
+    private static readonly ProfilerMarker DrawSetupMarker = new("FS.Streaming.Grass.Draw.ReadSettings");
+    private static readonly ProfilerMarker PropertiesMarker = new("FS.Streaming.Grass.Draw.PrepareProperties");
+    private static readonly ProfilerMarker CapabilityMarker = new("FS.Streaming.Grass.Draw.CheckGpuSupport");
+    private static readonly ProfilerMarker EnsureMarker = new("FS.Streaming.Grass.Draw.EnsureBuffers");
+    private static readonly ProfilerMarker CreateSourcesMarker = new("FS.Streaming.Grass.Draw.Buffers.CreateSources");
+    private static readonly ProfilerMarker CreateSlotsMarker = new("FS.Streaming.Grass.Draw.Buffers.CreateSlots");
+    private static readonly ProfilerMarker ReplayMarker = new("FS.Streaming.Grass.Draw.Buffers.ReuploadResidentSlots");
+    private static readonly ProfilerMarker MetadataMarker = new("FS.Streaming.Grass.Draw.Buffers.UploadMetadata");
+    private static readonly ProfilerMarker CullMarker = new("FS.Streaming.Grass.Draw.Cull");
+    private static readonly ProfilerMarker ChannelsMarker = new("FS.Streaming.Grass.Draw.Cull.SelectChannels");
+    private static readonly ProfilerMarker BoundsMarker = new("FS.Streaming.Grass.Draw.Cull.ReadMeshBounds");
+    private static readonly ProfilerMarker WindMarker = new("FS.Streaming.Grass.Draw.ReadWindProperties");
+    private static readonly ProfilerMarker CreateVisibleMarker = new("FS.Streaming.Grass.Draw.Buffers.CreateVisibleIndices");
+    private static readonly ProfilerMarker CreateArgsMarker = new("FS.Streaming.Grass.Draw.Buffers.CreateDrawArguments");
+    private static readonly ProfilerMarker ReadArgsMarker = new("FS.Streaming.Grass.Draw.Cull.ReadMeshArguments");
+    private static readonly ProfilerMarker UploadArgsMarker = new("FS.Streaming.Grass.Draw.Buffers.UploadDrawArguments");
+    private static readonly ProfilerMarker UnusedMarker = new("FS.Streaming.Grass.Draw.Buffers.CreateUnusedIndices");
+    private static readonly ProfilerMarker ResetMarker = new("FS.Streaming.Grass.Draw.Cull.ResetCounters");
+    private static readonly ProfilerMarker KernelMarker = new("FS.Streaming.Grass.Draw.Cull.FindKernel");
+    private static readonly ProfilerMarker BindValuesMarker = new("FS.Streaming.Grass.Draw.Cull.BindValues");
+    private static readonly ProfilerMarker BindBuffersMarker = new("FS.Streaming.Grass.Draw.Cull.BindBuffers");
+    private static readonly ProfilerMarker DispatchMarker = new("FS.Streaming.Grass.Draw.Cull.Dispatch");
+    private static readonly ProfilerMarker CopyCountMarker = new("FS.Streaming.Grass.Draw.Cull.CopyCounts");
+    private static readonly ProfilerMarker SelectDrawsMarker = new("FS.Streaming.Grass.Draw.SelectDrawChannels");
+    private static readonly ProfilerMarker IndirectMarker = new("FS.Streaming.Grass.Draw.Indirect");
+    private static readonly ProfilerMarker IndirectPrepareMarker = new("FS.Streaming.Grass.Draw.Indirect.PrepareProperties");
+    private static readonly ProfilerMarker IndirectSubmitMarker = new("FS.Streaming.Grass.Draw.Indirect.Submit");
+    private static readonly ProfilerMarker FallbackMarker = new("FS.Streaming.Grass.Draw.Fallback.FilterAndBatch");
+    private static readonly ProfilerMarker FallbackPropertiesMarker = new("FS.Streaming.Grass.Draw.Fallback.PrepareProperties");
+    private static readonly ProfilerMarker FallbackSubmitMarker = new("FS.Streaming.Grass.Draw.Fallback.Submit");
+    private static readonly ProfilerMarker ReleaseMarker = new("FS.Streaming.Grass.Draw.Buffers.Release");
 #if UNITY_EDITOR
     public int SlotSizeForValidation => slotSize;
     public void CullAllForValidation(GrassSettings settings, Mesh[] meshes, Material[] materials,
@@ -89,7 +122,7 @@ public sealed class ResidentGrassRenderer : IDisposable
         }
         if (sources != null && upload.Length > 0)
         {
-            using (SetDataMarker.Auto()) sources.SetData(upload, 0, index * slotSize, upload.Length);
+            using (SetDataMarker.Auto()) { sources.SetData(upload, 0, index * slotSize, upload.Length); GrassDrawDiagnostics.CountUpload(); }
         }
         }
     }
@@ -103,24 +136,37 @@ public sealed class ResidentGrassRenderer : IDisposable
         Camera camera, Vector4[] planes, Vector3 viewer, float subSize, float outerRadius, float edgeWidth,
         Mesh forestNear = null, Material forestNearMaterial = null, Mesh forestFar = null, Material forestFarMaterial = null)
     {
+        using var drawScope = DrawChunkMarker.Auto();
         if (!hasBounds) return;
         LastCullDispatchCount = 0;
-        bool splitForest = (forestNear != null && forestNearMaterial != null) || (forestFar != null && forestFarMaterial != null);
-        Vector4 density = new Vector4(Mathf.Clamp01(settings.densityRadius3), Mathf.Clamp01(settings.densityRadius6),
+        bool splitForest;
+        Vector4 density;
+        float farDensity;
+        using (DrawSetupMarker.Auto())
+        {
+        splitForest = (forestNear != null && forestNearMaterial != null) || (forestFar != null && forestFarMaterial != null);
+        density = new Vector4(Mathf.Clamp01(settings.densityRadius3), Mathf.Clamp01(settings.densityRadius6),
             Mathf.Clamp01(settings.densityRadius10), Mathf.Clamp01(settings.densityBeyond10));
-        float farDensity = Mathf.Clamp01(settings.billboardCoverage);
+        farDensity = Mathf.Clamp01(settings.billboardCoverage);
+        }
         Prepare(settings);
-        bool gpu = settings.gpuIndirectRendering && settings.grassCompactShader != null &&
+        bool gpu;
+        using (CapabilityMarker.Auto())
+        gpu = settings.gpuIndirectRendering && settings.grassCompactShader != null &&
             settings.grassCompactShader.HasKernel("CullResidentGrassAll") &&
             Supports(near, nearMaterial, settings) && Supports(far, farMaterial, settings) &&
             (!splitForest || (Supports(forestNear, forestNearMaterial, settings) && Supports(forestFar, forestFarMaterial, settings)));
 #if UNITY_EDITOR
         if (gpu) GpuChunks++; else FallbackChunks++;
 #endif
+        GrassDrawDiagnostics.CountChunk(gpu);
         if (gpu)
         {
             EnsureBuffers();
-            if (metadataDirty) { slots.SetData(metadata); metadataDirty = false; }
+            if (metadataDirty)
+            {
+                using (MetadataMarker.Auto()) { slots.SetData(metadata); metadataDirty = false; GrassDrawDiagnostics.CountUpload(); }
+            }
             CullAll(settings, near, nearMaterial, far, farMaterial, forestNear, forestNearMaterial,
                 forestFar, forestFarMaterial, camera != null ? planes : null, viewer, subSize,
                 outerRadius, edgeWidth, density, farDensity);
@@ -129,6 +175,7 @@ public sealed class ResidentGrassRenderer : IDisposable
         {
             ReleaseBuffers();
         }
+        using (SelectDrawsMarker.Auto())
         for (int biome = 0; biome < (splitForest ? 2 : 1); biome++)
         {
             if (splitForest && (biome == 0 ? meadowCount : forestCount) == 0) continue;
@@ -153,6 +200,7 @@ public sealed class ResidentGrassRenderer : IDisposable
         mesh == null || material == null || GrassRenderUtility.IsSupported(settings.grassCompactShader, material);
     private void Prepare(GrassSettings s)
     {
+        using var scope = PropertiesMarker.Auto();
         properties.Clear();
         properties.SetColor("_ForestDarkGrassColor", s.forestDarkGrassColor);
         properties.SetColor("_ForestMidGrassColor", s.forestMidGrassColor);
@@ -162,12 +210,15 @@ public sealed class ResidentGrassRenderer : IDisposable
     }
     private void EnsureBuffers()
     {
+        using var scope = EnsureMarker.Auto();
         if (sources != null) return;
         int capacity = slotSize * cpuSlots.Length;
-        sources = new ComputeBuffer(capacity, 80);
-        slots = new ComputeBuffer(cpuSlots.Length, 16);
+        using (CreateSourcesMarker.Auto()) { sources = new ComputeBuffer(capacity, 80); GrassDrawDiagnostics.CountBufferCreated(); }
+        using (CreateSlotsMarker.Auto()) { slots = new ComputeBuffer(cpuSlots.Length, 16); GrassDrawDiagnostics.CountBufferCreated(); }
+        using (ReplayMarker.Auto())
         for (int i = 0; i < cpuSlots.Length; i++)
-            if (cpuSlots[i] != null && cpuSlots[i].Length > 0) sources.SetData(cpuSlots[i], 0, i * slotSize, cpuSlots[i].Length);
+            if (cpuSlots[i] != null && cpuSlots[i].Length > 0)
+            { sources.SetData(cpuSlots[i], 0, i * slotSize, cpuSlots[i].Length); GrassDrawDiagnostics.CountUpload(); }
         metadataDirty = true;
     }
     private readonly uint[] drawArgs = new uint[5];
@@ -176,6 +227,7 @@ public sealed class ResidentGrassRenderer : IDisposable
         Mesh forestNear, Material forestNearMaterial, Mesh forestFar, Material forestFarMaterial,
         Vector4[] planes, Vector3 viewer, float subSize, float radius, float edge, Vector4 density, float farDensity, int forceOverride = -1)
     {
+        using var scope = CullMarker.Auto();
         bool split = (forestNear != null && forestNearMaterial != null) || (forestFar != null && forestFarMaterial != null);
         channelMeshes[0] = near; channelMaterials[0] = nearMaterial;
         channelMeshes[1] = far; channelMaterials[1] = farMaterial;
@@ -185,6 +237,7 @@ public sealed class ResidentGrassRenderer : IDisposable
         channelMaterials[3] = forestFar != null && forestFarMaterial != null ? forestFarMaterial : farMaterial;
         int mask = 0;
         Vector4 forces = new Vector4(-1, -1, 0, 0);
+        using (ChannelsMarker.Auto())
         for (int biome = 0; biome < (split ? 2 : 1); biome++)
         {
             bool n = channelMeshes[biome * 2] != null && channelMaterials[biome * 2] != null;
@@ -197,25 +250,33 @@ public sealed class ResidentGrassRenderer : IDisposable
                 if (lod == 0 ? !n : !f) continue;
                 mask |= 1 << channel;
                 Mesh mesh = channelMeshes[channel];
-                centers[channel] = mesh.bounds.center; extents[channel] = mesh.bounds.extents;
-                winds[channel] = GrassRenderUtility.WindPadding(channelMaterials[channel]);
+                using (BoundsMarker.Auto()) { centers[channel] = mesh.bounds.center; extents[channel] = mesh.bounds.extents; }
+                using (WindMarker.Auto()) winds[channel] = GrassRenderUtility.WindPadding(channelMaterials[channel]);
                 if (visible[channel] == null)
                 {
-                    visible[channel] = new ComputeBuffer(slotSize * cpuSlots.Length, 4, ComputeBufferType.Append);
-                    arguments[channel] = new ComputeBuffer(5, 4, ComputeBufferType.IndirectArguments);
+                    using (CreateVisibleMarker.Auto()) { visible[channel] = new ComputeBuffer(slotSize * cpuSlots.Length, 4, ComputeBufferType.Append); GrassDrawDiagnostics.CountBufferCreated(); }
+                    using (CreateArgsMarker.Auto()) { arguments[channel] = new ComputeBuffer(5, 4, ComputeBufferType.IndirectArguments); GrassDrawDiagnostics.CountBufferCreated(); }
                 }
                 if (argumentMeshes[channel] != mesh)
                 {
-                    drawArgs[0] = mesh.GetIndexCount(0); drawArgs[1] = 0;
-                    drawArgs[2] = mesh.GetIndexStart(0); drawArgs[3] = (uint)mesh.GetBaseVertex(0);
-                    arguments[channel].SetData(drawArgs); argumentMeshes[channel] = mesh;
+                    using (ReadArgsMarker.Auto())
+                    {
+                        drawArgs[0] = mesh.GetIndexCount(0); drawArgs[1] = 0;
+                        drawArgs[2] = mesh.GetIndexStart(0); drawArgs[3] = (uint)mesh.GetBaseVertex(0);
+                    }
+                    using (UploadArgsMarker.Auto()) { arguments[channel].SetData(drawArgs); argumentMeshes[channel] = mesh; GrassDrawDiagnostics.CountUpload(); }
                 }
             }
         }
-        unusedVisible ??= new ComputeBuffer(1, 4, ComputeBufferType.Append);
-        for (int i = 0; i < 4; i++) visible[i]?.SetCounterValue(0);
+        if (unusedVisible == null)
+        { using (UnusedMarker.Auto()) { unusedVisible = new ComputeBuffer(1, 4, ComputeBufferType.Append); GrassDrawDiagnostics.CountBufferCreated(); } }
+        using (ResetMarker.Auto())
+            for (int i = 0; i < 4; i++) visible[i]?.SetCounterValue(0);
         var shader = settings.grassCompactShader;
-        int kernel = shader.FindKernel("CullResidentGrassAll");
+        int kernel;
+        using (KernelMarker.Auto()) kernel = shader.FindKernel("CullResidentGrassAll");
+        using (BindValuesMarker.Auto())
+        {
         shader.SetInt("_ResidentSlotSize", slotSize); shader.SetInt("_ResidentSlotCount", cpuSlots.Length);
         shader.SetInt("_ResidentSplitForest", split ? 1 : 0); shader.SetInt("_ResidentChannels", mask);
         shader.SetVector("_ResidentForces", forces);
@@ -225,30 +286,49 @@ public sealed class ResidentGrassRenderer : IDisposable
         if (planes != null) shader.SetVectorArray("_GrassFrustum", planes);
         shader.SetVectorArray("_ResidentCenters", centers); shader.SetVectorArray("_ResidentExtents", extents);
         shader.SetVectorArray("_ResidentWind", winds);
+        }
+        using (BindBuffersMarker.Auto())
+        {
         shader.SetBuffer(kernel, "_GrassInstances", sources); shader.SetBuffer(kernel, "_ResidentSlots", slots);
         shader.SetBuffer(kernel, "_ResidentMeadowNear", visible[0] ?? unusedVisible);
         shader.SetBuffer(kernel, "_ResidentMeadowFar", visible[1] ?? unusedVisible);
         shader.SetBuffer(kernel, "_ResidentForestNear", visible[2] ?? unusedVisible);
         shader.SetBuffer(kernel, "_ResidentForestFar", visible[3] ?? unusedVisible);
-        if (mask != 0) { shader.Dispatch(kernel, (slotSize * cpuSlots.Length + 63) / 64, 1, 1); LastCullDispatchCount++; }
+        }
+        if (mask != 0)
+        { using (DispatchMarker.Auto()) { shader.Dispatch(kernel, (slotSize * cpuSlots.Length + 63) / 64, 1, 1); LastCullDispatchCount++; GrassDrawDiagnostics.CountDispatch(); } }
+        using (CopyCountMarker.Auto())
         for (int i = 0; i < 4; i++)
             if (visible[i] != null) ComputeBuffer.CopyCount(visible[i], arguments[i], 4);
     }
     private void DrawGpu(int channel, GrassSettings settings, Mesh mesh, Material material, Camera camera)
     {
-        Vector3 wind = GrassRenderUtility.WindPadding(material);
-        properties.SetBuffer("_GrassInstances", sources); properties.SetBuffer("_GrassVisibleIndices", visible[channel]);
-        Bounds b = bounds; b.Expand(wind * 2);
-        Graphics.DrawMeshInstancedIndirect(mesh, 0, material, b, arguments[channel], 0, properties,
-            ShadowCastingMode.Off, settings.receiveGrassShadows, 0, camera, LightProbeUsage.Off);
+        using var scope = IndirectMarker.Auto();
+        Vector3 wind;
+        using (WindMarker.Auto()) wind = GrassRenderUtility.WindPadding(material);
+        Bounds b;
+        using (IndirectPrepareMarker.Auto())
+        {
+            properties.SetBuffer("_GrassInstances", sources); properties.SetBuffer("_GrassVisibleIndices", visible[channel]);
+            b = bounds; b.Expand(wind * 2);
+        }
+        using (IndirectSubmitMarker.Auto())
+        {
+            Graphics.DrawMeshInstancedIndirect(mesh, 0, material, b, arguments[channel], 0, properties,
+                ShadowCastingMode.Off, settings.receiveGrassShadows, 0, camera, LightProbeUsage.Off);
+            GrassDrawDiagnostics.CountIndirectDraw();
+        }
     }
     private void DrawFallback(int representation, int forest, Mesh mesh, Material material, Camera camera, Vector3 viewer,
         float subSize, float radius, float edge, Vector4 density, float farDensity, int force, bool shadows)
     {
+        // Filtering is self time; nested Submit scopes account for emitted fallback batches.
+        using var scope = FallbackMarker.Auto();
         int count = 0;
         for (int slot = 0; slot < cpuSlots.Length; slot++)
         {
             if (cpuSlots[slot] == null) continue;
+            GrassDrawDiagnostics.CountFallbackCandidates(cpuSlots[slot].Length);
             foreach (var instance in cpuSlots[slot])
             {
                 if (forest >= 0 && (instance.Data.x >= 0.5f ? 1 : 0) != forest) continue;
@@ -265,15 +345,25 @@ public sealed class ResidentGrassRenderer : IDisposable
     }
     private void DrawFallbackBatch(Mesh mesh, Material material, Camera camera, int count, bool shadows)
     {
-        properties.SetVectorArray("_GrassInstanceData", fallbackData);
-        Graphics.DrawMeshInstanced(mesh, 0, material, fallbackMatrices, count, properties, ShadowCastingMode.Off, shadows, 0, camera, LightProbeUsage.Off);
+        using (FallbackPropertiesMarker.Auto()) properties.SetVectorArray("_GrassInstanceData", fallbackData);
+        using (FallbackSubmitMarker.Auto())
+        {
+            Graphics.DrawMeshInstanced(mesh, 0, material, fallbackMatrices, count, properties, ShadowCastingMode.Off, shadows, 0, camera, LightProbeUsage.Off);
+            GrassDrawDiagnostics.CountFallbackDraw();
+        }
     }
     private void ReleaseBuffers()
     {
-        sources?.Release(); slots?.Release();
-        unusedVisible?.Release(); unusedVisible = null;
-        for (int i = 0; i < 4; i++) { visible[i]?.Release(); arguments[i]?.Release(); visible[i] = arguments[i] = null; argumentMeshes[i] = null; }
+        using var scope = ReleaseMarker.Auto();
+        ReleaseBuffer(sources); ReleaseBuffer(slots);
+        ReleaseBuffer(unusedVisible); unusedVisible = null;
+        for (int i = 0; i < 4; i++) { ReleaseBuffer(visible[i]); ReleaseBuffer(arguments[i]); visible[i] = arguments[i] = null; argumentMeshes[i] = null; }
         sources = slots = null;
+    }
+    private static void ReleaseBuffer(ComputeBuffer buffer)
+    {
+        if (buffer == null) return;
+        buffer.Release(); GrassDrawDiagnostics.CountBufferReleased();
     }
     public void Dispose() => ReleaseBuffers();
 #if UNITY_EDITOR

@@ -137,7 +137,8 @@ public static class FoliagePublicationValidation
         }
         finally { Object.DestroyImmediate(prefab); }
     }
-    private static void ValidateQueue()
+    public static void ValidateSharedPublication() => ValidateQueue(true);
+    private static void ValidateQueue(bool worldBudget = false)
     {
         using var f = new Fixture(); Populate(f.Record.FoliageData,400);
         // Production queue validation also checks deduplication while its active work spans frames.
@@ -157,10 +158,32 @@ public static class FoliagePublicationValidation
             var type = typeof(FoliagePublicationKind);
             var enqueue = typeof(FoliageManager).GetMethod("EnqueueFoliageBatchRebuild",Private);
             var process = typeof(FoliageManager).GetMethod("ProcessPendingFoliageBatchWork",Private);
+            long clock = 0;
+            var shared = new WorldStreamingBudget(WorldStreamingConfiguration.Default, () => clock, .01);
+            var scheduler = Field<FoliagePublicationScheduler>(foliage,"publicationScheduler");
+            if (worldBudget)
+            {
+                enqueue.Invoke(foliage,new[]{(object)f.Record,Enum.Parse(type,"Flower")});
+                shared.BeginFrame();
+                using (shared.Measure(WorldStreamingPhase.Foliage))
+                {
+                    clock += 300;
+                    scheduler.Update(manager,f.Record.ChunkCoord,0L,.001f,shared);
+                    Check(scheduler.PendingCount == 1 && scheduler.ActiveCount == 0 && f.Target.GpuFlowerInstanceCount == 0,
+                        "Publication bypassed the exhausted world allowance.");
+                }
+                shared.EndFrame();
+            }
             for (int step = 0; step < 50 && f.Target.GpuFlowerInstanceCount != 400; step++)
             {
                 enqueue.Invoke(foliage,new[]{(object)f.Record,Enum.Parse(type,"Flower")});
-                process.Invoke(foliage,new object[]{manager,f.Record.ChunkCoord,default(SubChunkCoord),0L,.001f});
+                if (worldBudget)
+                {
+                    shared.BeginFrame();
+                    using (shared.Measure(WorldStreamingPhase.Foliage)) scheduler.Update(manager,f.Record.ChunkCoord,0L,.001f,shared);
+                    shared.EndFrame();
+                }
+                else process.Invoke(foliage,new object[]{manager,f.Record.ChunkCoord,default(SubChunkCoord),0L,.001f});
                 Check(Field<FoliagePublicationScheduler>(foliage,"publicationScheduler").PendingCount == 0,"Repeated requests duplicated active publication.");
             }
             Check(f.Target.GpuFlowerInstanceCount == 400,"Publication starved under an exhausted shared budget.");

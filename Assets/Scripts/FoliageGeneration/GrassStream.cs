@@ -24,12 +24,16 @@ public sealed class GrassStream : IDisposable
     private static readonly ProfilerMarker PublishMarker = new ProfilerMarker("FS.Streaming.Grass.Publish");
     private static readonly ProfilerMarker ScheduleMarker = new ProfilerMarker("FS.Streaming.Grass.Schedule");
     private static readonly ProfilerMarker DrawMarker = new ProfilerMarker("FS.Streaming.Grass.Draw");
+    private static readonly ProfilerMarker DrawEntryMarker = new("FS.Streaming.Grass.Draw.VisitEntry");
+    private static readonly ProfilerMarker DrawVisibilityMarker = new("FS.Streaming.Grass.Draw.CheckVisibility");
+    private static readonly ProfilerMarker DrawCountersMarker = new("FS.Streaming.Grass.Draw.InitializeCounters");
     private static readonly ProfilerMarker RetiredMarker = new ProfilerMarker("FS.Streaming.Grass.CleanupRetiredJobs");
     private static readonly ProfilerMarker ScanJobsMarker = new ProfilerMarker("FS.Streaming.Grass.ScanAndCompleteJobs");
     private static readonly ProfilerMarker ApplyJobMarker = new ProfilerMarker("FS.Streaming.Grass.ApplyOneJob");
     private static readonly ProfilerMarker DiscardJobMarker = new ProfilerMarker("FS.Streaming.Grass.DiscardOneJob");
     private static readonly ProfilerMarker BuildUploadsMarker = new ProfilerMarker("FS.Streaming.Grass.BuildUploadQueue");
     private static readonly ProfilerMarker SortUploadsMarker = new ProfilerMarker("FS.Streaming.Grass.SortUploadQueue");
+    private static readonly ProfilerMarker UploadTileMarker = new("FS.Streaming.Grass.UploadOneTile");
 #if UNITY_EDITOR
     public static double RefreshMs, CompleteMs, PublishMs, ScheduleMs, DrawMs;
     public static int PendingCount, ActiveCount;
@@ -67,6 +71,8 @@ public sealed class GrassStream : IDisposable
     }
     private readonly Dictionary<ChunkCoord, Entry> entries = new Dictionary<ChunkCoord, Entry>();
     private readonly List<Tile> retiredJobs = new List<Tile>();
+    private readonly List<Tile> runningJobs = new List<Tile>();
+    private int completionCursor;
     private readonly List<Tile> requests = new List<Tile>();
     private readonly List<ChunkCoord> remove = new List<ChunkCoord>();
     private readonly HashSet<ChunkCoord> touched = new HashSet<ChunkCoord>();
@@ -79,6 +85,8 @@ public sealed class GrassStream : IDisposable
     private readonly Func<bool> useClover;
     private int generationHash, version = 1;
     private int activeJobs;
+    private int workCursor;
+    private WorldStreamingBudget streamingBudget;
     private float priorityNow, priorityRadius;
     private readonly Comparison<Tile> compareRequests;
     private double nextRefresh;
@@ -115,7 +123,7 @@ public sealed class GrassStream : IDisposable
     }
     public void Update(ChunkManager manager, List<ChunkCoord> activeCoords, Vector3 viewer, Camera camera,
         Vector4[] planes, Mesh nearMesh, Material nearMaterial, Mesh farMesh, Material farMaterial,
-        Mesh forestNear = null, Material forestNearMaterial = null, Mesh forestFar = null, Material forestFarMaterial = null)
+        Mesh forestNear = null, Material forestNearMaterial = null, Mesh forestFar = null, Material forestFarMaterial = null, WorldStreamingBudget frameBudget = null)
     {
         long phaseStart = TerrainGenerationProfiler.GetTimestamp();
         int hash = GenerationHash();
@@ -255,39 +263,57 @@ public sealed class GrassStream : IDisposable
 #if UNITY_EDITOR
         RefreshMs = TerrainGenerationProfiler.GetElapsedMilliseconds(phaseStart);
 #endif
-        phaseStart = TerrainGenerationProfiler.GetTimestamp();
-        using (CompleteMarker.Auto())
+        streamingBudget = frameBudget;
+        using (frameBudget?.Measure(WorldStreamingPhase.Grass))
         {
-            CompleteJobs();
-        }
+            // Completion, upload and dispatch each receive first service every three frames.
+            int first = workCursor;
+            workCursor = (workCursor + 1) % 3;
+            for (int offset = 0; offset < 3; offset++)
+            {
+                if (frameBudget != null && !frameBudget.HasRemaining) break;
+                phaseStart = TerrainGenerationProfiler.GetTimestamp();
+                switch ((first + offset) % 3)
+                {
+                    case 0:
+                        using (CompleteMarker.Auto()) CompleteJobs();
 #if UNITY_EDITOR
-        CompleteMs = TerrainGenerationProfiler.GetElapsedMilliseconds(phaseStart);
+                        CompleteMs = TerrainGenerationProfiler.GetElapsedMilliseconds(phaseStart);
 #endif
-        phaseStart = TerrainGenerationProfiler.GetTimestamp();
-        using (PublishMarker.Auto())
-        {
-            Publish(nearMesh, farMesh, forestNearMaterial != null ? forestNear : null, forestFarMaterial != null ? forestFar : null);
-        }
+                        break;
+                    case 1:
+                        using (PublishMarker.Auto()) Publish(nearMesh, farMesh, forestNearMaterial != null ? forestNear : null, forestFarMaterial != null ? forestFar : null);
 #if UNITY_EDITOR
-        PublishMs = TerrainGenerationProfiler.GetElapsedMilliseconds(phaseStart);
+                        PublishMs = TerrainGenerationProfiler.GetElapsedMilliseconds(phaseStart);
 #endif
-        phaseStart = TerrainGenerationProfiler.GetTimestamp();
-        using (ScheduleMarker.Auto())
-        {
-            Schedule(now, outer);
+                        break;
+                    case 2:
+                        using (ScheduleMarker.Auto()) Schedule(now, outer);
+#if UNITY_EDITOR
+                        ScheduleMs = TerrainGenerationProfiler.GetElapsedMilliseconds(phaseStart);
+#endif
+                        break;
+                }
+            }
         }
 #if UNITY_EDITOR
-        ScheduleMs = TerrainGenerationProfiler.GetElapsedMilliseconds(phaseStart);
         ResidentGrassRenderer.GpuChunks = ResidentGrassRenderer.FallbackChunks = 0;
         PendingCount = requests.Count; ActiveCount = activeJobs;
 #endif
         phaseStart = TerrainGenerationProfiler.GetTimestamp();
         using (DrawMarker.Auto())
         {
+        using (DrawCountersMarker.Auto()) FirstSettlers.Profiling.GrassDrawDiagnostics.Initialize();
         foreach (var entry in entries.Values)
-            if (entry.Runtime.IsVisible && entry.Runtime.HasTerrainMesh && entry.Runtime.IsFoliageRenderVisible)
+        {
+            using var entryScope = DrawEntryMarker.Auto();
+            bool visible;
+            using (DrawVisibilityMarker.Auto())
+                visible = entry.Runtime.IsVisible && entry.Runtime.HasTerrainMesh && entry.Runtime.IsFoliageRenderVisible;
+            if (visible)
                 entry.Renderer.Draw(settings, nearMesh, nearMaterial, farMesh, farMaterial, camera, planes, viewer, subSize, outer, width,
                     forestNear, forestNearMaterial, forestFar, forestFarMaterial);
+        }
         }
 #if UNITY_EDITOR
         DrawMs = TerrainGenerationProfiler.GetElapsedMilliseconds(phaseStart);
@@ -298,30 +324,38 @@ public sealed class GrassStream : IDisposable
         long start = TerrainGenerationProfiler.GetTimestamp(); int completed = 0;
         using (RetiredMarker.Auto())
         {
-        for (int i = retiredJobs.Count - 1; i >= 0; i--)
+        for (int i = retiredJobs.Count - 1; i >= 0 && (streamingBudget == null || streamingBudget.HasRemaining); i--)
             if (retiredJobs[i].Job.IsCompleted) { using (DiscardJobMarker.Auto()) retiredJobs[i].Job.Dispose(); retiredJobs.RemoveAt(i); activeJobs--; }
         }
         using (ScanJobsMarker.Auto())
         {
-        foreach (var entry in entries.Values) foreach (var tile in entry.Tiles)
+        int checks = runningJobs.Count;
+        for (int checkedJobs = 0; checkedJobs < checks && runningJobs.Count > 0; checkedJobs++)
         {
-            if (tile.Job == null || !tile.Job.IsCompleted) continue;
+            if (streamingBudget != null && !streamingBudget.HasRemaining) return;
+            if (completionCursor >= runningJobs.Count) completionCursor = 0;
+            var tile = runningJobs[completionCursor];
+            if (!tile.Job.IsCompleted) { completionCursor++; continue; }
             if (tile.JobVersion == tile.State.DesiredVersion)
             {
                 bool applied;
                 using (ApplyJobMarker.Auto())
                     applied = tile.Job.CompleteAndApplyIncremental(
                         start,
-                        Mathf.Max(0.05f, settings.grassCompletionBudgetMs));
+                        (float)Math.Min(Mathf.Max(0.05f, settings.grassCompletionBudgetMs), streamingBudget?.RemainingMs ?? double.PositiveInfinity));
                 if (!applied)
+                {
+                    completionCursor++;
                     return;
+                }
 
-                tile.Candidates = entry.Data.nearGrassInstancesBySubChunk[tile.X, tile.Z];
+                tile.Candidates = tile.Owner.Data.nearGrassInstancesBySubChunk[tile.X, tile.Z];
                 tile.State.DataVersion = tile.JobVersion;
             }
             else { using (DiscardJobMarker.Auto()) tile.Job.Dispose(); }
-            tile.Job = null; activeJobs--; completed++;
+            tile.Job = null; runningJobs.RemoveAt(completionCursor); activeJobs--; completed++;
             if (completed >= Mathf.Max(1, settings.maxSubChunkGenerationsPerFrame) ||
+                (streamingBudget != null && !streamingBudget.HasRemaining) ||
                 TerrainGenerationProfiler.GetElapsedMilliseconds(start) >= Mathf.Max(0.05f, settings.grassCompletionBudgetMs)) return;
         }
         }
@@ -339,9 +373,11 @@ public sealed class GrassStream : IDisposable
         long start = TerrainGenerationProfiler.GetTimestamp(); int count = 0;
         foreach (var tile in requests)
         {
-            tile.Owner.Renderer.Upload(tile.Index, tile.Candidates, tile.Owner.Transform, near, far, forestNear, forestFar);
+            using (UploadTileMarker.Auto())
+                tile.Owner.Renderer.Upload(tile.Index, tile.Candidates, tile.Owner.Transform, near, far, forestNear, forestFar);
             tile.State.DisplayVersion = tile.State.DataVersion;
             if (++count >= Mathf.Max(1, settings.maxGrassUploadsPerFrame) ||
+                (streamingBudget != null && !streamingBudget.HasRemaining) ||
                 TerrainGenerationProfiler.GetElapsedMilliseconds(start) >= Mathf.Max(0.05f, settings.grassUploadBudgetMs)) break;
         }
     }
@@ -362,19 +398,21 @@ public sealed class GrassStream : IDisposable
                 entry.Prepared = !useClover() || entry.Data.cloverGenerated;
                 if (!entry.Prepared)
                 {
-                    if (TerrainGenerationProfiler.GetElapsedMilliseconds(start) >= Mathf.Max(0.05f, settings.subChunkGenerationBudgetMsPerFrame)) break;
+                    if ((streamingBudget != null && !streamingBudget.HasRemaining) || TerrainGenerationProfiler.GetElapsedMilliseconds(start) >= Mathf.Max(0.05f, settings.subChunkGenerationBudgetMsPerFrame)) break;
                     continue;
                 }
             }
             tile.JobVersion = tile.State.DesiredVersion;
             if (FoliageGenerator.TryScheduleGrassForSubChunk(entry.Record, settings, clover, trees, seed,
-                chunkSize, worldScale, heightMultiplier, tile.X, tile.Z, useClover(), out tile.Job)) activeJobs++;
+                chunkSize, worldScale, heightMultiplier, tile.X, tile.Z, useClover(), out tile.Job))
+            { activeJobs++; runningJobs.Add(tile); }
             else
             {
                 tile.Candidates = entry.Data.nearGrassInstancesBySubChunk[tile.X, tile.Z];
                 tile.State.DataVersion = tile.JobVersion;
             }
             if (++scheduled >= Mathf.Max(1, settings.maxSubChunkGenerationsPerFrame) ||
+                (streamingBudget != null && !streamingBudget.HasRemaining) ||
                 TerrainGenerationProfiler.GetElapsedMilliseconds(start) >= Mathf.Max(0.05f, settings.subChunkGenerationBudgetMsPerFrame)) break;
         }
     }
@@ -391,9 +429,26 @@ public sealed class GrassStream : IDisposable
     {
         using (RetireEntryMarker.Auto())
         {
-        foreach (var tile in entry.Tiles) if (tile.Job != null) retiredJobs.Add(tile);
+        foreach (var tile in entry.Tiles) if (tile.Job != null)
+        { runningJobs.Remove(tile); retiredJobs.Add(tile); }
         using (ReleaseRendererMarker.Auto()) entry.Dispose();
         }
+    }
+
+    internal bool IsReading(ChunkRecord record)
+    {
+        if (entries.TryGetValue(record.ChunkCoord, out var entry))
+            foreach (var tile in entry.Tiles) if (tile.Job != null) return true;
+        foreach (var tile in retiredJobs)
+            if (ReferenceEquals(tile.Owner.Record, record) && tile.Job != null) return true;
+        return false;
+    }
+
+    internal void ForgetChunk(ChunkCoord coord)
+    {
+        if (entries.TryGetValue(coord, out var entry)) { Retire(entry); entries.Remove(coord); }
+        requests.RemoveAll(tile => tile.Owner.Record.ChunkCoord == coord);
+        touched.Remove(coord);
     }
 #if UNITY_EDITOR
     public bool IsSettledForValidation()
@@ -408,6 +463,7 @@ public sealed class GrassStream : IDisposable
     {
         foreach (var entry in entries.Values) { foreach (var tile in entry.Tiles) tile.Job?.Dispose(); entry.Dispose(); }
         foreach (var tile in retiredJobs) tile.Job.Dispose();
-        entries.Clear(); retiredJobs.Clear(); activeJobs = 0;
+        entries.Clear(); retiredJobs.Clear(); runningJobs.Clear(); activeJobs = 0;
+        requests.Clear(); remove.Clear(); touched.Clear();
     }
 }
