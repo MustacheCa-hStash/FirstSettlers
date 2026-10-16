@@ -62,8 +62,8 @@ public static class ModularWoodValidation
     }
     private static void Assets(BuildCatalog c)
     {
-        int stoneCount=0;foreach(var d in c.presets)if(d.contentId.StartsWith("build.stone."))stoneCount++;
-        Check(c.presets.Length==13+stoneCount && c.Find(SplitPlankWallSetup.InfillContentId)==null,"Removed legacy infill still in menu or wood catalog changed unexpectedly");
+        int stoneCount=0,furnitureCount=0;foreach(var d in c.presets){if(d.contentId.StartsWith("build.stone."))stoneCount++;if(d.kind==BuildPartKind.Furniture)furnitureCount++;}
+        Check(c.presets.Length==13+stoneCount+furnitureCount && c.Find(SplitPlankWallSetup.InfillContentId)==null,"Removed legacy infill still in menu or wood catalog changed unexpectedly");
         SquareInfillValidation.Assets(c,Check);
         OpeningWallValidation.Assets(c,Check);
         StairExtensionValidation.Assets(c,Check);

@@ -84,12 +84,16 @@ public static class StoneKitSetup
                 d.solidBoxes=new[]{new Bounds(new Vector3(.6875f,.625f,0),new Vector3(1.375f,1.25f,.5f)),new Bounds(new Vector3(3.3125f,.625f,0),new Vector3(1.375f,1.25f,.5f))};
                 d.wallOpenings=new[]{new Bounds(new Vector3(2,.625f,0),new Vector3(1.25f,1.25f,.5f))};
             }
-            d.uvVariants=new Mesh[3];
-            for(int variant=0;variant<3;variant++)
+            if(i==0) BakedStoneWallSetup.Apply(d);
+            else
             {
-                string file=Models+"/"+Files[i]+(variant==0?"":"_UV"+variant)+".fbx";
-                AssetDatabase.ImportAsset(file,ImportAssetOptions.ForceSynchronousImport);
-                d.uvVariants[variant]=ModularWoodSetup.StructuralMesh(ModularWoodSetup.Import(file),d.LocalBounds);
+                d.uvVariants=new Mesh[3];
+                for(int variant=0;variant<3;variant++)
+                {
+                    string file=Models+"/"+Files[i]+(variant==0?"":"_UV"+variant)+".fbx";
+                    AssetDatabase.ImportAsset(file,ImportAssetOptions.ForceSynchronousImport);
+                    d.uvVariants[variant]=ModularWoodSetup.StructuralMesh(ModularWoodSetup.Import(file),d.LocalBounds);
+                }
             }
             d.mesh=d.uvVariants[0];
             bool exists=AssetDatabase.LoadAssetAtPath<GameObject>(path+".prefab")!=null;
@@ -99,7 +103,7 @@ public static class StoneKitSetup
                 root.name=Names[i];root.layer=GameplayLayers.WorldSolid;
                 root.transform.SetPositionAndRotation(Vector3.zero,Quaternion.identity);root.transform.localScale=Vector3.one;
                 if(!root.TryGetComponent<MeshFilter>(out var filter))filter=root.AddComponent<MeshFilter>();filter.sharedMesh=d.mesh;
-                if(!root.TryGetComponent<MeshRenderer>(out var renderer))renderer=root.AddComponent<MeshRenderer>();renderer.sharedMaterial=material;
+                if(!root.TryGetComponent<MeshRenderer>(out var renderer))renderer=root.AddComponent<MeshRenderer>();renderer.sharedMaterial=d.material;
                 foreach(var old in root.GetComponents<Collider>())Object.DestroyImmediate(old);
                 foreach(var solid in d.solidBoxes.Length>0?d.solidBoxes:new[]{d.LocalBounds})
                 {var collider=root.AddComponent<BoxCollider>();collider.center=solid.center;collider.size=solid.size;}

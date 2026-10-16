@@ -30,6 +30,7 @@ Shader "Custom/BuildingWoodMatte"
         // Reuse the existing sun-cycle ambient-floor dimming, without any tree deformation/fade.
         #include "Assets/Shaders/TreeNightLighting.hlsl"
         #include "Assets/Shaders/TerrainSkyAccess.hlsl"
+        #include "Assets/Shaders/LocalFlameLighting.hlsl"
 
         TEXTURE2D(_BaseMap);
         SAMPLER(sampler_BaseMap);
@@ -116,7 +117,7 @@ Shader "Custom/BuildingWoodMatte"
             Tags { "LightMode" = "UniversalForwardOnly" }
 
             HLSLPROGRAM
-            #pragma target 3.5
+            #pragma target 4.5
             #pragma vertex WoodVertex
             #pragma fragment WoodFragment
             #pragma multi_compile_instancing
@@ -158,7 +159,9 @@ Shader "Custom/BuildingWoodMatte"
                 #endif
                 half4 shadowMask = half4(1, 1, 1, 1);
                 Light mainLight = GetMainLight(shadowCoord, input.positionWS, shadowMask);
-                half caveAmbient=TerrainCaveAmbient(input.positionWS,normalWS);
+                half2 caveLighting=TerrainCaveLighting(input.positionWS,normalWS);
+                half caveAmbient=caveLighting.x;
+                mainLight.shadowAttenuation=TerrainCaveDirectionalShadow(mainLight.shadowAttenuation,GetMainLightShadowParams().x,caveLighting.y);
                 half3 lighting = max(SampleSH(normalWS), TreeNightAmbientFloor(_AmbientFloor).xxx) * ao.indirectAmbientOcclusion * caveAmbient;
                 lighting += WoodDiffuse(mainLight, normalWS) * ao.directAmbientOcclusion;
 
@@ -184,6 +187,7 @@ Shader "Custom/BuildingWoodMatte"
                 half shadowSide = 1.0h - saturate(dot(normalWS, mainLight.direction));
                 half shadowTint = max(shadowSide, (1.0h - mainLight.shadowAttenuation) * _ShadowStrength) * _ShadowTintStrength;
                 half3 color = albedo * lighting * lerp(half3(1, 1, 1), _ShadowTint.rgb, shadowTint);
+                color += albedo * FSLocalFlameDiffuse(input.positionWS,normalWS);
                 // Diffuse only: no view-dependent specular, metallic or reflection-probe contribution.
                 return half4(MixFogColor(color,unity_FogColor.rgb*caveAmbient,input.fogAndVertexLight.x), 1.0h);
             }
@@ -198,7 +202,7 @@ Shader "Custom/BuildingWoodMatte"
             ColorMask 0
 
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex WoodShadowVertex
             #pragma fragment WoodDepthFragment
             #pragma multi_compile_instancing
@@ -248,7 +252,7 @@ Shader "Custom/BuildingWoodMatte"
             Tags { "LightMode" = "DepthOnly" }
             ColorMask 0
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex WoodVertex
             #pragma fragment WoodDepthFragment
             #pragma multi_compile_instancing
@@ -267,7 +271,7 @@ Shader "Custom/BuildingWoodMatte"
             Name "DepthNormals"
             Tags { "LightMode" = "DepthNormalsOnly" }
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex WoodVertex
             #pragma fragment WoodDepthNormalsFragment
             #pragma multi_compile_instancing

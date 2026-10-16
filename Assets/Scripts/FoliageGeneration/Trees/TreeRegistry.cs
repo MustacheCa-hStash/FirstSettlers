@@ -31,6 +31,7 @@ public sealed class TreeRegistry
     private readonly Dictionary<TreeId, TreeState> changedStates = new Dictionary<TreeId, TreeState>();
 
     public int Count => records.Count;
+    public float ChunkWorldSize=>chunkWorldSize;
     public int ChunkCount => chunks.Count;
     /// <summary>Live main-thread view of registered trees, including distant placements and all states.</summary>
     public IEnumerable<TreeRecord> Records => records.Values;

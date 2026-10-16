@@ -3,10 +3,10 @@ using UnityEngine;
 /// <summary>Presentation metadata; the catalog continues to own gameplay definitions.</summary>
 public static class BuildUiContent
 {
-    public static readonly string[] Categories = { "All pieces", "Foundations", "Walls", "Floors", "Posts", "Stairs", "Roofs" };
+    public static readonly string[] Categories = { "All pieces", "Foundations", "Walls", "Floors", "Posts", "Stairs", "Roofs", "Furniture", "Lighting" };
     public static string ThumbnailKey(BuildDefinition d) => d.contentId.Replace('.', '_');
-    public static int Category(BuildDefinition d) => d.IsHalfGable ? 6 : d.kind switch
-    { BuildPartKind.Foundation=>1, BuildPartKind.Wall=>2, BuildPartKind.Floor=>3, BuildPartKind.Corner=>4, BuildPartKind.Stair or BuildPartKind.Handrail=>5, BuildPartKind.Roof=>6, _=>0 };
+    public static int Category(BuildDefinition d) => d.flamePrefab!=null ? 8 : d.IsHalfGable ? 6 : d.kind switch
+    { BuildPartKind.Foundation=>1, BuildPartKind.Wall=>2, BuildPartKind.Floor=>3, BuildPartKind.Corner=>4, BuildPartKind.Stair or BuildPartKind.Handrail=>5, BuildPartKind.Roof=>6, BuildPartKind.Furniture=>7, _=>0 };
     public static string Name(BuildDefinition d) => d.contentId switch
     {
         "build.prototype.wall"=>"Split-plank wall", "build.wood.w21-half-storey-stair"=>"W21 stair",
@@ -22,7 +22,10 @@ public static class BuildUiContent
         "build.wood.w15-gable-rising"=>9, "build.wood.w22-full-storey-stair"=>10, "build.wood.w24-stair-handrail"=>11,
         "build.wood.square-infill"=>12,
         "build.stone.s02-coursed-wall"=>13, "build.stone.s03-pier"=>14, "build.stone.s04-flagstone-floor"=>15, "build.stone.s06-wall-cap"=>16,
-        "build.stone.s07-low-wall"=>17, "build.stone.s12-gate-bay"=>18, _=>19
+        "build.stone.s07-low-wall"=>17, "build.stone.s12-gate-bay"=>18,
+        "build.furniture.f01-three-leg-stool"=>19, "build.furniture.f02-plank-bench"=>20,
+        "build.furniture.f03-pegged-table"=>21, "build.furniture.f04-low-work-table"=>22,
+        "build.furniture.f05-sleeping-platform"=>23, "build.furniture.f06-wall-shelf"=>24, _=>25
     };
     public static string Dimensions(BuildDefinition d)
     { Vector3 s=d.LocalBounds.size; return $"{s.x:0.##} × {s.y:0.##} × {s.z:0.##} m"; }
@@ -47,6 +50,13 @@ public static class BuildUiContent
         "build.stone.s06-wall-cap"=>"A row of rough capstones. Adds 0.25 m above a wall top.",
         "build.stone.s07-low-wall"=>"Low rubble boundary wall. Seats directly on terrain or a supported building.",
         "build.stone.s12-gate-bay"=>"Low stone wings around an empty 1.25 m gate opening. Both wings can seat directly on terrain.",
+        "build.furniture.f01-three-leg-stool"=>"A hewn three-leg stool. Place all feet on ground or supported flooring.",
+        "build.furniture.f02-plank-bench"=>"Backless plank seating on pegged slab supports.",
+        "build.furniture.f03-pegged-table"=>"A split-board table with pegged end frames and a low stretcher.",
+        "build.furniture.f04-low-work-table"=>"A low timber work surface on short legs.",
+        "build.furniture.f05-sleeping-platform"=>"A low timber bed frame with an open woven cord deck.",
+        "build.furniture.f06-wall-shelf"=>"A pegged shelf with two braces. Aim at a supported wall face.",
+        "build.lighting.wall-torch"=>"A fibre-bound torch in a pegged wooden holder. Mount on a supported wall to cast warm local light.",
         _=>"Choose this component, then aim at a surface to place it."
     };
 }

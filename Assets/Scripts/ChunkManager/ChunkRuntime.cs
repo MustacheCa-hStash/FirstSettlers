@@ -23,6 +23,7 @@ public class ChunkRuntime
     private Material runtimeWaterMaterial;
     private MeshCollider terrainMeshCollider;
     private TerrainSculptChunkSurface sculptSurface;
+    private readonly LocalFlameGeometry.Part[] flamePart=new LocalFlameGeometry.Part[1];
     public bool HasSculptSurface => sculptSurface != null;
     public bool TryGetSculptBounds(out Bounds bounds)
     {bounds=sculptSurface!=null?sculptSurface.WorldBounds:default;return sculptSurface!=null;}
@@ -179,6 +180,7 @@ public class ChunkRuntime
         waterRoot.SetActive(hasWater);
 
         currentLOD = lod;
+        RefreshFlameGeometry();
     }
 
     public void ApplyCollider(Mesh colliderMesh)
@@ -230,6 +232,14 @@ public class ChunkRuntime
     {
         if(terrainMeshRenderer!=null)terrainMeshRenderer.enabled=renderVisible&&!terrainHandoffHidden&&sculptSurface?.HasRender!=true;
         sculptSurface?.SetRenderVisible(renderVisible&&!terrainHandoffHidden,!terrainHandoffHidden);
+        RefreshFlameGeometry();
+    }
+    private void RefreshFlameGeometry()
+    {
+        Mesh mesh=sculptSurface?.HasRender==true?sculptSurface.RenderMesh:terrainMeshFilter!=null?terrainMeshFilter.sharedMesh:null;
+        if(mesh==null || terrainHandoffHidden || root==null || !visible){LocalFlameGeometry.Remove(this);return;}
+        flamePart[0]=new LocalFlameGeometry.Part(mesh,sculptSurface?.HasRender==true?Matrix4x4.identity:root.transform.localToWorldMatrix);
+        LocalFlameGeometry.Set(this,flamePart);
     }
 
     public bool TryGetVisibleWaterBounds(out Bounds bounds)
@@ -243,6 +253,7 @@ public class ChunkRuntime
 
     public void ClearMeshes()
     {
+        LocalFlameGeometry.Remove(this);
         if (terrainMeshFilter)
             terrainMeshFilter.sharedMesh = null;
 
@@ -327,6 +338,7 @@ public class ChunkRuntime
         this.visible = visible;
         if (root)
             root.SetActive(visible);
+        RefreshFlameGeometry();
     }
     public void ReleaseToPool(Transform poolParent)
     {
@@ -358,6 +370,7 @@ public class ChunkRuntime
     public void DestroyRuntime()
     {
         SetSculptSurface(null);
+        LocalFlameGeometry.Remove(this);
         terrainHorizonBinding?.Dispose();
         terrainHorizonBinding = null;
         chunkRecord?.ClearActiveRuntime(this);

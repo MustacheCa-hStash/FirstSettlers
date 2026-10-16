@@ -18,6 +18,7 @@ public sealed class BuildWorld : MonoBehaviour
     private readonly List<ulong> expired = new();
     private BuildGameplay gameplay;
     private BuildRenderer buildingRenderer;
+    private LocalFlameBuildBridge flameBridge;
     private MeshCollider placementProbe;
     private int supportRevision = -1;
     private int previewRevision=-1,previewYaw;
@@ -46,6 +47,7 @@ public sealed class BuildWorld : MonoBehaviour
     {
         catalog ??= Resources.Load<BuildCatalog>("Building/PrototypeCatalog");
         Session = new BuildSession(); buildingRenderer = new BuildRenderer(Session); gameplay = new BuildGameplay(Session);
+        flameBridge=new LocalFlameBuildBridge(this);
         ColliderDebug=GetComponent<BuildColliderDebug>() ?? gameObject.AddComponent<BuildColliderDebug>();
     }
     private void LateUpdate()
@@ -53,8 +55,9 @@ public sealed class BuildWorld : MonoBehaviour
         if (Session == null) return;
         if (Focus != null) gameplay.Update(Focus.position, colliderRange, Mathf.Max(colliderRange + 1, colliderReleaseRange), activationsPerFrame);
         UpdateCollapse(); buildingRenderer.Draw(Camera, renderRange, shadowRange);
+        flameBridge.Update();
     }
-    private void OnDestroy() { gameplay?.Dispose();Session?.Dispose(); if (placementProbe != null) BuildLifetime.Destroy(placementProbe.gameObject);if(boxProbe!=null)BuildLifetime.Destroy(boxProbe.gameObject); }
+    private void OnDestroy() { flameBridge?.Dispose();gameplay?.Dispose();Session?.Dispose(); if (placementProbe != null) BuildLifetime.Destroy(placementProbe.gameObject);if(boxProbe!=null)BuildLifetime.Destroy(boxProbe.gameObject); }
     public BuildPieceRecord Commit(BuildPreview preview)
     {
         Validate(ref preview);
@@ -92,6 +95,8 @@ public sealed class BuildWorld : MonoBehaviour
         buildingRenderer?.SetPreview(null);
         DebugPreview=preview;
         preview.Grounded=false;
+        if(preview.InvalidAttachment)
+        {Reject(ref preview,BuildPlacementFailure.Support,preview.Definition.furnitureWallMounted?"Aim at a supported wall face":"Aim at ground or the top of a floor; furniture cannot carry building pieces");return;}
         Bounds terrainBounds=BuildGeometry.WorldBounds(preview.Definition.LocalBounds,preview.Origin,preview.WorldYaw);
         if(TerrainGuard!=null&&!TerrainGuard.CanMove((Unity.Mathematics.float3)terrainBounds.min,(Unity.Mathematics.float3)terrainBounds.max,0,0))
         {Reject(ref preview,BuildPlacementFailure.Terrain,"Waiting for current terrain collision");return;}
@@ -126,7 +131,9 @@ public sealed class BuildWorld : MonoBehaviour
         var all=new List<BuildPieceRecord>(Session.Pieces.Values){candidate};
         var supported=cached?previewSupported:BuildSupportState.Resolve(all,states,p=>Session.NeighboursFor(p,candidate));
         previewStates=states;previewSupported=supported;previewRevision=Session.Revision;previewDefinition=preview.Definition;previewOrigin=preview.Origin;previewYaw=preview.WorldYaw;previewGrounded=preview.Grounded;
-        if(!supported.Contains(candidate.Id)){Reject(ref preview,BuildPlacementFailure.Support,preview.Definition.requiresFullBearing?"Needs foundation coverage beneath the complete paving tile":"Needs a grounded foundation or supported piece");return;}
+        if(!supported.Contains(candidate.Id)){Reject(ref preview,BuildPlacementFailure.Support,preview.Definition.kind==BuildPartKind.Furniture?
+            (preview.Definition.furnitureWallMounted?"Every shelf mounting point needs a supported wall face":"Every furniture foot needs ground or supported flooring"):
+            preview.Definition.requiresFullBearing?"Needs foundation coverage beneath the complete paving tile":"Needs a grounded foundation or supported piece");return;}
         foreach(var piece in Session.Pieces.Values)if(piece.Supported && !supported.Contains(piece.Id))
         {Reject(ref preview,BuildPlacementFailure.Support,"Would remove support from an existing piece",piece);return;}
         Bounds local=state.Bounds;
@@ -181,6 +188,7 @@ public sealed class BuildWorld : MonoBehaviour
     public static bool IsGround(Collider collider) => collider != null && (collider is TerrainCollider || collider.GetComponent<WorldGroundSurface>() != null);
     private static bool Grounded(BuildPreview preview)
     {
+        if(preview.Definition.kind==BuildPartKind.Furniture)return BuildFurnishing.Grounded(preview);
         if(preview.Definition.canGroundOnTerrain)
         {
             var sections=preview.Definition.solidBoxes;

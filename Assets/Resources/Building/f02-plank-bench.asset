@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: f02-plank-bench
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.furniture.f02-plank-bench
+  displayName: Plank bench
+  kind: 7
+  wallPlacementMode: 0
+  sizeUnits: {x: 6, y: 2, z: 2}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: -0.75, y: 0, z: -0.25}
+  jointSockets: []
+  stackRiseUnits: 0
+  wallEndInsetUnits: 1
+  mesh: {fileID: -7327493104057821903, guid: 1fb135b46eb63354aabdb4cb57f99c6e, type: 3}
+  preserveAuthoredMesh: 1
+  requiresFullBearing: 0
+  canGroundOnTerrain: 1
+  furnitureWallMounted: 0
+  furnitureSupportPoints:
+  - {x: -0.56, y: 0, z: -0.17}
+  - {x: -0.56, y: 0, z: 0.17}
+  - {x: 0.56, y: 0, z: -0.17}
+  - {x: 0.56, y: 0, z: 0.17}
+  solidBoxes:
+  - m_Center: {x: 0, y: 0.465, z: 0}
+    m_Extent: {x: 0.75, y: 0.035, z: 0.25}
+  - m_Center: {x: -0.56, y: 0.215, z: 0}
+    m_Extent: {x: 0.065, y: 0.215, z: 0.22}
+  - m_Center: {x: 0.56, y: 0.215, z: 0}
+    m_Extent: {x: 0.065, y: 0.215, z: 0.22}
+  - m_Center: {x: 0, y: 0.235, z: 0}
+    m_Extent: {x: 0.62, y: 0.035, z: 0.035}
+  wallOpenings: []
+  gableSlope: 0
+  flipVariant: {fileID: 0}
+  gableRoofSeamMesh: {fileID: 0}
+  uvVariants: []
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes: []
+  roofAttachment: 0
+  material: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
+  authoringPrefab: {fileID: 8254053850875203511, guid: 07f942d852c3256409d6610815c8458a, type: 3}
+  maxHealth: 100

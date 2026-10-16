@@ -119,6 +119,11 @@ public sealed class LocalPlayerInput : MonoBehaviour
             }
             if (Pressed(BuildButton.Debug)) building?.CycleColliderDebug();
             if (Pressed(BuildButton.Freeze)) building?.ToggleDebugFreeze();
+            if(keyboard.tKey.wasPressedThisFrame && WorldInteractionAllowed && !BuildingActive && sculpting?.Active!=true)
+            {
+                var torch=GetComponent<LocalFlameHeldTorch>()??gameObject.AddComponent<LocalFlameHeldTorch>();
+                torch.Toggle(GetComponentInChildren<Camera>(),building!=null?building.World:GetComponent<BuildWorld>());
+            }
             for (int i = 0; i < 9; i++)
                 if (keyboard[(Key)((int)Key.Digit1 + i)].wasPressedThisFrame) Menus.SelectHotbar(i);
         }

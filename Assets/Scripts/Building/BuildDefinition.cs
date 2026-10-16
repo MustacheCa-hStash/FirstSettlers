@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public enum BuildPartKind { Wall, Floor, Foundation, Corner, Stair, Roof, Handrail }
+public enum BuildPartKind { Wall, Floor, Foundation, Corner, Stair, Roof, Handrail, Furniture }
 public enum WallPlacementMode { Panel, Infill, Surface }
 public enum RoofAttachmentMode { None, Gable, Beam }
 public enum GableSlope { None, Rising, Falling }
@@ -36,6 +36,10 @@ public sealed class BuildDefinition : ScriptableObject
     public bool requiresFullBearing;
     [Tooltip("This piece may ground directly on terrain. Each authored solid section needs foot contact; apertures never count as bearing.")]
     public bool canGroundOnTerrain;
+    [Tooltip("Furniture attaches by its rear face instead of standing on its feet. Furniture never carries structural loads.")]
+    public bool furnitureWallMounted;
+    [Tooltip("Local foot-bottom or rear mounting points. Every point needs real supported contact.")]
+    public Vector3[] furnitureSupportPoints;
     [Tooltip("Authored solid sections around wall openings. Empty uses the full logical box unless convex volumes are supplied.")]
     public Bounds[] solidBoxes;
     [Tooltip("Clear apertures which generated junction framing must preserve.")]
@@ -62,6 +66,8 @@ public sealed class BuildDefinition : ScriptableObject
     public RoofAttachmentMode roofAttachment;
     public Material material;
     public GameObject authoringPrefab;
+    [Tooltip("Optional pooled flame/emitter effect; the solid model remains in the ordinary instanced building renderer.")]
+    public GameObject flamePrefab;
     public float maxHealth = 100;
     public Bounds LocalBounds => new(boundsOffset+(Vector3)minimumUnits * BuildGeometry.Unit + (Vector3)sizeUnits * (BuildGeometry.Unit * .5f),
         (Vector3)sizeUnits * BuildGeometry.Unit);

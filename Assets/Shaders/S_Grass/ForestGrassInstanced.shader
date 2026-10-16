@@ -25,6 +25,7 @@ Shader "FirstSettlers/Forest Grass Instanced"
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+        #include "Assets/Shaders/LocalFlameLighting.hlsl"
         #include "Assets/Shaders/GrassIndirectInstance.hlsl"
         CBUFFER_START(UnityPerMaterial)
             half4 _BaseColor, _DryColor, _RootColor;
@@ -99,6 +100,7 @@ Shader "FirstSettlers/Forest Grass Instanced"
             half shadow = lerp(1, light.shadowAttenuation, saturate(_ReceiveShadows));
             half3 lighting = max(SampleSH(normal), _AmbientStrength.xxx) + light.color *
                 (0.35h + saturate(dot(normal,light.direction)) * 0.65h) * shadow * light.distanceAttenuation;
+            lighting+=FSLocalFlameDiffuse(input.positionWS,normal);
             return half4(MixFog(albedo * lighting,InitializeInputDataFog(float4(input.positionWS,1),input.fog)),1);
         }
         half4 depth(Varyings input) : SV_Target { return 0; }
@@ -117,7 +119,7 @@ Shader "FirstSettlers/Forest Grass Instanced"
         {
             Name "ForwardLit" Tags { "LightMode"="UniversalForwardOnly" }
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma target 4.5 PROCEDURAL_INSTANCING_ON
             #pragma vertex vert
             #pragma fragment frag
@@ -134,7 +136,7 @@ Shader "FirstSettlers/Forest Grass Instanced"
             Name "DepthOnly" Tags { "LightMode"="DepthOnly" }
             ColorMask R
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma target 4.5 PROCEDURAL_INSTANCING_ON
             #pragma vertex vert
             #pragma fragment depth
@@ -146,7 +148,7 @@ Shader "FirstSettlers/Forest Grass Instanced"
         {
             Name "DepthNormals" Tags { "LightMode"="DepthNormalsOnly" }
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma target 4.5 PROCEDURAL_INSTANCING_ON
             #pragma vertex vert
             #pragma fragment depthNormal

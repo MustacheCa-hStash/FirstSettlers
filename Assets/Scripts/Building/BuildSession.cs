@@ -45,6 +45,7 @@ public sealed class BuildSession : IDisposable
     private readonly HashSet<ulong> seen = new();
     private readonly Queue<BuildPieceRecord> supportQueue = new();
     private readonly BuildResolution resolution=new();
+    private readonly List<LocalFlameGeometry.Part> flameParts=new();
     public IReadOnlyDictionary<ulong, BuildPieceRecord> Pieces => pieces;
     public IReadOnlyDictionary<ulong, BuildGridFrame> Frames => frames;
     public int Revision { get; private set; }
@@ -79,6 +80,7 @@ public sealed class BuildSession : IDisposable
         if (!pieces.TryGetValue(id, out var piece)) return false;
         foreach (ulong neighbour in piece.Connections) if (pieces.TryGetValue(neighbour, out var other)) other.Connections.Remove(id);
         ForCells(piece.WorldBounds, key => { if (cells.TryGetValue(key, out var ids)) { ids.Remove(id); if (ids.Count == 0) cells.Remove(key); } });
+        LocalFlameGeometry.Remove(piece);
         pieces.Remove(id); RebuildResolution(); return true;
     }
     public bool Damage(ulong id, float amount)
@@ -91,7 +93,7 @@ public sealed class BuildSession : IDisposable
     public void RecomputeSupport()
     {
         using var scope = SupportMarker.Auto();
-        bool fullBearing=false;foreach(var p in pieces.Values)fullBearing|=p.Definition.requiresFullBearing;
+        bool fullBearing=false;foreach(var p in pieces.Values)fullBearing|=p.Definition.requiresFullBearing || p.Definition.kind==BuildPartKind.Furniture;
         if(fullBearing)
         {
             var list=new List<BuildPieceRecord>(pieces.Values);var states=new Dictionary<ulong,BuildResolvedState>();
@@ -131,6 +133,15 @@ public sealed class BuildSession : IDisposable
                 {p.Connections.Add(other.Id);other.Connections.Add(p.Id);}
         }
         RecomputeSupport();
+        foreach(var p in list)
+        {
+            flameParts.Clear();var matrix=Matrix4x4.TRS(p.Origin,BuildGeometry.Rotation(p.WorldYawStep),Vector3.one);
+            var state=p.Resolved;
+            if(state.mesh!=null)flameParts.Add(new(state.mesh,matrix,p.Definition.material));
+            if(state.auxiliaryMesh!=null)flameParts.Add(new(state.auxiliaryMesh,matrix,p.Definition.material));
+            foreach(var a in state.attachments)if(a.mesh!=null)flameParts.Add(new(a.mesh,matrix*a.localMatrix,a.material));
+            LocalFlameGeometry.Set(p,flameParts);
+        }
     }
     public Dictionary<ulong,BuildResolvedState> ResolvePreview(BuildPieceRecord candidate)
     {var list=new List<BuildPieceRecord>(pieces.Values);list.Add(candidate);return resolution.Resolve(list,p=>NeighboursFor(p,candidate));}
@@ -147,7 +158,7 @@ public sealed class BuildSession : IDisposable
         if(d.kind==BuildPartKind.Stair)b.Encapsulate(new Bounds(d.LocalBounds.center+Vector3.up,d.LocalBounds.size+new Vector3(1,2,1)));
         return BuildGeometry.WorldBounds(b,origin,yaw);
     }
-    public void Dispose()=>resolution.Dispose();
+    public void Dispose(){foreach(var p in pieces.Values)LocalFlameGeometry.Remove(p);resolution.Dispose();}
     private static void ForCells(Bounds bounds, Action<Vector3Int> visit)
     {
         Vector3Int min = BuildGeometry.Cell(bounds.min), max = BuildGeometry.Cell(bounds.max);

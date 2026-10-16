@@ -42,7 +42,7 @@ Shader "Custom/WhitePineBarkSimpleLit"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
@@ -183,7 +183,7 @@ Shader "Custom/WhitePineBarkSimpleLit"
             Cull Back
 
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing

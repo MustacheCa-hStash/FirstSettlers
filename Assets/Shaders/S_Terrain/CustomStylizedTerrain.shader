@@ -160,6 +160,7 @@ Shader "Custom/StylizedTerrainURP"
 
             HLSLPROGRAM
             #pragma vertex vert
+            #pragma target 4.5
             #pragma fragment frag
             #pragma shader_feature_local_fragment _ROCK_DETAIL
             #pragma shader_feature_local_fragment _GRASS_BLADE_GROUND
@@ -174,6 +175,7 @@ Shader "Custom/StylizedTerrainURP"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Assets/Shaders/TerrainSkyAccess.hlsl"
+            #include "Assets/Shaders/LocalFlameLighting.hlsl"
 
             TEXTURE2D(_ControlMap0);
             // Chunk control maps share clamp/filter settings. Repeat detail
@@ -663,15 +665,21 @@ Shader "Custom/StylizedTerrainURP"
                 shadowCoord=TransformWorldToShadowCoord(IN.positionWS);
                 #endif
                 Light mainLight=GetMainLight(shadowCoord);
+                // The field supplies location/ambient, not the direction of the sun.
+                // Use full geometric roof occlusion here even when day/night art
+                // intentionally weakens outdoor directional shadows.
+                half2 caveLighting=TerrainCaveLighting(IN.positionWS,normalize(IN.normalWS));
+                mainLight.shadowAttenuation=TerrainCaveDirectionalShadow(mainLight.shadowAttenuation,GetMainLightShadowParams().x,caveLighting.y);
                 half shadowAttenuation=lerp(1.0h,mainLight.shadowAttenuation*terrainVisibility,saturate(_ReceiveShadows));
                 half3 diffuse=LightingLambert(mainLight.color,mainLight.direction,normalWS)*mainLight.distanceAttenuation*shadowAttenuation;
                 // Visibility offsets follow the geometric surface, independently of
                 // triplanar/detail normal perturbations used for diffuse shading.
-                half caveAmbient=TerrainCaveAmbient(IN.positionWS,normalize(IN.normalWS));
+                half caveAmbient=caveLighting.x;
                 half3 ambient=max(SampleSH(normalWS),half3(_AmbientStrength,_AmbientStrength,_AmbientStrength))*caveAmbient;
                 half3 color=albedo*(diffuse+ambient);
                 half tintWeight=saturate(1.0h-terrainVisibility)*saturate(_TerrainHorizonParams.z)*saturate(_ReceiveShadows);
                 color*=lerp(half3(1,1,1),_TerrainHorizonTint.rgb,tintWeight);
+                color+=albedo*FSLocalFlameDiffuse(IN.positionWS,normalWS);
                 return half4(MixFogColor(color,unity_FogColor.rgb*caveAmbient,IN.fogFactor),1);
             }
 

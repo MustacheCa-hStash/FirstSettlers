@@ -17,7 +17,7 @@ public static class BuildSupportState
         if(!fullBearing)
         {
             while(queue.Count>0)foreach(var id in links[queue.Dequeue()])if(supported.Add(id))queue.Enqueue(id);
-            return supported;
+            Furnishings();return supported;
         }
         var byId=new Dictionary<ulong,BuildPieceRecord>();foreach(var p in pieces)byId.Add(p.Id,p);
         bool added;
@@ -30,7 +30,13 @@ public static class BuildSupportState
                 if(p.Definition.requiresFullBearing && !supported.Contains(p.Id) && FullBearing(p,nearby?.Invoke(p)??pieces,states,supported))
                 {supported.Add(p.Id);queue.Enqueue(p.Id);added=true;}
         }while(added);
-        return supported;
+        Furnishings();return supported;
+        void Furnishings()
+        {
+            foreach(var p in pieces)
+                if(p.Definition.kind==BuildPartKind.Furniture && !supported.Contains(p.Id) &&
+                    BuildFurnishing.Supported(p,nearby?.Invoke(p)??pieces,states,supported))supported.Add(p.Id);
+        }
     }
     private static bool FullBearing(BuildPieceRecord floor,IReadOnlyList<BuildPieceRecord> pieces,Dictionary<ulong,BuildResolvedState> states,HashSet<ulong> supported)
     {

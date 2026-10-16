@@ -4,6 +4,7 @@
 #include "Assets/Shaders/DistantTreeFade.hlsl"
 #include "Assets/Shaders/TreeSeasonSimulation.hlsl"
 #include "Assets/Shaders/TreeNightLighting.hlsl"
+#include "Assets/Shaders/LocalFlameLighting.hlsl"
 
 InputData InitializeTreeSimpleLitInputData(
     float3 positionWS,
@@ -81,7 +82,9 @@ half4 ShadeDistantAwareTree(InputData inputData, SurfaceData surfaceData)
         float fog = ComputeFogFactor(TransformWorldToHClip(inputData.positionWS).z);
         return half4(MixFog(color, fog), surfaceData.alpha);
     }
-    return UniversalFragmentBlinnPhong(inputData, surfaceData);
+    half4 result=UniversalFragmentBlinnPhong(inputData, surfaceData);
+    result.rgb+=surfaceData.albedo*FSLocalFlameDiffuse(inputData.positionWS,inputData.normalWS);
+    return result;
 }
 
 #endif

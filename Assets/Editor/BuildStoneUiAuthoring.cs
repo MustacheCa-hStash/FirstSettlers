@@ -79,13 +79,19 @@ public static class BuildStoneUiAuthoring
         var meshObject=new GameObject("UI thumbnail "+definition.contentId);meshObject.layer=31;
         meshObject.AddComponent<MeshFilter>().sharedMesh=definition.mesh;
         meshObject.AddComponent<MeshRenderer>().sharedMaterial=definition.material;
+        if(definition.flamePrefab!=null)
+        {
+            var flame=Object.Instantiate(definition.flamePrefab,meshObject.transform);
+            foreach(var child in flame.GetComponentsInChildren<Transform>(true))child.gameObject.layer=31;
+        }
         var cameraObject=new GameObject("Thumbnail camera");var camera=cameraObject.AddComponent<Camera>();
         camera.enabled=false;camera.orthographic=true;camera.aspect=4f/3;camera.cullingMask=1<<31;
         camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=Color.clear;
         camera.nearClipPlane=.01f;camera.farClipPlane=40;
         var extra=cameraObject.AddComponent<UniversalAdditionalCameraData>();extra.renderPostProcessing=false;
         var bounds=definition.mesh.bounds;
-        camera.transform.position=bounds.center+new Vector3(5,3.5f,-7).normalized*12;
+        if(definition.flamePrefab!=null)bounds.Encapsulate(new Bounds(new Vector3(0,.94f,.32f),new Vector3(.28f,.45f,.28f)));
+        camera.transform.position=bounds.center+new Vector3(5,3.5f,definition.flamePrefab!=null?7:-7).normalized*12;
         camera.transform.LookAt(bounds.center);
         float xExtent=0,yExtent=0;
         for(int i=0;i<8;i++)
@@ -192,6 +198,15 @@ public static class BuildStoneUiAuthoring
             Require(committed==gable.flipVariant,"Double-click lost staged gable slope");
             view.Filter(5);Draw();int stairsShown=0;foreach(var button in presets)if(button.resolvedStyle.display!=DisplayStyle.None)stairsShown++;
             Require(stairsShown==3,"Stairs filter must include W21/W22/W24");
+            if(source.Find("build.furniture.f01-three-leg-stool")!=null)
+            {
+                view.Filter(7);Draw();int furnitureShown=0;
+                foreach(var button in presets)if(button.resolvedStyle.display!=DisplayStyle.None)furnitureShown++;
+                Require(furnitureShown==6,"Furniture filter must contain exactly F01-F06");
+                var stool=source.Find("build.furniture.f01-three-leg-stool");view.SetSelection(stool);view.ConfirmSelection();
+                Require(committed==stool,"Furniture selection did not reach its catalog definition");Draw();
+                Save(target,$"{Captures}/furniture-{width}x{height}.png");
+            }
             view.SetSelection(gable);view.Filter(0);Draw();
             var menu=root.Q<VisualElement>("build-menu");
             void CheckCentered()

@@ -10,6 +10,7 @@ public struct BuildPreview
     public int WorldYaw;
     public bool Grounded, Valid;
     public bool TopAttachment;
+    public bool InvalidAttachment;
     public bool FitStairContinuation;
     public Vector3Int StairFitNudge;
     public bool RoofContinuesFromBelow;
@@ -32,6 +33,8 @@ public static class BuildPlacement
         BuildGridFrame targetFrame, int worldHeading, int contextTurn, Vector3Int nudge, Vector3? viewerPosition = null,
         bool preferTopAttachment = false)
     {
+        if(definition.kind==BuildPartKind.Furniture || target?.Definition.kind==BuildPartKind.Furniture)
+            return BuildFurnishing.Solve(definition,hit,normal,target,targetFrame,worldHeading,contextTurn,nudge);
         var preview = new BuildPreview { Definition = definition, Hint = "Ground grid" };
         if (target == null)
         {

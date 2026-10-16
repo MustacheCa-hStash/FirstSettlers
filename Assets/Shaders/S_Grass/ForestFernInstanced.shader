@@ -16,6 +16,7 @@ Shader "FirstSettlers/Forest Fern Instanced"
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+        #include "Assets/Shaders/LocalFlameLighting.hlsl"
         CBUFFER_START(UnityPerMaterial)
             half4 _BaseColor;
             half _AmbientStrength, _WindStrength;
@@ -79,6 +80,7 @@ Shader "FirstSettlers/Forest Fern Instanced"
             half3 ambient = max(SampleSH(normal), _AmbientStrength.xxx);
             half3 lighting = ambient + mainLight.color * saturate(dot(normal, mainLight.direction)) *
                 mainLight.distanceAttenuation * mainLight.shadowAttenuation;
+            lighting+=FSLocalFlameDiffuse(input.positionWS,normal);
             return half4(MixFog(texel.rgb * input.color.rgb * lighting,
                 InitializeInputDataFog(float4(input.positionWS,1),input.fog)), texel.a);
         }
@@ -105,7 +107,7 @@ Shader "FirstSettlers/Forest Fern Instanced"
         {
             Name "ForwardLit" Tags { "LightMode"="UniversalForwardOnly" }
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
@@ -122,7 +124,7 @@ Shader "FirstSettlers/Forest Fern Instanced"
             Name "DepthOnly" Tags { "LightMode"="DepthOnly" }
             ColorMask R
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment depth
             #pragma multi_compile_instancing
@@ -134,7 +136,7 @@ Shader "FirstSettlers/Forest Fern Instanced"
         {
             Name "DepthNormals" Tags { "LightMode"="DepthNormalsOnly" }
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment depthNormal
             #pragma multi_compile_instancing

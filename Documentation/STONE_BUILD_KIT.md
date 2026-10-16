@@ -1,5 +1,7 @@
 # S02, S03, S04 and S06: Blender source and building integration
 
+**S02 update:** the installed coursed wall now uses a **12-triangle box with baked colour/AO and normal maps**, replacing its 2,960-triangle stone assembly. See [baked wall implementation, rebuild and verification](BAKED_STONE_WALL.md). The original detailed S02 source is retained for baking; the remaining stone pieces retain their existing geometry.
+
 This page describes the initial four stone components. [S07 and S12](STONE_BOUNDARY_WALLS.md) extend the installed stone kit to six options, with directly terrain-bearing boundary walls and an empty gate opening. The saved world scene is not changed. The dedicated importer preserves existing wooden models/materials and appends or updates the stone definitions.
 
 ## Source and dimensions
@@ -10,7 +12,7 @@ Editable source: [StoneBuildKit.blend](../ArtReferences/StoneBuildKit/Models/Sto
 
 | Component | Unity bounds / anchor | Visible triangles | Construction |
 | --- | --- | --- | --- |
-| S02 coursed stone wall | X=0..4, Y=0..3, Z=−0.25..+0.25 | 2,960 | 67 staggered stones in nine uneven courses, plus recessed packing core |
+| S02 coursed stone wall | X=0..4, Y=0..3, Z=−0.25..+0.25 | 12 | Closed box; nine masonry courses baked from the original 67-stone source |
 | S03 stone pier | X/Z=−0.25..+0.25, Y=0..3 | 716 | Eight courses of paired stones with alternating bond, plus recessed core |
 | S04 flagstone ground floor | X/Z=0..4, Y=−0.25..0; top-surface anchor | 2,168 | 36 irregular convex paving stones over packed bedding; level walking tops |
 | S06 stone wall cap | X=0..4, Y=0..0.25, Z=−0.25..+0.25 | 264 | Six independent broad capstones; not a monolithic stone lintel |
@@ -21,7 +23,7 @@ Blender uses X across, Z up and Y depth. FBXs bake axis conversion into native U
 
 The source uses an exact copy of the approved `Assets/Textures/Rock/Presets/PaintedStone_Albedo.png`, saved as `Assets/Textures/Buildings/Stone/PaintedStone_Albedo.png` so building imports are self-contained. Its source is 1254 × 1254 pixels. This is the joint-free stone-face approach proposed for individually modeled stones. The earlier labelled trim design board remains a design reference, not an applied texture; its printed joints, labels and legend are not used on models.
 
-All parts share one material/submesh, `Assets/Materials/Buildings/Stone/PaintedStone.mat`. It reuses the established matte building shader's day/night, shadow and fog response with the painted stone albedo and white tint. The shader's existing name is `Custom/BuildingWoodMatte`; it contains no wood-specific surface generation. No normal-map relief, gloss or new photographic detail is introduced.
+S03/S04/S06 retain one material/submesh, `Assets/Materials/Buildings/Stone/PaintedStone.mat`, using `Custom/BuildingWoodMatte`. S02 now uses its own `BakedStoneWall.mat` with `Custom/BakedStoneWallMatte`, supporting tangent-space normal maps and ambient occlusion while retaining the established diffuse, day/night, shadow, local flame, cave and fog response. Both material paths remain matte and instanced.
 
 Each stone face, bevel, underside, recessed core face and bedding face has UV0. Planar projection chooses a nondegenerate face plane and uses the same physical UV scale along both projected axes. Deterministic seeds vary crop offset, scale, axis swap and mirroring per stone and face. UVs stay inside the tile with a minimum 3.5% border; texture wrapping is Clamp. No triangle has collapsed UV area. Each component has three exported UV layouts with identical geometry and bounds. Existing position/heading hashing selects a stable layout; removing and replacing neighbours does not reshuffle its appearance.
 
@@ -40,7 +42,7 @@ S03 is optional freestanding masonry bearing. Its three-metre body is not automa
 ## Rebuild and import
 
 1. Run Blender with `--background --factory-startup --python Tools/BuildStoneKit.py` from this repository. The script regenerates its own stone source, reports, twelve FBXs and render previews. Preserve later manual edits before rerunning this generator.
-2. In Unity, choose **Tools → Building → Rebuild S02 S03 S04 S06 Stone Kit**. This links imported FBX subassets directly, preserves stone definition/prefab GUIDs on rebuild and bakes four actual-mesh thumbnails.
+2. Run Blender with `--background --python Tools/BakeStoneWall.py` to regenerate the separate baked S02 exports and atlases. In Unity, choose **Tools → Building → Rebuild S02 S03 S04 S06 Stone Kit**. This selects the baked S02, links imported FBX subassets directly, preserves stone definition/prefab GUIDs on rebuild and bakes four actual-mesh thumbnails. Use **Rebuild Baked S02 Stone Wall** for a wall-only update.
 3. The general **Rebuild Full-Span Modular Kit** pipeline also discovers and includes the stone models. The dedicated stone command is preferable when only these assets need rebuilding because it does not rebuild wooden assets.
 4. Restart Play mode to load the extended catalog. Stone pieces appear under Walls, Posts and Floors; the total option count also includes the installed wooden extensions.
 

@@ -79,7 +79,7 @@ public sealed class DistantTreeManager : IDisposable
     {
         this.treeRegistry = treeRegistry ?? new TreeRegistry(seed, chunkSize * worldScale);
         this.treeRegistry.ChunkChanged += OnChunkChanged;
-        standingTrees = new StandingTreeRenderer(settings);
+        standingTrees = new StandingTreeRenderer(settings,this.treeRegistry);
         this.erosion = erosion.Sanitized();
         this.settings = settings; this.seed = seed; this.chunkSize = chunkSize; this.sampleScale = sampleScale;
         this.octaves = octaves; this.persistence = persistence; this.lacunarity = lacunarity;

@@ -55,7 +55,7 @@ Shader "Custom/OakLeafSimpleLitCutout"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
@@ -252,7 +252,7 @@ Shader "Custom/OakLeafSimpleLitCutout"
             Cull Off
 
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing

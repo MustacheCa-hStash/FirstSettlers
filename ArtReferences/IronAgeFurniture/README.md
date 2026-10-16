@@ -1,6 +1,6 @@
 # Household furnishings: F01–F24 concept catalog
 
-Five illustrated sheets for First Settlers, continuing the ivory paper, ink and gouache treatment of the [wood](../IronAgeWood/README.md) and [stone](../StoneBuildKit/README.md) catalogs. Twenty-four proposed furniture and dressing assets cover seating, sleeping, storage, tableware, textiles and small household details.
+Five illustrated sheets for First Settlers, continuing the ivory paper, ink and gouache treatment of the [wood](../IronAgeWood/README.md) and [stone](../StoneBuildKit/README.md) catalogs. Twenty-four furniture and dressing designs cover seating, sleeping, storage, tableware, textiles and small household details. **F01–F06 are now modeled, UV-mapped, exported to Unity and integrated into the building catalog with icons and furnishing support rules.** See the [implementation guide](../../Documentation/FURNITURE_KIT.md), [editable Blender source](Models/FurnitureKit.blend) and [rendered models](Models/furniture-kit-overview.png).
 
 - [01: Seating, tables and bed](01-seating-tables-and-bed.png) — F01–F06
 - [02: Storage and textiles](02-storage-and-textiles.png) — F07–F12
@@ -10,7 +10,7 @@ Five illustrated sheets for First Settlers, continuing the ivory paper, ink and 
 - [Exact image generation prompts](GENERATION_PROMPTS.md)
 - [Household trim atlas, material proof and UV guide](Textures/README.md) — one new sheet, with existing wood/stone reuse.
 
-These are concept references and a future modeling specification. F## identifiers are design IDs, not registered runtime content IDs. No models, recipes, prefabs, interactions or placement support are implemented by this catalog. The dimensions in this document govern future modeling; painted perspective, tiny arrows, weave counts and assembly arrangements are illustrative.
+The sheets remain concept references. F01–F06 have stable `build.furniture.*` runtime content IDs, authored meshes/prefabs and placement support; F07–F24 remain proposals. Sitting, sleeping, storage and crafting interactions are not implemented. The dimensions in this document govern modeling; painted perspective, tiny arrows, weave counts and assembly arrangements are illustrative.
 
 ## Period and material direction
 

@@ -206,7 +206,7 @@ public sealed class BuildingController : MonoBehaviour
             point = hit.point; normal = hit.normal;
             direct = hit.collider.GetComponentInParent<BuildGameplayProxy>()?.Record;
             if (direct != null && !world.Session.TryGet(direct.Id, out direct)) direct = null;
-            nextTarget = direct ?? (selected.kind!=BuildPartKind.Stair && BuildWorld.IsGround(hit.collider) ? NearbyTarget(hit.point) : null);
+            nextTarget = direct ?? (selected.kind is not (BuildPartKind.Stair or BuildPartKind.Furniture) && BuildWorld.IsGround(hit.collider) ? NearbyTarget(hit.point) : null);
             skyGuide = default;
             // A wall face beside a real corner can hide the narrow post from the centre ray.
             // Resolve that connected joint locally; unrelated solids keep their ordinary priority.
@@ -222,7 +222,7 @@ public sealed class BuildingController : MonoBehaviour
                 skyGuide.Capture(direct, world.Session.Frame(direct.OwnFrameId), hit.normal, ray.origin);
             return true;
         }
-        if (target != null && world.Session.TryGet(target.Id, out _) &&
+        if (target != null && target.Definition.kind!=BuildPartKind.Furniture && world.Session.TryGet(target.Id, out _) &&
             skyGuide.TryContinue(ray, reach, selected.kind == BuildPartKind.Floor ? skyRoofHeight : selected.LocalBounds.size.y,
                 skySideMargin, out point, out normal))
         {
@@ -296,12 +296,13 @@ public sealed class BuildingController : MonoBehaviour
     }
     private BuildPieceRecord NearbyTarget(Vector3 hit)
     {
-        if (target != null && world.Session.TryGet(target.Id, out _) &&
+        if (target != null && target.Definition.kind!=BuildPartKind.Furniture && world.Session.TryGet(target.Id, out _) &&
             BuildGeometry.Distance(target.Definition.LocalBounds, target.Origin, target.WorldYawStep, hit) <= Mathf.Max(acquireMargin, releaseMargin)) return target;
         world.Session.Query(new Bounds(hit, Vector3.one * (acquireMargin * 2)), candidates);
         BuildPieceRecord best = null; float distance = acquireMargin;
         foreach (var piece in candidates)
         {
+            if(piece.Definition.kind==BuildPartKind.Furniture)continue;
             float value = BuildGeometry.Distance(piece.Definition.LocalBounds, piece.Origin, piece.WorldYawStep, hit);
             if (value <= distance) { best = piece; distance = value; }
         }

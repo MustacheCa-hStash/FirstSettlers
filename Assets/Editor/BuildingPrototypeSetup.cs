@@ -66,6 +66,9 @@ public static class BuildingPrototypeSetup
         if(File.Exists(StairExtensionSetup.W22Model))presets.AddRange(StairExtensionSetup.Create());
         if(File.Exists(SquareInfillSetup.Model))presets.Add(SquareInfillSetup.Create(wall));
         if(StoneKitSetup.Available)presets.AddRange(StoneKitSetup.Create());
+        if(FurnitureKitSetup.Available)presets.AddRange(FurnitureKitSetup.Create());
+        var torch=AssetDatabase.LoadAssetAtPath<BuildDefinition>(Folder+"/wall-torch.asset");
+        if(torch!=null)presets.Add(torch);
         catalog.presets = presets.ToArray(); catalog.validPreview = valid; catalog.invalidPreview = invalid;
         catalog.panel = panel; catalog.layout = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(Folder + "/BuildMenu.uxml");
         if (catalog.layout == null || panel.themeStyleSheet == null) throw new InvalidOperationException("Building UI failed to import.");

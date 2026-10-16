@@ -26,6 +26,8 @@ public sealed class BuildCategoryIcon : VisualElement
             case 4: Box(12,3,8,26); Line(new(16,3),new(16,29)); break;
             case 5: Line(new(3,28),new(3,23),new(9,23),new(9,17),new(15,17),new(15,11),new(21,11),new(21,5),new(28,5),new(28,28),new(3,28)); break;
             case 6: Line(new(3,28),new(16,4),new(29,28),new(3,28)); Line(new(16,4),new(16,28)); break;
+            case 7: Box(4,10,24,5); Line(new(7,15),new(7,28)); Line(new(25,15),new(25,28)); Line(new(7,23),new(25,23)); break;
+            case 8: Line(new(14,20),new(14,29),new(18,29),new(18,20)); Line(new(16,3),new(11,11),new(10,16),new(13,20),new(19,20),new(22,16),new(20,10),new(18,14),new(16,3)); break;
         }
     }
 }

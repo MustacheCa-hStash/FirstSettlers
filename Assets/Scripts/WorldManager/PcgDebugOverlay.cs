@@ -121,7 +121,7 @@ public class PcgDebugOverlay : MonoBehaviour
         panel.transform.SetParent(debugCanvas.transform, false);
         RectTransform rect = panel.GetComponent<RectTransform>();
         rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 1f);
-        rect.anchoredPosition = new Vector2(-12f, -12f); rect.sizeDelta = new Vector2(520f, 155f);
+        rect.anchoredPosition = new Vector2(-12f, -12f); rect.sizeDelta = new Vector2(700f, 255f);
         Image image = panel.GetComponent<Image>(); image.color = new Color(0f, 0f, 0f, 0.72f); image.raycastTarget = false;
         GameObject text = new GameObject("Performance Text", typeof(RectTransform)); text.transform.SetParent(panel.transform, false);
         RectTransform textRect = text.GetComponent<RectTransform>(); textRect.anchorMin = Vector2.zero; textRect.anchorMax = Vector2.one;
@@ -139,6 +139,18 @@ public class PcgDebugOverlay : MonoBehaviour
         performanceBuilder.Append("1% low FPS: "); performanceBuilder.AppendLine(frameTimes.Count >= 100 ? low.ToString("0.0") : "warming up");
         performanceBuilder.Append("Sample: "); performanceBuilder.Append(frameTimes.SampleSeconds.ToString("0.0")); performanceBuilder.AppendLine(" s");
         if (worldManager != null) performanceBuilder.AppendLine(worldManager.StreamingBudgetSummary);
+        var flames=LocalFlameLighting.Instance;
+        if(flames!=null)
+        {
+            performanceBuilder.Append("Flame lights ").Append(flames.ActiveLights).Append('/').Append(flames.RegisteredSources)
+                .Append(" · cache refresh ").Append(flames.StaticRefreshes).Append(" · moving ").Append(flames.DynamicRefreshes)
+                .Append(" · pending ").Append(flames.PendingRefreshes).Append(" · coverage ").Append(flames.CoverageSuppressed).AppendLine();
+            performanceBuilder.Append("Flame CPU ").Append(flames.LastCpuMs.ToString("0.000")).Append(" ms · ")
+                .Append(flames.LastAllocatedBytes).Append(" B · shadow draws ").Append(flames.ShadowDraws).AppendLine();
+            performanceBuilder.Append("Surface pages ").Append(flames.SurfaceCache?.ReadyPages??0).Append('/').Append(flames.SurfaceCache?.ResidentPages??0)
+                .Append(" · updates ").Append(flames.SurfaceCache?.UpdatedPages??0).Append(" · GPU cache ")
+                .Append(flames.AllocatedGpuBytes/(1024*1024)).AppendLine(" MiB");
+        }
         performanceBuilder.Append("F7 reset");
         performanceText.text = performanceBuilder.ToString();
     }

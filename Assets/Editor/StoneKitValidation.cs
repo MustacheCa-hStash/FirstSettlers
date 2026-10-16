@@ -34,14 +34,15 @@ public static class StoneKitValidation
     }
     private static void Assets(BuildCatalog catalog)
     {
-        Check(catalog.presets.Length==(catalog.Find(SquareInfillSetup.Id)!=null?13:12)+StoneKitSetup.Ids.Length,"Expected existing wood and all stone menu entries");
+        Check(catalog.presets.Length==(catalog.Find(SquareInfillSetup.Id)!=null?13:12)+StoneKitSetup.Ids.Length+
+            (catalog.Find("build.furniture.f01-three-leg-stool")!=null?6:0)+(catalog.Find("build.lighting.wall-torch")!=null?1:0),"Expected existing wood, stone, optional furniture and lighting menu entries");
         var ids=new HashSet<string>();foreach(var d in catalog.presets)Check(ids.Add(d.contentId),"Duplicate catalog ID");
         foreach(var id in StoneKitSetup.Ids)
         {
             var d=catalog.Find(id);Check(d!=null,"Missing "+id);Check(d.preserveAuthoredMesh,"Stone mesh can be replaced by timber fitting");
             Check(d.uvVariants.Length==3 && d.mesh==d.uvVariants[0],"Three UV layouts not linked");
             Check(d.jointCoverVariants.Length==0,"Stone gained automatic timber posts");
-            Check(d.material.shader.name=="Custom/BuildingWoodMatte" && d.material.mainTexture!=null,"Missing matte UV material");
+            Check(d.material.shader.name==(id==StoneKitSetup.Ids[0]?"Custom/BakedStoneWallMatte":"Custom/BuildingWoodMatte") && d.material.mainTexture!=null,"Missing matte UV material");
             var prefab=d.authoringPrefab;Check(prefab!=null,"Missing authoring prefab");
             Check(prefab.GetComponent<MeshFilter>().sharedMesh==d.mesh,"Prefab mesh mismatch");
             var solids=d.solidBoxes.Length>0?d.solidBoxes:new[]{d.LocalBounds};var colliders=prefab.GetComponents<BoxCollider>();
@@ -52,6 +53,12 @@ public static class StoneKitValidation
             for(int variation=0;variation<3;variation++)
             {
                 Mesh mesh=d.uvVariants[variation];Check(!mesh.isReadable && mesh.subMeshCount==1,"Import must be one non-readable static submesh");
+                if(id==StoneKitSetup.Ids[0])
+                {
+                    Check(mesh.GetIndexCount(0)==36,"S02 must remain a 12-triangle box");
+                    Check(mesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.Tangent),"Baked S02 requires tangent-space normals");
+                    Check(d.material.GetTexture("_BumpMap")!=null && d.material.enableInstancing,"S02 lost normal atlas or instancing");
+                }
                 Near(mesh.bounds.min,d.LocalBounds.min,"Export min");Near(mesh.bounds.max,d.LocalBounds.max,"Export max");
                 using var data=MeshUtility.AcquireReadOnlyMeshData(mesh);var source=data[0];
                 using var vertices=new NativeArray<Vector3>(source.vertexCount,Allocator.Temp);

@@ -6,6 +6,7 @@ public static class BuildPlacementPolicy
     public static bool IsDuplicate(BuildPieceRecord a,BuildPieceRecord b)
     {
         if(a.Definition.kind!=b.Definition.kind)return false;
+        if(a.Definition.kind==BuildPartKind.Furniture && a.Definition.contentId!=b.Definition.contentId)return false;
         if(a.Definition.IsHalfGable || b.Definition.IsHalfGable)
         {
             if(!a.Definition.IsHalfGable || !b.Definition.IsHalfGable)return false;
@@ -14,7 +15,7 @@ public static class BuildPlacementPolicy
             if((ap-bp).sqrMagnitude>.000144f)return false;
         }
         int turn=BuildGeometry.Turn(a.WorldYawStep-b.WorldYawStep);
-        bool sameShapeHeading=a.Definition.kind is BuildPartKind.Stair or BuildPartKind.Roof ? turn==0 :
+        bool sameShapeHeading=a.Definition.kind is BuildPartKind.Stair or BuildPartKind.Roof or BuildPartKind.Furniture ? turn==0 :
             a.Definition.kind==BuildPartKind.Wall ? turn%4==0 : turn%2==0;
         if(!sameShapeHeading)return false;
         Bounds ab=BuildGeometry.WorldBounds(a.Definition.LocalBounds,a.Origin,a.WorldYawStep);

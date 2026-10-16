@@ -36,7 +36,7 @@ Shader "Custom/TreeBillboardInstancedSimpleLit"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma target 4.5 PROCEDURAL_INSTANCING_ON
             #pragma vertex vert
             #pragma fragment frag
@@ -165,7 +165,7 @@ Shader "Custom/TreeBillboardInstancedSimpleLit"
             Cull Off
 
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing

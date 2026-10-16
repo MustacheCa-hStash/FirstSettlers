@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: f01-three-leg-stool
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.furniture.f01-three-leg-stool
+  displayName: Three-leg stool
+  kind: 7
+  wallPlacementMode: 0
+  sizeUnits: {x: 2, y: 2, z: 2}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: -0.25, y: 0, z: -0.25}
+  jointSockets: []
+  stackRiseUnits: 0
+  wallEndInsetUnits: 1
+  mesh: {fileID: 4585346950390831912, guid: 6cacbd5238a8d7940b720691e1d82822, type: 3}
+  preserveAuthoredMesh: 1
+  requiresFullBearing: 0
+  canGroundOnTerrain: 1
+  furnitureWallMounted: 0
+  furnitureSupportPoints:
+  - {x: -0.214, y: 0, z: -0.214}
+  - {x: 0.214, y: 0, z: -0.214}
+  - {x: 0, y: 0, z: 0.214}
+  solidBoxes:
+  - m_Center: {x: 0, y: 0.47, z: 0}
+    m_Extent: {x: 0.23, y: 0.03, z: 0.21}
+  - m_Center: {x: -0.167, y: 0.22, z: -0.157}
+    m_Extent: {x: 0.083, y: 0.22, z: 0.093}
+  - m_Center: {x: 0.167, y: 0.22, z: -0.157}
+    m_Extent: {x: 0.083, y: 0.22, z: 0.093}
+  - m_Center: {x: 0, y: 0.22, z: 0.167}
+    m_Extent: {x: 0.036, y: 0.22, z: 0.083}
+  wallOpenings: []
+  gableSlope: 0
+  flipVariant: {fileID: 0}
+  gableRoofSeamMesh: {fileID: 0}
+  uvVariants: []
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes: []
+  roofAttachment: 0
+  material: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
+  authoringPrefab: {fileID: 975256582563804888, guid: 4c7afc40bb70f2649b29e4d7a0070370, type: 3}
+  maxHealth: 100

@@ -35,6 +35,7 @@ Shader "Custom/WeatheredRock"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
         // Reuse the existing sun-cycle ambient-floor dimming, without any tree deformation/fade.
         #include "Assets/Shaders/TreeNightLighting.hlsl"
+        #include "Assets/Shaders/LocalFlameLighting.hlsl"
 
         TEXTURE2D(_BaseMap);
         SAMPLER(sampler_BaseMap);
@@ -159,7 +160,7 @@ Shader "Custom/WeatheredRock"
             Tags { "LightMode" = "UniversalForwardOnly" }
 
             HLSLPROGRAM
-            #pragma target 3.5
+            #pragma target 4.5
             #pragma vertex WoodVertex
             #pragma fragment WoodFragment
             #pragma multi_compile_instancing
@@ -230,6 +231,7 @@ Shader "Custom/WeatheredRock"
                 half shadowSide = 1.0h - saturate(dot(normalWS, mainLight.direction));
                 half shadowTint = max(shadowSide, (1.0h - mainLight.shadowAttenuation) * _ShadowStrength) * _ShadowTintStrength;
                 half3 color = albedo * lighting * lerp(half3(1, 1, 1), _ShadowTint.rgb, shadowTint);
+                color += albedo * FSLocalFlameDiffuse(input.positionWS,normalWS);
                 // Diffuse only: no view-dependent specular, metallic or reflection-probe contribution.
                 return half4(MixFog(color, input.fogAndVertexLight.x), 1.0h);
             }
@@ -244,7 +246,7 @@ Shader "Custom/WeatheredRock"
             ColorMask 0
 
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex WoodShadowVertex
             #pragma fragment WoodDepthFragment
             #pragma multi_compile_instancing
@@ -294,7 +296,7 @@ Shader "Custom/WeatheredRock"
             Tags { "LightMode" = "DepthOnly" }
             ColorMask 0
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex WoodVertex
             #pragma fragment WoodDepthFragment
             #pragma multi_compile_instancing
@@ -313,7 +315,7 @@ Shader "Custom/WeatheredRock"
             Name "DepthNormals"
             Tags { "LightMode" = "DepthNormalsOnly" }
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex WoodVertex
             #pragma fragment WoodDepthNormalsFragment
             #pragma multi_compile_instancing

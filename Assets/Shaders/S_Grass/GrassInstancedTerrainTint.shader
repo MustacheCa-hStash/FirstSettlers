@@ -70,7 +70,7 @@ Shader "Custom/GrassInstancedTerrainTint"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma target 4.5 PROCEDURAL_INSTANCING_ON
             #pragma vertex vert
             #pragma fragment frag
@@ -82,6 +82,7 @@ Shader "Custom/GrassInstancedTerrainTint"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Shaders/LocalFlameLighting.hlsl"
             #include "Assets/Shaders/GrassIndirectInstance.hlsl"
 
             TEXTURE2D(_BaseMap);
@@ -275,6 +276,7 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half ndotl = saturate(dot(normalWS, mainLight.direction));
                 half3 ambient = max(SampleSH(normalWS), _AmbientStrength.xxx);
                 half3 lighting = ambient + mainLight.color * (0.35h + ndotl * 0.65h) * shadowAttenuation;
+                lighting+=FSLocalFlameDiffuse(IN.positionWS,normalWS);
 
                 half3 color = grassTint * bladeTone * _BaseColor.rgb * _Color.rgb * lighting;
                 return half4(color, baseSample.a * _BaseColor.a * _Color.a);

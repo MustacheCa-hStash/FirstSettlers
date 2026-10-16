@@ -18,6 +18,7 @@ public static class BuildResolvedGeometry
     }
     public static bool Connects(BuildPieceRecord a,BuildResolvedState sa,BuildPieceRecord b,BuildResolvedState sb)
     {
+        if(a.Definition.kind==BuildPartKind.Furniture || b.Definition.kind==BuildPartKind.Furniture)return false;
         if(a.Definition.kind==BuildPartKind.Stair)return BuildStairAttachment.Connects(a,b,sb);
         if(b.Definition.kind==BuildPartKind.Stair)return BuildStairAttachment.Connects(b,a,sa);
         if(a.Definition.kind==BuildPartKind.Handrail || b.Definition.kind==BuildPartKind.Handrail)return false;

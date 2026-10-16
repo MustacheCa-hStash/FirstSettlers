@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>Shared prefab render definitions and reusable instanced draws. Never creates tree GameObjects.</summary>
-public sealed class StandingTreeRenderer : IDisposable
+public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProvider
 {
     // Match the existing foliage submission API; keep batches below its 1023-instance limit.
     private const int Capacity = 500;
@@ -34,14 +34,37 @@ public sealed class StandingTreeRenderer : IDisposable
     private readonly Dictionary<Mesh, Mesh> meshes = new();
     private readonly List<Batch> batches = new(), touched = new();
     private Camera camera;
+    private readonly TreeRegistry flameRegistry;
+    private readonly List<TreeRecord> flameTrees=new();
     public RenderGeometryStats RenderStats { get; private set; }
     public int DrawCalls { get; private set; }
 
-    public StandingTreeRenderer(TreeSettings settings)
+    public StandingTreeRenderer(TreeSettings settings,TreeRegistry registry=null)
     {
         this.settings = settings;
+        flameRegistry=registry;
+        if(registry!=null){registry.ChunkChanged+=FlameChunkChanged;LocalFlameGeometry.RegisterProvider(this);}
         foreach (var species in TreeSpeciesCatalog.All)
             Add(species.Variant, species.NearPrefab(settings));
+    }
+    private void FlameChunkChanged(ChunkCoord coord)
+    {
+        float size=flameRegistry.ChunkWorldSize;
+        LocalFlameGeometry.NotifyChanged(new Bounds(new Vector3((coord.x+.5f)*size,0,(coord.z+.5f)*size),new Vector3(size+90,10000000,size+90)));
+    }
+    public void CollectFlameGeometry(Vector3 position,float range,List<LocalFlameGeometry.Part> output)
+    {
+        flameTrees.Clear();flameRegistry.CollectOriginsInRadiusXZ(position,range+45,flameTrees);
+        foreach(var tree in flameTrees)
+        {
+            if(tree.State!=TreeState.Standing || !variants.TryGetValue(tree.Placement.variant,out var definition))continue;
+            var matrix=Matrix4x4.TRS(tree.WorldPosition,tree.Placement.localRotation,tree.Placement.localScale);
+            foreach(var part in definition.Levels[0])
+            {
+                var b=part.Batch;var geometry=new LocalFlameGeometry.Part(b.Mesh,matrix*part.Local,b.Material,b.Submesh);
+                if(geometry.Bounds.SqrDistance(position)<=range*range)output.Add(geometry);
+            }
+        }
     }
 
     private void Add(WorldFeatureVariant variant, GameObject prefab)
@@ -212,6 +235,7 @@ public sealed class StandingTreeRenderer : IDisposable
 
     public void Dispose()
     {
+        if(flameRegistry!=null){flameRegistry.ChunkChanged-=FlameChunkChanged;LocalFlameGeometry.RemoveProvider(this);}
         foreach (var material in materials.Values) DestroyOwned(material);
         foreach (var mesh in meshes.Values) DestroyOwned(mesh);
         materials.Clear(); meshes.Clear(); variants.Clear(); definitions.Clear(); batches.Clear(); touched.Clear();

@@ -42,6 +42,9 @@ public sealed class RockWorldRenderer : IDisposable
     {
         if(!sets.Add(set))return;
         ResidentInstances+=set.InstanceCount;
+        var flameParts=new List<LocalFlameGeometry.Part>(set.Visuals.Count);
+        foreach(var visual in set.Visuals)flameParts.Add(new(visual.Mesh,visual.Matrix,visual.Material,visual.Submesh));
+        LocalFlameGeometry.Set(set,flameParts);
         foreach(var visual in set.Visuals)
         {
             Add(set,visual,visual.Mesh);
@@ -62,6 +65,7 @@ public sealed class RockWorldRenderer : IDisposable
     public void Unregister(RockRenderSet set)
     {
         if(set==null || !sets.Remove(set))return;
+        LocalFlameGeometry.Remove(set);
         ResidentInstances-=set.InstanceCount;
         foreach(var group in groups.Values)
             for(int i=group.Sources.Count-1;i>=0;i--)if(group.Sources[i].Set==set)group.Sources.RemoveAt(i);
@@ -112,5 +116,5 @@ public sealed class RockWorldRenderer : IDisposable
         if(visible)VisibleGeometry=stats;else ShadowGeometry=stats;
         submission.Count=0;
     }
-    public void Dispose(){groups.Clear();sets.Clear();ResidentInstances=0;}
+    public void Dispose(){foreach(var set in sets)LocalFlameGeometry.Remove(set);groups.Clear();sets.Clear();ResidentInstances=0;}
 }

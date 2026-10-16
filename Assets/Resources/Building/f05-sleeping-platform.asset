@@ -1,0 +1,70 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: f05-sleeping-platform
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.furniture.f05-sleeping-platform
+  displayName: Sleeping platform
+  kind: 7
+  wallPlacementMode: 0
+  sizeUnits: {x: 8, y: 2, z: 4}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: -1, y: 0, z: -0.5}
+  jointSockets: []
+  stackRiseUnits: 0
+  wallEndInsetUnits: 1
+  mesh: {fileID: 8396987974066166419, guid: d2a251b515c3de2409dbbf405300c968, type: 3}
+  preserveAuthoredMesh: 1
+  requiresFullBearing: 0
+  canGroundOnTerrain: 1
+  furnitureWallMounted: 0
+  furnitureSupportPoints:
+  - {x: -0.95, y: 0, z: -0.475}
+  - {x: -0.95, y: 0, z: 0.475}
+  - {x: 0.95, y: 0, z: -0.475}
+  - {x: 0.95, y: 0, z: 0.475}
+  solidBoxes:
+  - m_Center: {x: 0, y: 0.465, z: 0}
+    m_Extent: {x: 0.9, y: 0.021, z: 0.45}
+  - m_Center: {x: -0.95, y: 0.25, z: -0.475}
+    m_Extent: {x: 0.05, y: 0.25, z: 0.025}
+  - m_Center: {x: -0.95, y: 0.25, z: 0.475}
+    m_Extent: {x: 0.05, y: 0.25, z: 0.025}
+  - m_Center: {x: 0.95, y: 0.25, z: -0.475}
+    m_Extent: {x: 0.05, y: 0.25, z: 0.025}
+  - m_Center: {x: 0.95, y: 0.25, z: 0.475}
+    m_Extent: {x: 0.05, y: 0.25, z: 0.025}
+  - m_Center: {x: 0, y: 0.42, z: -0.475}
+    m_Extent: {x: 0.9, y: 0.06, z: 0.025}
+  - m_Center: {x: 0, y: 0.42, z: 0.475}
+    m_Extent: {x: 0.9, y: 0.06, z: 0.025}
+  - m_Center: {x: -0.95, y: 0.42, z: 0}
+    m_Extent: {x: 0.05, y: 0.06, z: 0.45}
+  - m_Center: {x: 0.95, y: 0.42, z: 0}
+    m_Extent: {x: 0.05, y: 0.06, z: 0.45}
+  wallOpenings: []
+  gableSlope: 0
+  flipVariant: {fileID: 0}
+  gableRoofSeamMesh: {fileID: 0}
+  uvVariants: []
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes: []
+  roofAttachment: 0
+  material: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
+  authoringPrefab: {fileID: 1079229707164914805, guid: 37b8002922ef0a54888e77b7cdb502f1, type: 3}
+  maxHealth: 100

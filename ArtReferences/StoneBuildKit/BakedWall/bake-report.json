@@ -1,0 +1,60 @@
+{
+  "source": "ArtReferences\\StoneBuildKit\\Models\\StoneBuildKit.blend",
+  "sourceSHA256": "33a776cd6e5297fae15d97a13047a51f7a6699e3bc675b575be8bc02f8b5f21e",
+  "sourceTriangles": 2960,
+  "runtimeTriangles": 12,
+  "closedBox": true,
+  "boundsMetres": [
+    4,
+    3,
+    0.5
+  ],
+  "atlasSize": 2048,
+  "pixelsPerMetre": 232,
+  "colour": "unlit diffuse RGB, ambient occlusion in alpha",
+  "normals": "tangent-space +Y",
+  "uvVariants": 3,
+  "atlasRectsPixels": {
+    "front": [
+      80,
+      1120,
+      928,
+      696
+    ],
+    "back": [
+      1040,
+      1120,
+      928,
+      696
+    ],
+    "top": [
+      80,
+      880,
+      928,
+      116
+    ],
+    "bottom": [
+      1040,
+      880,
+      928,
+      116
+    ],
+    "left": [
+      80,
+      80,
+      116,
+      696
+    ],
+    "right": [
+      240,
+      80,
+      116,
+      696
+    ]
+  },
+  "exports": [
+    "Assets\\Models\\Buildings\\Stone\\S02_BakedCoursedWall_4x3x0.50.fbx",
+    "Assets\\Models\\Buildings\\Stone\\S02_BakedCoursedWall_4x3x0.50_UV1.fbx",
+    "Assets\\Models\\Buildings\\Stone\\S02_BakedCoursedWall_4x3x0.50_UV2.fbx"
+  ]
+}

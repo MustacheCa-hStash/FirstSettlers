@@ -1,10 +1,10 @@
-param([switch]$PrepareOnly, [switch]$CompileOnly, [switch]$Render, [switch]$InputChecks, [switch]$ShadowChecks, [switch]$WattleChecks, [switch]$PreviewChecks, [switch]$StairChecks, [switch]$RoofChecks, [switch]$FramingChecks, [switch]$ColliderDebugChecks, [switch]$IntersectionChecks, [switch]$ModularChecks, [switch]$InstalledAssets, [switch]$UiChecks, [switch]$UiAssets, [switch]$StairUiAssets, [switch]$InventoryChecks, [switch]$InventoryInputChecks, [switch]$StoneChecks, [switch]$SquareInfillAssets, [ValidatePattern('^[a-z0-9-]+$')][string]$Workspace='building-prototype')
+param([switch]$PrepareOnly, [switch]$CompileOnly, [switch]$Render, [switch]$InputChecks, [switch]$ShadowChecks, [switch]$WattleChecks, [switch]$PreviewChecks, [switch]$StairChecks, [switch]$RoofChecks, [switch]$FramingChecks, [switch]$ColliderDebugChecks, [switch]$IntersectionChecks, [switch]$ModularChecks, [switch]$InstalledAssets, [switch]$UiChecks, [switch]$UiAssets, [switch]$StairUiAssets, [switch]$InventoryChecks, [switch]$InventoryInputChecks, [switch]$StoneChecks, [switch]$BakedStoneWallChecks, [switch]$SquareInfillAssets, [ValidatePattern('^[a-z0-9-]+$')][string]$Workspace='building-prototype')
 $ErrorActionPreference = 'Stop'
 if ($StairUiAssets) { $UiChecks = $true }
 if ($InstalledAssets) { $ModularChecks = $true }
 # Full-span assets supersede legacy dimensional fixtures. Keep native input validation separate.
 if (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'Assets/Models/Buildings/Wood/Modular/SplitPlankWall_4.00Wx3.00Hx0.25D.fbx')) {
-    if (-not $PrepareOnly -and -not $CompileOnly -and -not $InputChecks -and -not $UiChecks -and -not $UiAssets -and -not $InventoryChecks -and -not $InventoryInputChecks -and -not $StoneChecks) { $ModularChecks = $true }
+    if (-not $PrepareOnly -and -not $CompileOnly -and -not $InputChecks -and -not $UiChecks -and -not $UiAssets -and -not $InventoryChecks -and -not $InventoryInputChecks -and -not $StoneChecks -and -not $BakedStoneWallChecks) { $ModularChecks = $true }
 }
 $buildingRoot = Split-Path -Parent $PSScriptRoot
 $buildingWorkRelative = '.utmp/' + $Workspace
@@ -65,8 +65,10 @@ try {
     $buildingOwned += @(Get-Item 'Assets/Scripts/PlayerMovement/SmoothWalkSurface.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/BuildStoneUiAuthoring.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/StoneKitSetup.cs','Assets/Editor/StoneKitValidation.cs')
+    $buildingOwned += @(Get-Item 'Assets/Editor/BakedStoneWallSetup.cs','Assets/Editor/BakedStoneWallValidation.cs','Assets/Shaders/BakedStoneWallMatte.shader')
     $buildingOwned += @(Get-Item 'Assets/Shaders/TerrainSkyAccess.hlsl')
     $buildingOwned += @(Get-Item 'Assets/Editor/WoodSurfaceSetup.cs')
+    $buildingOwned += @(Get-Item 'Assets/Editor/FurnitureKitSetup.cs','Assets/Editor/FurnitureKitValidation.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/InventoryUiValidation.cs')
     $buildingOwned += @(Get-Item 'Assets/Scripts/UI/LocalPlayerMenus.cs','Assets/Scripts/UI/InventoryView.cs')
     $buildingOwned += @(Get-ChildItem 'Assets/Resources/Inventory' -File -Recurse | Where-Object { $_.Extension -ne '.meta' })
@@ -83,10 +85,14 @@ try {
     }
     New-Item -ItemType Directory -Path "$buildingProject/Assets/Editor","$buildingProject/Assets/Resources","$buildingProject/Packages","$buildingProject/ProjectSettings" -Force | Out-Null
     Copy-Item -LiteralPath 'Assets/Scripts' -Destination "$buildingProject/Assets" -Recurse -Force
-    if ($Render -or $ShadowChecks -or $WattleChecks -or $PreviewChecks -or $RoofChecks -or $FramingChecks -or $ColliderDebugChecks -or $IntersectionChecks -or $ModularChecks -or $UiChecks -or $UiAssets -or $StoneChecks) { Copy-Item -LiteralPath 'Assets/Settings' -Destination "$buildingProject/Assets" -Recurse -Force }
+    if ($Render -or $ShadowChecks -or $WattleChecks -or $PreviewChecks -or $RoofChecks -or $FramingChecks -or $ColliderDebugChecks -or $IntersectionChecks -or $ModularChecks -or $UiChecks -or $UiAssets -or $StoneChecks -or $BakedStoneWallChecks) { Copy-Item -LiteralPath 'Assets/Settings' -Destination "$buildingProject/Assets" -Recurse -Force }
     Copy-Item -LiteralPath 'Assets/Scripts.meta' -Destination "$buildingProject/Assets" -ErrorAction SilentlyContinue
     Copy-Item -LiteralPath 'Assets/Resources/Building' -Destination "$buildingProject/Assets/Resources" -Recurse -Force
     Copy-Item -LiteralPath 'Assets/Resources/Building.meta' -Destination "$buildingProject/Assets/Resources" -Force
+    if (Test-Path -LiteralPath 'Assets/Resources/Lighting') {
+        Copy-Item -LiteralPath 'Assets/Resources/Lighting' -Destination "$buildingProject/Assets/Resources" -Recurse -Force
+        if (Test-Path -LiteralPath 'Assets/Resources/Lighting.meta') { Copy-Item -LiteralPath 'Assets/Resources/Lighting.meta' -Destination "$buildingProject/Assets/Resources" -Force }
+    }
     Copy-Item -LiteralPath 'Assets/Resources/Inventory' -Destination "$buildingProject/Assets/Resources" -Recurse -Force
     Copy-Item -LiteralPath 'Assets/Resources/Inventory.meta' -Destination "$buildingProject/Assets/Resources" -Force
     # Authored wall dependencies must be present for both logical and render checks.
@@ -100,16 +106,20 @@ try {
         }
     }
     New-Item -ItemType Directory -Path "$buildingProject/Assets/Shaders" -Force | Out-Null
-    foreach ($buildingShaderFile in 'BuildingWoodMatte.shader','TreeNightLighting.hlsl','TerrainSkyAccess.hlsl','WattleValidationDepthReveal.shader') {
+    foreach ($buildingShaderFile in 'BuildingWoodMatte.shader','BakedStoneWallMatte.shader','TreeNightLighting.hlsl','TerrainSkyAccess.hlsl','LocalFlameLighting.hlsl','WattleValidationDepthReveal.shader') {
         Copy-Item -LiteralPath "Assets/Shaders/$buildingShaderFile","Assets/Shaders/$buildingShaderFile.meta" -Destination "$buildingProject/Assets/Shaders" -Force
     }
     foreach ($buildingName in 'BuildingPrototypeSetup','BuildingPrototypeValidation','BuildingPrototypeRenderValidation','BuildingPrototypeInputValidation','SplitPlankWallSetup','WattleWallSetup','WattleWallValidation','BuildingShadowValidation','BayPostSetup','W21StairSetup','W21StairValidation','ThatchRoofSetup','ThatchRoofValidation','FloorFramingSetup','BuildCollisionAuthoring','BuildFramingValidation','BuildColliderDebugValidation','BuildIntersectionRegressionValidation','ModularWoodSetup','ModularWoodValidation') {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
     }
-    foreach ($buildingName in 'OpeningWallSetup','OpeningWallValidation','StairExtensionSetup','StairExtensionValidation','StoneKitSetup','StoneKitValidation','SquareInfillSetup','SquareInfillValidation','WoodSurfaceSetup') {
+    foreach ($buildingName in 'OpeningWallSetup','OpeningWallValidation','StairExtensionSetup','StairExtensionValidation','StoneKitSetup','StoneKitValidation','BakedStoneWallSetup','BakedStoneWallValidation','SquareInfillSetup','SquareInfillValidation','WoodSurfaceSetup','FurnitureKitSetup','FurnitureKitValidation') {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
     }
     Copy-Item -LiteralPath 'Assets/Editor/BuildStoneUiAuthoring.cs','Assets/Editor/BuildStoneUiAuthoring.cs.meta' -Destination "$buildingProject/Assets/Editor" -Force
+    if (Test-Path -LiteralPath 'ArtReferences/IronAgeFurniture/Models/furniture-models.json') {
+        New-Item -ItemType Directory -Path "$buildingProject/ArtReferences/IronAgeFurniture/Models" -Force | Out-Null
+        Copy-Item -LiteralPath 'ArtReferences/IronAgeFurniture/Models/furniture-models.json' -Destination "$buildingProject/ArtReferences/IronAgeFurniture/Models" -Force
+    }
     Copy-Item -LiteralPath 'Assets/Editor/InventoryUiValidation.cs','Assets/Editor/InventoryUiValidation.cs.meta' -Destination "$buildingProject/Assets/Editor" -Force
     foreach ($buildingName in 'ProjectVersion.txt','TagManager.asset','ProjectSettings.asset') {
         Copy-Item -LiteralPath "ProjectSettings/$buildingName" -Destination "$buildingProject/ProjectSettings" -Force
@@ -138,8 +148,13 @@ try {
     $buildingArgs = @('-batchmode','-projectPath',('"'+$buildingProject+'"'),'-executeMethod',$buildingMethod,'-logFile',('"'+$buildingLog+'"'))
     if ($InstalledAssets) { $buildingArgs[4] = 'ModularWoodValidation.RunInstalledBatch' }
     if ($StoneChecks) { $buildingArgs[4] = if ($InstalledAssets) { 'StoneKitValidation.RunInstalledBatch' } else { 'StoneKitValidation.RunBatch' }; $buildingLog = Join-Path $buildingWork 'stone-kit.log'; $buildingArgs[6] = '"'+$buildingLog+'"' }
+    if ($BakedStoneWallChecks) {
+        $buildingArgs[4] = if ($InstalledAssets) { 'BakedStoneWallValidation.RunInstalledBatch' } else { 'BakedStoneWallValidation.InstallAndRunBatch' }
+        $buildingLog = Join-Path $buildingWork 'baked-stone-wall.log'
+        $buildingArgs[6] = '"'+$buildingLog+'"'
+    }
     if ($SquareInfillAssets) { $buildingArgs[4] = 'SquareInfillSetup.InstallBatch' }
-    if (-not $Render -and -not $ShadowChecks -and -not $WattleChecks -and -not $PreviewChecks -and -not $RoofChecks -and -not $FramingChecks -and -not $ColliderDebugChecks -and -not $IntersectionChecks -and -not $ModularChecks -and -not $UiChecks -and -not $UiAssets -and -not $InventoryChecks -and -not $InventoryInputChecks -and -not $StoneChecks) { $buildingArgs += '-nographics' }
+    if (-not $Render -and -not $ShadowChecks -and -not $WattleChecks -and -not $PreviewChecks -and -not $RoofChecks -and -not $FramingChecks -and -not $ColliderDebugChecks -and -not $IntersectionChecks -and -not $ModularChecks -and -not $UiChecks -and -not $UiAssets -and -not $InventoryChecks -and -not $InventoryInputChecks -and -not $StoneChecks -and -not $BakedStoneWallChecks) { $buildingArgs += '-nographics' }
     $buildingProcess = Start-Process -FilePath "$buildingEditor/Unity.exe" -ArgumentList $buildingArgs -WindowStyle Hidden -PassThru
     Write-Output "Isolated Unity validation PID $($buildingProcess.Id); log $buildingLog"
     $buildingProcess.Id | Set-Content (Join-Path $buildingWork 'validation-pid.txt')

@@ -1,5 +1,19 @@
 # FirstSettlers Work Notes
 
+## October 16: adaptive surface lighting and mounted torch
+
+Added bounded local flame lighting with cached surface irradiance, spatial light lists, separate moving-occluder shadows, local invalidation and queued refreshes. The revised torch has a 12 m cutoff, wider useful illumination, up to 64 illuminating sources and effects eligible within 96 m. Surface caching was implemented and benchmarked, and remains opt-in because it did not consistently outperform spatial direct lighting. Moving/cheap cases retain live lighting. The grazing shadow-band comparison now uses actual texel centres. **B → Lighting → Mounted torch** places the new fibre-bound torch/wooden holder; **T** equips the development carried variant. A shared 36-frame flame atlas supplies visible fire and mild matching flicker. Restart Play mode after import.
+
+The original eight-light CPU baseline is historical. The new standalone comparison covers 8/32/64 torches in a hall and cave, including forced/adaptive surface caching, spatial direct lighting and native URP. The default raw texture payload is 102 MiB; enabling the experimental surface cache adds approximately 24 MiB. See [the surface-cache trial and comparison](Documentation/LOCAL_FLAME_SURFACE_CACHE.md). See [implementation, controls, evidence and limits](Documentation/LOCAL_FLAME_LIGHTING.md) and [the editable torch model](ArtReferences/Torch/README.md).
+
+## October 16: F01–F06 furniture in the building catalog
+
+Added the first six household pieces: three-leg stool, plank bench, pegged table, low work table, sleeping platform and wall shelf. Editable Blender source, complete wood/cord UVs, six FBXs, prefabs and rendered icons are installed under a new Furniture category. Furniture receives per-foot or rear-wall support without carrying structural loads; compound collision keeps space beneath tables/seats open. Compilation and 13,115 isolated asset/UI/runtime checks passed, including 320 floor/rotation cases and four menu resolutions. Existing modular-wood and stone regressions also passed. See the [furniture implementation guide](Documentation/FURNITURE_KIT.md). Restart Play Mode after import to load the updated catalog.
+
+## October 16: directional light under cave roofs
+
+Fixed residual sun/moon light on underground floors and sun-facing building faces. The day/night controller's deliberately weak outdoor shadows left direct light in fully occluded caves after ambient was dimmed. Terrain and wood/stone shaders now recover full geometric shadow occlusion underground, preserving outdoor artistic shadows and actual direct light through entrances. This reuses the existing field and shadow map, with no new tracing or memory allocation. See [cause, limits and regression coverage](Documentation/TERRAIN_SKY_ACCESS.md#directional-cave-lighting-fix).
+
 ## October 16: cached cave sky access
 
 Added a sparse **2 m** sky-access field for terrain and shared wood/stone building ambient, with live cave-brightness and entrance-response controls in `Assets/Resources/TerrainSculpting/CaveLighting.asset`. Lighting uses shared worker admission, revision-safe background tracing, bounded nearest-tile residency and a 24 MiB reservation inside the existing 128 MiB derived cap. Day/night lighting reuses visibility; fog follows cave attenuation. Point-light dynamics remain deferred. See [settings, cache behavior and validation](Documentation/TERRAIN_SKY_ACCESS.md).

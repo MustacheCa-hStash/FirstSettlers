@@ -127,3 +127,9 @@ public interface ITerrainMovementGuard
 {
     bool CanMove(double3 from, double3 to, double radius, double height);
 }
+
+/// <summary>Lighting needs published render geometry, independently of player collision residency.</summary>
+public interface ITerrainLightGuard
+{
+    bool CanIlluminate(double3 center,double radius);
+}

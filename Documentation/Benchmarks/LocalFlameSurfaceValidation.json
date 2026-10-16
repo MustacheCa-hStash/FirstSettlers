@@ -1,0 +1,8 @@
+{
+    "checks": 45,
+    "readyPages": 4,
+    "directCacheError": 0.007525523503621419,
+    "grazingRelativeError": 0.0003270336417415164,
+    "shadowBytes": 106954752,
+    "surfaceBytes": 25120000
+}

@@ -59,7 +59,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
@@ -69,6 +69,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Shaders/LocalFlameLighting.hlsl"
             #include "Assets/Shaders/DistantTreeFade.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
 
@@ -297,6 +298,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 inputData.normalWS = normalize(lerp(litNormal, half3(0.0h, 1.0h, 0.0h), snowBlend * 0.65h));
                 SurfaceData surfaceData = InitializeSpruceLeafSurfaceData(albedo, alpha);
                 half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
+                color.rgb+=surfaceData.albedo*FSLocalFlameDiffuse(inputData.positionWS,inputData.normalWS);
                 Light mainLight = GetMainLight(inputData.shadowCoord);
                 half backlight = pow(saturate(dot(-inputData.normalWS, mainLight.direction)), _BacklightPower);
                 backlight *= _BacklightStrength * mainLight.shadowAttenuation * mainLight.distanceAttenuation;
@@ -318,7 +320,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
             Cull Off
 
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing

@@ -34,6 +34,7 @@ public static class TerrainSculptingWorldGraphicsValidation
             var camera=new GameObject("Sky validation camera").AddComponent<Camera>();camera.nearClipPlane=.05f;camera.farClipPlane=80;camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=Color.black;
             var light=new GameObject("Sky validation sun").AddComponent<Light>();light.type=LightType.Directional;light.intensity=0;
             ValidateCaveLighting(camera,light,Shader.Find("Custom/StylizedTerrainURP"),Resources.Load<TerrainSculptSurfaceSettings>("TerrainSculpting/ExcavatedStone"));
+            ValidateDirectionalCaveLighting(camera,light,Shader.Find("Custom/StylizedTerrainURP"),Resources.Load<TerrainSculptSurfaceSettings>("TerrainSculpting/ExcavatedStone"));
             EditorApplication.Exit(0);
         }
         catch(Exception error){Debug.LogException(error);EditorApplication.Exit(1);}
@@ -130,6 +131,7 @@ public static class TerrainSculptingWorldGraphicsValidation
             finally{Object.DestroyImmediate(quad);Object.DestroyImmediate(quadMesh);Object.DestroyImmediate(wallMaterial);Object.DestroyImmediate(stripes);}
             ValidateGpuVegetation(f);
             ValidateCaveLighting(camera,light,shader,appearance);
+            ValidateDirectionalCaveLighting(camera,light,shader,appearance);
             foreach(var message in ShaderUtil.GetShaderMessages(shader))Check(message.severity!=UnityEditor.Rendering.ShaderCompilerMessageSeverity.Error,"Terrain shader compilation failed: "+message.message);
             Debug.Log($"TERRAIN SCULPTING P6 GRAPHICS PASS: {checks} checks; real URP cave/stone, independent texture, vertical projection, two-sided roof shadow occlusion ({a:F4}->{b:F4}), resident GPU grass/fern, cached cave ambient, live brightness, exterior preservation and building shading.");
         }
@@ -140,6 +142,82 @@ public static class TerrainSculptingWorldGraphicsValidation
             Object.DestroyImmediate(cameraObject);Object.DestroyImmediate(lightObject);Object.DestroyImmediate(control);Object.DestroyImmediate(empty);
             Object.DestroyImmediate(disabledSky);
         }
+    }
+    private static void ValidateDirectionalCaveLighting(Camera camera,Light light,Shader shader,TerrainSculptSurfaceSettings appearance)
+    {
+        var settings=ScriptableObject.CreateInstance<TerrainSkyAccessSettings>();settings.blendSeconds=0;
+        var wood=new Material(Shader.Find("Custom/BuildingWoodMatte"));GameObject panel=null,receiver=null;
+        try
+        {
+            using var f=new TerrainSculptingIntegrationValidation.Fixture((x,z)=>20,terrainShader:shader,appearance:appearance,receiveShadows:true,skyAccess:settings);
+            f.Viewer.transform.position=new Vector3(1104,7,1104);f.Ready();
+            Check(f.Runtime.TryExcavate(TerrainDensityBrush.Box(new double3(1104,7,1104),new double3(4,2,4))),"Directional chamber rejected.");TerrainSkyAccessValidation.Ready(f);
+            Check(f.Runtime.SkyAccess.SampleExposure(new double3(1104,6,1104))<.01,"Directional chamber is not sealed.");
+            camera.orthographic=true;camera.orthographicSize=.8f;camera.GetUniversalAdditionalCameraData().renderShadows=true;
+            light.shadows=LightShadows.Hard;light.shadowBias=.02f;light.shadowNormalBias=0;RenderSettings.sun=light;
+            camera.transform.SetPositionAndRotation(new Vector3(1104,8,1104),Quaternion.Euler(90,0,0));
+            light.intensity=0;using var floorAmbient=Capture(camera,"CaveSunFloorAmbient.png");double baseline=Mean(floorAmbient.Texture);
+            light.transform.rotation=Quaternion.Euler(90,0,0);light.color=new Color(1,.75f,.45f);light.intensity=1.35f;
+            foreach(float strength in new[]{1f,.85f,.3f,.22f})
+            {
+                light.shadowStrength=strength;
+                light.transform.rotation=Quaternion.Euler(90,strength*10,0);
+                using var floor=Capture(camera,$"CaveSunFloorStrength{Mathf.RoundToInt(strength*100)}.png");double value=Mean(floor.Texture);
+                Debug.Log($"CAVE DIRECT SUN MEASURE: strength {strength:F2}, sealed floor ambient {baseline:F4}, sun {value:F4}.");
+                Check(value<baseline+.012,$"Directional light leaks through a retained roof at shadow strength {strength:F2}: ambient={baseline:F4}, sun={value:F4}.");
+            }
+            wood.SetFloat("_AmbientFloor",.4f);wood.SetFloat("_ShadowTintStrength",0);wood.SetColor("_BaseColor",Color.white);
+            receiver=GameObject.CreatePrimitive(PrimitiveType.Cube);receiver.transform.position=new Vector3(1104,5.3f,1104);receiver.transform.localScale=new Vector3(2,.25f,2);
+            receiver.GetComponent<MeshRenderer>().sharedMaterial=wood;
+            light.intensity=0;using var buildFloorAmbient=Capture(camera,"CaveSunBuildFloorAmbient.png");
+            foreach(float strength in new[]{.85f,.3f,.22f})
+            {
+                light.shadowStrength=strength;light.intensity=1.35f;light.transform.rotation=Quaternion.Euler(90,strength*10,0);
+                using var floor=Capture(camera,$"CaveSunBuildFloorStrength{Mathf.RoundToInt(strength*100)}.png");
+                Debug.Log($"CAVE BUILD FLOOR MEASURE: strength {strength:F2}, ambient {Mean(buildFloorAmbient.Texture):F4}, sun {Mean(floor.Texture):F4}.");
+                Check(Mean(floor.Texture)<Mean(buildFloorAmbient.Texture)+.012,"A horizontal building floor receives blocked direct light at strength "+strength);
+            }
+            receiver.SetActive(false);
+            panel=GameObject.CreatePrimitive(PrimitiveType.Cube);panel.transform.position=new Vector3(1104,6.5f,1104);panel.transform.localScale=new Vector3(2,2,.25f);
+            wood.SetFloat("_AmbientFloor",.4f);wood.SetFloat("_ShadowTintStrength",0);wood.SetColor("_BaseColor",Color.white);panel.GetComponent<MeshRenderer>().sharedMaterial=wood;
+            light.transform.rotation=Quaternion.Euler(45,0,0);light.shadowStrength=.85f;
+            foreach(int side in new[]{-1,1})
+            {
+                camera.transform.position=new Vector3(1104,6.5f,1104+side*2.5f);camera.transform.LookAt(panel.transform.position);
+                light.intensity=0;using var ambient=Capture(camera,$"CaveSunBuildSide{side}Ambient.png");
+                light.intensity=1.35f;using var sun=Capture(camera,$"CaveSunBuildSide{side}Lit.png");
+                Debug.Log($"CAVE BUILD SIDE MEASURE: side {side}, ambient {Mean(ambient.Texture):F4}, sun {Mean(sun.Texture):F4}.");
+                Check(Mean(sun.Texture)<Mean(ambient.Texture)+.012,"One underground building face receives blocked directional light: side "+side);
+                // Looking at the same surface from another angle must not change its illumination.
+                camera.transform.position+=Vector3.right*.25f;camera.transform.LookAt(panel.transform.position);
+                using var turned=Capture(camera,$"CaveSunBuildSide{side}Turned.png");
+                Check(Math.Abs(Mean(turned.Texture)-Mean(sun.Texture))<.012,"Camera heading changed a fixed underground building face's brightness.");
+            }
+            // Preserve artistic shadow strength outdoors: the same opaque cube on
+            // the original surface must still have its intended partial shadow.
+            Object.DestroyImmediate(panel);panel=null;
+            f.Find(new ChunkCoord(29,28));
+            camera.orthographicSize=.6f;camera.transform.SetPositionAndRotation(new Vector3(1114,24,1104),Quaternion.Euler(90,0,0));
+            panel=GameObject.CreatePrimitive(PrimitiveType.Cube);panel.transform.position=new Vector3(1114,21,1104);panel.transform.localScale=new Vector3(2,.25f,2);
+            panel.GetComponent<MeshRenderer>().sharedMaterial=wood;panel.GetComponent<MeshRenderer>().shadowCastingMode=ShadowCastingMode.TwoSided;
+            receiver.SetActive(true);receiver.transform.position=new Vector3(1114,20.15f,1104);
+            camera.transform.position=new Vector3(1114,20.7f,1104);light.transform.rotation=Quaternion.Euler(90,0,0);light.intensity=1.35f;
+            light.shadowStrength=1;using var outdoorFull=Capture(camera,"CaveSunOutdoorFullShadow.png");
+            light.shadowStrength=.3f;light.transform.rotation=Quaternion.Euler(90,3,0);using var outdoorSoft=Capture(camera,"CaveSunOutdoorPartialShadow.png");
+            Debug.Log($"CAVE OUTDOOR SHADOW MEASURE: full {Mean(outdoorFull.Texture):F4}, partial {Mean(outdoorSoft.Texture):F4}.");
+            Check(Mean(outdoorSoft.Texture)>Mean(outdoorFull.Texture)+.04,"The cave fix removed artistic partial shadows outdoors.");
+            Object.DestroyImmediate(panel);panel=null;
+            // A real vertical opening must continue to admit direct sun even when
+            // the averaged nine-direction ambient sky exposure is below one.
+            Check(f.Runtime.TryExcavate(TerrainDensityBrush.Box(new double3(1104,14,1104),new double3(1.5,7,1.5))),"Directional skylight rejected.");TerrainSkyAccessValidation.Ready(f);
+            receiver.transform.position=new Vector3(1104,5.3f,1104);
+            camera.transform.SetPositionAndRotation(new Vector3(1104,8,1104),Quaternion.Euler(90,0,0));light.shadowStrength=.3f;
+            light.intensity=0;using var shaftAmbient=Capture(camera,"CaveSunShaftAmbient.png");
+            light.intensity=1.35f;using var shaftSun=Capture(camera,"CaveSunShaftDirect.png");
+            Check(Mean(shaftSun.Texture)>Mean(shaftAmbient.Texture)+.04,"A real shaft's direct sunlight was dimmed by averaged sky exposure.");
+            Debug.Log("CAVE DIRECTIONAL OCCLUSION PASS: weak/strong sun shadows, opposing building faces, camera turns, outdoor artistic shadows and direct light through a real shaft.");
+        }
+        finally{if(panel!=null)Object.DestroyImmediate(panel);if(receiver!=null)Object.DestroyImmediate(receiver);Object.DestroyImmediate(wood);Object.DestroyImmediate(settings);}
     }
     private static void ValidateCaveLighting(Camera camera,Light light,Shader shader,TerrainSculptSurfaceSettings appearance)
     {

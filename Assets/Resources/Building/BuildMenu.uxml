@@ -5,7 +5,7 @@
       <ui:VisualElement class="build-category-panel stone-panel">
         <ui:VisualElement class="stone-pillar pillar-left" picking-mode="Ignore" />
         <ui:Label text="BUILD" class="build-title stone-heading" />
-        <ui:Label text="Ordinary wood kit" class="build-subtitle" />
+        <ui:Label text="Building &amp; furnishings" class="build-subtitle" />
         <ui:VisualElement name="build-categories" class="build-categories" />
       </ui:VisualElement>
       <ui:VisualElement class="build-grid-panel stone-panel">

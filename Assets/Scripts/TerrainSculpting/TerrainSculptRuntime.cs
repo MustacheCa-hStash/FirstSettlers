@@ -9,7 +9,7 @@ using Debug = UnityEngine.Debug;
 
 /// <summary>One bounded asynchronous transaction/coverage batch. Publication and all Unity
 /// objects belong to the calling main thread. No stroke queue or additional worker pool.</summary>
-public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard
+public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, ITerrainLightGuard
 {
     private static long nextEpoch;
     private static readonly ProfilerMarker MeshMarker = new ProfilerMarker("FS.Streaming.Sculpt.Mesh");
@@ -393,6 +393,24 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard
     {
         foreach(var surface in staged.Values)surface.Dispose();staged.Clear();
         preparing?.Dispose();preparing=null;stagingOrder.Clear();stagingCursor=0;reservedCharge=0;
+    }
+
+    public bool CanIlluminate(double3 center,double radius)
+    {
+        if(disposed || Persistence!=null&&!Persistence.Ready || world.Revision!=PublishedDensityRevision)return false;
+        if(world.ModifiedBrickCount>0&&PublishedCoverageRevision<0)return false;
+        var coverage=new TerrainSculptCoveragePolicy(publishedAnchor);
+        foreach(var group in groups)
+        {
+            if(TerrainSculptCoveragePolicy.Distance(center,group.Minimum,group.Maximum)>radius)continue;
+            if(!group.Render || coverage.Weight(center-new double3(0,radius,0))<1 || coverage.Weight(center+new double3(0,radius,0))<1)return false;
+            int x0=TerrainDensityCoordinates.FloorDiv(TerrainDensityCoordinates.FloorIndex(group.Footprint.Min.x),chunkSize);
+            int z0=TerrainDensityCoordinates.FloorDiv(TerrainDensityCoordinates.FloorIndex(group.Footprint.Min.y),chunkSize);
+            int x1=TerrainDensityCoordinates.FloorDiv(group.Footprint.Max.x-1,chunkSize),z1=TerrainDensityCoordinates.FloorDiv(group.Footprint.Max.y-1,chunkSize);
+            for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++)
+                if(!live.TryGetValue(new ChunkCoord(x,z),out var surface)||!surface.HasRender||surface.BoundRuntime==null)return false;
+        }
+        return true;
     }
 
     public bool CanMove(double3 from,double3 to,double radius,double height)

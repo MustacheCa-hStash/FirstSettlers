@@ -42,7 +42,7 @@ Shader "Custom/SpruceBarkSimpleLit"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
@@ -51,6 +51,7 @@ Shader "Custom/SpruceBarkSimpleLit"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Shaders/LocalFlameLighting.hlsl"
             #include "Assets/Shaders/DistantTreeFade.hlsl"
 
             TEXTURE2D(_BaseMap);
@@ -194,6 +195,7 @@ Shader "Custom/SpruceBarkSimpleLit"
 
                 SurfaceData surfaceData = InitializeSpruceBarkSurfaceData(barkColor);
                 half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
+                color.rgb+=surfaceData.albedo*FSLocalFlameDiffuse(inputData.positionWS,inputData.normalWS);
 
                 Light mainLight = GetMainLight(inputData.shadowCoord);
                 half shadowSide = saturate(1.0h - dot(litNormal, mainLight.direction) * 0.5h - 0.5h);
@@ -215,7 +217,7 @@ Shader "Custom/SpruceBarkSimpleLit"
             Cull Back
 
             HLSLPROGRAM
-            #pragma target 3.0
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing

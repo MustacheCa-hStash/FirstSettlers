@@ -1,6 +1,6 @@
 # Painted stone trim-sheet proposal
 
-Implementation update: S02/S03/S04/S06 now use individually modeled stones with varied UV crops of the approved joint-free painted stone texture. The labelled board below remains a proposal; its masonry seams and labels are not applied to those meshes. See the [model and import guide](../../../Documentation/STONE_BUILD_KIT.md).
+Implementation update: S02 now uses a **12-triangle box with baked colour/AO and normal atlases** derived from its original detailed masonry. See the [baked wall guide](../../../Documentation/BAKED_STONE_WALL.md). S03/S04/S06 retain individually modeled stones with varied UV crops of the approved joint-free painted stone texture. The labelled board below remains a proposal; its masonry seams and labels are not applied to those meshes. See the [model and import guide](../../../Documentation/STONE_BUILD_KIT.md).
 
 [View the labelled proposal](painted-stone-trim-proposal.png).
 
