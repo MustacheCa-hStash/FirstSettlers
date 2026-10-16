@@ -54,6 +54,7 @@ public class ChunkFoliageRuntime
     private static readonly ProfilerMarker RockClearMarker = new("FS.Streaming.Foliage.Publication.Rock.ClearPrevious");
     private static readonly ProfilerMarker RockColliderMarker = new("FS.Streaming.Foliage.Publication.Rock.RegisterColliders");
     private static readonly ProfilerMarker RockRendererMarker = new("FS.Streaming.Foliage.Publication.Rock.RegisterRenderer");
+    private static readonly ProfilerMarker SuppressMarker=new("FS.Streaming.Sculpt.SmallFoliageSuppress");
     public Transform root;
     private bool rangeVisible, renderVisible = true, shadowCasterVisible = true;
     public bool isVisible;
@@ -79,6 +80,70 @@ public class ChunkFoliageRuntime
     private List<GrassRenderBatch> dandelionRenderBatches = new();
     private readonly MaterialPropertyBlock flowerPropertyBlock = new(), cloverPropertyBlock = new(), dandelionPropertyBlock = new();
     private GameObject bushGameObjectRoot;
+    private TerrainSculptSuppression suppression;
+    private bool suppressionDirty;
+    public void ApplySuppression(TerrainSculptSuppression mask,float chunkWidth)
+    {
+        if(ReferenceEquals(mask,suppression)||mask==null)return;
+        var previous=suppression;suppression=mask;
+        Vector3 center=root!=null?root.position:Vector3.zero;float half=chunkWidth*.5f+1;
+        if(!mask.ChangedIn(previous,center.x-half,center.z-half,center.x+half,center.z+half))return;
+        suppressionDirty=true;FilterSmallBatches();SuppressBushes(bushGameObjects);
+    }
+    private bool Hidden(Vector3 p)=>suppression?.Contains(p.x,p.z)==true;
+    private void SuppressBushes(List<GameObject> objects)
+    {
+        for(int i=objects.Count-1;i>=0;i--)
+        {
+            var body=objects[i];if(body==null){objects.RemoveAt(i);continue;}
+            if(!Hidden(body.transform.position))continue;
+            body.SetActive(false);if(Application.isPlaying)Object.Destroy(body);else Object.DestroyImmediate(body);objects.RemoveAt(i);
+        }
+    }
+    private void Filter(ref Matrix4x4[] matrices,ref Vector4[] data)
+    {
+        if(matrices==null)return;
+        int count=0;foreach(var matrix in matrices)if(!suppression.Contains(matrix.m03,matrix.m23))count++;
+        if(count==matrices.Length)return;
+        var filtered=new Matrix4x4[count];var attributes=data!=null?new Vector4[count]:null;int next=0;
+        for(int i=0;i<matrices.Length;i++)
+        {
+            if(suppression.Contains(matrices[i].m03,matrices[i].m23))continue;
+            filtered[next]=matrices[i];if(attributes!=null)attributes[next]=data[i];next++;
+        }
+        matrices=filtered;data=attributes;
+    }
+    private void FilterSmallBatches()
+    {
+        if(!suppressionDirty||suppression==null)return;
+        using var marker=SuppressMarker.Auto();
+        suppressionDirty=false;
+        for(int i=flowerRenderBatches.Count-1;i>=0;i--)
+        {
+            var batch=flowerRenderBatches[i];Filter(ref batch.matrices,ref batch.petalColors);
+            if(batch.matrices?.Length==0)flowerRenderBatches.RemoveAt(i);else flowerRenderBatches[i]=batch;
+        }
+        for(int i=cloverRenderBatches.Count-1;i>=0;i--)
+        {
+            var batch=cloverRenderBatches[i];Filter(ref batch.matrices,ref batch.instanceData);
+            if(batch.matrices?.Length==0)cloverRenderBatches.RemoveAt(i);else cloverRenderBatches[i]=batch;
+        }
+        for(int i=dandelionRenderBatches.Count-1;i>=0;i--)
+        {
+            var batch=dandelionRenderBatches[i];Filter(ref batch.matrices,ref batch.instanceData);
+            if(batch.matrices?.Length==0)dandelionRenderBatches.RemoveAt(i);else dandelionRenderBatches[i]=batch;
+        }
+        void Water(List<Matrix4x4[]> batches)
+        {
+            for(int i=batches.Count-1;i>=0;i--)
+            {
+                var matrices=batches[i];Vector4[] unused=null;Filter(ref matrices,ref unused);
+                if(matrices?.Length==0)batches.RemoveAt(i);else batches[i]=matrices;
+            }
+        }
+        Water(lilyPadRenderBatches);Water(cattailRenderBatches);
+    }
+    private void SmallBatchesChanged(){suppressionDirty=true;FilterSmallBatches();}
     private List<GameObject> bushGameObjects = new();
     private bool hasCurrentBushRepresentation, hasCurrentRockRepresentation;
     private bool hasBuiltFlowerRenderData, hasBuiltLilyPadRenderData, hasBuiltCattailRenderData, hasBuiltCloverRenderData, hasBuiltDandelionRenderData;
@@ -96,13 +161,14 @@ public class ChunkFoliageRuntime
         hasBuiltCloverRenderData = hasBuiltDandelionRenderData = false;
         ClearBushGameObjects(); ClearRockGameObjects(); TreePlacementReady = false;
     }
-    internal void PublishFlowers(List<FlowerRenderBatch> batches) { flowerRenderBatches = batches; hasBuiltFlowerRenderData = true; }
-    internal void PublishClover(List<CloverRenderBatch> batches) { cloverRenderBatches = batches; hasBuiltCloverRenderData = true; }
-    internal void PublishDandelions(List<GrassRenderBatch> batches) { dandelionRenderBatches = batches; hasBuiltDandelionRenderData = true; }
+    internal void PublishFlowers(List<FlowerRenderBatch> batches) { flowerRenderBatches = batches; hasBuiltFlowerRenderData = true;SmallBatchesChanged(); }
+    internal void PublishClover(List<CloverRenderBatch> batches) { cloverRenderBatches = batches; hasBuiltCloverRenderData = true;SmallBatchesChanged(); }
+    internal void PublishDandelions(List<GrassRenderBatch> batches) { dandelionRenderBatches = batches; hasBuiltDandelionRenderData = true;SmallBatchesChanged(); }
     internal void PublishWaterPlants(bool cattails, List<Matrix4x4[]> batches)
     {
         if (cattails) { cattailRenderBatches = batches; hasBuiltCattailRenderData = true; }
         else { lilyPadRenderBatches = batches; hasBuiltLilyPadRenderData = true; }
+        SmallBatchesChanged();
     }
     internal IEnumerator<bool> BuildBushesIncrementally(List<BerryBushInstanceData> instances)
     {
@@ -120,6 +186,7 @@ public class ChunkFoliageRuntime
             yield return true;
             foreach (var instance in instances)
             {
+                if(Hidden(root.TransformPoint(instance.localPosition))){yield return true;continue;}
                 GameObject prefab = GetBushPrefab(instance.variant);
                 if (prefab != null)
                 {
@@ -139,6 +206,7 @@ public class ChunkFoliageRuntime
                 }
                 yield return true;
             }
+            SuppressBushes(objects);
             using (BushClearMarker.Auto()) ClearBushGameObjects();
             bushGameObjectRoot = staging; bushGameObjects = objects;
             using (BushActivateMarker.Auto()) { staging.name = "BerryBush_GameObjects"; staging.SetActive(true); }
@@ -388,6 +456,7 @@ public class ChunkFoliageRuntime
 
     public void CacheFlowerBatches(List<Matrix4x4> worldMatrices, List<Vector4> petalColors, bool isTallFlower = false, bool isDaisyWeed = false)
     {
+        suppressionDirty=true;
         if (!isTallFlower && !isDaisyWeed)
             flowerRenderBatches.Clear();
 
@@ -429,6 +498,7 @@ public class ChunkFoliageRuntime
 
     public void CacheFlowerBatches(Matrix4x4[] worldMatrices, Vector4[] petalColors, bool isTallFlower = false, bool isDaisyWeed = false)
     {
+        suppressionDirty=true;
         if (!isTallFlower && !isDaisyWeed)
             flowerRenderBatches.Clear();
 
@@ -467,6 +537,7 @@ public class ChunkFoliageRuntime
 
     public void CacheCloverBatches(List<Matrix4x4>[] worldMatricesByPrefab, List<Vector4>[] instanceDataByPrefab)
     {
+        suppressionDirty=true;
         cloverRenderBatches.Clear();
 
         if (worldMatricesByPrefab == null || instanceDataByPrefab == null)
@@ -517,11 +588,13 @@ public class ChunkFoliageRuntime
 
     public void CacheDandelionBatches(List<Matrix4x4> worldMatrices, List<Vector4> instanceData)
     {
+        suppressionDirty=true;
         hasBuiltDandelionRenderData = CacheGrassRenderBatches(worldMatrices, instanceData, dandelionRenderBatches);
     }
 
     public void CacheDandelionBatches(Matrix4x4[] worldMatrices, Vector4[] instanceData)
     {
+        suppressionDirty=true;
         hasBuiltDandelionRenderData = CacheGrassRenderBatches(worldMatrices, instanceData, dandelionRenderBatches);
     }
 
@@ -635,6 +708,7 @@ public class ChunkFoliageRuntime
 
     public void CacheLilyPadBatches(List<Matrix4x4> matrices)
     {
+        suppressionDirty=true;
         lilyPadRenderBatches.Clear();
         const int maxBatchSize = 1023;
         for (int start = 0; start < matrices.Count; start += maxBatchSize)
@@ -655,6 +729,7 @@ public class ChunkFoliageRuntime
 
     public void CacheCattailBatches(List<Matrix4x4> matrices)
     {
+        suppressionDirty=true;
         cattailRenderBatches.Clear();
         const int maxBatchSize = 1023;
         for (int start = 0; start < matrices.Count; start += maxBatchSize)
@@ -711,6 +786,7 @@ public class ChunkFoliageRuntime
 
     public void DrawFlowers()
     {
+        FilterSmallBatches();
         if (!isVisible || !HasValidFlowerRenderData() || flowerRenderBatches.Count == 0)
             return;
 
@@ -750,6 +826,7 @@ public class ChunkFoliageRuntime
 
     public void DrawLilyPads()
     {
+        FilterSmallBatches();
         if (!isVisible || !HasValidLilyPadRenderData())
             return;
 
@@ -763,6 +840,7 @@ public class ChunkFoliageRuntime
 
     public void DrawCattails()
     {
+        FilterSmallBatches();
         if (!isVisible || !HasValidCattailRenderData())
             return;
 
@@ -776,6 +854,7 @@ public class ChunkFoliageRuntime
 
     public void DrawClover(Vector3? viewer=null,float renderDistance=0,float fadeWidth=0)
     {
+        FilterSmallBatches();
         if (!isVisible || !HasValidCloverRenderData() || cloverRenderBatches.Count == 0)
             return;
 
@@ -823,6 +902,7 @@ public class ChunkFoliageRuntime
 
     public void DrawDandelions()
     {
+        FilterSmallBatches();
         if (!isVisible || !HasValidDandelionRenderData() || dandelionRenderBatches.Count == 0)
             return;
 

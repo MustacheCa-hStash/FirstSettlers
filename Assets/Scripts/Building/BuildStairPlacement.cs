@@ -1,6 +1,6 @@
 using UnityEngine;
 
-/// <summary>Stairs connect at exposed toe/high-end sockets; underside aim descends from a real attachment.</summary>
+/// <summary>Stairs connect at toe/high-end sockets even inside terrain; underside aim descends from a real attachment.</summary>
 public static class BuildStairPlacement
 {
     public static bool Solve(BuildDefinition d,Vector3 hit,Vector3 normal,BuildPieceRecord target,int turn,Vector3Int nudge,Vector3? viewer,out BuildPreview preview)

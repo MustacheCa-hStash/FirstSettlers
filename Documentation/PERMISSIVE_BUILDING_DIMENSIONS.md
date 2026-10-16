@@ -13,6 +13,12 @@ missing support, removal of existing support, external player/object penetration
 and reach limits still reject placement. Coincident wall/infill material variants
 are duplicates when their footprints match; replacement remains a separate action.
 
+P6 additionally permits all terrain overlap, including completely buried pieces.
+Only initial footing for foundations/terrain-capable definitions uses terrain;
+new placement waits for current edited collision. Stored grounding survives
+excavation and streaming. Stairs still need structural endpoint attachment, even
+when that endpoint is buried. See [terrain/build integration](TERRAIN_SCULPTING_BUILDING_INTEGRATION.md).
+
 Accepted solid intersections transmit support. Headroom regions never transmit
 support. The logical support graph therefore agrees with accepted physical contact
 instead of requiring an exact butt-face alignment. This is a simple prototype

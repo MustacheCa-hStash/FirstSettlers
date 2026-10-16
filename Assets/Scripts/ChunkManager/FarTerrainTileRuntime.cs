@@ -188,13 +188,13 @@ public class FarTerrainTileRuntime
 
         if (runtimeMaterial)
         {
-            Object.Destroy(runtimeMaterial);
+            TerrainAssetOwner.Destroy(runtimeMaterial);
             runtimeMaterial = null;
         }
 
         if (root)
         {
-            Object.Destroy(root);
+            TerrainAssetOwner.Destroy(root);
             root = null;
         }
 

@@ -1548,6 +1548,7 @@ MonoBehaviour:
   streamingContentReserveMs: 0.5
   streamingFoliageReserveMs: 0.35
   streamingGrassReserveMs: 0.15
+  enableTerrainSculpting: 1
 --- !u!4 &830849844
 Transform:
   m_ObjectHideFlags: 0

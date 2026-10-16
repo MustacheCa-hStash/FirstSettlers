@@ -90,6 +90,13 @@ public class FoliageManager
     private readonly FoliageRenderAssets assets;
     private readonly GrassStream grassStream;
     private int foregroundWorkCursor;
+    private TerrainSculptSuppression suppression;
+    public void ApplyTerrainSuppression(TerrainSculptSuppression mask,IEnumerable<ChunkRuntime> runtimes)
+    {
+        if(ReferenceEquals(mask,suppression))return;
+        suppression=mask;
+        foreach(var runtime in runtimes)runtime.FoliageRuntime?.ApplySuppression(mask,chunkSize*worldScale);
+    }
     private WorldStreamingBudget streamingBudget;
     private readonly RockColliderPool rockPool;
     private readonly RockWorldRenderer rockRenderer;
@@ -1077,6 +1084,7 @@ public class FoliageManager
         var root = new GameObject($"Foliage_{record.ChunkCoord.x}_{record.ChunkCoord.z}");
         root.transform.SetParent(chunkRuntime.RootTransform, false); runtime.root = root.transform;
         assets.ApplyTo(runtime); chunkRuntime.FoliageRuntime = runtime;
+        runtime.ApplySuppression(suppression,chunkSize*worldScale);
         runtime.SetRenderVisible(chunkRuntime.IsFoliageRenderVisible);
         runtime.SetShadowCasterVisible(chunkRuntime.IsFoliageShadowCasterVisible); runtime.SetVisible(false);
     }

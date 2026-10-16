@@ -1,5 +1,49 @@
 # FirstSettlers Work Notes
 
+## October 16: cached cave sky access
+
+Added a sparse **2 m** sky-access field for terrain and shared wood/stone building ambient, with live cave-brightness and entrance-response controls in `Assets/Resources/TerrainSculpting/CaveLighting.asset`. Lighting uses shared worker admission, revision-safe background tracing, bounded nearest-tile residency and a 24 MiB reservation inside the existing 128 MiB derived cap. Day/night lighting reuses visibility; fog follows cave attenuation. Point-light dynamics remain deferred. See [settings, cache behavior and validation](Documentation/TERRAIN_SKY_ACCESS.md).
+
+## October 16: building in excavated terrain
+
+P6 building integration permits partial/complete terrain overlap, including underground stairs and buried endpoints, while retaining initial foundation/terrain-capable footing checks and ordinary structural attachments. New placement waits for current edited collision and rechecks footing; placed anchors survive excavation and streaming. Removing/destroying structural support still uses the existing grace/collapse rules. Full build meshes/colliders and existing snaps/nudges remain. Lighting, cached sky access, point lights, hidden-piece selection and P7 remain deferred. See [integration policy, validation and future lighting design](Documentation/TERRAIN_SCULPTING_BUILDING_INTEGRATION.md).
+
+## Surface foliage around excavations
+
+Grass/small-decoration clearing now follows lost support at the original surface. Sealed caves retain vegetation above them; breakthrough removes it locally. Circular padding is reduced from 0.6 m to 0.15 m on a finer foliage mask, while terrain density stays at 0.3 m. See [foliage refinements](Documentation/TERRAIN_SCULPTING_FOLIAGE_REFINEMENTS.md) for support tolerance, CPU/GPU validation and memory accounting. Sculpting remains session-only.
+
+## October 15: session-only terrain and spawn recovery
+
+Terrain sculpting now keeps edits only for the current world session. Restarting starts with the procedural baseline; existing disk saves are ignored and no terrain files are written. The elevated-spawn freeze was traced to successor coverage exceeding its derived-memory allowance. A bounded recovery releases optional extraction cache and prioritizes nearby edited visuals/collision while retaining accepted density and published collision. The HUD documents the session lifecycle. See [session and spawn fixes](Documentation/TERRAIN_SCULPTING_SESSION_FIXES.md).
+
+## October 15: excavation stone, local shadows and vegetation
+
+P6 A/B adds world-space stone on cut floors/walls/ceilings, two-sided local roof shadow casting and persistent grass/small-decoration suppression for resident and pending representations. The independent [ExcavatedStone appearance asset](Assets/Resources/TerrainSculpting/ExcavatedStone.asset) initially uses the existing stone texture and supports later albedo/normal/tiling replacement. Existing saves rebuild both appearance and suppression without a reset. CPU/save/performance regressions, 98 shader variants, native URP renders and GPU grass/fern checks passed. See [checkpoint 6 A/B](Documentation/TERRAIN_SCULPTING_CHECKPOINT_6_AB.md). Building support is deferred for review; cave ambient lighting remains after P6.
+
+## October 15: sculpt playtest shutdown and latency fixes
+
+Fixed sculpt HUD/outline teardown after Unity objects have already been destroyed and ensured world cleanup still reaches backend disposal. Corrected pathological seam-edge hash collisions, cached unchanged 4.8 m mesh-brick extraction, and localized assembly/publication to affected source-chunk windows. Connected-room benchmarks that previously took 2–46 seconds now complete in a few hundred milliseconds; heavy edited-scene p95/frame-time gates remain open. The existing density/save format and scene settings are retained. See [playtest fixes, budgets and validation](Documentation/TERRAIN_SCULPTING_PLAYTEST_FIXES.md). Foliage, exposed-stone materials and ceiling shadows remain P6.
+
+## October 15: development terrain sculpt controls
+
+P5 adds opt-in **F6** sculpt mode with a depth-tested sphere/box preview, **R** shape selection, **0.1 m wheel** size steps, LMB tap/hold excavation (maximum 4/s), and **F10** save/retry. Closest-solid terrain targeting, dry bounds, collision readiness, building/menu/focus coordination and fresh-click suppression protect interaction. The passive HUD distinguishes pending, rejected, unsaved and saved states. See [checkpoint 5](Documentation/TERRAIN_SCULPTING_CHECKPOINT_5.md) for Unity testing steps, native-input evidence and rendered captures. The saved scene remains off; P6 foliage/building/material integration and the existing live performance gate remain outstanding.
+
+## October 15: persistent terrain excavation
+
+P4 adds compressed immutable density records, checksummed world/profile identity, atomic manifests with a recoverable predecessor, background saving after two quiet seconds, explicit flush/retry APIs and orderly shutdown saves. Restart reconstructs terrain meshes and collision from the saved owners; startup and failure guards prevent unavailable edited terrain from becoming traversable. Persistent hosts reserve save-snapshot headroom within the existing 64 MiB payload budget. See [checkpoint 4](Documentation/TERRAIN_SCULPTING_CHECKPOINT_4.md) for the format, recovery policy, limits and validation. The scene toggle remains off; development controls remain P5 and P3's live performance gate remains open.
+
+## October 15: sculpt transactions and streaming
+
+P3 now stages complete density/render/collision swaps through the shared worker and frame budgets, rejects stale results, reuses unchanged surfaces, and enforces the approved 192/256 m horizontal and 64/96 m vertical visual transitions. Collision readiness, occupied/support pins, source/far handoffs and destination preparation protect movement. Native `ChunkManager`, source-chunk topology, guarded motor, delayed-work, nine-edit coverage and resource regressions are documented in [checkpoint 3](Documentation/TERRAIN_SCULPTING_CHECKPOINT_3.md). The feature remains opt-in/off in the scene; native edit latency still misses the provisional target, and the live walking/performance gate remains open. Persistence and development controls follow separately.
+
+## October 15: sparse terrain meshing and collision adapter
+
+P2 of the [terrain sculpting plan](Documentation/TERRAIN_SCULPTING_PLAN.md) now reconstructs exterior surfaces, tunnel walls and retained ceilings from the density field. Explicit collars join the original 0.3 m render grid and 2.4 m collider grid; filtered baseline meshes remove old blocking geometry. Compilation, topology/native-height seam checks, 16 actual player-motor traversals and a deep-cavity sparse-reconstruction fixture passed. Main-scene integration remains disabled; live streaming, transactions and performance measurement follow in P3. See [checkpoint 2 and the tested geometry preview](Documentation/TERRAIN_SCULPTING_CHECKPOINT_2.md).
+
+## October 15: sparse terrain excavation foundation
+
+Added the first authoritative density layer for the approved [terrain sculpting plan](Documentation/TERRAIN_SCULPTING_PLAN.md): 0.3 m samples, sparse immutable bricks, staged sphere/box excavation, stable snapshots, shared mesh halos and bounded payload admission. Canonical baseline sampling uses the existing native height pipeline. Runtime/editor/player compilation, 8,565 P1 assertions and the shared height-sampling regression passed; 108 native baseline samples matched exactly. This checkpoint does not enable sculpting in the scene; meshing, collision replacement, development controls and file persistence follow in later phases. See [checkpoint scope and validation](Documentation/TERRAIN_SCULPTING_CHECKPOINT_1.md).
+
 ## October 15: household furnishings concept catalog
 
 Added the [F01–F24 furniture and household catalog](ArtReferences/IronAgeFurniture/README.md), matching the illustrated stone and wood sheets: seating, tables, sleeping platform, baskets/chest, textiles, pottery, tableware and small craft/decorative props, plus a furnished shelter study. The guide records proposed modeling sizes, fit with current 4 m bays, period references and future placement needs. These are concept references; runtime furniture assets are not implemented.

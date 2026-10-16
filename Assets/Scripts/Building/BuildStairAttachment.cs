@@ -1,35 +1,13 @@
 using UnityEngine;
 
-/// <summary>Terrain can bury a flight's body, but never creates support or an exposed endpoint.</summary>
+/// <summary>Structural stair contacts are independent of terrain overlap and visibility.
+/// Terrain never grants a stair its own grounding anchor.</summary>
 public static class BuildStairAttachment
 {
     public static Vector3 LowLocal(BuildDefinition d)=>new(d.LocalBounds.center.x,d.LocalBounds.min.y,d.LocalBounds.min.z);
     public static Vector3 HighLocal(BuildDefinition d)=>new(d.LocalBounds.center.x,d.LocalBounds.max.y,d.LocalBounds.max.z);
     public static Vector3 Low(BuildPieceRecord p)=>p.Origin+BuildGeometry.Rotation(p.WorldYawStep)*LowLocal(p.Definition);
     public static Vector3 High(BuildPieceRecord p)=>p.Origin+BuildGeometry.Rotation(p.WorldYawStep)*HighLocal(p.Definition);
-    public static bool HasExposedFlight(BuildPieceRecord p)
-    {
-        Vector3 low=Low(p),high=High(p);
-        for(int i=0;i<5;i++){float t=i==0?.01f:i==4?.99f:i*.25f;if(!Buried(Vector3.Lerp(low,high,t)-Vector3.up*.03f))return true;}
-        return false;
-    }
-    public static bool Buried(Vector3 point)
-    {
-        foreach(var terrain in Terrain.activeTerrains)
-        {
-            if(terrain==null || terrain.terrainData==null)continue;var local=point-terrain.transform.position;var size=terrain.terrainData.size;
-            if(local.x>=0 && local.z>=0 && local.x<=size.x && local.z<=size.z && point.y<terrain.SampleHeight(point)+terrain.transform.position.y-.02f)return true;
-        }
-        // A steep terrain chunk can be far above the socket: cast from its own bounds.
-        foreach(var ground in WorldGroundSurface.Active)
-        {
-            if(ground==null || !ground.TryGetComponent<Collider>(out var collider) || !collider.enabled)continue;
-            var bounds=collider.bounds;if(point.x<bounds.min.x-.015f || point.x>bounds.max.x+.015f || point.z<bounds.min.z-.015f || point.z>bounds.max.z+.015f || point.y>=bounds.max.y-.02f)continue;
-            var ray=new Ray(new Vector3(point.x,bounds.max.y+1,point.z),Vector3.down);
-            if(collider.Raycast(ray,out var hit,bounds.max.y+1-point.y) && hit.point.y>point.y+.02f)return true;
-        }
-        return false;
-    }
     private static bool Near(Vector3 a,Vector3 b)=>(a-b).sqrMagnitude<.000225f;
     public static bool Connects(BuildPieceRecord stair,BuildPieceRecord other,BuildResolvedState state)
     {
@@ -37,12 +15,11 @@ public static class BuildStairAttachment
         var low=Low(stair);var high=High(stair);
         if(other.Definition.kind==BuildPartKind.Stair)
             return BuildGeometry.Turn(stair.WorldYawStep-other.WorldYawStep)==0 &&
-                (Near(low,High(other)) && !Buried(low) || Near(high,Low(other)) && !Buried(high));
-        return ExposedContact(low,other,state) || ExposedContact(high,other,state);
+                (Near(low,High(other)) || Near(high,Low(other)));
+        return EndpointContact(low,other,state) || EndpointContact(high,other,state);
     }
-    public static bool ExposedContact(Vector3 endpoint,BuildPieceRecord other,BuildResolvedState state)
+    public static bool EndpointContact(Vector3 endpoint,BuildPieceRecord other,BuildResolvedState state)
     {
-        if(Buried(endpoint))return false;
         Vector3 local=Quaternion.Inverse(BuildGeometry.Rotation(other.WorldYawStep))*(endpoint-other.Origin);
         if(other.Definition.kind is BuildPartKind.Floor or BuildPartKind.Foundation)
         {

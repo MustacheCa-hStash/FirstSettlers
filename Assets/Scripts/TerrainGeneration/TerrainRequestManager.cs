@@ -80,6 +80,31 @@ public class TerrainRequestManager : System.IDisposable
     public int ActiveMeshJobCount => Interlocked.CompareExchange(ref activeMeshJobs, 0, 0);
     public int ActiveColliderJobCount => Interlocked.CompareExchange(ref activeColliderJobs, 0, 0);
 
+    /// <summary>Sculpt extraction shares the ordinary mesh allowance; no independent worker pool.</summary>
+    public bool TryRunSculpt(System.Action work)
+    {
+        if (work == null) throw new System.ArgumentNullException(nameof(work));
+        if (disposed || !TryAcquire(ref activeMeshJobs,maxActiveMeshJobs)) return false;
+        return QueueWorker(_ => { try { work(); } finally { Interlocked.Decrement(ref activeMeshJobs); } },ref activeMeshJobs);
+    }
+    public System.IDisposable TryAcquireSculptCooking()
+    {
+        if(disposed||!TryAcquire(ref activeColliderJobs,maxActiveColliderJobs))return null;
+        return new SculptCookingLease();
+    }
+    private sealed class SculptCookingLease : System.IDisposable
+    {
+        private int active=1;
+        public void Dispose(){if(Interlocked.Exchange(ref active,0)==1)Interlocked.Decrement(ref activeColliderJobs);}
+    }
+    private static bool TryAcquire(ref int count,int limit)
+    {
+        int seen=Interlocked.CompareExchange(ref count,0,0);
+        while(seen<limit)
+        {int actual=Interlocked.CompareExchange(ref count,seen+1,seen);if(actual==seen)return true;seen=actual;}
+        return false;
+    }
+
     public TerrainRequestManager(
         int maxActiveTerrainDataJobs,
         int maxActiveFarTerrainJobs,
@@ -445,7 +470,7 @@ public class TerrainRequestManager : System.IDisposable
         if (nativeLease == null)
             return false;
 
-        Interlocked.Increment(ref activeMeshJobs);
+        if(!TryAcquire(ref activeMeshJobs,maxActiveMeshJobs)){nativeLease.Dispose();return false;}
 
         LODMeshRequestWorkItem workItem = new LODMeshRequestWorkItem(
             this,
@@ -559,10 +584,8 @@ public class TerrainRequestManager : System.IDisposable
         float worldScale)
     {
         if (disposed || CompletedColliderResultCount >= Mathf.Max(2, maxActiveColliderJobs * 2) ||
-            Interlocked.CompareExchange(ref activeColliderJobs, 0, 0) >= maxActiveColliderJobs)
+            !TryAcquire(ref activeColliderJobs,maxActiveColliderJobs))
             return false;
-
-        Interlocked.Increment(ref activeColliderJobs);
 
         return QueueWorker(_ =>
         {

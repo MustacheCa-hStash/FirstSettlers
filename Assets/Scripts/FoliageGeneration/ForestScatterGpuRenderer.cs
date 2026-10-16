@@ -19,6 +19,7 @@ public sealed class ForestScatterGpuRenderer : IDisposable
         public int Slot, Start, Capacity, Count;
         public Bounds Bounds;
         public LeafClusterGeneration Generation;
+        public int Revision;
     }
     readonly ComputeShader compute;
     readonly int kernel;
@@ -70,13 +71,13 @@ public sealed class ForestScatterGpuRenderer : IDisposable
     }
     public void Sync(ChunkCoord coord, LeafClusterGeneration generation, bool active, float radius, bool fern)
     {
-        if (tiles.TryGetValue(coord, out var tile) && !ReferenceEquals(tile.Generation, generation)) { Remove(coord); tile = null; }
+        if (tiles.TryGetValue(coord, out var tile) && (!ReferenceEquals(tile.Generation, generation)||tile.Revision!=generation.RepresentationRevision)) { Remove(coord); tile = null; }
         int count = generation.Instances.Count;
         if (tile == null)
         {
             int slot = freeSlots.Count > 0 ? freeSlots.Pop() : slotCount++;
             if (metadata.Length < slotCount) Array.Resize(ref metadata, Mathf.NextPowerOfTwo(Mathf.Max(16, slotCount)));
-            tile = new Tile { Slot = slot, Generation = generation, Capacity = Mathf.NextPowerOfTwo(Mathf.Max(64, count)) };
+            tile = new Tile { Slot = slot, Generation = generation,Revision=generation.RepresentationRevision, Capacity = Mathf.NextPowerOfTwo(Mathf.Max(64, count)) };
             tile.Start = Allocate(tile.Capacity); tiles.Add(coord, tile);
         }
         int from = tile.Count;

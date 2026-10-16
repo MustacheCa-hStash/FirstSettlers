@@ -96,6 +96,7 @@ public sealed class LocalPlayerMenus : MonoBehaviour
         input?.SuppressLookAfterCursorCapture();
         Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false;
     }
+    public void RequestGameplayCursorCapture(){if(!IsOpen)CaptureCursor();}
 
     public void RefreshView() => view?.SetState(InventoryOpen, !IsOpen);
 

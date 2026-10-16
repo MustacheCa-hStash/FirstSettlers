@@ -30,6 +30,9 @@ public sealed class BuildWorld : MonoBehaviour
     public BuildCatalog Catalog => catalog;
     public Camera Camera { get; set; }
     public Transform Focus { get; set; }
+    // A coverage/readiness check, not a solid-overlap test. The local world binds it;
+    // terrain intersections remain permitted, including completely buried pieces.
+    public ITerrainMovementGuard TerrainGuard { get; set; }
     public int DrawCalls => buildingRenderer?.DrawCalls ?? 0;
     public int ActiveColliders => gameplay?.ActiveCount ?? 0;
     public BuildColliderDebug ColliderDebug { get; private set; }
@@ -88,6 +91,12 @@ public sealed class BuildWorld : MonoBehaviour
         preview.Warning=BuildPlacementWarning.None;preview.WarningPieceId=0;preview.WarningMessage=null;
         buildingRenderer?.SetPreview(null);
         DebugPreview=preview;
+        preview.Grounded=false;
+        Bounds terrainBounds=BuildGeometry.WorldBounds(preview.Definition.LocalBounds,preview.Origin,preview.WorldYaw);
+        if(TerrainGuard!=null&&!TerrainGuard.CanMove((Unity.Mathematics.float3)terrainBounds.min,(Unity.Mathematics.float3)terrainBounds.max,0,0))
+        {Reject(ref preview,BuildPlacementFailure.Terrain,"Waiting for current terrain collision");return;}
+        // Footing queries run on every validation/commit against the current published
+        // collider. Their result is latched only when the new record is committed.
         preview.Grounded=(preview.Definition.kind==BuildPartKind.Foundation || preview.Definition.canGroundOnTerrain) && Grounded(preview);
         var candidate=new BuildPieceRecord{Id=ulong.MaxValue,Definition=preview.Definition,Origin=preview.Origin,
             WorldYawStep=(byte)preview.WorldYaw,Grounded=preview.Grounded};
@@ -95,13 +104,11 @@ public sealed class BuildWorld : MonoBehaviour
         bool cached=previewRevision==Session.Revision && previewDefinition==preview.Definition && previewOrigin==preview.Origin && previewYaw==preview.WorldYaw && previewGrounded==preview.Grounded;
         var states=cached?previewStates:Session.ResolvePreview(candidate);var state=states[candidate.Id];preview.Resolved=state;
         DebugStates=states;
-        if(preview.Definition.kind==BuildPartKind.Stair && !BuildStairAttachment.HasExposedFlight(candidate))
-        {Reject(ref preview,BuildPlacementFailure.Support,"Stair flight is completely buried");return;}
         if(preview.Definition.kind==BuildPartKind.Stair && preview.StairAimTarget==0 && preview.Hint=="Ground grid")
         {Reject(ref preview,BuildPlacementFailure.Support,"Aim at a supported building attachment; stairs cannot start from terrain");return;}
         if(preview.Definition.kind==BuildPartKind.Stair && preview.StairAimTarget!=0 && Session.TryGet(preview.StairAimTarget,out var aimedStair) && aimedStair.Definition.kind==BuildPartKind.Stair &&
             !BuildStairAttachment.Connects(candidate,aimedStair,aimedStair.Resolved))
-        {Reject(ref preview,BuildPlacementFailure.Support,"Stair endpoint is buried or does not meet the adjoining flight",aimedStair);return;}
+        {Reject(ref preview,BuildPlacementFailure.Support,"Stair endpoint does not meet the adjoining flight",aimedStair);return;}
         if(state.boxes.Length+state.volumes.Length==0)
         {Reject(ref preview,BuildPlacementFailure.Joint,"No compatible floor joint at this orientation");return;}
         if(state.invalidJoint)Warn(ref preview,BuildPlacementWarning.UnresolvedJoint);
@@ -130,7 +137,9 @@ public sealed class BuildWorld : MonoBehaviour
         for(int i=0;i<count;i++)
         {
             var collider=overlaps[i];if(collider.GetComponentInParent<BuildGameplayProxy>()!=null)continue;
-            if((preview.Grounded || preview.Definition.kind==BuildPartKind.Stair) && IsGround(collider))continue;
+            // Eligibility is independent of how much authored geometry is concealed by
+            // terrain. Keep the entire mesh/collider; placing a piece never excavates it.
+            if(IsGround(collider))continue;
             bool hit=false;
             foreach(var b in state.boxes)
             {
@@ -150,7 +159,7 @@ public sealed class BuildWorld : MonoBehaviour
             }
             if(hit)
             {
-                Reject(ref preview,BuildPlacementFailure.External,collider.gameObject.layer==GameplayLayers.Player?"Move clear of the preview":"Blocked by terrain or another object");
+                Reject(ref preview,BuildPlacementFailure.External,collider.gameObject.layer==GameplayLayers.Player?"Move clear of the preview":"Blocked by another object");
                 preview.BlockingCollider=collider;preview.Message+=" · "+collider.name;return;
             }
         }

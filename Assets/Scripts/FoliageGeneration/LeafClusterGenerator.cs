@@ -17,6 +17,23 @@ public sealed class LeafClusterGeneration
     public readonly List<LeafClusterInstance> Instances = new List<LeafClusterInstance>();
     public bool Complete { get; private set; }
     public int VisitedCells { get; private set; }
+    public int RepresentationRevision { get; private set; }
+    private TerrainSculptSuppression suppression;
+    private int filteredCount;
+    internal void ApplySuppression(TerrainSculptSuppression mask)
+    {
+        if(mask==null)return;
+        float x=record.ChunkCoord.x*size*scale,z=record.ChunkCoord.z*size*scale;
+        int from=!ReferenceEquals(mask,suppression)&&mask.ChangedIn(suppression,x,z,x+size*scale,z+size*scale)?0:filteredCount;
+        suppression=mask;
+        int retained=from;
+        for(int i=from;i<Instances.Count;i++)
+        {
+            var instance=Instances[i];if(!mask.Contains(instance.position.x,instance.position.z))Instances[retained++]=instance;
+        }
+        if(retained<Instances.Count){Instances.RemoveRange(retained,Instances.Count-retained);RepresentationRevision++;}
+        filteredCount=Instances.Count;
+    }
     private readonly ChunkRecord record;
     private readonly float[,] heights, slopes, rivers, moisture;
     private readonly BiomeType[,] biomes;

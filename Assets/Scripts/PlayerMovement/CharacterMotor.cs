@@ -41,6 +41,7 @@ public sealed class CharacterMotor : MonoBehaviour
     private Vector3 horizontalVelocity;
     private float verticalVelocity;
     private bool groundUsesSmoothRamp;
+    public ITerrainMovementGuard TerrainGuard { get; set; }
 
     public Vector3 ActualVelocity { get; private set; }
     public Vector3 GroundNormal { get; private set; } = Vector3.up;
@@ -114,7 +115,12 @@ public sealed class CharacterMotor : MonoBehaviour
 
         verticalVelocity += gravity * deltaTime;
         Vector3 before = transform.position;
-        CollisionFlags flags = controller.Move((horizontalVelocity + Vector3.up * verticalVelocity) * deltaTime);
+        Vector3 displacement=(horizontalVelocity+Vector3.up*verticalVelocity)*deltaTime;
+        if(TerrainGuard!=null&&!TerrainGuard.CanMove((Unity.Mathematics.float3)before,(Unity.Mathematics.float3)(before+displacement),controller.radius,controller.height))
+        {
+            horizontalVelocity=Vector3.zero;verticalVelocity=0;ActualVelocity=Vector3.zero;return;
+        }
+        CollisionFlags flags = controller.Move(displacement);
         ActualVelocity = (transform.position - before) / deltaTime;
 
         if ((flags & CollisionFlags.Above) != 0 && verticalVelocity > 0f)

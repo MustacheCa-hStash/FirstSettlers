@@ -65,6 +65,7 @@ try {
     $buildingOwned += @(Get-Item 'Assets/Scripts/PlayerMovement/SmoothWalkSurface.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/BuildStoneUiAuthoring.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/StoneKitSetup.cs','Assets/Editor/StoneKitValidation.cs')
+    $buildingOwned += @(Get-Item 'Assets/Shaders/TerrainSkyAccess.hlsl')
     $buildingOwned += @(Get-Item 'Assets/Editor/WoodSurfaceSetup.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/InventoryUiValidation.cs')
     $buildingOwned += @(Get-Item 'Assets/Scripts/UI/LocalPlayerMenus.cs','Assets/Scripts/UI/InventoryView.cs')
@@ -99,7 +100,7 @@ try {
         }
     }
     New-Item -ItemType Directory -Path "$buildingProject/Assets/Shaders" -Force | Out-Null
-    foreach ($buildingShaderFile in 'BuildingWoodMatte.shader','TreeNightLighting.hlsl','WattleValidationDepthReveal.shader') {
+    foreach ($buildingShaderFile in 'BuildingWoodMatte.shader','TreeNightLighting.hlsl','TerrainSkyAccess.hlsl','WattleValidationDepthReveal.shader') {
         Copy-Item -LiteralPath "Assets/Shaders/$buildingShaderFile","Assets/Shaders/$buildingShaderFile.meta" -Destination "$buildingProject/Assets/Shaders" -Force
     }
     foreach ($buildingName in 'BuildingPrototypeSetup','BuildingPrototypeValidation','BuildingPrototypeRenderValidation','BuildingPrototypeInputValidation','SplitPlankWallSetup','WattleWallSetup','WattleWallValidation','BuildingShadowValidation','BayPostSetup','W21StairSetup','W21StairValidation','ThatchRoofSetup','ThatchRoofValidation','FloorFramingSetup','BuildCollisionAuthoring','BuildFramingValidation','BuildColliderDebugValidation','BuildIntersectionRegressionValidation','ModularWoodSetup','ModularWoodValidation') {

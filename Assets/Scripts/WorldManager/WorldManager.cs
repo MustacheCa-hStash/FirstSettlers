@@ -92,8 +92,15 @@ public class WorldManager : MonoBehaviour
     [SerializeField, Min(0)] float streamingContentReserveMs = .5f;
     [SerializeField, Min(0)] float streamingFoliageReserveMs = .35f;
     [SerializeField, Min(0)] float streamingGrassReserveMs = .15f;
+    [Tooltip("Opt-in terrain excavation for the current play session. Edits are kept in memory and discarded when the world restarts; existing disk saves are ignored. F6 toggles sculpt mode; R changes shape; wheel changes size. Restart Play Mode after changing.")]
+    [SerializeField] bool enableTerrainSculpting;
+    [Tooltip("Independent stone texture, tint and metre tiling for excavated surfaces. Empty uses Resources/TerrainSculpting/ExcavatedStone. Restart Play Mode after changing.")]
+    [SerializeField] TerrainSculptSurfaceSettings excavationAppearance;
+    [Tooltip("Live cave ambient controls. Empty uses Resources/TerrainSculpting/CaveLighting. Probe spacing is 2 m.")]
+    [SerializeField] TerrainSkyAccessSettings caveLighting;
 
     private ChunkManager chunkManager;
+    private TerrainSculptController sculptController;
     private PlanarWaterReflection planarWaterReflection;
     private static readonly int TreeSeasonEnabledId = Shader.PropertyToID("_TreeSeasonSimulationEnabled");
     private static readonly int TreeSeasonAutumnId = Shader.PropertyToID("_TreeSeasonSimulationAutumnAmount");
@@ -106,6 +113,7 @@ public class WorldManager : MonoBehaviour
     public TreeGameplayManager TreeGameplay => chunkManager?.TreeGameplay;
     public string StreamingBudgetSummary => chunkManager?.StreamingBudgetSummary ?? "Streaming: world not running";
     public int TerrainGenerationRevision { get; private set; }
+    public TerrainSculptRuntime Sculpting => chunkManager?.Sculpting;
     public bool SimulateTreeSeason => simulateTreeSeason;
     public float TreeSeasonAutumnAmount => treeSeasonAutumnAmount;
 
@@ -173,6 +181,9 @@ public class WorldManager : MonoBehaviour
         beeSettings.prefab ??= butterflySettings.prefab;
 
         chunkManager = new ChunkManager(BuildConfiguration());
+        if(viewer!=null&&viewer.TryGetComponent<CharacterMotor>(out var motor))motor.TerrainGuard=chunkManager.Sculpting;
+        if(viewer!=null)foreach(var building in viewer.GetComponentsInChildren<BuildWorld>(true))building.TerrainGuard=chunkManager.Sculpting;
+        ConfigureSculptController();
 
         if (waterMaterial != null && waterMaterial.shader != null &&
             waterMaterial.shader.name == "FirstSettlers/Murky Planar Water")
@@ -186,6 +197,16 @@ public class WorldManager : MonoBehaviour
             planarWaterReflection.SetWaterVisibilityProvider((planes, mask) =>
                 chunkManager != null && chunkManager.HasVisibleWater(planes, mask));
         }
+    }
+
+    private void ConfigureSculptController()
+    {
+        if(sculptController!=null)sculptController.Configure(null,null);
+        if(chunkManager.Sculpting==null||viewer==null)return;
+        var localInput=viewer.GetComponentInChildren<LocalPlayerInput>(true);
+        if(localInput==null)return;
+        sculptController=localInput.GetComponent<TerrainSculptController>()??localInput.gameObject.AddComponent<TerrainSculptController>();
+        sculptController.Configure(chunkManager.Sculpting,viewerCamera!=null?viewerCamera:viewer.GetComponentInChildren<Camera>());
     }
 
     private WorldConfiguration BuildConfiguration() => new WorldConfiguration
@@ -226,8 +247,16 @@ public class WorldManager : MonoBehaviour
         Streaming = new WorldStreamingConfiguration
         {
             TotalMs = streamingBudgetMsPerFrame, ContentReserveMs = streamingContentReserveMs,
-            FoliageReserveMs = streamingFoliageReserveMs, GrassReserveMs = streamingGrassReserveMs
+            FoliageReserveMs = streamingFoliageReserveMs, GrassReserveMs = streamingGrassReserveMs,
+            SculptReserveMs = enableTerrainSculpting ? .5f : 0
         },
+        Sculpting = new TerrainSculptConfiguration
+        {
+            Enabled=enableTerrainSculpting,DensityBytes=64L*1024*1024,DerivedBytes=128L*1024*1024,PublicationMs=.5f,SurfaceAppearance=excavationAppearance,SkyAccess=caveLighting
+        },
+        // Keep terrain's lifecycle consistent with the rest of this unsaved world. Disk
+        // persistence remains available to explicit hosts once whole-world saving exists.
+        TerrainEdits = null,
         Publication = new TerrainPublicationBudget
         {
             TerrainDataCount = maxTerrainDataResultsAppliedPerFrame,
@@ -318,8 +347,18 @@ public class WorldManager : MonoBehaviour
 
     void OnDestroy()
     {
-        ReleaseTreeSeasonSimulation();
-        chunkManager?.Dispose();
+        try
+        {
+            if(sculptController!=null&&ReferenceEquals(sculptController.Runtime,chunkManager?.Sculpting))sculptController.Configure(null,null);
+            if(viewer!=null&&viewer.TryGetComponent<CharacterMotor>(out var motor)&&ReferenceEquals(motor.TerrainGuard,chunkManager?.Sculpting))motor.TerrainGuard=null;
+            if(viewer!=null)foreach(var building in viewer.GetComponentsInChildren<BuildWorld>(true))
+                if(ReferenceEquals(building.TerrainGuard,chunkManager?.Sculpting))building.TerrainGuard=null;
+        }
+        finally
+        {
+            try { ReleaseTreeSeasonSimulation(); }
+            finally { chunkManager?.Dispose(); }
+        }
     }
 
     public WorldDebugInfo GetDebugInfoAtWorldPosition(Vector3 worldPosition)

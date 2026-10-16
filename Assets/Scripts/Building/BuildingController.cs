@@ -61,6 +61,7 @@ public sealed class BuildingController : MonoBehaviour
         if (Active) Exit();
         else
         {
+            input?.ExitSculpting();
             Active = true; OpenMenu();
         }
     }

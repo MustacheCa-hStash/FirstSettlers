@@ -1,4 +1,4 @@
-# W22 full-storey stairs, W24 handrails and exposed stair attachments
+# W22 full-storey stairs, W24 handrails and stair attachments
 
 The build menu now has twelve options. W21 remains the half-storey stair; W22 and
 W24 are appended without changing existing component IDs or enum values.
@@ -43,19 +43,19 @@ leaving the space between them open. Only the stair ramp gets SmoothWalkSurface.
 Exact sockets determine the initial pose. In particular, a centred 1.25 m flight
 may have an origin between quarter-metre ticks; rounding that origin would shift
 its attachment. Manual nudges still move by 0.25 m in the active frame. A nudge or
-rotation which breaks the attachment is rejected unless another valid exposed
+rotation which breaks the attachment is rejected unless another valid
 endpoint supplies support.
 
 ## Terrain and support policy
 
-A stair needs an **exposed endpoint attached to a supported building**. Ground
+A stair needs an **endpoint attached to a supported building**. Ground
 never grounds a stair. Incidental body/side overlap with another build piece does
 not replace that endpoint connection. Declared floor-edge landing sockets remain
 available when optional floor/headroom fitting suppresses nearby floor output.
 
-Once the attachment is valid, the stair's body may intersect a TerrainCollider or
-an explicitly marked WorldGroundSurface. Terrain intersection is skipped only
-for stair placement. Rock/prop/player obstruction checks remain active, and the
+Once the attachment is valid, the stair's body and either endpoint may intersect
+a TerrainCollider or an explicitly marked WorldGroundSurface, including complete
+burial. P6 permits terrain overlap for all build types. Rock/prop/player obstruction checks remain active, and the
 terrain's gameplay collision remains solid. Visible portions of a descending
 flight can therefore meet the ground naturally while its lower end is buried.
 The renderer keeps the full authored mesh; terrain depth testing hides the buried
@@ -63,17 +63,18 @@ portion rather than substituting a clipped prefab.
 
 Examples:
 
-- A W22 attached at an upper floor's exposed 3 m edge may descend to Y=0 even if
+- A W22 attached at an upper floor's 3 m edge may descend to Y=0 even if
   terrain crosses its lower portion at Y=1. This is valid.
 - Clicking that terrain directly to start W21/W22 is invalid, even near a building;
   stair aiming no longer substitutes a nearby build target for a terrain hit.
-- Extending downward from the buried toe of that flight is invalid. Its exposed
-  high end can still connect upward.
-- A completely buried new flight is invalid, even if an old building overlaps it.
+- Extending downward from the buried toe of that flight is valid when the normal
+  endpoint connection and other placement checks pass.
+- A completely buried new flight is valid with a supported endpoint connection.
 
-Endpoint tests use Unity Terrain height data or casts against registered marked
-terrain colliders from their own upper bounds, so deep burial/steep terrain cannot
-evade a fixed-distance ground probe. A 0.02 m tolerance handles contact round-off.
+Endpoint tests use structural socket/landing geometry. The former terrain-height
+and overhead-ray burial tests were removed: a retained cave ceiling is not solid
+terrain at the stair, and terrain visibility is not a requirement for attachment.
+See [P6 building integration](TERRAIN_SCULPTING_BUILDING_INTEGRATION.md).
 Removing a real attachment disconnects the dependent stair/handrail chain under
 the existing unsupported-piece grace period. Handrails attach to stairs; they do
 not act as independent foundations or grant support to unrelated build types.

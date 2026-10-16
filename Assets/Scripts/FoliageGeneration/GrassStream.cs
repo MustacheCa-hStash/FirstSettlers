@@ -253,11 +253,15 @@ public sealed class GrassStream : IDisposable
         }
         using (BlendMarker.Auto())
         {
-        foreach (var entry in entries.Values) foreach (var tile in entry.Tiles)
+        foreach (var entry in entries.Values)
         {
+            using(frameBudget?.Measure(WorldStreamingPhase.Grass))entry.Renderer.ApplySuppression(manager.Sculpting?.Suppression);
+            foreach(var tile in entry.Tiles)
+            {
             tile.State.Blend = GrassStreamingPolicy.AdvanceBlend(tile.State.Blend, tile.TargetBlend, Time.unscaledDeltaTime,
                 settings.representationTransitionSeconds, settings.representationHysteresis);
             entry.Renderer.SetBlend(tile.Index, tile.State.Blend);
+            }
         }
         }
 #if UNITY_EDITOR

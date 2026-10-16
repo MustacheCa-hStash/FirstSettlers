@@ -45,6 +45,7 @@ public sealed class LeafClusterSystem : IDisposable
     sealed class CpuTile
     {
         public LeafClusterGeneration Generation;
+        public int Revision;
         public readonly List<CachedInstance> Instances = new List<CachedInstance>();
     }
     struct CachedInstance
@@ -143,6 +144,7 @@ public sealed class LeafClusterSystem : IDisposable
                 }
             }
         }
+        foreach(var generation in resident.Values)generation.ApplySuppression(manager.Sculpting?.Suppression);
         if (camera != null) GeometryUtility.CalculateFrustumPlanes(camera, frustum);
         using (DrawMarker.Auto())
         {
@@ -253,8 +255,8 @@ public sealed class LeafClusterSystem : IDisposable
     }
     private void PrepareCpu(ChunkCoord coord, LeafClusterGeneration generation)
     {
-        if (!cpuTiles.TryGetValue(coord, out var tile) || !ReferenceEquals(tile.Generation, generation))
-            cpuTiles[coord] = tile = new CpuTile { Generation = generation };
+        if (!cpuTiles.TryGetValue(coord, out var tile) || !ReferenceEquals(tile.Generation, generation)||tile.Revision!=generation.RepresentationRevision)
+            cpuTiles[coord] = tile = new CpuTile { Generation = generation,Revision=generation.RepresentationRevision };
         for (int i = tile.Instances.Count; i < generation.Instances.Count; i++)
         {
             var instance = generation.Instances[i];

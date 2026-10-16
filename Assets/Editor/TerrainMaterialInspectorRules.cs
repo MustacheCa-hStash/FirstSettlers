@@ -15,7 +15,7 @@ internal static class TerrainMaterialInspectorRules
         ("_MixedForestFloorHeightStrength", "_MixedForestFloorHeight") };
 
     internal static bool HasUvTransform(string name) => Array.IndexOf(UvTransforms, name) >= 0;
-    internal static bool IsRuntimeInput(string name) => name.StartsWith("_ControlMap", StringComparison.Ordinal) || name.StartsWith("_TerrainHorizon", StringComparison.Ordinal);
+    internal static bool IsRuntimeInput(string name) => name.StartsWith("_ControlMap", StringComparison.Ordinal) || name.StartsWith("_TerrainHorizon", StringComparison.Ordinal)||name.StartsWith("_Excavation",StringComparison.Ordinal);
     internal static string Keyword(string name) => name == "_RockDetail" ? "_ROCK_DETAIL" : name == "_GrassBladeGround" ? "_GRASS_BLADE_GROUND" : null;
     private static MaterialProperty Property(MaterialProperty[] properties, string name) => Array.Find(properties, p => p.name == name);
     private static bool Zero(MaterialProperty[] properties, string name)
@@ -31,6 +31,7 @@ internal static class TerrainMaterialInspectorRules
 
     internal static string InactiveReason(string name, MaterialProperty[] properties)
     {
+        if(name.StartsWith("_Excavation",StringComparison.Ordinal))return "Assigned per renderer from World Manager's excavation appearance asset; edit that asset to replace underground stone.";
         if (IsRuntimeInput(name)) return "Generated and assigned by terrain streaming / World Manager.";
         if (Array.IndexOf(TraditionalGrass, name) >= 0 && Toggle(properties, "_GrassBladeGround", true)) return "Matching Blade Ground is selected.";
         if ((name == "_GrassSurfaceMap" || name.StartsWith("_GrassGround", StringComparison.Ordinal)) && Toggle(properties, "_GrassBladeGround", false)) return "Select Use Matching Blade Ground to use these controls.";

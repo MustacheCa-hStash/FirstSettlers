@@ -30,6 +30,7 @@ public class WorldManagerEditor : Editor
         new[] { "Terrain Shape and Climate", "sampleScale", "mountainWidth", "worldScale", "meshHeightMultiplier", "erosion", "octaves", "persistence", "lacunarity" },
         new[] { "Terrain Rendering and Lighting", "terrainMaterial", "mountainSnowBlendGamma", "terrainReceiveShadows", "terrainHorizonShadows" },
         new[] { "Terrain Streaming", "viewDistance", "colliderDistance", "enableFarTerrain", "farTerrainStartRing", "farTerrainMacroTileSize", "farTerrainHeightGridResolution", "farTerrainControlMapResolution", "farTerrainSkirtDepth" },
+        new[] { "Terrain Sculpting", "enableTerrainSculpting", "excavationAppearance", "caveLighting" },
         new[] { "Grass and Forest Ground Cover", "grassSettings", "leafClusterSettings", "fernSettings" },
         new[] { "Trees, Bushes and Rocks", "treeSettings", "showTreeExclusionRadiusGizmos" },
         new[] { "Tree Season Preview", "simulateTreeSeason", "treeSeasonAutumnAmount" },

@@ -20,7 +20,7 @@ public sealed class TerrainMaterialInspector : ShaderGUI
         new[] { "Forest Floor Macro Variation", "_ForestFloorMacroScale", "_ForestFloorMacroStrength" },
         new[] { "Snow", "_SnowColor", "_SnowTint", "_SnowAlbedo", "_SnowNormal", "_SnowNormalStrength", "_SnowTilingNear", "_SnowTilingFar", "_SnowTilingNearDistance", "_SnowTilingFarDistance", "_SnowTriplanarStart", "_SnowTriplanarEnd", "_SnowTriplanarSharpness" },
         new[] { "Lighting and Distance Blending", "_AmbientStrength", "_DistanceBlendNoiseScale", "_DistanceBlendNoiseStrength" },
-        new[] { "Preview and Runtime Inputs", "_ReceiveShadows", "_ControlMap0", "_ControlMap1", "_ControlMap2", "_TerrainHorizon0", "_TerrainHorizon1", "_TerrainHorizonUV", "_TerrainHorizonParams", "_TerrainHorizonTint" }
+        new[] { "Preview and Runtime Inputs", "_ReceiveShadows", "_ControlMap0", "_ControlMap1", "_ControlMap2", "_TerrainHorizon0", "_TerrainHorizon1", "_TerrainHorizonUV", "_TerrainHorizonParams", "_TerrainHorizonTint", "_ExcavationAlbedo", "_ExcavationNormal", "_ExcavationTint", "_ExcavationTiling", "_ExcavationNormalStrength" }
     };
 
     public override void OnGUI(MaterialEditor editor, MaterialProperty[] properties)

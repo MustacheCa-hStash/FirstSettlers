@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using Unity.Profiling;
 
-public enum WorldStreamingPhase { Results, Content, Foliage, Grass }
+public enum WorldStreamingPhase { Results, Content, Foliage, Grass, Sculpt }
 
 /// <summary>Accounts only measured main-thread streaming work; drawing and worker time are excluded.
 /// Reservations protect later phases, then unused capacity returns to the shared allowance.</summary>
@@ -12,6 +12,7 @@ public sealed class WorldStreamingBudget
     private static readonly ProfilerMarker ContentMarker = new("FS.Streaming.Budgeted.Content");
     private static readonly ProfilerMarker FoliageMarker = new("FS.Streaming.Budgeted.Foliage");
     private static readonly ProfilerMarker GrassMarker = new("FS.Streaming.Budgeted.Grass");
+    private static readonly ProfilerMarker SculptMarker = new("FS.Streaming.Budgeted.Sculpt");
     private readonly WorldStreamingConfiguration configuration;
     private readonly Func<long> timestamp;
     private readonly double millisecondsPerTick;
@@ -29,7 +30,7 @@ public sealed class WorldStreamingBudget
         {
             if (configuration.TotalMs <= 0) return double.PositiveInfinity;
             double reserved = 0;
-            for (int i = 1; i <= 3; i++)
+            for (int i = 1; i <= 4; i++)
                 if ((completedPhases & (1 << i)) == 0 && active != (WorldStreamingPhase)i)
                     reserved += Reservation((WorldStreamingPhase)i);
             return Math.Max(0, configuration.TotalMs - ElapsedMs - reserved);
@@ -53,6 +54,7 @@ public sealed class WorldStreamingBudget
         WorldStreamingPhase.Content => configuration.ContentReserveMs,
         WorldStreamingPhase.Foliage => configuration.FoliageReserveMs,
         WorldStreamingPhase.Grass => configuration.GrassReserveMs,
+        WorldStreamingPhase.Sculpt => configuration.SculptReserveMs,
         _ => 0
     };
     public void BeginFrame()
@@ -69,6 +71,7 @@ public sealed class WorldStreamingBudget
             WorldStreamingPhase.Content => ContentMarker,
             WorldStreamingPhase.Foliage => FoliageMarker,
             WorldStreamingPhase.Grass => GrassMarker,
+            WorldStreamingPhase.Sculpt => SculptMarker,
             _ => throw new ArgumentOutOfRangeException(nameof(phase))
         };
         var profilerScope = marker.Auto();

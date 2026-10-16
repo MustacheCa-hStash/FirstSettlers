@@ -8,6 +8,7 @@ public sealed class LocalPlayerInput : MonoBehaviour
     [SerializeField] private CharacterMotor motor;
     [SerializeField] private FirstPersonLook look;
     [SerializeField] private BuildingController building;
+    private TerrainSculptController sculpting;
     [Header("GUI Scale")]
     [Tooltip("Inventory size relative to the original layout. 1 = default. Large sizes are limited to fit the screen.")]
     [SerializeField, Range(InventoryView.MinGuiScale, InventoryView.MaxGuiScale)] private float inventoryGuiScale = 1;
@@ -21,13 +22,27 @@ public sealed class LocalPlayerInput : MonoBehaviour
     [System.Flags]
     private enum BuildButton { Toggle = 1, Cancel = 2, Picker = 4, LeftTurn = 8, RightTurn = 16,
         Left = 32, Right = 64, Forward = 128, Back = 256, Up = 512, Down = 1024, Place = 2048, Remove = 4096,
-        Debug = 8192, Freeze = 16384, Flip = 32768, Confirm = 65536 }
+        Debug = 8192, Freeze = 16384, Flip = 32768, Confirm = 65536, Sculpt = 131072, SaveTerrain = 262144 }
     private BuildButton heldBuildButtons;
     private int suppressLookFrames;
     private bool guiScaleDirty;
+    private bool applicationFocused=true;
     public LocalPlayerMenus Menus { get; private set; }
-    public bool WorldInteractionAllowed => Menus == null || !Menus.BlocksWorldInteraction;
+    public bool WorldInteractionAllowed => applicationFocused && (Menus == null || !Menus.BlocksWorldInteraction);
+    public bool BuildingActive => building!=null&&building.Active;
+    public TerrainSculptController Sculpting => sculpting;
     public void SetBuilding(BuildingController controller) { building = controller; Menus?.SetBuilding(controller); }
+    public void SetSculpting(TerrainSculptController controller)
+    {if(sculpting==controller)return;sculpting?.Exit();sculpting=controller;}
+    public void ClearSculpting(TerrainSculptController controller){if(sculpting==controller)sculpting=null;}
+    public void ExitSculpting()=>sculpting?.Exit();
+    public void ToggleSculpting()
+    {
+        if(sculpting==null||!sculpting.Available)return;
+        if(sculpting.Active)sculpting.Exit();
+        else{building?.Exit();Menus?.CloseActive();sculpting.Enter();}
+        ResetNudgeRepeat();Menus?.RequestGameplayCursorCapture();
+    }
     public void SuppressLookAfterCursorCapture() => suppressLookFrames = 2;
 
     private void Awake()
@@ -69,6 +84,7 @@ public sealed class LocalPlayerInput : MonoBehaviour
     private void OnDisable()
     {
         ResetNudgeRepeat();
+        sculpting?.Exit();
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
@@ -79,6 +95,7 @@ public sealed class LocalPlayerInput : MonoBehaviour
         if (motor == null || look == null)
         {
             ResetNudgeRepeat();
+            sculpting?.Suspend();
             return;
         }
 
@@ -87,14 +104,18 @@ public sealed class LocalPlayerInput : MonoBehaviour
         BuildButton pressed = held & ~heldBuildButtons;
         heldBuildButtons = held;
         bool Pressed(BuildButton button) => (pressed & button) != 0;
+        if(!applicationFocused)
+        {ResetNudgeRepeat();sculpting?.Suspend();return;}
         if (keyboard != null)
         {
-            if (Pressed(BuildButton.Toggle) && building != null) building.Toggle();
+            if (Pressed(BuildButton.Sculpt)) ToggleSculpting();
+            else if (Pressed(BuildButton.Toggle) && building != null) {ExitSculpting();building.Toggle();}
             else if (Pressed(BuildButton.Picker)) Menus.ToggleInventory();
             else if (Pressed(BuildButton.Cancel))
             {
                 if (building != null && building.Active) building.Exit();
                 else if (Menus.IsOpen) Menus.CloseActive();
+                else if(sculpting!=null&&sculpting.Active){sculpting.Exit();Menus.RequestGameplayCursorCapture();}
             }
             if (Pressed(BuildButton.Debug)) building?.CycleColliderDebug();
             if (Pressed(BuildButton.Freeze)) building?.ToggleDebugFreeze();
@@ -103,6 +124,7 @@ public sealed class LocalPlayerInput : MonoBehaviour
         }
         if (building != null && building.MenuOpen)
         {
+            sculpting?.Suspend();
             if (Pressed(BuildButton.Flip)) building.FlipMenuSlope();
             if (Pressed(BuildButton.Confirm)) building.ConfirmMenuSelection();
             ResetNudgeRepeat();
@@ -111,10 +133,12 @@ public sealed class LocalPlayerInput : MonoBehaviour
         }
         if (Menus.IsOpen)
         {
+            sculpting?.Suspend();
             ResetNudgeRepeat();
             motor.Simulate(Menus.AllowsMovement ? ReadMovement(keyboard) : default, Time.deltaTime);
             return;
         }
+        bool captureSuppressed=suppressLookFrames>0;
         if (suppressLookFrames > 0) suppressLookFrames--;
         else if (Mouse.current != null)
             look.ApplyLook(Mouse.current.delta.ReadValue());
@@ -122,11 +146,27 @@ public sealed class LocalPlayerInput : MonoBehaviour
         if (Keyboard.current == null)
         {
             ResetNudgeRepeat();
+            sculpting?.Suspend();
             motor.Simulate(default, Time.deltaTime);
             return;
         }
 
-        if (building != null && building.Active)
+        if(sculpting!=null&&sculpting.Active)
+        {
+            ResetNudgeRepeat();
+            // Focus/menu ownership and the capture transition govern interaction. The
+            // Editor can report an unlocked OS cursor even with a valid gameplay command.
+            if(captureSuppressed)sculpting.Suspend();
+            else
+            {
+                float scroll=Mouse.current?.scroll.ReadValue().y??0;
+                // Input System scroll units vary by device; one event direction is one 0.1 m step.
+                int sizeStep=scroll>0?1:scroll<0?-1:0;
+                sculpting.Submit(new TerrainSculptInputCommand((held&BuildButton.Place)!=0,Pressed(BuildButton.Place),
+                    sizeStep,Pressed(BuildButton.Flip),Pressed(BuildButton.SaveTerrain)));
+            }
+        }
+        else if (building != null && building.Active)
         {
             var mouse = Mouse.current;
             int turn = (Pressed(BuildButton.RightTurn) ? 1 : 0) - (Pressed(BuildButton.LeftTurn) ? 1 : 0);
@@ -168,7 +208,12 @@ public sealed class LocalPlayerInput : MonoBehaviour
 
     }
     private void ResetNudgeRepeat() => leftNudge = rightNudge = forwardNudge = backNudge = default;
-    private void OnApplicationFocus(bool focused) { if (!focused) ResetNudgeRepeat(); }
+    private void OnApplicationFocus(bool focused)
+    {
+        applicationFocused=focused;ResetNudgeRepeat();sculpting?.SetFocus(focused);
+        heldBuildButtons=ReadBuildButtons(Keyboard.current,Mouse.current);
+        if(focused)SuppressLookAfterCursorCapture();
+    }
     // Explicit edges are sampled once by this owner, including while the picker is open.
     // This also consumes menu clicks and prevents repeated toggles/placements while held.
     private static BuildButton ReadBuildButtons(Keyboard keyboard, Mouse mouse)
@@ -191,6 +236,8 @@ public sealed class LocalPlayerInput : MonoBehaviour
             if (keyboard.pageDownKey.isPressed) buttons |= BuildButton.Down;
             if (keyboard.f8Key.isPressed) buttons |= BuildButton.Debug;
             if (keyboard.f9Key.isPressed) buttons |= BuildButton.Freeze;
+            if (keyboard.f6Key.isPressed) buttons |= BuildButton.Sculpt;
+            if (keyboard.f10Key.isPressed) buttons |= BuildButton.SaveTerrain;
         }
         if (mouse != null)
         {

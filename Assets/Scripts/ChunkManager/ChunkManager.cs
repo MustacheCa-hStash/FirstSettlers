@@ -101,7 +101,23 @@ public class ChunkManager : IChunkLookup
     private readonly TerrainHandoffCoordinator handoffs;
     private readonly TerrainResultPublisher resultPublisher;
     private readonly WorldStreamingBudget streamingBudget;
-    public string StreamingBudgetSummary => $"Streaming: {streamingBudget.LastFrameMs:0.00}/{streamingBudget.TotalMs:0.00} ms; peak {streamingBudget.PeakFrameMs:0.00}; overruns {streamingBudget.OverrunFrames}";
+    public TerrainSculptRuntime Sculpting { get; }
+    private readonly HashSet<ChunkCoord> sculptDestinationChunks = new HashSet<ChunkCoord>();
+    private readonly HashSet<ChunkCoord> sculptPreparationChunks = new HashSet<ChunkCoord>();
+    private readonly HashSet<FarTerrainPatchKey> sculptPreparationFarTiles = new HashSet<FarTerrainPatchKey>();
+    private readonly HashSet<ChunkCoord> sculptForcedNormalChunks = new HashSet<ChunkCoord>();
+    private HashSet<ChunkCoord> lastSculptRenderChunks = new HashSet<ChunkCoord>();
+    private bool sculptSetChanged;
+    // Immutable managed maps stay valid after record retirement. The sampler retains at most 32;
+    // this lookup only shares references to the existing records, without worker dictionary reads.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<ChunkCoord,float[,]> sculptHeightMaps = new System.Collections.Concurrent.ConcurrentDictionary<ChunkCoord,float[,]>();
+    public string StreamingBudgetSummary => $"Streaming: {streamingBudget.LastFrameMs:0.00}/{streamingBudget.TotalMs:0.00} ms; peak {streamingBudget.PeakFrameMs:0.00}; overruns {streamingBudget.OverrunFrames}" +
+        (Sculpting == null ? "" : $"\nSculpt: {Sculpting.Status}; rev {Sculpting.PublishedDensityRevision}/{Sculpting.PublishedCoverageRevision}; chunks {Sculpting.LiveChunkCount}; workers {Sculpting.ActiveJobs}; derived {(Sculpting.DerivedLiveBytes+Sculpting.DerivedReservedBytes)/1048576d:0.0} MiB; stale {Sculpting.StaleDiscards}"+
+            $"\nDensity {(Sculpting.Density.ResidentPayloadBytes+Sculpting.Density.ReservedPayloadBytes)/1048576d:0.00} MiB; triangles {Sculpting.LiveRenderTriangles}/{Sculpting.LiveCollisionTriangles}; last edit {Sculpting.LastEditMs:0.0} ms (worker {Sculpting.LastWorkerMs:0.0}, mesh {Sculpting.LastMeshStageMs:0.0}, cook {Sculpting.LastCookMs:0.0}, commit {Sculpting.LastCommitMs:0.0})"+
+            $"\nMesh bricks extracted/reused {Sculpting.LastExtractedBricks}/{Sculpting.LastReusedBricks}; extraction {Sculpting.LastExtractMs:0.0} ms, assembly {Sculpting.LastAssemblyMs:0.0} ms; cache pressure retries {Sculpting.CachePressureRetries}"+
+            $"; foliage mask {Sculpting.Suppression?.TileCount??0} tiles / {Sculpting.SuppressionBytes/1048576d:0.00} MiB"+
+            (Sculpting.SkyAccess==null?"":$"\nSky access: {Sculpting.SkyAccess.Status}; {Sculpting.SkyAccess.ResidentPages}/{Sculpting.SkyAccess.VisiblePages} tiles, {Sculpting.SkyAccess.Pending} pending, {Sculpting.SkyAccess.OmittedPages} omitted; trace/upload {Sculpting.SkyAccess.LastTraceMs:0.0}/{Sculpting.SkyAccess.LastUploadMs:0.0} ms; 24 MiB reserved within derived cap")+
+            (Sculpting.Persistence==null?"":$"\nSave: {Sculpting.Persistence.Status}; saved rev {Sculpting.Persistence.SavedRevision}; dirty {Sculpting.Persistence.Dirty}"));
     private readonly TerrainRequestManager terrainRequestManager;
     private readonly FoliageManager foliageManager;
     private readonly AmbientLifeManager butterflyManager;
@@ -113,10 +129,15 @@ public class ChunkManager : IChunkLookup
     private bool disposed;
     private static readonly ProfilerMarker ReleaseDataMarker = new("FS.Streaming.Ownership.ReleaseInactiveChunkData");
 
-    public ChunkManager(WorldConfiguration configuration)
+    public ChunkManager(WorldConfiguration configuration, System.Func<int> frameIndex = null)
     {
         if (configuration == null) throw new System.ArgumentNullException(nameof(configuration));
-        streamingBudget = new WorldStreamingBudget(configuration.Streaming);
+        if(configuration.Sculpting.Enabled&&(configuration.Generation.WorldScale!=(float)TerrainDensityProfile.Default.Spacing||
+            configuration.Generation.ChunkSize%16!=0||configuration.Sculpting.DensityBytes<=0||configuration.Sculpting.DerivedBytes<=0))
+            throw new System.ArgumentException("Sculpting requires the approved 0.3 m source grid, aligned chunks and positive memory budgets.");
+        var streaming=configuration.Streaming;
+        if(configuration.Sculpting.Enabled)streaming.SculptReserveMs=.5f;
+        streamingBudget = new WorldStreamingBudget(streaming);
         var content = configuration.Content;
         var coverage = configuration.Coverage;
         var foliage = configuration.Foliage;
@@ -126,7 +147,8 @@ public class ChunkManager : IChunkLookup
         var workers = configuration.Workers;
         runtimePool = new TerrainRuntimePool(generation, rendering, scene.ChunkParent);
         coveragePolicy = new TerrainCoveragePolicy(coverage);
-        handoffs = new TerrainHandoffCoordinator(coveragePolicy, loadedChunks, loadedFarTerrainTiles, ReleaseChunkRuntime, ReleaseFarTerrainTileRuntime);
+        handoffs = new TerrainHandoffCoordinator(coveragePolicy, loadedChunks, loadedFarTerrainTiles, ReleaseChunkRuntime, ReleaseFarTerrainTileRuntime,
+            coord => Sculpting?.OwnsRuntime(coord) != true && !sculptPreparationChunks.Contains(coord));
         this.viewDistance = coverage.ViewDistance;
         this.colliderDistance = coverage.ColliderDistance;
         this.enableFarTerrain = coverage.EnableFarTerrain;
@@ -182,7 +204,18 @@ public class ChunkManager : IChunkLookup
             generation.Water, generation.MountainHorizontalScale, generation.MountainSnowRenderCoverageGamma, generation.Erosion);
         resultPublisher = new TerrainResultPublisher(terrainRequestManager, configuration.Publication,
             GetChunkRecord, FindFarTerrainRecord, result => IsFarTerrainResultStillWanted(result, GetViewerChunkCoord()),
-            QueueVisibleChunkContentWork, QueueFarTerrainTileContentWork, streamingBudget);
+            QueueVisibleChunkContentWork, QueueFarTerrainTileContentWork, streamingBudget,frameIndex);
+        if(configuration.Sculpting.Enabled)
+        {
+            var baseline=new TerrainBaselineSampler(generation,32,
+                coord=>sculptHeightMaps.TryGetValue(coord,out var map)?map:null,true);
+            var density=new TerrainDensityWorld(TerrainDensityProfile.Default,baseline,configuration.Sculpting.DensityBytes,generation.Water.SurfaceY+.3);
+            var persistence=configuration.TerrainEdits==null?null:new TerrainEditPersistence(density,
+                new TerrainEditStore(configuration.TerrainEdits.Root,TerrainEditIdentity.Create(configuration.TerrainEdits.Slot,generation,density.Profile),configuration.Sculpting.DensityBytes),
+                message=>Debug.LogWarning(message));
+            Sculpting=new TerrainSculptRuntime(density,baseline.SampleHeight,generation.ChunkSize,terrainRequestManager,
+                coord => loadedChunks.TryGetValue(coord,out var runtime)?runtime:null,viewer,configuration.Sculpting,true,SculptDestinationReady,SculptHostReady,persistence);
+        }
         Trees = new TreeRegistry(generation.Seed, generation.ChunkSize * generation.WorldScale);
         if (foliage.Trees != null) TreeGameplay = new TreeGameplayManager(Trees, foliage.Trees, generation.ChunkSize * generation.WorldScale);
         foliageManager = new FoliageManager(configuration.Generation, configuration.Foliage, Trees);
@@ -201,6 +234,8 @@ public class ChunkManager : IChunkLookup
     {
         if (disposed) return;
         disposed = true;
+        Sculpting?.Dispose(); // Cancel/join producers before retiring source runtimes or their native maps.
+        sculptHeightMaps.Clear();
         terrainRequestManager?.Dispose(); // Close admission and all result queues before waiting for workers.
         leafClusters.Dispose();
         ferns.Dispose();
@@ -243,6 +278,7 @@ public class ChunkManager : IChunkLookup
         butterflyManager?.ForgetChunk(coord); beeManager?.ForgetChunk(coord);
         terrainRequestManager.DiscardChunkResults(coord);
         record.Dispose(); chunkRecords.Remove(coord);
+        sculptHeightMaps.TryRemove(coord,out _);
         queuedVisibleChunkContentCoords.Remove(coord); deferredVisibleChunkContentRetries.RemoveAll(c => c == coord);
         RemoveFromQueue(pendingRuntimeCreations, coord); RemoveFromQueue(pendingVisibleChunkContentWork, coord);
         return true;
@@ -489,14 +525,24 @@ public class ChunkManager : IChunkLookup
 
             using (streamingBudget.Measure(WorldStreamingPhase.Content))
             {
-                if (viewerChunkChanged)
+                if (viewerChunkChanged || sculptSetChanged)
                 {
+                    sculptSetChanged=false;
                     RebuildActiveChunkSet(viewerCoord);
                     lastUpdateViewerCoord = viewerCoord;
                 }
                 ProcessRuntimeCreationQueue();
                 UpdateVisibleChunkContent(viewerCoord);
             }
+            if(Sculpting!=null)
+                using(streamingBudget.Measure(WorldStreamingPhase.Sculpt))
+                {
+                    PrepareSculptDestination();
+                    long revision=Sculpting.PublishedCoverageRevision;
+                    Sculpting.Update(streamingBudget);
+                    foliageManager.ApplyTerrainSuppression(Sculpting.Suppression,loadedChunks.Values);
+                    if(Sculpting.PublishedCoverageRevision!=revision)CompleteSculptHandoff();
+                }
 
             // Horizon dispatch and representation drawing retain their existing lifecycle.
             terrainHorizonShadows.Update(viewer.position,
@@ -527,12 +573,100 @@ public class ChunkManager : IChunkLookup
         finally { streamingBudget.EndFrame(); }
     }
 
+    private void PrepareSculptDestination()
+    {
+        if(Sculpting==null)return;
+        if(!Sculpting.Busy&&sculptDestinationChunks.Count==0)return;
+        var target=Sculpting.PendingDestination;
+        var wanted=new HashSet<ChunkCoord>(Sculpting.PendingSourceChunks);
+        var renderWanted=new HashSet<ChunkCoord>(Sculpting.PendingRenderChunks);
+        if(target.HasValue)
+        {
+            double width=chunkSize*(double)worldScale;
+            int cx=TerrainDensityCoordinates.FloorIndex(target.Value.x/width),cz=TerrainDensityCoordinates.FloorIndex(target.Value.z/width);
+            for(int z=cz-1;z<=cz+1;z++)for(int x=cx-1;x<=cx+1;x++)
+            {wanted.Add(new ChunkCoord(x,z));renderWanted.Add(new ChunkCoord(x,z));}
+        }
+        sculptPreparationFarTiles.Clear();
+        foreach(var pair in loadedFarTerrainTiles)
+        {
+            if(!pair.Value.HasTerrainMesh)continue;
+            int x0=pair.Key.Origin.x*pair.Key.SizeInChunks,z0=pair.Key.Origin.z*pair.Key.SizeInChunks;
+            bool overlaps=false;
+            foreach(var coord in renderWanted)if(coord.x>=x0&&coord.x<x0+pair.Key.SizeInChunks&&coord.z>=z0&&coord.z<z0+pair.Key.SizeInChunks){overlaps=true;break;}
+            if(!overlaps)continue;
+            if((long)pair.Key.SizeInChunks*pair.Key.SizeInChunks>64)
+            {Sculpting.RejectPreparation("Terrain handoff exceeds the 64-source-chunk preparation limit.");return;}
+            sculptPreparationFarTiles.Add(pair.Key);
+            for(int z=z0;z<z0+pair.Key.SizeInChunks;z++)for(int x=x0;x<x0+pair.Key.SizeInChunks;x++)wanted.Add(new ChunkCoord(x,z));
+        }
+        if(sculptPreparationFarTiles.Count>0&&wanted.Count>64)
+        {Sculpting.RejectPreparation("Terrain handoff exceeds the 64-source-chunk preparation limit.");return;}
+        sculptPreparationChunks.Clear();foreach(var coord in wanted)sculptPreparationChunks.Add(coord);
+        int processed=0;
+        foreach(var coord in wanted)
+        {
+            if(!streamingBudget.HasRemaining)return;
+            var record=GetOrCreateChunkRecord(coord);
+            if(loadedChunks.TryGetValue(coord,out var ready)&&ready.HasTerrainMesh&&ready.CurrentLOD>=0&&ready.CurrentLOD<FarTerrainLOD&&ready.HasCollider()&&record.HasTerrainData)
+            {
+                sculptDestinationChunks.Add(coord);continue;
+            }
+            if(processed++>=4)break;
+            var runtime=GetOrCreateChunkRuntime(record);sculptDestinationChunks.Add(coord);
+            runtime.SetVisible(true);
+            if(!activeLastUpdate.Contains(coord))runtime.SetRenderVisible(false);
+            EnsureTerrainDataRequested(record);EnsureLODMeshRequested(record,0);TryApplyLODMesh(record,runtime,0);
+            record.ColliderDesired=true;EnsureColliderRequested(record);TryApplyCollider(record,runtime);
+        }
+        if(!target.HasValue&&sculptDestinationChunks.Count>0)
+        {
+            var release=new List<ChunkCoord>();
+            foreach(var coord in sculptDestinationChunks)
+                if(!wanted.Contains(coord)&&!activeLastUpdate.Contains(coord)&&Sculpting.OwnsRuntime(coord)!=true&&loadedChunks.TryGetValue(coord,out var runtime))
+                {ReleaseChunkRuntime(coord,runtime);loadedChunks.Remove(coord);release.Add(coord);}
+                else if(activeLastUpdate.Contains(coord))release.Add(coord);
+            foreach(var coord in release)sculptDestinationChunks.Remove(coord);
+        }
+    }
+    private bool SculptDestinationReady(Unity.Mathematics.double3 target)
+    {
+        double width=chunkSize*(double)worldScale;
+        int cx=TerrainDensityCoordinates.FloorIndex(target.x/width),cz=TerrainDensityCoordinates.FloorIndex(target.z/width);
+        for(int z=cz-1;z<=cz+1;z++)for(int x=cx-1;x<=cx+1;x++)
+            if(!loadedChunks.TryGetValue(new ChunkCoord(x,z),out var runtime)||!runtime.HasTerrainMesh||!runtime.HasCollider())return false;
+        return true;
+    }
+    private bool SculptHostReady()
+    {
+        foreach(var coord in sculptPreparationChunks)
+            if(!loadedChunks.TryGetValue(coord,out var runtime)||!runtime.HasTerrainMesh||runtime.CurrentLOD<0||runtime.CurrentLOD>=FarTerrainLOD||!runtime.HasCollider())return false;
+        return true;
+    }
+    private void CompleteSculptHandoff()
+    {
+        // All old far coverage remains live until every source chunk in its footprint is ready.
+        foreach(var patch in sculptPreparationFarTiles)
+            if(loadedFarTerrainTiles.TryGetValue(patch,out var runtime)){ReleaseFarTerrainTileRuntime(runtime);loadedFarTerrainTiles.Remove(patch);}
+        if(viewerCamera!=null)GeometryUtility.CalculateFrustumPlanes(viewerCamera,frustumPlanes);
+        foreach(var coord in sculptPreparationChunks)
+            if(loadedChunks.TryGetValue(coord,out var runtime))
+            {runtime.SetTerrainHandoffHidden(false);UpdateChunkRenderVisibility(coord,runtime);}
+        sculptPreparationFarTiles.Clear();sculptPreparationChunks.Clear();
+        var ownedRender=new HashSet<ChunkCoord>(Sculpting.RenderChunks);
+        if(!ownedRender.SetEquals(lastSculptRenderChunks))sculptSetChanged=true;
+        lastSculptRenderChunks=ownedRender;
+    }
+    private bool ShouldUseFarTerrain(ChunkCoord viewerCoord,ChunkCoord targetCoord) =>
+        !sculptForcedNormalChunks.Contains(targetCoord)&&coveragePolicy.ShouldUseFarTerrain(viewerCoord,targetCoord);
+
     private void RebuildActiveChunkSet(ChunkCoord viewerCoord)
     {
         using (RebuildActiveChunkSetMarker.Auto())
         {
         activeThisUpdate.Clear();
         activeFarTilesThisUpdate.Clear();
+        sculptForcedNormalChunks.Clear();
         orderedActiveCoords.Clear();
         orderedActiveFarTileCoords.Clear();
         pendingVisibleChunkContentWork.Clear();
@@ -554,14 +688,23 @@ public class ChunkManager : IChunkLookup
 
                 if (coveragePolicy.TryGetFarTerrainPatch(viewerCoord, targetCoord, out FarTerrainPatchKey farPatch))
                 {
+                    if(Sculpting?.OwnsRenderIn(farPatch)==true)
+                    {
+                        int x0=farPatch.Origin.x*farPatch.SizeInChunks,z0=farPatch.Origin.z*farPatch.SizeInChunks;
+                        for(int fz=z0;fz<z0+farPatch.SizeInChunks;fz++)for(int fx=x0;fx<x0+farPatch.SizeInChunks;fx++)
+                        {
+                            var forced=new ChunkCoord(fx,fz);sculptForcedNormalChunks.Add(forced);
+                            if(activeThisUpdate.Add(forced))orderedActiveCoords.Add(forced);
+                        }
+                        continue;
+                    }
                     if (activeFarTilesThisUpdate.Add(farPatch))
                         orderedActiveFarTileCoords.Add(farPatch);
 
                     continue;
                 }
 
-                activeThisUpdate.Add(targetCoord);
-                orderedActiveCoords.Add(targetCoord);
+                if(activeThisUpdate.Add(targetCoord))orderedActiveCoords.Add(targetCoord);
             }
         }
 
@@ -759,7 +902,7 @@ public class ChunkManager : IChunkLookup
             int dx = coord.x - viewerCoord.x;
             int dz = coord.z - viewerCoord.z;
             int sqrDistance = dx * dx + dz * dz;
-            bool useFarTerrain = coveragePolicy.ShouldUseFarTerrain(viewerCoord, coord);
+            bool useFarTerrain = ShouldUseFarTerrain(viewerCoord, coord);
 
             using (VisibleChunkColliderPathMarker.Auto())
             {
@@ -832,7 +975,7 @@ public class ChunkManager : IChunkLookup
             int dx = coord.x - viewerCoord.x;
             int dz = coord.z - viewerCoord.z;
             int sqrDistance = dx * dx + dz * dz;
-            bool useFarTerrain = coveragePolicy.ShouldUseFarTerrain(viewerCoord, coord);
+            bool useFarTerrain = ShouldUseFarTerrain(viewerCoord, coord);
 
             if (useFarTerrain)
             {
@@ -958,6 +1101,8 @@ public class ChunkManager : IChunkLookup
 
     private void QueueVisibleChunkContentWork(ChunkCoord coord)
     {
+        if(Sculpting!=null&&chunkRecords.TryGetValue(coord,out var record)&&record.HeightMap!=null)
+            sculptHeightMaps[coord]=record.HeightMap;
         if (queuedVisibleChunkContentCoords.Add(coord))
             pendingVisibleChunkContentWork.Enqueue(coord);
     }
@@ -976,7 +1121,7 @@ public class ChunkManager : IChunkLookup
         if (!chunkRecords.TryGetValue(coord, out ChunkRecord record))
             return false;
 
-        bool useFarTerrain = coveragePolicy.ShouldUseFarTerrain(viewerCoord, coord);
+        bool useFarTerrain = ShouldUseFarTerrain(viewerCoord, coord);
         if (useFarTerrain)
         {
             if (record.HasFarTerrain)
@@ -1122,6 +1267,7 @@ public class ChunkManager : IChunkLookup
     private bool IsChunkInFrustum(ChunkCoord coord, float paddingWorldUnits)
     {
         Bounds bounds = GetChunkWorldBounds(coord);
+        if(loadedChunks.TryGetValue(coord,out var runtime)&&runtime.TryGetSculptBounds(out var sculptBounds))bounds.Encapsulate(sculptBounds);
         if (paddingWorldUnits > 0f)
             bounds.Expand(new Vector3(paddingWorldUnits * 2f, 0f, paddingWorldUnits * 2f));
 
@@ -1268,7 +1414,7 @@ public class ChunkManager : IChunkLookup
 
     private void EnsureTerrainVisualRequested(ChunkRecord record, ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
-        if (coveragePolicy.ShouldUseFarTerrain(viewerCoord, targetCoord))
+        if (ShouldUseFarTerrain(viewerCoord, targetCoord))
         {
             EnsureFarTerrainRequested(record);
         }
@@ -1561,7 +1707,7 @@ public class ChunkManager : IChunkLookup
             return false;
 
         if (!IsChunkWithinViewDistance(viewerCoord, result.ChunkCoord) ||
-            !coveragePolicy.ShouldUseFarTerrain(viewerCoord, result.ChunkCoord))
+            !ShouldUseFarTerrain(viewerCoord, result.ChunkCoord))
         {
             record.CancelFarTerrainRequest(result.RequestVersion);
             return false;

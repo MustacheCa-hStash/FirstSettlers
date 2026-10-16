@@ -20,7 +20,8 @@ public sealed class BuildPieceRecord
     public Vector3Int AnchorUnits;
     public byte YawStep;
     public float Health;
-    // Grounding is logical state, never inferred from a streaming collider disappearing.
+    // Terrain grounding is captured at valid placement and remains an anchor even after
+    // excavation. Only structural edits/destruction change its support connections.
     public bool Grounded;
     [NonSerialized] public bool Supported;
     [NonSerialized] public Vector3 Origin;

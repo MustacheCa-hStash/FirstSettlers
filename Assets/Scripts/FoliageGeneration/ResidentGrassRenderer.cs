@@ -77,6 +77,29 @@ public sealed class ResidentGrassRenderer : IDisposable
     public int LastCullDispatchCount { get; private set; }
     private Bounds bounds;
     private bool hasBounds;
+    private TerrainSculptSuppression suppression;
+    private static readonly ProfilerMarker SuppressionMarker=new("FS.Streaming.Sculpt.GrassSuppress");
+    public void ApplySuppression(TerrainSculptSuppression mask)
+    {
+        if(ReferenceEquals(mask,suppression)||mask==null)return;
+        var previous=suppression;suppression=mask;
+        if(!hasBounds||!mask.ChangedIn(previous,bounds.min.x,bounds.min.z,bounds.max.x,bounds.max.z))return;
+        using var marker=SuppressionMarker.Auto();
+        for(int slot=0;slot<cpuSlots.Length;slot++)
+        {
+            var data=cpuSlots[slot];if(data==null)continue;
+            int count=0,forest=0;
+            foreach(var instance in data)
+            {
+                if(mask.Contains(instance.ObjectToWorld.m03,instance.ObjectToWorld.m23))continue;
+                data[count++]=instance;if(instance.Data.x>=.5f)forest++;
+            }
+            if(count==data.Length)continue;
+            forestCount+=forest-forestCounts[slot];meadowCount+=(count-forest)-(data.Length-forestCounts[slot]);forestCounts[slot]=forest;
+            Array.Resize(ref data,count);cpuSlots[slot]=data;metadata[slot].x=count;metadataDirty=true;
+            if(sources!=null&&count>0){sources.SetData(data,0,slot*slotSize,count);GrassDrawDiagnostics.CountUpload();}
+        }
+    }
     public ResidentGrassRenderer(int subCount, int cellsPerAxis, int subAxis)
     {
         slotSize = (Mathf.CeilToInt((float)cellsPerAxis / subAxis) + 3);
@@ -99,11 +122,13 @@ public sealed class ResidentGrassRenderer : IDisposable
         forestCount -= forestCounts[index];
         meadowCount -= (int)metadata[index].x - forestCounts[index];
         forestCounts[index] = 0;
+        int retained=0;
         for (int i = 0; i < candidates.Count; i++)
         {
             var c = candidates[i];
             var matrix = localToWorld * Matrix4x4.TRS(c.localPosition, c.localRotation, c.localScale);
-            upload[i] = new GrassRenderUtility.Instance { ObjectToWorld = matrix,
+            if(suppression?.Contains(matrix.m03,matrix.m23)==true)continue;
+            upload[retained++] = new GrassRenderUtility.Instance { ObjectToWorld = matrix,
                 Data = new Vector4(c.forestBlend, (c.selectionRank & 0xffffffu) / 16777216f,
                     GrassStreamingPolicy.UnitRank(c.selectionRank), GrassStreamingPolicy.RepresentationRank(c.selectionRank)) };
             bool forest = c.forestBlend >= 0.5f;
@@ -114,6 +139,7 @@ public sealed class ResidentGrassRenderer : IDisposable
             if (candidateFar != null) IncludeBounds(GrassRenderUtility.TransformBounds(candidateFar.bounds, matrix));
         }
         // CPU copy remains available for hardware/material fallback and buffer recreation.
+        if(retained!=upload.Length)Array.Resize(ref upload,retained);
         cpuSlots[index] = upload;
         metadata[index].x = upload.Length;
         forestCount += forestCounts[index];

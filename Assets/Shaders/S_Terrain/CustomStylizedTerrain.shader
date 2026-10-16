@@ -132,6 +132,11 @@ Shader "Custom/StylizedTerrainURP"
         _BlendSharpness("Blend Sharpness", Range(0.25, 3.0)) = 1.0
         _AmbientStrength("Minimum Ambient Strength", Range(0.0, 1.0)) = 0.26
         _ReceiveShadows("Receive Shadows", Float) = 1.0
+        [HideInInspector] [NoScaleOffset] _ExcavationAlbedo("Excavated Stone Albedo", 2D) = "white" {}
+        [HideInInspector] [NoScaleOffset] _ExcavationNormal("Excavated Stone Normal", 2D) = "bump" {}
+        [HideInInspector] _ExcavationTint("Excavated Stone Tint", Color) = (1,1,1,1)
+        [HideInInspector] _ExcavationTiling("Excavated Stone Repeats Per Metre", Float) = 0.65
+        [HideInInspector] _ExcavationNormalStrength("Excavated Stone Normal Strength", Float) = 0
         [HideInInspector] [NoScaleOffset] _TerrainHorizon0("Terrain Horizon 0", 2D) = "black" {}
         [HideInInspector] [NoScaleOffset] _TerrainHorizon1("Terrain Horizon 1", 2D) = "black" {}
         [HideInInspector] _TerrainHorizonUV("Terrain Horizon UV", Vector) = (0,0,0,0)
@@ -158,6 +163,8 @@ Shader "Custom/StylizedTerrainURP"
             #pragma fragment frag
             #pragma shader_feature_local_fragment _ROCK_DETAIL
             #pragma shader_feature_local_fragment _GRASS_BLADE_GROUND
+            // Runtime chunk materials select this variant; retain it in player builds.
+            #pragma multi_compile_local _ _TERRAIN_EXCAVATION
             #pragma multi_compile_fog
             // PC_Renderer uses Forward+: GetMainLight needs its clustered attenuation variant.
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
@@ -166,6 +173,7 @@ Shader "Custom/StylizedTerrainURP"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Shaders/TerrainSkyAccess.hlsl"
 
             TEXTURE2D(_ControlMap0);
             // Chunk control maps share clamp/filter settings. Repeat detail
@@ -233,6 +241,9 @@ Shader "Custom/StylizedTerrainURP"
             TEXTURE2D(_RockAlbedo);
             SAMPLER(sampler_RockAlbedo);
             TEXTURE2D(_RockNormal);
+            TEXTURE2D(_ExcavationAlbedo);
+            TEXTURE2D(_ExcavationNormal);
+            SAMPLER(sampler_ExcavationAlbedo);
 
 
             struct Attributes
@@ -240,6 +251,7 @@ Shader "Custom/StylizedTerrainURP"
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 float2 uv : TEXCOORD0;
+                float2 surfaceData : TEXCOORD1;
             };
 
             struct Varyings
@@ -251,10 +263,14 @@ Shader "Custom/StylizedTerrainURP"
                 float fogFactor : TEXCOORD3;
                 float4 shadowCoord : TEXCOORD4;
                 float2 horizonLight : TEXCOORD5;
+                float exposure : TEXCOORD6;
             };
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _ControlMap0_TexelSize;
+                half4 _ExcavationTint;
+                float _ExcavationTiling;
+                float _ExcavationNormalStrength;
                 float _SurfaceBlendSharpness;
                 half4 _SandColor;
                 float _SandTiling;
@@ -595,8 +611,12 @@ Shader "Custom/StylizedTerrainURP"
                 OUT.positionWS = positionInputs.positionWS;
                 OUT.normalWS = normalInputs.normalWS;
                 OUT.uv = IN.uv;
+                OUT.exposure = 0;
+                #if defined(_TERRAIN_EXCAVATION)
+                OUT.exposure = IN.surfaceData.x;
+                #endif
                 OUT.fogFactor = ComputeFogFactor(positionInputs.positionCS.z);
-                OUT.shadowCoord = TransformWorldToShadowCoord(positionInputs.positionWS);
+                OUT.shadowCoord = GetShadowCoord(positionInputs);
                 half3 lightDirection = GetMainLight().direction;
                 OUT.horizonLight = float2(
                     frac(atan2(lightDirection.z, lightDirection.x) * (1.0 / (2.0 * PI))) * 8.0,
@@ -605,10 +625,64 @@ Shader "Custom/StylizedTerrainURP"
                 return OUT;
             }
 
+            void SampleExcavation(float3 p,float3 n,float3 positionDx,float3 positionDy,out half3 albedo,out float3 normalWS)
+            {
+                float3 weights=max(pow(abs(n),4.0)-0.01,0.0);
+                weights/=max(dot(weights,1.0),1e-5);
+                float3 signs=step(0.0,n)*2.0-1.0;
+                float3 dx=positionDx*_ExcavationTiling,dy=positionDy*_ExcavationTiling;
+                p*=_ExcavationTiling;albedo=0;float3 perturbation=0;
+                [branch] if(weights.x>0)
+                {
+                    float2 s=float2(-signs.x,1),uv=p.zy*s;
+                    albedo+=SAMPLE_TEXTURE2D_GRAD(_ExcavationAlbedo,sampler_ExcavationAlbedo,uv,dx.zy*s,dy.zy*s).rgb*weights.x;
+                    if(_ExcavationNormalStrength>0){float3 t=UnpackNormal(SAMPLE_TEXTURE2D_GRAD(_ExcavationNormal,sampler_ExcavationAlbedo,uv,dx.zy*s,dy.zy*s));perturbation+=float3(0,t.y,-t.x*signs.x)*weights.x;}
+                }
+                [branch] if(weights.y>0)
+                {
+                    float2 s=float2(signs.y,1),uv=p.zx*s;
+                    albedo+=SAMPLE_TEXTURE2D_GRAD(_ExcavationAlbedo,sampler_ExcavationAlbedo,uv,dx.zx*s,dy.zx*s).rgb*weights.y;
+                    if(_ExcavationNormalStrength>0){float3 t=UnpackNormal(SAMPLE_TEXTURE2D_GRAD(_ExcavationNormal,sampler_ExcavationAlbedo,uv,dx.zx*s,dy.zx*s));perturbation+=float3(t.y,0,t.x*signs.y)*weights.y;}
+                }
+                [branch] if(weights.z>0)
+                {
+                    float2 s=float2(signs.z,1),uv=p.xy*s;
+                    albedo+=SAMPLE_TEXTURE2D_GRAD(_ExcavationAlbedo,sampler_ExcavationAlbedo,uv,dx.xy*s,dy.xy*s).rgb*weights.z;
+                    if(_ExcavationNormalStrength>0){float3 t=UnpackNormal(SAMPLE_TEXTURE2D_GRAD(_ExcavationNormal,sampler_ExcavationAlbedo,uv,dx.xy*s,dy.xy*s));perturbation+=float3(t.x*signs.z,t.y,0)*weights.z;}
+                }
+                perturbation-=n*dot(perturbation,n);
+                normalWS=normalize(n+perturbation*_ExcavationNormalStrength);albedo*=_ExcavationTint.rgb;
+            }
+
+            half4 ShadeTerrainSurface(half3 albedo,float3 normalWS,Varyings IN,half terrainVisibility)
+            {
+                float4 shadowCoord=IN.shadowCoord;
+                #if defined(_MAIN_LIGHT_SHADOWS_CASCADE)
+                // Cascade selection is discontinuous. Interpolating coordinates selected
+                // at vertices produces dark triangular streaks across cascade boundaries.
+                shadowCoord=TransformWorldToShadowCoord(IN.positionWS);
+                #endif
+                Light mainLight=GetMainLight(shadowCoord);
+                half shadowAttenuation=lerp(1.0h,mainLight.shadowAttenuation*terrainVisibility,saturate(_ReceiveShadows));
+                half3 diffuse=LightingLambert(mainLight.color,mainLight.direction,normalWS)*mainLight.distanceAttenuation*shadowAttenuation;
+                // Visibility offsets follow the geometric surface, independently of
+                // triplanar/detail normal perturbations used for diffuse shading.
+                half caveAmbient=TerrainCaveAmbient(IN.positionWS,normalize(IN.normalWS));
+                half3 ambient=max(SampleSH(normalWS),half3(_AmbientStrength,_AmbientStrength,_AmbientStrength))*caveAmbient;
+                half3 color=albedo*(diffuse+ambient);
+                half tintWeight=saturate(1.0h-terrainVisibility)*saturate(_TerrainHorizonParams.z)*saturate(_ReceiveShadows);
+                color*=lerp(half3(1,1,1),_TerrainHorizonTint.rgb,tintWeight);
+                return half4(MixFogColor(color,unity_FogColor.rgb*caveAmbient,IN.fogFactor),1);
+            }
+
             half4 frag(Varyings IN) : SV_Target
             {
                 half3 baseNormalWS = normalize(IN.normalWS);
                 half3 normalWS = baseNormalWS;
+                #if defined(_TERRAIN_EXCAVATION)
+                float exposure=saturate(IN.exposure);
+                float3 excavationDx=ddx(IN.positionWS),excavationDy=ddy(IN.positionWS);
+                #endif
 
                 // Control pixels represent mesh samples, including the endpoints of each chunk.
                 float2 controlUV = IN.uv * (1.0 - _ControlMap0_TexelSize.xy) + 0.5 * _ControlMap0_TexelSize.xy;
@@ -960,21 +1034,57 @@ Shader "Custom/StylizedTerrainURP"
                 }
 
 
-                Light mainLight = GetMainLight(IN.shadowCoord);
                 half terrainVisibility = TerrainHorizonVisibility(IN.positionWS, IN.horizonLight);
-                half shadowAttenuation = lerp(1.0h, mainLight.shadowAttenuation * terrainVisibility, saturate(_ReceiveShadows));
-                half3 diffuse = LightingLambert(mainLight.color, mainLight.direction, normalWS) *
-                    mainLight.distanceAttenuation *
-                    shadowAttenuation;
-                half3 ambient = max(SampleSH(normalWS), half3(_AmbientStrength, _AmbientStrength, _AmbientStrength));
-                half3 lighting = diffuse + ambient;
-                half3 color = baseColor * lighting;
-                half tintWeight = saturate(1.0h - terrainVisibility) * saturate(_TerrainHorizonParams.z) * saturate(_ReceiveShadows);
-                color *= lerp(half3(1, 1, 1), _TerrainHorizonTint.rgb, tintWeight);
-                color = MixFog(color, IN.fogFactor);
-
-                return half4(color, 1.0);
+                #if defined(_TERRAIN_EXCAVATION)
+                [branch] if(exposure>0)
+                {
+                    half3 stone;float3 stoneNormal;
+                    SampleExcavation(IN.positionWS,baseNormalWS,excavationDx,excavationDy,stone,stoneNormal);
+                    baseColor=lerp(baseColor,stone,exposure);normalWS=normalize(lerp(normalWS,stoneNormal,exposure));
+                    terrainVisibility=lerp(terrainVisibility,1,exposure);
+                }
+                #endif
+                return ShadeTerrainSurface(baseColor,normalWS,IN,terrainVisibility);
             }
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags { "LightMode"="ShadowCaster" }
+            ZWrite On
+            ZTest LEqual
+            ColorMask 0
+            Cull Off
+            HLSLPROGRAM
+            #pragma vertex ShadowVert
+            #pragma fragment ShadowFrag
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+            float3 _LightDirection;
+            float3 _LightPosition;
+            struct ShadowAttributes { float4 positionOS:POSITION; float3 normalOS:NORMAL; };
+            float4 ShadowVert(ShadowAttributes input):SV_POSITION
+            {
+                float3 positionWS=TransformObjectToWorld(input.positionOS.xyz);
+                float3 normalWS=TransformObjectToWorldNormal(input.normalOS);
+                #if defined(_CASTING_PUNCTUAL_LIGHT_SHADOW)
+                float3 direction=normalize(_LightPosition-positionWS);
+                #else
+                float3 direction=_LightDirection;
+                #endif
+                // Cavity ceilings face inward; bias their two-sided caster toward the light.
+                normalWS=dot(normalWS,direction)<0?-normalWS:normalWS;
+                float4 positionCS=TransformWorldToHClip(ApplyShadowBias(positionWS,normalWS,direction));
+                #if UNITY_REVERSED_Z
+                positionCS.z=min(positionCS.z,UNITY_NEAR_CLIP_VALUE*positionCS.w);
+                #else
+                positionCS.z=max(positionCS.z,UNITY_NEAR_CLIP_VALUE*positionCS.w);
+                #endif
+                return positionCS;
+            }
+            half4 ShadowFrag():SV_Target { return 0; }
             ENDHLSL
         }
     }

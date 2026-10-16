@@ -35,7 +35,7 @@ public sealed class TerrainRuntimePool : IDisposable
     {
         while (normal.Count > 0) normal.Pop().DestroyRuntime();
         while (far.Count > 0) far.Pop().DestroyRuntime();
-        if (runtimePoolParent != null) { Object.Destroy(runtimePoolParent.gameObject); runtimePoolParent = null; }
+        if (runtimePoolParent != null) { TerrainAssetOwner.Destroy(runtimePoolParent.gameObject); runtimePoolParent = null; }
     }
     private Transform GetRuntimePoolParent()
     {

@@ -11,10 +11,11 @@ public sealed class TerrainHandoffCoordinator
     private readonly Dictionary<FarTerrainPatchKey, FarTerrainTileRuntime> loadedFarTerrainTiles;
     private readonly Action<ChunkCoord, ChunkRuntime> releaseNormal;
     private readonly Action<FarTerrainTileRuntime> releaseFar;
+    private readonly Func<ChunkCoord,bool> canRetireNormal;
     public TerrainHandoffCoordinator(TerrainCoveragePolicy policy, Dictionary<ChunkCoord, ChunkRuntime> normal,
         Dictionary<FarTerrainPatchKey, FarTerrainTileRuntime> far, Action<ChunkCoord, ChunkRuntime> releaseNormal,
-        Action<FarTerrainTileRuntime> releaseFar)
-    { this.policy = policy; loadedChunks = normal; loadedFarTerrainTiles = far; this.releaseNormal = releaseNormal; this.releaseFar = releaseFar; }
+        Action<FarTerrainTileRuntime> releaseFar, Func<ChunkCoord,bool> canRetireNormal = null)
+    { this.policy = policy; loadedChunks = normal; loadedFarTerrainTiles = far; this.releaseNormal = releaseNormal; this.releaseFar = releaseFar; this.canRetireNormal=canRetireNormal; }
     public void Reconcile(HashSet<ChunkCoord> desired)
     {
         outgoingNormalChunks.Clear();
@@ -48,6 +49,13 @@ public sealed class TerrainHandoffCoordinator
             ChunkCoord coord = outgoingNormalChunks[i];
             if (!loadedChunks.TryGetValue(coord, out var runtime))
                 continue;
+            if(canRetireNormal!=null&&!canRetireNormal(coord))
+            {
+                outgoingNormalChunks[retainedCount++]=coord;
+                // Remote support pins may retain collision after visual handoff.
+                if(policy.ShouldUseFarTerrain(viewer,coord))terrainHandoffHiddenCoords.Add(coord);
+                continue;
+            }
             if (!policy.TryGetFarTerrainPatch(viewer, coord, out FarTerrainPatchKey patch))
             {
                 using (ReleaseNormalHandoffMarker.Auto()) releaseNormal(coord, runtime);

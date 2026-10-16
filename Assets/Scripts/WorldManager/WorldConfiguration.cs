@@ -9,6 +9,9 @@ public sealed class WorldConfiguration
     public TerrainPublicationBudget Publication = TerrainPublicationBudget.Default;
     public TerrainContentBudget Content = TerrainContentBudget.Default;
     public WorldStreamingConfiguration Streaming = WorldStreamingConfiguration.Default;
+    public TerrainSculptConfiguration Sculpting = TerrainSculptConfiguration.Default;
+    // Explicit opt-in for a persistent host. The current WorldManager uses session-only terrain.
+    public TerrainEditStorageConfiguration TerrainEdits;
     public WorldRenderingConfiguration Rendering;
     public WorldSceneReferences Scene;
     public WorldFoliageConfiguration Foliage = WorldFoliageConfiguration.Default;
@@ -16,7 +19,7 @@ public sealed class WorldConfiguration
 
 public struct WorldStreamingConfiguration
 {
-    public float TotalMs, ContentReserveMs, FoliageReserveMs, GrassReserveMs;
+    public float TotalMs, ContentReserveMs, FoliageReserveMs, GrassReserveMs, SculptReserveMs;
     public WorldStreamingConfiguration Sanitized()
     {
         var value = this;
@@ -24,10 +27,13 @@ public struct WorldStreamingConfiguration
         value.ContentReserveMs = Mathf.Max(0, ContentReserveMs);
         value.FoliageReserveMs = Mathf.Max(0, FoliageReserveMs);
         value.GrassReserveMs = Mathf.Max(0, GrassReserveMs);
-        float sum = value.ContentReserveMs + value.FoliageReserveMs + value.GrassReserveMs;
+        value.SculptReserveMs = Mathf.Max(0, SculptReserveMs);
+        float sum = value.ContentReserveMs + value.FoliageReserveMs + value.GrassReserveMs + value.SculptReserveMs;
         // Keep at least half the allowance available to result consumption.
-        float scale = sum > 0 && value.TotalMs > 0 ? Mathf.Min(1, value.TotalMs * .5f / sum) : 1;
+        float availableFraction = value.SculptReserveMs > 0 ? .75f : .5f;
+        float scale = sum > 0 && value.TotalMs > 0 ? Mathf.Min(1, value.TotalMs * availableFraction / sum) : 1;
         value.ContentReserveMs *= scale; value.FoliageReserveMs *= scale; value.GrassReserveMs *= scale;
+        value.SculptReserveMs *= scale;
         return value;
     }
     public static WorldStreamingConfiguration Default => new()

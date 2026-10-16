@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public enum BuildPlacementFailure { None, Solid, Headroom, Joint, Support, External, Crowded, Reach }
+public enum BuildPlacementFailure { None, Solid, Headroom, Joint, Support, External, Crowded, Reach, Terrain }
 public enum BuildPlacementWarning { None, RoofStairHeadroom, RoofStairOverlap, UnresolvedJoint, StairHeadroom, BuildOverlap }
 public enum BuildColliderDebugMode { Off, Solids, SolidsAndClearance }
 

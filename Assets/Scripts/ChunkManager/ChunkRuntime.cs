@@ -22,6 +22,10 @@ public class ChunkRuntime
 
     private Material runtimeWaterMaterial;
     private MeshCollider terrainMeshCollider;
+    private TerrainSculptChunkSurface sculptSurface;
+    public bool HasSculptSurface => sculptSurface != null;
+    public bool TryGetSculptBounds(out Bounds bounds)
+    {bounds=sculptSurface!=null?sculptSurface.WorldBounds:default;return sculptSurface!=null;}
 
     private ChunkFoliageRuntime foliageRuntime;
 
@@ -31,7 +35,7 @@ public class ChunkRuntime
     public GameObject Root => root;
     public Transform RootTransform => root != null ? root.transform : null;
     public bool IsVisible => visible;
-    public bool HasTerrainMesh => terrainMeshFilter != null && terrainMeshFilter.sharedMesh != null;
+    public bool HasTerrainMesh => sculptSurface?.HasRender == true || (terrainMeshFilter != null && terrainMeshFilter.sharedMesh != null);
     public bool IsRenderVisible => renderVisible && !terrainHandoffHidden;
     public bool IsFoliageRenderVisible => foliageRenderVisible;
     public bool IsFoliageShadowCasterVisible => foliageShadowCasterVisible;
@@ -186,6 +190,7 @@ public class ChunkRuntime
             terrainMeshCollider.sharedMesh = null;
 
         terrainMeshCollider.sharedMesh = colliderMesh;
+        terrainMeshCollider.enabled = sculptSurface?.HasCollision != true;
     }
 
     public void RemoveCollider()
@@ -196,7 +201,7 @@ public class ChunkRuntime
         if (terrainMeshCollider)
         {
             terrainMeshCollider.sharedMesh = null;
-            Object.Destroy(terrainMeshCollider);
+            TerrainAssetOwner.Destroy(terrainMeshCollider);
         }
 
         terrainMeshCollider = null;
@@ -204,7 +209,27 @@ public class ChunkRuntime
 
     public bool HasCollider()
     {
-        return terrainMeshCollider != null && terrainMeshCollider.sharedMesh != null;
+        return sculptSurface?.HasCollision == true || (terrainMeshCollider != null && terrainMeshCollider.sharedMesh != null);
+    }
+
+    // Replacement ownership is independent of normal LOD, material, visibility and collider requests.
+    public void SetSculptSurface(TerrainSculptChunkSurface surface)
+    {
+        if (ReferenceEquals(sculptSurface,surface)) return;
+        sculptSurface?.Detach();sculptSurface=surface;
+        if(runtimeTerrainMaterial!=null&&runtimeTerrainMaterial.HasProperty("_ExcavationTiling"))
+        {
+            if(surface?.HasRender==true)runtimeTerrainMaterial.EnableKeyword("_TERRAIN_EXCAVATION");
+            else runtimeTerrainMaterial.DisableKeyword("_TERRAIN_EXCAVATION");
+        }
+        surface?.Bind(this,runtimeTerrainMaterial,terrainMeshRenderer.receiveShadows);
+        RefreshTerrainVisibility();
+        if(terrainMeshCollider!=null)terrainMeshCollider.enabled=surface?.HasCollision!=true;
+    }
+    private void RefreshTerrainVisibility()
+    {
+        if(terrainMeshRenderer!=null)terrainMeshRenderer.enabled=renderVisible&&!terrainHandoffHidden&&sculptSurface?.HasRender!=true;
+        sculptSurface?.SetRenderVisible(renderVisible&&!terrainHandoffHidden,!terrainHandoffHidden);
     }
 
     public bool TryGetVisibleWaterBounds(out Bounds bounds)
@@ -240,7 +265,7 @@ public class ChunkRuntime
         stats.VisibleChunkCount++;
         stats.AddLOD(currentLOD);
 
-        Mesh terrainMesh = terrainMeshFilter != null ? terrainMeshFilter.sharedMesh : null;
+        Mesh terrainMesh = sculptSurface?.HasRender==true?sculptSurface.RenderMesh:terrainMeshFilter != null ? terrainMeshFilter.sharedMesh : null;
         if (terrainMesh != null)
         {
             stats.VisibleChunkWithTerrainMeshCount++;
@@ -262,7 +287,7 @@ public class ChunkRuntime
         renderVisible = visible;
 
         if (terrainMeshRenderer != null)
-            terrainMeshRenderer.enabled = visible && !terrainHandoffHidden;
+            RefreshTerrainVisibility();
 
         if (waterMeshRenderer != null)
             waterMeshRenderer.enabled = visible && !terrainHandoffHidden;
@@ -275,7 +300,7 @@ public class ChunkRuntime
     {
         if (terrainHandoffHidden == hidden) return;
         terrainHandoffHidden = hidden;
-        if (terrainMeshRenderer != null) terrainMeshRenderer.enabled = renderVisible && !hidden;
+        RefreshTerrainVisibility();
         if (waterMeshRenderer != null) waterMeshRenderer.enabled = renderVisible && !hidden;
     }
 
@@ -305,6 +330,7 @@ public class ChunkRuntime
     }
     public void ReleaseToPool(Transform poolParent)
     {
+        SetSculptSurface(null);
         chunkRecord?.ClearActiveRuntime(this);
 
         RemoveCollider();
@@ -331,6 +357,7 @@ public class ChunkRuntime
 
     public void DestroyRuntime()
     {
+        SetSculptSurface(null);
         terrainHorizonBinding?.Dispose();
         terrainHorizonBinding = null;
         chunkRecord?.ClearActiveRuntime(this);
@@ -344,7 +371,7 @@ public class ChunkRuntime
             foliageRuntime.ClearCachedBatches();
             if (foliageRuntime.root)
             {
-                Object.Destroy(foliageRuntime.root.gameObject);
+                TerrainAssetOwner.Destroy(foliageRuntime.root.gameObject);
                 foliageRuntime.root = null;
             }
             foliageRuntime = null;
@@ -352,19 +379,19 @@ public class ChunkRuntime
 
         if (runtimeTerrainMaterial)
         {
-            Object.Destroy(runtimeTerrainMaterial);
+            TerrainAssetOwner.Destroy(runtimeTerrainMaterial);
             runtimeTerrainMaterial = null;
         }
 
         if (runtimeWaterMaterial)
         {
-            Object.Destroy(runtimeWaterMaterial);
+            TerrainAssetOwner.Destroy(runtimeWaterMaterial);
             runtimeWaterMaterial = null;
         }
 
         if (root)
         {
-            Object.Destroy(root);
+            TerrainAssetOwner.Destroy(root);
             root = null;
         }
 

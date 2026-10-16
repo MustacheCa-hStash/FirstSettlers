@@ -29,6 +29,7 @@ Shader "Custom/BuildingWoodMatte"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
         // Reuse the existing sun-cycle ambient-floor dimming, without any tree deformation/fade.
         #include "Assets/Shaders/TreeNightLighting.hlsl"
+        #include "Assets/Shaders/TerrainSkyAccess.hlsl"
 
         TEXTURE2D(_BaseMap);
         SAMPLER(sampler_BaseMap);
@@ -157,7 +158,8 @@ Shader "Custom/BuildingWoodMatte"
                 #endif
                 half4 shadowMask = half4(1, 1, 1, 1);
                 Light mainLight = GetMainLight(shadowCoord, input.positionWS, shadowMask);
-                half3 lighting = max(SampleSH(normalWS), TreeNightAmbientFloor(_AmbientFloor).xxx) * ao.indirectAmbientOcclusion;
+                half caveAmbient=TerrainCaveAmbient(input.positionWS,normalWS);
+                half3 lighting = max(SampleSH(normalWS), TreeNightAmbientFloor(_AmbientFloor).xxx) * ao.indirectAmbientOcclusion * caveAmbient;
                 lighting += WoodDiffuse(mainLight, normalWS) * ao.directAmbientOcclusion;
 
                 #if defined(_ADDITIONAL_LIGHTS)
@@ -183,7 +185,7 @@ Shader "Custom/BuildingWoodMatte"
                 half shadowTint = max(shadowSide, (1.0h - mainLight.shadowAttenuation) * _ShadowStrength) * _ShadowTintStrength;
                 half3 color = albedo * lighting * lerp(half3(1, 1, 1), _ShadowTint.rgb, shadowTint);
                 // Diffuse only: no view-dependent specular, metallic or reflection-probe contribution.
-                return half4(MixFog(color, input.fogAndVertexLight.x), 1.0h);
+                return half4(MixFogColor(color,unity_FogColor.rgb*caveAmbient,input.fogAndVertexLight.x), 1.0h);
             }
             ENDHLSL
         }
