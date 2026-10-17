@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "maximumRGBDifference8bit": 0,
+  "opaqueAOInTrim": true,
+  "flatNormalsInTrim": true,
+  "colliderUnchanged": true
+}

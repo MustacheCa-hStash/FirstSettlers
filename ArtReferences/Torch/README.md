@@ -2,6 +2,8 @@
 
 Installed in the building catalog as **Lighting → Mounted torch**, content ID `build.lighting.wall-torch`. Press **T** in ordinary gameplay for the development carried variant. See [runtime behavior, budgets and measurements](../../Documentation/LOCAL_FLAME_LIGHTING.md).
 
+The installed mounted body now uses `MountedTorch_Baked.fbx`: **280 triangles**, with 512-pixel colour/AO and normal maps. The 1,996-triangle export below remains the detailed authoring/bake source. Current comparisons and validation are in [baked furnishings](../../Documentation/BAKED_FURNISHINGS.md) and `../BakedFurnishings/`. The hand model and flame animation are retained.
+
 The model follows the game's flexible British Iron Age inspired direction. It uses a split wooden handle, a small cluster of darkened fuel splints, plant-fibre binding and a pegged wooden wall holder. This exact object is an authored proposal, not a replica of an excavated British torch. A protected lantern remains separate content; the [British Museum's first-century Roman lantern](https://www.britishmuseum.org/collection/object/G_1856-1226-670) is an ancient reference with a different regional/period context.
 
 ![Authored solid torch and holder](torch-model.png)

@@ -59,12 +59,13 @@ public static class FurnitureKitSetup
             d.solidBoxes=new Bounds[part.solid_boxes.Length];
             for(int j=0;j<d.solidBoxes.Length;j++)d.solidBoxes[j]=new Bounds(V(part.solid_boxes[j].center),V(part.solid_boxes[j].size));
             d.mesh=ModularWoodSetup.StructuralMesh(ModularWoodSetup.Import(Models+"/"+part.file),d.LocalBounds);
+            if(d.contentId==BakedFurnishingsSetup.BedId)BakedFurnishingsSetup.Apply(d);
             d.uvVariants=Array.Empty<Mesh>();d.jointSockets=Array.Empty<BuildJointSocket>();d.jointCoverVariants=Array.Empty<Mesh>();
             d.occupiedVolumes=Array.Empty<BuildConvexVolume>();d.wallOpenings=Array.Empty<Bounds>();d.requiresFullBearing=false;
             var root=new GameObject(part.name){layer=GameplayLayers.WorldSolid};
             try
             {
-                root.AddComponent<MeshFilter>().sharedMesh=d.mesh;root.AddComponent<MeshRenderer>().sharedMaterial=material;
+                root.AddComponent<MeshFilter>().sharedMesh=d.mesh;root.AddComponent<MeshRenderer>().sharedMaterial=d.material;
                 foreach(var box in d.solidBoxes){var collider=root.AddComponent<BoxCollider>();collider.center=box.center;collider.size=box.size;}
                 d.authoringPrefab=PrefabUtility.SaveAsPrefabAsset(root,path+".prefab");
             }finally{Object.DestroyImmediate(root);}

@@ -1,0 +1,1004 @@
+{
+  "sourceSHA256": {
+    "ArtReferences\\StoneBuildKit\\Models\\StoneBuildKit.blend": "33a776cd6e5297fae15d97a13047a51f7a6699e3bc675b575be8bc02f8b5f21e",
+    "ArtReferences\\StoneBuildKit\\Boundary\\StoneBoundaryKit.blend": "34c5feddffcfec92377f4b7e00b884d39885bbc7928994638a11bb079e037e75"
+  },
+  "atlasSize": 2048,
+  "sharedTexturePairs": 1,
+  "colour": "unlit RGB, AO in alpha",
+  "normals": "tangent-space +Y",
+  "boundaryBakeOnlyBevelMetres": 0.008,
+  "models": [
+    {
+      "tag": "S03",
+      "before": 716,
+      "after": 12,
+      "solids": 1,
+      "bounds": [
+        [
+          [
+            -0.25,
+            0,
+            -0.25
+          ],
+          [
+            0.25,
+            3,
+            0.25
+          ]
+        ]
+      ],
+      "files": [
+        "S03_Baked.fbx",
+        "S03_Baked_UV1.fbx",
+        "S03_Baked_UV2.fbx"
+      ]
+    },
+    {
+      "tag": "S04",
+      "before": 2168,
+      "after": 12,
+      "solids": 1,
+      "bounds": [
+        [
+          [
+            0,
+            -0.25,
+            0
+          ],
+          [
+            4,
+            0,
+            4
+          ]
+        ]
+      ],
+      "files": [
+        "S04_Baked.fbx",
+        "S04_Baked_UV1.fbx",
+        "S04_Baked_UV2.fbx"
+      ]
+    },
+    {
+      "tag": "S06",
+      "before": 264,
+      "after": 72,
+      "solids": 6,
+      "bounds": [
+        [
+          [
+            0.0,
+            0.0,
+            -0.25
+          ],
+          [
+            0.5759999752044678,
+            0.25,
+            0.25
+          ]
+        ],
+        [
+          [
+            0.5839999914169312,
+            0.0,
+            -0.25
+          ],
+          [
+            1.2660000324249268,
+            0.25,
+            0.25
+          ]
+        ],
+        [
+          [
+            1.2740000486373901,
+            0.0,
+            -0.25
+          ],
+          [
+            1.8960000276565552,
+            0.25,
+            0.25
+          ]
+        ],
+        [
+          [
+            1.9040000438690186,
+            0.0,
+            -0.25
+          ],
+          [
+            2.615999937057495,
+            0.25,
+            0.25
+          ]
+        ],
+        [
+          [
+            2.624000072479248,
+            0.0,
+            -0.25
+          ],
+          [
+            3.2760000228881836,
+            0.25,
+            0.25
+          ]
+        ],
+        [
+          [
+            3.2839999198913574,
+            0.0,
+            -0.25
+          ],
+          [
+            4.0,
+            0.25,
+            0.25
+          ]
+        ]
+      ],
+      "files": [
+        "S06_Baked.fbx",
+        "S06_Baked_UV1.fbx",
+        "S06_Baked_UV2.fbx"
+      ]
+    },
+    {
+      "tag": "S07",
+      "before": 852,
+      "after": 12,
+      "solids": 1,
+      "bounds": [
+        [
+          [
+            0,
+            0,
+            -0.25
+          ],
+          [
+            4,
+            1.25,
+            0.25
+          ]
+        ]
+      ],
+      "files": [
+        "S07_Baked.fbx",
+        "S07_Baked_UV1.fbx",
+        "S07_Baked_UV2.fbx"
+      ]
+    },
+    {
+      "tag": "S12",
+      "before": 584,
+      "after": 24,
+      "solids": 2,
+      "bounds": [
+        [
+          [
+            0,
+            0,
+            -0.25
+          ],
+          [
+            1.375,
+            1.25,
+            0.25
+          ]
+        ],
+        [
+          [
+            2.625,
+            0,
+            -0.25
+          ],
+          [
+            4,
+            1.25,
+            0.25
+          ]
+        ]
+      ],
+      "files": [
+        "S12_Baked.fbx",
+        "S12_Baked_UV1.fbx",
+        "S12_Baked_UV2.fbx"
+      ]
+    }
+  ],
+  "atlasIslands": [
+    {
+      "tag": "S04",
+      "solid": 0,
+      "face": "top",
+      "rectPixels": [
+        88,
+        88,
+        896,
+        896
+      ],
+      "pixelsPerMetre": 224
+    },
+    {
+      "tag": "S04",
+      "solid": 0,
+      "face": "front",
+      "rectPixels": [
+        1016,
+        88,
+        768,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S04",
+      "solid": 0,
+      "face": "back",
+      "rectPixels": [
+        1016,
+        168,
+        768,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S04",
+      "solid": 0,
+      "face": "left",
+      "rectPixels": [
+        1016,
+        248,
+        768,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S04",
+      "solid": 0,
+      "face": "right",
+      "rectPixels": [
+        1016,
+        328,
+        768,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S07",
+      "solid": 0,
+      "face": "front",
+      "rectPixels": [
+        1016,
+        408,
+        768,
+        240
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S07",
+      "solid": 0,
+      "face": "back",
+      "rectPixels": [
+        1016,
+        680,
+        768,
+        240
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S07",
+      "solid": 0,
+      "face": "top",
+      "rectPixels": [
+        1016,
+        952,
+        768,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S07",
+      "solid": 0,
+      "face": "bottom",
+      "rectPixels": [
+        88,
+        1016,
+        768,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S03",
+      "solid": 0,
+      "face": "front",
+      "rectPixels": [
+        888,
+        1016,
+        96,
+        576
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S03",
+      "solid": 0,
+      "face": "back",
+      "rectPixels": [
+        1816,
+        88,
+        96,
+        576
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S03",
+      "solid": 0,
+      "face": "left",
+      "rectPixels": [
+        1816,
+        696,
+        96,
+        576
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S03",
+      "solid": 0,
+      "face": "right",
+      "rectPixels": [
+        1016,
+        1304,
+        96,
+        576
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S12",
+      "solid": 0,
+      "face": "front",
+      "rectPixels": [
+        88,
+        1624,
+        264,
+        240
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S12",
+      "solid": 0,
+      "face": "back",
+      "rectPixels": [
+        384,
+        1624,
+        264,
+        240
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S12",
+      "solid": 0,
+      "face": "top",
+      "rectPixels": [
+        680,
+        1624,
+        264,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S12",
+      "solid": 0,
+      "face": "bottom",
+      "rectPixels": [
+        680,
+        1752,
+        264,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S12",
+      "solid": 1,
+      "face": "front",
+      "rectPixels": [
+        88,
+        1144,
+        264,
+        240
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S12",
+      "solid": 1,
+      "face": "back",
+      "rectPixels": [
+        384,
+        1144,
+        264,
+        240
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S12",
+      "solid": 1,
+      "face": "top",
+      "rectPixels": [
+        88,
+        1416,
+        264,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S12",
+      "solid": 1,
+      "face": "bottom",
+      "rectPixels": [
+        384,
+        1416,
+        264,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S04",
+      "solid": 0,
+      "face": "bottom",
+      "rectPixels": [
+        1144,
+        1080,
+        256,
+        256
+      ],
+      "pixelsPerMetre": 64
+    },
+    {
+      "tag": "S07",
+      "solid": 0,
+      "face": "left",
+      "rectPixels": [
+        680,
+        1144,
+        96,
+        240
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S07",
+      "solid": 0,
+      "face": "right",
+      "rectPixels": [
+        1432,
+        1080,
+        96,
+        240
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S12",
+      "solid": 0,
+      "face": "left",
+      "rectPixels": [
+        1560,
+        1080,
+        96,
+        240
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S12",
+      "solid": 0,
+      "face": "right",
+      "rectPixels": [
+        1688,
+        1080,
+        96,
+        240
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S12",
+      "solid": 1,
+      "face": "left",
+      "rectPixels": [
+        1816,
+        1304,
+        96,
+        240
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S12",
+      "solid": 1,
+      "face": "right",
+      "rectPixels": [
+        1144,
+        1576,
+        96,
+        240
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 5,
+      "face": "front",
+      "rectPixels": [
+        88,
+        1544,
+        138,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 5,
+      "face": "back",
+      "rectPixels": [
+        258,
+        1544,
+        138,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 5,
+      "face": "top",
+      "rectPixels": [
+        1144,
+        1848,
+        138,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 5,
+      "face": "bottom",
+      "rectPixels": [
+        680,
+        1416,
+        138,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 3,
+      "face": "front",
+      "rectPixels": [
+        428,
+        1544,
+        137,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 3,
+      "face": "back",
+      "rectPixels": [
+        597,
+        1544,
+        137,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 3,
+      "face": "top",
+      "rectPixels": [
+        1144,
+        1368,
+        137,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 3,
+      "face": "bottom",
+      "rectPixels": [
+        1272,
+        1576,
+        137,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 1,
+      "face": "front",
+      "rectPixels": [
+        1144,
+        1496,
+        131,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 1,
+      "face": "back",
+      "rectPixels": [
+        1307,
+        1496,
+        131,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 1,
+      "face": "top",
+      "rectPixels": [
+        1313,
+        1368,
+        131,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 1,
+      "face": "bottom",
+      "rectPixels": [
+        1272,
+        1704,
+        131,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 4,
+      "face": "front",
+      "rectPixels": [
+        88,
+        1912,
+        126,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 4,
+      "face": "back",
+      "rectPixels": [
+        246,
+        1912,
+        126,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 4,
+      "face": "top",
+      "rectPixels": [
+        1314,
+        1832,
+        126,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 4,
+      "face": "bottom",
+      "rectPixels": [
+        1435,
+        1704,
+        126,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 2,
+      "face": "front",
+      "rectPixels": [
+        404,
+        1912,
+        120,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 2,
+      "face": "back",
+      "rectPixels": [
+        556,
+        1912,
+        120,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 2,
+      "face": "top",
+      "rectPixels": [
+        1441,
+        1576,
+        120,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 2,
+      "face": "bottom",
+      "rectPixels": [
+        1472,
+        1832,
+        120,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 0,
+      "face": "front",
+      "rectPixels": [
+        1470,
+        1496,
+        111,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 0,
+      "face": "back",
+      "rectPixels": [
+        708,
+        1912,
+        111,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 0,
+      "face": "top",
+      "rectPixels": [
+        1476,
+        1352,
+        111,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 0,
+      "face": "bottom",
+      "rectPixels": [
+        1624,
+        1352,
+        111,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S03",
+      "solid": 0,
+      "face": "top",
+      "rectPixels": [
+        1016,
+        1080,
+        96,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S03",
+      "solid": 0,
+      "face": "bottom",
+      "rectPixels": [
+        1624,
+        1480,
+        96,
+        96
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 0,
+      "face": "left",
+      "rectPixels": [
+        1016,
+        1208,
+        96,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 0,
+      "face": "right",
+      "rectPixels": [
+        851,
+        1912,
+        96,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 1,
+      "face": "left",
+      "rectPixels": [
+        979,
+        1912,
+        96,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 1,
+      "face": "right",
+      "rectPixels": [
+        1752,
+        1576,
+        96,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 2,
+      "face": "left",
+      "rectPixels": [
+        1624,
+        1608,
+        96,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 2,
+      "face": "right",
+      "rectPixels": [
+        1593,
+        1688,
+        96,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 3,
+      "face": "left",
+      "rectPixels": [
+        1752,
+        1656,
+        96,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 3,
+      "face": "right",
+      "rectPixels": [
+        1721,
+        1736,
+        96,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 4,
+      "face": "left",
+      "rectPixels": [
+        1849,
+        1736,
+        96,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 4,
+      "face": "right",
+      "rectPixels": [
+        1624,
+        1816,
+        96,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 5,
+      "face": "left",
+      "rectPixels": [
+        1624,
+        1896,
+        96,
+        48
+      ],
+      "pixelsPerMetre": 192
+    },
+    {
+      "tag": "S06",
+      "solid": 5,
+      "face": "right",
+      "rectPixels": [
+        1752,
+        1816,
+        96,
+        48
+      ],
+      "pixelsPerMetre": 192
+    }
+  ]
+}

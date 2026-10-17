@@ -13,7 +13,7 @@ public static class SquareInfillValidation
         var d=c.Find(SquareInfillSetup.Id);check(d!=null,"Square infill missing from catalog");
         check(d.IsWallInfill && d.sizeUnits==new Vector3Int(8,8,1) && d.stackRiseUnits==8 && d.wallEndInsetUnits==0,"Square infill structural dimensions");
         check(d.jointSockets.Length==9 && d.jointCoverVariants.Length==1,"Square infill junction data");
-        check(d.material==c.presets[0].material,"Square infill did not share the current split-plank material");
+        check(d.material==SplitPlankWallSetup.TrimMaterial,"Square infill did not retain the current wood trim material");
         check((d.mesh.bounds.size-new Vector3(2,2,.25f)).sqrMagnitude<.000001f,"Square imported mesh bounds");
         check(Mathf.Abs(d.jointCoverVariants[0].bounds.size.y-2.003f)<.00001f,"Square generated post is not two metres tall");
         var colliders=d.authoringPrefab.GetComponentsInChildren<Collider>();

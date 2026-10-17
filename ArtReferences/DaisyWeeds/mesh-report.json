@@ -1,4 +1,8 @@
 {
+  "headDepthAlongNormalRange": [
+    0.006,
+    0.006
+  ],
   "vertices": 132,
   "triangles": 119,
   "flowerHeads": 3,

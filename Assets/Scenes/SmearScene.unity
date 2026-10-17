@@ -1024,6 +1024,44 @@ MonoBehaviour:
   flowerSettings:
     enableFlowers: 1
     flowerPrefab: {fileID: 7417632742218973167, guid: 012753618076f5a44bc43bfe79e09f48, type: 3}
+    poppies:
+      enabled: 1
+      prefab: {fileID: 525999006865972219, guid: bcb2577b10994804fa28334aa2467374, type: 3}
+      patchCellSize: 32
+      patchSpawnChance: 0.32
+      patchNoiseScale: 0.024
+      patchNoiseThreshold: 0.48
+      minPlantsPerPatch: 20
+      maxPlantsPerPatch: 48
+      patchRadiusRange: {x: 4.2426405, y: 8.485281}
+      edgeIrregularity: 0.25
+      gapStrength: 0.22
+      uniformScaleRange: {x: 0.46, y: 0.62}
+      maxSlope: 32
+      treeExclusionRadius: 1.1
+      clearanceScale: 0.7
+      seedOffset: 72000
+      darkTint: {r: 0.86, g: 0.92, b: 0.92, a: 1}
+      lightTint: {r: 1, g: 1, b: 0.96, a: 1}
+    cornflowers:
+      enabled: 1
+      prefab: {fileID: 302251215685168417, guid: 9c608ddffb02d0a49b480b9aa6bc05b5, type: 3}
+      patchCellSize: 34
+      patchSpawnChance: 0.34
+      patchNoiseScale: 0.022
+      patchNoiseThreshold: 0.47
+      minPlantsPerPatch: 24
+      maxPlantsPerPatch: 56
+      patchRadiusRange: {x: 3, y: 6.5}
+      edgeIrregularity: 0.25
+      gapStrength: 0.22
+      uniformScaleRange: {x: 0.46, y: 0.62}
+      maxSlope: 32
+      treeExclusionRadius: 1.1
+      clearanceScale: 0.7
+      seedOffset: 86000
+      darkTint: {r: 0.87, g: 0.92, b: 1, a: 1}
+      lightTint: {r: 1, g: 1, b: 1, a: 1}
     tallFlowerPrefab: {fileID: 113416359944203664, guid: ace563dd08ee4f744bd35ba0580b03e4, type: 3}
     tallFlowerUniformScale: 1.355
     daisyWeedPrefab: {fileID: 8896480132052262351, guid: ff0e8ff02b583064abb831387de61597, type: 3}
@@ -1467,13 +1505,13 @@ MonoBehaviour:
     carveRivers: 1
     riverValleyWidth: 1.4
     riverValleyFlattening: 1
-    lowlandHeightRatio: 0.5
+    lowlandHeightRatio: 0.3
     shoreHeightBand: 0.25
     shoreSlopeRatio: 0.2
     mountainSpatialScale: 3.3
     mountainSparsity: 0.01
     gentleMountainErosion: 0.45
-    lowlandHillVariation: 0.8
+    lowlandHillVariation: 0.2
     lowlandHillScale: 900
     enabled: 1
     amplitude: 0.6
@@ -1549,6 +1587,8 @@ MonoBehaviour:
   streamingFoliageReserveMs: 0.35
   streamingGrassReserveMs: 0.15
   enableTerrainSculpting: 1
+  excavationAppearance: {fileID: 0}
+  caveLighting: {fileID: 0}
 --- !u!4 &830849844
 Transform:
   m_ObjectHideFlags: 0

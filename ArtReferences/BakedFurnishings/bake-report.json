@@ -1,0 +1,20 @@
+{
+  "sources": {
+    "ArtReferences\\Torch\\TorchKit.blend": "6603a96d2c4222698e844a8c2ea08d833163d58d0b4747717f7eaabc9fa7a014",
+    "ArtReferences\\IronAgeFurniture\\Models\\FurnitureKit.blend": "2a07ba27728a759aa8077c4068cc71d0766689a91b83ea2a03771ebee5a2f595"
+  },
+  "models": [
+    {
+      "piece": "MountedTorch",
+      "before": 1996,
+      "after": 280,
+      "atlas": 512
+    },
+    {
+      "piece": "SleepingPlatform",
+      "before": 1472,
+      "after": 320,
+      "atlas": 1024
+    }
+  ]
+}

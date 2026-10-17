@@ -21,7 +21,7 @@ Three mesh variants use the same atlas: original mapping, whole-wall X reflectio
 2. In Unity, use **Tools → Building → Rebuild Baked S02 Stone Wall**. This updates S02 and its thumbnail only. General stone/modular rebuilds also select the baked S02 assets.
 3. Restart Play mode if the catalog was already loaded.
 
-The old S02 FBXs and original `.blend` remain as authoring/reference data. The runtime definition and prefab reference only the new `S02_BakedCoursedWall` exports and `BakedStoneWall.mat`. S03/S04/S06/S07/S12 retain their existing meshes/material.
+The old S02 FBXs and original `.blend` remain as authoring/reference data. The runtime definition and prefab reference only the new `S02_BakedCoursedWall` exports and `BakedStoneWall.mat`. S03/S04/S06/S07/S12 subsequently received their own [minimal geometry and shared bake](BAKED_STONE_KIT.md).
 
 ## Verification and appearance
 
@@ -29,6 +29,6 @@ The old S02 FBXs and original `.blend` remain as authoring/reference data. The r
 
 Use `-BakedStoneWallChecks -InstalledAssets` to inspect the installed assets without rebuilding. `-StoneChecks -InstalledAssets` additionally exercises existing stone placement, support and gate collision fixtures. Results and render previews are saved under `ArtReferences/StoneBuildKit/BakedWall` in the validation project.
 
-The installed-assets run passed **96 asset/render checks** plus **88,178 stone regression checks**, including eight headings, wall/cap stacking, support removal, paving bearing, and sixteen real gate crossings. Saved evidence: [render checks](../ArtReferences/StoneBuildKit/BakedWall/unity-validation.json), [stone regression](../ArtReferences/StoneBuildKit/BakedWall/stone-regression.json), [revised wall](../ArtReferences/StoneBuildKit/BakedWall/wall-front.png), [original wall](../ArtReferences/StoneBuildKit/BakedWall/wall-original-2960-tris.png), and [joined/stacked instanced walls](../ArtReferences/StoneBuildKit/BakedWall/wall-joined-stacked-instanced.png).
+At the initial S02-only stage, the installed-assets run passed **96 asset/render checks** plus **88,178 stone regression checks**, including eight headings, wall/cap stacking, support removal, paving bearing, and sixteen real gate crossings. Saved evidence: [render checks](../ArtReferences/StoneBuildKit/BakedWall/unity-validation.json), [stone regression](../ArtReferences/StoneBuildKit/BakedWall/stone-regression.json), [revised wall](../ArtReferences/StoneBuildKit/BakedWall/wall-front.png), [original wall](../ArtReferences/StoneBuildKit/BakedWall/wall-original-2960-tris.png), and [joined/stacked instanced walls](../ArtReferences/StoneBuildKit/BakedWall/wall-joined-stacked-instanced.png).
 
 The wall outline is rectangular. Mortar and individual stone bevels are shading detail; they do not change the silhouette, physical collision or individual-stone shadow geometry. Very close grazing views reveal the flat surface, which is the intentional tradeoff for eliminating runtime stone geometry.

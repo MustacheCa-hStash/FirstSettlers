@@ -57,6 +57,7 @@ public static class StoneKitSetup
         material.SetTexture("_BaseMap",AssetDatabase.LoadAssetAtPath<Texture2D>(Texture));
         material.SetColor("_BaseColor",Color.white);material.SetFloat("_Saturation",1);material.SetFloat("_Contrast",1);material.SetFloat("_Brightness",1);
         material.SetFloat("_AlphaClip",0);material.DisableKeyword("_ALPHATEST_ON");material.enableInstancing=true;EditorUtility.SetDirty(material);
+        var bakedMaterial=BakedStoneKitSetup.CreateMaterial();
         var result=new BuildDefinition[Ids.Length];
         for(int i=0;i<Ids.Length;i++)
         {
@@ -85,16 +86,7 @@ public static class StoneKitSetup
                 d.wallOpenings=new[]{new Bounds(new Vector3(2,.625f,0),new Vector3(1.25f,1.25f,.5f))};
             }
             if(i==0) BakedStoneWallSetup.Apply(d);
-            else
-            {
-                d.uvVariants=new Mesh[3];
-                for(int variant=0;variant<3;variant++)
-                {
-                    string file=Models+"/"+Files[i]+(variant==0?"":"_UV"+variant)+".fbx";
-                    AssetDatabase.ImportAsset(file,ImportAssetOptions.ForceSynchronousImport);
-                    d.uvVariants[variant]=ModularWoodSetup.StructuralMesh(ModularWoodSetup.Import(file),d.LocalBounds);
-                }
-            }
+            else BakedStoneKitSetup.Apply(d,i-1,bakedMaterial);
             d.mesh=d.uvVariants[0];
             bool exists=AssetDatabase.LoadAssetAtPath<GameObject>(path+".prefab")!=null;
             var root=exists?PrefabUtility.LoadPrefabContents(path+".prefab"):new GameObject(Names[i]);

@@ -7,10 +7,12 @@ using UnityEngine;
 /// <summary>Wire the authored FBX into the existing wall slot without changing placement geometry.</summary>
 public static class SplitPlankWallSetup
 {
-    public const string ModelPath = "Assets/Models/Buildings/Wood/Modular/SplitPlankWall_4.00Wx3.00Hx0.25D.fbx";
+    public const string SourceModelPath = "Assets/Models/Buildings/Wood/Modular/SplitPlankWall_4.00Wx3.00Hx0.25D.fbx";
+    public const string ModelPath = BakedSplitPlankWallSetup.Model;
     public const string TexturePath = "Assets/Textures/Buildings/Wood/ordinary-wood-trim-albedo.png";
     public const string MaterialPath = "Assets/Materials/Buildings/Wood/SplitPlankWood.mat";
     public const string ShaderName = "Custom/BuildingWoodMatte";
+    public static Material TrimMaterial => AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
     public const string InfillModelPath = "Assets/Models/Buildings/Wood/TwoPlankInfill_0.5Wx2.75Hx0.25D.fbx";
     public const string InfillDefinitionPath = "Assets/Resources/Building/two-plank-infill.asset";
     public const string InfillPrefabPath = "Assets/Resources/Building/two-plank-infill.prefab";
@@ -137,6 +139,9 @@ public static class SplitPlankWallSetup
         ModularWoodSetup.Profile(wall,true);
         wall.mesh = mesh;
         wall.material = material;
+
+        BakedSplitPlankWallSetup.Apply(wall);
+        mesh = wall.mesh; material = wall.material;
 
         string prefabPath = BuildingPrototypeSetup.Folder + "/wall.prefab";
         var root = PrefabUtility.LoadPrefabContents(prefabPath);

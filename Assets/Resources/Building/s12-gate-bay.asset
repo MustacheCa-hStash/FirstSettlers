@@ -58,7 +58,7 @@ MonoBehaviour:
     interior: 0
   stackRiseUnits: 5
   wallEndInsetUnits: 0
-  mesh: {fileID: -5133830953159761912, guid: 0c4e3083dcd48ad4da4b9e4beafc1b96, type: 3}
+  mesh: {fileID: -6387321346523279028, guid: 22a89c7bb1f7bc24486a2d6b3574da59, type: 3}
   preserveAuthoredMesh: 1
   requiresFullBearing: 0
   canGroundOnTerrain: 1
@@ -74,9 +74,9 @@ MonoBehaviour:
   flipVariant: {fileID: 0}
   gableRoofSeamMesh: {fileID: 0}
   uvVariants:
-  - {fileID: -5133830953159761912, guid: 0c4e3083dcd48ad4da4b9e4beafc1b96, type: 3}
-  - {fileID: 2132519891339147885, guid: d65b4a060c74b9b46949e23c1916994f, type: 3}
-  - {fileID: 2510686735216548474, guid: 7bb21aacedf6c6d46bb9e353610c6bb4, type: 3}
+  - {fileID: -6387321346523279028, guid: 22a89c7bb1f7bc24486a2d6b3574da59, type: 3}
+  - {fileID: -907356761426288324, guid: 10c8b3bf1e2ca4e42a21de6e8aaeab8c, type: 3}
+  - {fileID: 4140813828123504215, guid: 46e34ae31e933394999cb5e59f7c87c6, type: 3}
   floorOpeningUvVariants: []
   jointCoverVariants: []
   jointCoverMaterial: {fileID: 0}
@@ -86,6 +86,6 @@ MonoBehaviour:
   collisionMesh: {fileID: 0}
   occupiedVolumes: []
   roofAttachment: 0
-  material: {fileID: 2100000, guid: 4d2d86430550b0d46bc1ecb21a9425c3, type: 2}
+  material: {fileID: 2100000, guid: 9732315c5be172242a7c593823eefb5f, type: 2}
   authoringPrefab: {fileID: 6961131149287764988, guid: 3cc41870720c813448315041304952cb, type: 3}
   maxHealth: 100

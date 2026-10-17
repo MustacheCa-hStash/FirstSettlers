@@ -6,6 +6,7 @@ ROOT=Path(__file__).resolve().parents[1]
 ART=ROOT/'ArtReferences/DaisyWeeds';OUT=ROOT/'Assets/Models/Grass+Flowers'
 ART.mkdir(parents=True,exist_ok=True);OUT.mkdir(parents=True,exist_ok=True)
 bpy.ops.wm.read_factory_settings(use_empty=True)
+bpy.context.preferences.filepaths.save_version=0
 image=bpy.data.images.load(str(ROOT/'Assets/Textures/Flowers/T_DaisyWeeds_Painted_Atlas.png'));image.pack()
 w,h=image.size
 pixels=list(image.pixels)
@@ -16,7 +17,9 @@ def region(x0,x1):
         for x in range(int(w*x0),int(w*x1)):
             if pixels[(y*w+x)*4+3]>.5:xs.append(x);ys.append(y)
     return ((min(xs)-4)/w,(min(ys)-4)/h,(max(xs)+5)/w,(max(ys)+5)/h)
-flower_uv=region(0,.65);leaf_uv=region(.68,1)
+flower_uv=(35/1254,223/1254,805/1254,964/1254) # Original approved atlas mapping.
+# Retain the approved leaf mapping; this revision only changes flower-head geometry.
+leaf_uv=(0.6786283891547049, 0.037480063795853266, 0.9776714513556619, 0.9593301435406698)
 mat=bpy.data.materials.new('Painted Daisy Weeds');mat.use_nodes=True
 bsdf=mat.node_tree.nodes.get('Principled BSDF');bsdf.inputs['Roughness'].default_value=1;bsdf.inputs['Specular IOR Level'].default_value=0
 tex=mat.node_tree.nodes.new('ShaderNodeTexImage');tex.image=image
@@ -52,6 +55,7 @@ def leaf(base,angle,length,width,lift=.2):
 def bloom(tip,radius,tilt,yaw):
     normal=Vector((math.sin(tilt)*math.cos(yaw),math.sin(tilt)*math.sin(yaw),math.cos(tilt)))
     side=normal.cross(Vector((0,1,0))).normalized();other=normal.cross(side).normalized()
+    # Restore the original almost-flat twelve-segment head.
     centre=vertex(tip+normal*.006,mapuv(flower_uv,.5,.5),(1,1,0,1));ring=[]
     for k in range(12):
         a=k*math.tau/12
@@ -84,7 +88,7 @@ data=dict(name='DaisyWeeds_Painted',positions=[vector(p) for p in vertices],norm
     uvs=[dict(x=u[0],y=u[1]) for u in uvs],colors=[dict(r=c[0],g=c[1],b=c[2],a=c[3]) for c in colors],
     triangles=[i for f in faces for i in (f[0],f[2],f[1])])
 (OUT/'DaisyWeeds_Painted.json').write_text(json.dumps(data,separators=(',',':')))
-report=dict(vertices=len(vertices),triangles=len(faces),flowerHeads=3,leaves=8,materialCount=1,sourceDimensions=list(obj.dimensions),runtimeScaleRange=[.4*1.283,.5*1.283],flowerUV=flower_uv,leafUV=leaf_uv)
+report=dict(headDepthAlongNormalRange=[.006,.006],vertices=len(vertices),triangles=len(faces),flowerHeads=3,leaves=8,materialCount=1,sourceDimensions=list(obj.dimensions),runtimeScaleRange=[.4*1.283,.5*1.283],flowerUV=flower_uv,leafUV=leaf_uv)
 (ART/'mesh-report.json').write_text(json.dumps(report,indent=2))
 bpy.ops.wm.save_as_mainfile(filepath=str(ART/'DaisyWeeds_Painted.blend'))
 print('DAISY_BLENDER_REPORT',json.dumps(report))

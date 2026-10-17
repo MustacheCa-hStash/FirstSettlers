@@ -1,6 +1,6 @@
 # F01–F06 furniture: Blender source and building integration
 
-First-page furnishings use six static single-material FBX meshes, the existing shared matte wood material, authored compound collision, stable building IDs and actual-mesh catalog thumbnails. The existing enum values remain unchanged; Furniture is appended as value 7.
+First-page furnishings use six static single-material FBX meshes, authored compound collision, stable building IDs and actual-mesh catalog thumbnails. F05 uses its baked matte material; the other five use the shared matte wood material. The existing enum values remain unchanged; Furniture is appended as value 7.
 
 ## Assets
 
@@ -18,16 +18,16 @@ Dimensions below are Unity X width/length × Y height × Z depth, in metres. F01
 | F02 | Plank bench | 1.50 × 0.50 × 0.50 | 276 | `build.furniture.f02-plank-bench` |
 | F03 | Pegged table | 1.50 × 0.75 × 0.75 | 628 | `build.furniture.f03-pegged-table` |
 | F04 | Low work table | 1.00 × 0.50 × 0.75 | 628 | `build.furniture.f04-low-work-table` |
-| F05 | Sleeping platform | 2.00 × 0.50 × 1.00 | 1,472 | `build.furniture.f05-sleeping-platform` |
+| F05 | Sleeping platform | 2.00 × 0.50 × 1.00 | 320 | `build.furniture.f05-sleeping-platform` |
 | F06 | Wall shelf | 1.00 × 0.25 × 0.25 | 212 | `build.furniture.f06-wall-shelf` |
 
-F01 has a split oval seat and three splayed legs. F02 has split seat boards, slab supports and a pegged stretcher. F03/F04 have four split top boards, end frames, aprons, legs and a stretcher. F05 has separate corner posts/rails and 56 six-sided cord strands with real visible gaps; its usable deck is 1.80 × 0.90 m. F06 has a board, two back brackets, diagonal braces and small wooden pegs.
+F01 has a split oval seat and three splayed legs. F02 has split seat boards, slab supports and a pegged stretcher. F03/F04 have four split top boards, end frames, aprons, legs and a stretcher. F05 has separate corner posts/rails and 56 double-faced cord strips with real visible gaps; its usable deck is 1.80 × 0.90 m. F06 has a board, two back brackets, diagonal braces and small wooden pegs. The original 1,472-triangle F05 remains the bake source; see [baked furnishings](BAKED_FURNISHINGS.md) for the installed model and current validation.
 
 These are the bare first-page pieces. Bedding, storage props and interactive sitting/sleeping behavior belong to subsequent work.
 
 ## Surface and collision
 
-Every face, including hidden caps and bevels, has non-degenerate UV0. Long faces follow timber grain; caps use end grain. The bed cords use the existing atlas's lashing region. No extra furnishing texture is needed for this page. Each mesh has one material submesh and uses the current shared `SplitPlankWood` material, retaining the project's fog, shadows, night and cave-light response.
+Every face, including hidden caps and bevels, has non-degenerate UV0. Long faces follow timber grain; caps use end grain. F01–F04 and F06 use the shared `SplitPlankWood` material. F05 uses a 1K colour/AO and normal pair baked from the original wood and lashing atlas. Each mesh has one material submesh and retains the project's fog, shadows, night and cave-light response.
 
 The authored mesh is preserved by resolution; no timber bearing geometry, automatic posts or wall sockets are generated for furniture. Runtime rendering stays in the existing instanced building renderer. Collision uses pooled compound boxes around the actual seat/top, legs, slab supports, stretcher, bed deck/frame or shelf braces. Spaces beneath tables and benches remain open. Rounded/slanted surfaces use conservative box approximations rather than individual visual triangles. The bed has a thin continuous walking collider over its cord deck so the character cannot fall between small visual gaps.
 

@@ -1,0 +1,25 @@
+{
+  "headDepthAlongNormal": 0.15350017952732742,
+  "vertices": 76,
+  "triangles": 68,
+  "flowerHeads": 1,
+  "outerFlorets": 8,
+  "leaves": 0,
+  "stemBaseRadius": 0.035,
+  "materials": 1,
+  "sourceDimensions": [
+    0.4129234552383423,
+    0.41226303577423096,
+    1.2997771501541138
+  ],
+  "runtimeScaleRange": [
+    0.46,
+    0.62
+  ],
+  "petalUV": [
+    0.08293460925039872,
+    0.06618819776714513,
+    0.916267942583732,
+    0.8987240829346093
+  ]
+}

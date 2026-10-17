@@ -1,8 +1,6 @@
 using System;
-using System.IO;
 using UnityEditor;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 /// <summary>S02 only: a closed box with baked masonry, never individual runtime stones.</summary>
 public static class BakedStoneWallSetup
@@ -37,22 +35,22 @@ public static class BakedStoneWallSetup
         importer.SaveAndReimport();
     }
 
-    public static void Apply(BuildDefinition definition)
+    public static Material CreateMaterial(string path, string colour, string normal, string name)
     {
-        Texture(Colour, false); Texture(Normal, true);
+        Texture(colour, false); Texture(normal, true);
         var shader = Shader.Find("Custom/BakedStoneWallMatte");
         if (shader == null) throw new InvalidOperationException("Baked stone wall shader missing.");
-        var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
+        var material = AssetDatabase.LoadAssetAtPath<Material>(path);
         if (material == null)
         {
             var original = AssetDatabase.LoadAssetAtPath<Material>(StoneKitSetup.MaterialPath);
             material = original != null ? new Material(original) : new Material(shader);
-            material.name = "Baked stone wall";
-            AssetDatabase.CreateAsset(material, MaterialPath);
+            material.name = name;
+            AssetDatabase.CreateAsset(material, path);
         }
         material.shader = shader;
-        material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(Colour));
-        material.SetTexture("_BumpMap", AssetDatabase.LoadAssetAtPath<Texture2D>(Normal));
+        material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(colour));
+        material.SetTexture("_BumpMap", AssetDatabase.LoadAssetAtPath<Texture2D>(normal));
         material.SetFloat("_BumpScale", 1);
         material.SetFloat("_OcclusionStrength", .65f);
         material.SetFloat("_AlphaClip", 0);
@@ -60,14 +58,24 @@ public static class BakedStoneWallSetup
         material.DisableKeyword("_ALPHATEST_ON");
         material.enableInstancing = true;
         EditorUtility.SetDirty(material);
-        definition.material = material;
+        return material;
+    }
+
+    public static void Apply(BuildDefinition definition)
+    {
+        definition.material = CreateMaterial(MaterialPath, Colour, Normal, "Baked stone wall");
+        ApplyMeshes(definition, Model);
+    }
+
+    public static void ApplyMeshes(BuildDefinition definition, string model)
+    {
         definition.uvVariants = new Mesh[3];
         for (int i = 0; i < 3; i++)
         {
-            string path = Model + (i == 0 ? "" : "_UV" + i) + ".fbx";
+            string path = model + (i == 0 ? "" : "_UV" + i) + ".fbx";
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
             var importer = AssetImporter.GetAtPath(path) as ModelImporter;
-            if (importer == null) throw new InvalidOperationException("Baked S02 model missing: " + path);
+            if (importer == null) throw new InvalidOperationException("Baked stone model missing: " + path);
             importer.bakeAxisConversion = true;
             importer.materialImportMode = ModelImporterMaterialImportMode.None;
             importer.importNormals = ModelImporterNormals.Import;

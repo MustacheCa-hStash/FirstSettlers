@@ -24,9 +24,9 @@ public static class OpeningWallSetup
     {
         string path=BuildingPrototypeSetup.Folder+"/"+Names[index];var d=AssetDatabase.LoadAssetAtPath<BuildDefinition>(path+".asset");
         if(d==null){d=ScriptableObject.CreateInstance<BuildDefinition>();AssetDatabase.CreateAsset(d,path+".asset");}
-        ModularWoodSetup.Profile(d,true);d.contentId=id;d.displayName=title;d.material=wall.material;d.gableSlope=slope;d.flipVariant=null;
+        ModularWoodSetup.Profile(d,true);d.contentId=id;d.displayName=title;d.material=SplitPlankWallSetup.TrimMaterial;d.gableSlope=slope;d.flipVariant=null;
         d.solidBoxes=Array.Empty<Bounds>();d.wallOpenings=Array.Empty<Bounds>();d.occupiedVolumes=Array.Empty<BuildConvexVolume>();
-        d.jointCoverVariants=post.uvVariants;d.jointCoverMaterial=wall.material;
+        d.jointCoverVariants=post.uvVariants;d.jointCoverMaterial=SplitPlankWallSetup.TrimMaterial;
         d.gableRoofSeamMesh=null;
         if(slope==GableSlope.None)
         {

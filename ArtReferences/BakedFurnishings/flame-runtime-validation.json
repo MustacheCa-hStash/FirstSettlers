@@ -1,0 +1,5 @@
+{
+  "passed": true,
+  "checks": 21,
+  "editorStartupNote": "Unity SearchDatabase indexer threw a startup exception; the independent gameplay checks completed successfully."
+}

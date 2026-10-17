@@ -41,10 +41,11 @@ public static class TorchKitSetup
             new Bounds(new Vector3(0,.285f,.19f),new Vector3(.14f,.04f,.3f)),new Bounds(new Vector3(0,.38f,.32f),new Vector3(.11f,.73f,.11f))};
         d.jointSockets=Array.Empty<BuildJointSocket>();d.uvVariants=Array.Empty<Mesh>();d.jointCoverVariants=Array.Empty<Mesh>();d.wallOpenings=Array.Empty<Bounds>();d.occupiedVolumes=Array.Empty<BuildConvexVolume>();
         d.flamePrefab=effect;d.maxHealth=50;
+        BakedFurnishingsSetup.Apply(d);
         var root=new GameObject("Mounted torch"){layer=GameplayLayers.WorldSolid};
         try
         {
-            root.AddComponent<MeshFilter>().sharedMesh=mounted;root.AddComponent<MeshRenderer>().sharedMaterial=wood;
+            root.AddComponent<MeshFilter>().sharedMesh=d.mesh;root.AddComponent<MeshRenderer>().sharedMaterial=d.material;
             foreach(var box in d.solidBoxes){var collider=root.AddComponent<BoxCollider>();collider.center=box.center;collider.size=box.size;}
             d.authoringPrefab=PrefabUtility.SaveAsPrefabAsset(root,"Assets/Resources/Building/wall-torch.prefab");
         }finally{Object.DestroyImmediate(root);}

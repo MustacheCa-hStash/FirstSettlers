@@ -56,7 +56,7 @@ public static class ModularWoodSetup
         post.uvVariants=new[]{post.mesh,Save(Folder+"/BayPost_0.26Wx3.00Hx0.26D_UV1.fbx","bay-post-uv1-mesh"),Save(Folder+"/BayPost_0.26Wx3.00Hx0.26D_UV2.fbx","bay-post-uv2-mesh")};
         foreach(var d in new[]{wall,wattle})
         {
-            d.jointCoverVariants=post.uvVariants;d.jointCoverMaterial=wall.material;EditorUtility.SetDirty(d);
+            d.jointCoverVariants=post.uvVariants;d.jointCoverMaterial=SplitPlankWallSetup.TrimMaterial;EditorUtility.SetDirty(d);
         }
         EditorUtility.SetDirty(post);
     }

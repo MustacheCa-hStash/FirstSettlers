@@ -104,7 +104,7 @@ public sealed class FoliagePublication : IDisposable
 
     private IEnumerator<bool> BuildBatches()
     {
-        int groupCount = Kind == FoliagePublicationKind.Flower ? 3 :
+        int groupCount = Kind == FoliagePublicationKind.Flower ? 5 :
             Kind == FoliagePublicationKind.Clover ? Mathf.Max(1, prefabCount) : 1;
         int[] counts;
         using (PrepareMarker.Auto()) counts = new int[groupCount];
@@ -136,7 +136,7 @@ public sealed class FoliagePublication : IDisposable
                     var m = new Matrix4x4[Mathf.Min(BatchSize, remaining)];
                     Vector4[] v = Kind == FoliagePublicationKind.LilyPad || Kind == FoliagePublicationKind.Cattail ? null : new Vector4[m.Length];
                     matrices[group].Add(m); values[group].Add(v);
-                    if (Kind == FoliagePublicationKind.Flower) flowers.Add(new FlowerRenderBatch(m, v, group == 1, group == 2));
+                    if (Kind == FoliagePublicationKind.Flower) flowers.Add(new FlowerRenderBatch(m, v, group == 1, group == 2, group == 3, group == 4));
                     else if (Kind == FoliagePublicationKind.Clover) clover.Add(new CloverRenderBatch(group, m, v));
                     else if (Kind == FoliagePublicationKind.Dandelion) dandelions.Add(new GrassRenderBatch(m, v));
                     else water.Add(m);
@@ -179,7 +179,7 @@ public sealed class FoliagePublication : IDisposable
     private int Group(int i)
     {
         if (Kind == FoliagePublicationKind.Flower)
-        { var f = data.flowerInstances[i]; return f.isDaisyWeed ? 2 : f.isTallFlower ? 1 : 0; }
+        { var f = data.flowerInstances[i]; return f.isCornflower ? 4 : f.isPoppy ? 3 : f.isDaisyWeed ? 2 : f.isTallFlower ? 1 : 0; }
         return Kind == FoliagePublicationKind.Clover ? Mathf.Clamp(data.cloverInstances[i].prefabIndex, 0, Mathf.Max(1, prefabCount) - 1) : 0;
     }
     private void Sample(int i, out Matrix4x4 matrix, out Vector4 value)

@@ -1,0 +1,32 @@
+Piece	Triangles	Content ID	Mesh
+Split-plank wood wall	136	build.prototype.wall	Assets/Models/Buildings/Wood/Modular/SplitPlankWall_Baked.fbx
+Timber floor	324	build.prototype.floor	Assets/Resources/Building/floor-mesh.asset
+Timber floor (stairwell)	480	build.prototype.floor	Assets/Resources/Building/floor-stairwell-mesh.asset
+Stone foundation	12	build.prototype.foundation	Assets/Resources/Building/foundation-mesh.asset
+Bay post	12	build.prototype.corner	Assets/Resources/Building/bay-post-mesh.asset
+Wattle wall	32	build.wood.wattle-wall	Assets/Models/Buildings/Wood/Modular/WattleWall_4.00Wx3.00Hx0.25D.fbx
+W21 half-storey wood stair	120	build.wood.w21-half-storey-stair	Assets/Resources/Building/w21-stair-mesh.asset
+Thatch roof	62	build.wood.thatch-roof-panel	Assets/Resources/Building/thatch-roof-panel-mesh.asset
+Thatch roof (roof continuation)	62	build.wood.thatch-roof-panel	Assets/Resources/Building/thatch-roof-panel-joined-mesh.asset
+W09 doorway wall	288	build.wood.w09-doorway	Assets/Models/Buildings/Wood/Modular/W09_DoorwayWall_4x3x0.25.fbx
+W11 shutter wall	384	build.wood.w11-shutter-wall	Assets/Models/Buildings/Wood/Modular/W11_ShutterWall_4x3x0.25.fbx
+W15 half-gable · rising	116	build.wood.w15-gable-rising	Assets/Models/Buildings/Wood/Modular/W15_GableRising_2x2x0.25.fbx
+W15 half-gable · rising (roof seam)	12	build.wood.w15-gable-rising	Assets/Models/Buildings/Wood/Modular/W15_GableRising_RoofSeam.fbx
+W15 half-gable · falling	116	build.wood.w15-gable-falling	Assets/Models/Buildings/Wood/Modular/W15_GableFalling_2x2x0.25.fbx
+W15 half-gable · falling (roof seam)	12	build.wood.w15-gable-falling	Assets/Models/Buildings/Wood/Modular/W15_GableFalling_RoofSeam.fbx
+W22 full-storey wood stair	240	build.wood.w22-full-storey-stair	Assets/Models/Buildings/Wood/Stairs/W22_FullStoreyStair_1.25Wx3Hx4D.fbx
+W24 stair handrail	36	build.wood.w24-stair-handrail	Assets/Models/Buildings/Wood/Stairs/W24_StairHandrail_0.25Wx2.5Hx2D.fbx
+S02 coursed stone wall	12	build.stone.s02-coursed-wall	Assets/Models/Buildings/Stone/S02_BakedCoursedWall_4x3x0.50.fbx
+S03 stone pier	12	build.stone.s03-pier	Assets/Models/Buildings/Stone/S03_Baked.fbx
+S04 flagstone ground floor	12	build.stone.s04-flagstone-floor	Assets/Models/Buildings/Stone/S04_Baked.fbx
+S06 stone wall cap	72	build.stone.s06-wall-cap	Assets/Models/Buildings/Stone/S06_Baked.fbx
+Square wall infill	132	build.wood.square-infill	Assets/Models/Buildings/Wood/Modular/SquareInfill_2x2x0.25.fbx
+S07 low rubble wall	12	build.stone.s07-low-wall	Assets/Models/Buildings/Stone/S07_Baked.fbx
+S12 empty stone gate bay	24	build.stone.s12-gate-bay	Assets/Models/Buildings/Stone/S12_Baked.fbx
+Three-leg stool	296	build.furniture.f01-three-leg-stool	Assets/Models/Buildings/Furniture/F01_three_leg_stool.fbx
+Plank bench	276	build.furniture.f02-plank-bench	Assets/Models/Buildings/Furniture/F02_plank_bench.fbx
+Pegged table	628	build.furniture.f03-pegged-table	Assets/Models/Buildings/Furniture/F03_pegged_table.fbx
+Low work table	628	build.furniture.f04-low-work-table	Assets/Models/Buildings/Furniture/F04_low_work_table.fbx
+Sleeping platform	320	build.furniture.f05-sleeping-platform	Assets/Models/Buildings/Furniture/SleepingPlatform_Baked.fbx
+Wall shelf	212	build.furniture.f06-wall-shelf	Assets/Models/Buildings/Furniture/F06_wall_shelf.fbx
+Mounted torch	280	build.lighting.wall-torch	Assets/Models/Buildings/Lighting/MountedTorch_Baked.fbx

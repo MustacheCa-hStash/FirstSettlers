@@ -4,6 +4,12 @@ The active `Assets/Prefabs/daisyWeeds.prefab` is now a standalone three-stem dai
 
 The current atlas simplifies the initial painted version: centres are smooth yellow discs, petals have only faint cream gradients, and leaves use a mostly uniform green fill, a simple midrib and gentle gradient. Seed detail, secondary leaf veins and realistic baked petal shadows were removed. This texture revision preserves the model, UVs, atlas GUID, shader and instance batching. The editable Blender source packs the updated atlas. The isolated Unity render and all 529 asset checks passed again after replacement.
 
+## Restored flat heads
+
+The deeper/cupped-head experiment was reverted after review. All flower positions, normals, UVs, colours and triangle indices exactly match the original pre-cupping mesh. The three tilted heads again use nearly flat twelve-segment fans, with the existing ivory/yellow atlas, stems, leaves and calyxes. Geometry is back to **132 vertices / 119 triangles** per three-flower clump. Side captures remain available for reference; the lower side profile is intentional in this restored version.
+
+![Restored daisy heads](daisy-clump.png)
+
 The existing prefab GUID `ff0e8ff02b583064abb831387de61597`, root file ID `8896480132052262351`, and material GUID were preserved. Existing SmearScene and recovery-scene references therefore resolve to the replacement without scene edits. Original source assets remain available for comparison; the live prefab no longer references them.
 
 | Item | Replacement |
@@ -33,13 +39,13 @@ The new asset also resolves independently of clover: daisy mesh/material lookup 
 
 The atlas was generated with the built-in ImageGen tool; [the current simplification prompt](SimplificationPrompt.md) records the latest edit, and [the original prompt](TexturePrompt.md) records the initial layout. `Atlas_Detailed_v1.png` preserves the initial detailed version for comparison. The current atlas is used intact. Blender analyzes the two separated alpha silhouettes to place UV islands. JSON provides explicit Unity Y-up coordinates, so the instanced path does not depend on a prefab child transform or FBX unit conversion.
 
-Run Blender with `--background --python Tools/BuildDaisyWeeds.py`, then use **Tools > Foliage > Daisy Weeds > Build Replacement** in Unity. `Tools/ValidateDaisyWeeds.ps1 -BuildAssets` builds in an isolated project under `.utmp/daisy`; copy the resulting prefab, material, mesh and imported texture metadata into the main workspace only after successful completion. Restart Play mode to refresh cached mesh/material references.
+Run Blender with `--background --python Tools/BuildDaisyWeeds.py`, then use **Tools > Foliage > Daisy Weeds > Build Replacement** in Unity. `Tools/ValidateDaisyWeeds.ps1 -BuildAssets` builds in an isolated project under `.utmp/daisy`; the script now waits for Unity and installs the resulting prefab, material, mesh and imported texture metadata only after successful completion. `Tools/ValidateDaisyWeeds.ps1 -Render` validates the asset and saves the successful previews here. Restart Play mode to refresh cached mesh/material references.
 
 ## Verification and cost
 
-The validator checks persistent prefab identity, standalone root/identity transform, the assigned mesh/material/texture, metre scale, all vertex/UV/normal streams, triangle validity, semantic metadata, 1,040-instance batching and lookup with clover disabled. Production instanced rendering is inspected from the front, back, overhead and as a meadow patch. Forward, shadow, depth and depth-normal shader passes compile successfully.
+The validator checks persistent prefab identity, standalone root/identity transform, the assigned mesh/material/texture, metre scale, all vertex/UV/normal streams, triangle validity, semantic metadata, 1,040-instance batching and lookup with clover disabled. The restored flat-head revision passes all 529 asset checks. Production instanced rendering is inspected from the front, back, overhead, four level side directions and as a meadow patch. Forward, shadow, depth and depth-normal shader passes compile successfully.
 
-A separate native Unity benchmark uses 1,024 plants at the same positions, yaw, scale 0.575, lighting and 1280 × 720 camera target, comparing old cards and new clumps. It renders one request per actual editor frame, with 24 warm-up and 80 measured frames per stage in the order none → old → new → new → old → none.
+The benchmark below was previously recorded for the 132-vertex / 119-triangle flat-head clump, which is the restored geometry. No new performance benchmark was run for the revert. A separate native Unity benchmark uses 1,024 plants at the same positions, yaw, scale 0.575, lighting and 1280 × 720 camera target, comparing old cards and new clumps. It renders one request per actual editor frame, with 24 warm-up and 80 measured frames per stage in the order none → old → new → new → old → none.
 
 | Path | Median camera-render wall time, first/repeat | p95, first/repeat | Flower submission mean |
 | --- | ---: | ---: | ---: |

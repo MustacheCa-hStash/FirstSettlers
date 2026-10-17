@@ -22,7 +22,7 @@ MonoBehaviour:
   jointSockets: []
   stackRiseUnits: 0
   wallEndInsetUnits: 1
-  mesh: {fileID: 8396987974066166419, guid: d2a251b515c3de2409dbbf405300c968, type: 3}
+  mesh: {fileID: 1681948401355549692, guid: 54e588b4be65b9449985e3a76e0432b9, type: 3}
   preserveAuthoredMesh: 1
   requiresFullBearing: 0
   canGroundOnTerrain: 1
@@ -65,6 +65,6 @@ MonoBehaviour:
   collisionMesh: {fileID: 0}
   occupiedVolumes: []
   roofAttachment: 0
-  material: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
+  material: {fileID: 2100000, guid: 797d14889e6fc57409892ac23c8a8380, type: 2}
   authoringPrefab: {fileID: 1079229707164914805, guid: 37b8002922ef0a54888e77b7cdb502f1, type: 3}
   maxHealth: 100

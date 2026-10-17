@@ -26,3 +26,19 @@ $daisyArguments=@('-batchmode','-projectPath',$daisyProject,'-executeMethod',$da
 if(-not $Render -and -not $Benchmark){$daisyArguments+='-nographics'}
 $daisyProcess=Start-Process -FilePath $daisyUnity -ArgumentList ($daisyArguments | ForEach-Object {'"'+$_+'"'}) -WindowStyle Hidden -PassThru
 Write-Output "Daisy Unity process $($daisyProcess.Id); log $daisyLog"
+$daisyProcess.WaitForExit()
+if($daisyProcess.ExitCode -ne 0){throw "Daisy Unity checks exited $($daisyProcess.ExitCode). See $daisyLog"}
+if($BuildAssets){
+    foreach($daisyBuilt in 'Assets/Prefabs/daisyWeeds.prefab','Assets/Materials/M_Flowers/M_DaisyWeeds.mat','Assets/Models/Grass+Flowers/DaisyWeeds_Painted_Runtime.asset'){
+        Copy-Item -LiteralPath "$daisyProject/$daisyBuilt","$daisyProject/$daisyBuilt.meta" -Destination (Split-Path -Parent "$daisyRoot/$daisyBuilt") -Force
+    }
+    foreach($daisyImported in 'Assets/Textures/Flowers/T_DaisyWeeds_Painted_Atlas.png.meta','Assets/Models/Grass+Flowers/DaisyWeeds_Painted.fbx.meta'){
+        Copy-Item -LiteralPath "$daisyProject/$daisyImported" -Destination "$daisyRoot/$daisyImported" -Force
+    }
+}
+if($Render){
+    foreach($daisyView in 'daisy-clump','daisy-back','daisy-overhead','daisy-patch','daisy-side-front','daisy-side-back','daisy-side-left','daisy-side-right'){
+        Copy-Item -LiteralPath "$daisyProject/.utmp/daisy/$daisyView.png" -Destination "$daisyRoot/ArtReferences/DaisyWeeds/$daisyView.png" -Force
+    }
+}
+Write-Output "Daisy Unity checks passed. Log: $daisyLog"

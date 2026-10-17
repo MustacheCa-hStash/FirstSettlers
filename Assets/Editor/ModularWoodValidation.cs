@@ -72,7 +72,7 @@ public static class ModularWoodValidation
         {
             Check(d.kind==BuildPartKind.Wall && d.wallPlacementMode==WallPlacementMode.Panel && d.sizeUnits==new Vector3Int(16,12,1) && d.wallEndInsetUnits==0 && d.stackRiseUnits==12 && d.jointSockets.Length==17,"Full-span profile missing: "+d.name);
             Near(d.mesh.bounds.min,new Vector3(0,0,-.125f),"Wall native origin: "+d.name);Near(d.mesh.bounds.max,new Vector3(4,3,.125f),"Wall native dimensions: "+d.name);
-            Check(d.jointCoverVariants.Length==3 && d.jointCoverMaterial==wall.material,"Shared post references missing");
+            Check(d.jointCoverVariants.Length==3 && d.jointCoverMaterial==SplitPlankWallSetup.TrimMaterial,"Shared post references missing");
             var prefab=d.authoringPrefab;Check(prefab!=null && prefab.GetComponent<MeshFilter>().sharedMesh==d.mesh,"Wall prefab mesh reference mismatch");
             Near(prefab.GetComponent<BoxCollider>().center,d.LocalBounds.center,"Wall prefab collider centre");Near(prefab.GetComponent<BoxCollider>().size,d.LocalBounds.size,"Wall prefab collider size");
             Check(prefab.transform.localScale==Vector3.one && prefab.transform.localRotation==Quaternion.identity,"Wall prefab transform changes envelope");
@@ -174,7 +174,7 @@ public static class ModularWoodValidation
             int turn=kind==BuildJointKind.Butt?0:2;
             if(reverse){b=s.Add(mate,f,position,turn,true);a=s.Add(d,f,default,0,true);}else{a=s.Add(d,f,default,0,true);b=s.Add(mate,f,position,turn,true);}
             Check(Covers(s)==1,"Junction cover duplicated/missing: "+kind+" yaw="+yaw);
-            foreach(var p in s.Pieces.Values)foreach(var attachment in p.Resolved.attachments)Check(attachment.material==c.presets[0].material,"Wattle joint used cutout rather than solid wood");
+            foreach(var p in s.Pieces.Values)foreach(var attachment in p.Resolved.attachments)Check(attachment.material==SplitPlankWallSetup.TrimMaterial,"Wattle joint used cutout rather than solid wood");
             bool seen=false;foreach(var contact in a.Resolved.joints)if(contact.Kind==kind)seen=true;Check(seen,"Junction type wrong: "+kind);
             Vector3 point=kind is BuildJointKind.Corner or BuildJointKind.Butt?new Vector3(4,0,0):new Vector3(2,0,0);
             var post=s.Add(c.presets[3],f,BuildGeometry.Ticks(point),0,false);Check(Covers(s)==0,"Explicit post failed to suppress generated cover");

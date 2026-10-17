@@ -19,7 +19,7 @@ public sealed class FoliageRenderAssets
     {
         grassSettings = settings.Grass; flowerSettings = settings.Flowers; lilyPadSettings = settings.LilyPads;
         cattailSettings = settings.Cattails; cloverSettings = settings.Clover; dandelionSettings = settings.Dandelions; treeSettings = settings.Trees;
-        ResolveGrassRenderAssets(); ResolveFlowerRenderAssets(); ResolveDaisyWeedRenderAssets(); ResolveLilyPadRenderAssets(); ResolveCattailRenderAssets();
+        ResolveGrassRenderAssets(); ResolveFlowerRenderAssets(); ResolveDaisyWeedRenderAssets(); ResolvePoppyRenderAssets(); ResolveCornflowerRenderAssets(); ResolveLilyPadRenderAssets(); ResolveCattailRenderAssets();
         ResolveCloverRenderAssets(); ResolveDandelionRenderAssets(); ResolveTreeRenderAssets();
         var small = new[] { "Pebble", "Fieldstone", "FlatStone" };
         var large = new[] { "RoundBoulder", "SplitBoulder", "LongBoulder" };
@@ -41,6 +41,10 @@ public sealed class FoliageRenderAssets
         runtime.tallFlowerMaterial = tallFlowerMaterial;
         runtime.daisyWeedMesh = daisyWeedMesh;
         runtime.daisyWeedMaterial = daisyWeedMaterial;
+        runtime.poppyMesh = poppyMesh;
+        runtime.poppyMaterial = poppyMaterial;
+        runtime.cornflowerMesh = cornflowerMesh;
+        runtime.cornflowerMaterial = cornflowerMaterial;
         runtime.flowerPetalColorPropertyId = flowerPetalColorPropertyId;
         runtime.lilyPadMesh = lilyPadMesh;
         runtime.lilyPadMaterial = lilyPadMaterial;
@@ -82,6 +86,10 @@ public sealed class FoliageRenderAssets
     private Material flowerMaterial;
     private Mesh tallFlowerMesh;
     private Material tallFlowerMaterial;
+    private Mesh cornflowerMesh;
+    private Material cornflowerMaterial;
+    private Mesh poppyMesh;
+    private Material poppyMaterial;
     private Mesh daisyWeedMesh;
     private Material daisyWeedMaterial;
     private int flowerPetalColorPropertyId;
@@ -109,6 +117,10 @@ public sealed class FoliageRenderAssets
     public Material FlowerMaterial => flowerMaterial;
     public Mesh TallFlowerMesh => tallFlowerMesh;
     public Material TallFlowerMaterial => tallFlowerMaterial;
+    public Mesh CornflowerMesh => cornflowerMesh;
+    public Material CornflowerMaterial => cornflowerMaterial;
+    public Mesh PoppyMesh => poppyMesh;
+    public Material PoppyMaterial => poppyMaterial;
     public Mesh DaisyWeedMesh => daisyWeedMesh;
     public Material DaisyWeedMaterial => daisyWeedMaterial;
     public int FlowerPetalColorPropertyId => flowerPetalColorPropertyId;
@@ -210,7 +222,7 @@ public sealed class FoliageRenderAssets
 
         flowerPetalColorPropertyId = Shader.PropertyToID(petalColorPropertyName);
 
-        if (flowerSettings.flowerPrefab == null && flowerSettings.tallFlowerPrefab == null && flowerSettings.daisyWeedPrefab == null)
+        if (flowerSettings.flowerPrefab == null && flowerSettings.tallFlowerPrefab == null && flowerSettings.daisyWeedPrefab == null && flowerSettings.poppies?.prefab == null && flowerSettings.cornflowers?.prefab == null)
         {
             Debug.LogWarning("Flower prefabs are missing. Flowers will not render until one is assigned.");
             return;
@@ -296,6 +308,32 @@ public sealed class FoliageRenderAssets
         cattailMeshLocalMatrix = cattailSettings.cattailPrefab.transform.worldToLocalMatrix *
             filter.transform.localToWorldMatrix;
         cattailMaterial.enableInstancing = true;
+    }
+
+    private void ResolvePoppyRenderAssets()
+    {
+        if (!IsFlowerSystemEnabled() || flowerSettings.poppies == null ||
+            !flowerSettings.poppies.enabled || flowerSettings.poppies.prefab == null) return;
+        var prefab = flowerSettings.poppies.prefab;
+        var filter = prefab.GetComponentInChildren<MeshFilter>();
+        var renderer = prefab.GetComponentInChildren<MeshRenderer>();
+        if (filter == null || filter.sharedMesh == null || renderer == null || renderer.sharedMaterial == null)
+        { Debug.LogError("Poppy prefab needs a mesh and material."); return; }
+        poppyMesh = filter.sharedMesh; poppyMaterial = renderer.sharedMaterial;
+        poppyMaterial.enableInstancing = true;
+    }
+
+    private void ResolveCornflowerRenderAssets()
+    {
+        if (!IsFlowerSystemEnabled() || flowerSettings.cornflowers == null ||
+            !flowerSettings.cornflowers.enabled || flowerSettings.cornflowers.prefab == null) return;
+        var prefab = flowerSettings.cornflowers.prefab;
+        var filter = prefab.GetComponentInChildren<MeshFilter>();
+        var renderer = prefab.GetComponentInChildren<MeshRenderer>();
+        if (filter == null || filter.sharedMesh == null || renderer == null || renderer.sharedMaterial == null)
+        { Debug.LogError("Cornflower prefab needs a mesh and material."); return; }
+        cornflowerMesh = filter.sharedMesh; cornflowerMaterial = renderer.sharedMaterial;
+        cornflowerMaterial.enableInstancing = true;
     }
 
     private void ResolveDaisyWeedRenderAssets()
@@ -450,7 +488,9 @@ public sealed class FoliageRenderAssets
     {
         return (flowerMesh != null && flowerMaterial != null) ||
                (tallFlowerMesh != null && tallFlowerMaterial != null) ||
-               (daisyWeedMesh != null && daisyWeedMaterial != null);
+               (daisyWeedMesh != null && daisyWeedMaterial != null) ||
+               (poppyMesh != null && poppyMaterial != null) ||
+               (cornflowerMesh != null && cornflowerMaterial != null);
     }
 
     public bool HasLilyPadRenderAssets()

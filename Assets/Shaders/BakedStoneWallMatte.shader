@@ -93,7 +93,7 @@ Shader "Custom/BakedStoneWallMatte"
             output.positionCS = positions.positionCS;
             output.positionWS = positions.positionWS;
             output.normalWS = TransformObjectToWorldNormal(input.normalOS);
-            output.tangentWS = half4(TransformObjectToWorldDir(input.tangentOS.xyz), input.tangentOS.w * GetOddNegativeScale());
+            output.tangentWS = half4(TransformObjectToWorldDir(input.tangentOS.xyz, false), input.tangentOS.w * GetOddNegativeScale());
             output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
             output.shadowCoord = GetShadowCoord(positions);
             output.fogAndVertexLight.x = ComputeFogFactor(positions.positionCS.z);
@@ -104,6 +104,8 @@ Shader "Custom/BakedStoneWallMatte"
         half3 BakedStoneNormal(WoodVaryings input)
         {
             half3 n = NormalizeNormalPerPixel(input.normalWS);
+            // Procedural bearing timber has no tangent channel and samples flat-normal trim tiles.
+            if (dot(input.tangentWS.xyz, input.tangentWS.xyz) < 0.0001h) return n;
             half3 t = normalize(input.tangentWS.xyz);
             half3 b = cross(n, t) * input.tangentWS.w;
             half3 detail = UnpackNormalScale(SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, input.uv), _BumpScale);

@@ -9,13 +9,13 @@ S07 and S12 extend the painted stone kit with directly terrain-bearing boundary 
 
 ## Models and mapping
 
-S07 uses 30 broad irregular stones in four staggered courses over a recessed packing core: **852 triangles**. S12 uses two independent masonry wings, ten stones and one packing core per wing: **584 triangles**. The shallow clipped corners and quiet painted mineral patches keep the established simplified art direction.
+S07 now uses a **12-triangle box** and S12 uses **two 12-triangle wings (24 triangles)** with a real empty gate aperture. Their masonry is baked into the shared colour/AO and normal atlas; see [the baked kit guide](BAKED_STONE_KIT.md). The original authoring sources retain 30 stones plus packing for S07 (852 triangles) and ten stones plus packing per S12 wing (584 triangles total). The shallow clipped corners and quiet painted mineral patches keep the established simplified art direction.
 
 S12 deliberately has **no wooden gate, posts, pivots or lintel**. Its empty opening runs from X=1.375 to X=2.625, giving 1.25 m clear width, and is open from the base upward. The whole stone assembly is 1.25 m high. Each wing is 1.375 m wide. The aperture is clear in the visual mesh, placement solids, authoring prefab and pooled runtime collision.
 
-Every surface, including backs, ends, tops, undersides and packing, has planar UV0. The same seeded crop/scale/mirroring approach as the earlier stone kit provides a distinct crop per stone and three deterministic layouts per model. Each projected face uses equal physical scale on both axes. All UV triangles are noncollapsed and stay within the padded sampling area of the approved joint-free painted stone albedo. No labelled trim-preview pixels are used.
+Every runtime face, including backs, ends, tops and undersides, maps into the shared baked atlas with three deterministic mapping variants. The original source stones retain varied painted-stone UV crops, which are captured by the bake. UV triangles remain noncollapsed and inside padded atlas regions. No labelled trim-preview pixels are used.
 
-`Tools/BuildStoneBoundaryKit.py` rebuilds only this extension's source, six FBXs and previews; it does not rewrite the earlier stone or wooden source files. Assets live beside the earlier stone FBXs under `Assets/Models/Buildings/Stone` and share `PaintedStone.mat`.
+`Tools/BuildStoneBoundaryKit.py` rebuilds this extension's detailed authoring source, six reference FBXs and previews. Run `Tools/BakeStoneKit.py` afterwards to regenerate the simplified runtime exports and shared textures. Runtime assets live under `Assets/Models/Buildings/Stone` and use `BakedStoneKit.mat`.
 
 ## Terrain bearing
 
@@ -34,6 +34,8 @@ IDs: `build.stone.s07-low-wall` and `build.stone.s12-gate-bay`. Both are under *
 Run **Tools → Building → Rebuild Stone Kit Including S07 S12** to update stone definitions, prefabs and actual-mesh thumbnails. The earlier stone menu command remains available and uses the same importer. The general building rebuild also includes these pieces. Restart Play mode to reload the extended catalog.
 
 ## Verification
+
+The counts below describe the original detailed exports. Current baked-geometry and gameplay verification is documented in the [baked kit guide](BAKED_STONE_KIT.md).
 
 `Tools/ValidateBuildingPrototype.ps1 -StoneChecks -Workspace stone-boundary` runs import and Play-mode checks in a separate temporary project. Use `-InstalledAssets` as well to verify the main project's installed assets without rebuilding them. The workspace option keeps separate validation runs from sharing a temporary Unity checkout.
 

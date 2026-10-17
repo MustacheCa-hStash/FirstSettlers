@@ -16,7 +16,7 @@ public static class SquareInfillSetup
         if(d==null){d=ScriptableObject.CreateInstance<BuildDefinition>();AssetDatabase.CreateAsset(d,AssetPath+".asset");}
         ModularWoodSetup.Profile(d,true);d.contentId=Id;d.displayName="Square wall infill";
         d.wallPlacementMode=WallPlacementMode.Infill;d.sizeUnits=new Vector3Int(8,8,1);d.stackRiseUnits=8;
-        d.material=wall.material;d.preserveAuthoredMesh=true;d.jointCoverMaterial=wall.material;
+        d.material=SplitPlankWallSetup.TrimMaterial;d.preserveAuthoredMesh=true;d.jointCoverMaterial=SplitPlankWallSetup.TrimMaterial;
         d.jointSockets=new BuildJointSocket[9];
         for(int i=0;i<=8;i++)d.jointSockets[i]=new BuildJointSocket{localPosition=new Vector3(i*.25f,0,0),outward=i==0?Vector3.left:Vector3.right,interior=i>0 && i<8};
         d.jointCoverVariants=new[]{ModularWoodSetup.StructuralMesh(ModularWoodSetup.Import(PostModel),new Bounds(new Vector3(0,1.0015f,0),new Vector3(.26f,2.003f,.26f)))};

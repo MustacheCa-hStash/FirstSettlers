@@ -50,8 +50,8 @@ public static class BuildingPrototypeSetup
         var corner = Part("corner", "Bay post", BuildPartKind.Corner, new Vector3Int(1, 11, 1), Vector3Int.zero, wallMaterial, "bay-post");
         SplitPlankWallSetup.Apply(wall);
         FloorFramingSetup.Apply(floor);
-        BayPostSetup.Apply(corner, wall.material);
-        var wattle = WattleWallSetup.Create(wall.material);
+        BayPostSetup.Apply(corner, SplitPlankWallSetup.TrimMaterial);
+        var wattle = WattleWallSetup.Create(SplitPlankWallSetup.TrimMaterial);
         ModularWoodSetup.Link(wall,wattle,corner);
         var panel = Asset<PanelSettings>(Folder + "/BuildPanel.asset");
         panel.scaleMode = PanelScaleMode.ScaleWithScreenSize; panel.referenceResolution = new Vector2Int(1920, 1080);

@@ -45,6 +45,10 @@ internal static class WorldManagerInspectorRules
         }
         foreach (var feature in Features)
             if (Within(path, feature.parent) && path != feature.parent + "." + feature.toggle && Off(so, feature.parent + "." + feature.toggle)) return "This feature is disabled.";
+        if (Within(path, "flowerSettings.poppies") && path != "flowerSettings.poppies.enabled" && Off(so, "flowerSettings.poppies.enabled"))
+            return "Poppies are disabled.";
+        if (Within(path, "flowerSettings.cornflowers") && path != "flowerSettings.cornflowers.enabled" && Off(so, "flowerSettings.cornflowers.enabled"))
+            return "Cornflowers are disabled.";
         if (Within(path, "terrainHorizonShadows"))
         {
             if (Off(so, "terrainReceiveShadows")) return "Terrain Receive Shadows is off.";

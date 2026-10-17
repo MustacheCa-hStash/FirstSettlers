@@ -92,11 +92,15 @@ public static class DaisyWeedValidation
             Capture("daisy-clump",new Vector3(.80f,.78f,-1.35f),new Vector3(0,.34f,0));
             Capture("daisy-back",new Vector3(-.85f,.75f,1.3f),new Vector3(0,.34f,0));
             Capture("daisy-overhead",new Vector3(.05f,1.7f,-.18f),new Vector3(0,.34f,0));
+            Capture("daisy-side-front",new Vector3(0,.67f,-1.15f),new Vector3(0,.67f,0));
+            Capture("daisy-side-back",new Vector3(0,.67f,1.15f),new Vector3(0,.67f,0));
+            Capture("daisy-side-left",new Vector3(-1.15f,.67f,0),new Vector3(0,.67f,0));
+            Capture("daisy-side-right",new Vector3(1.15f,.67f,0),new Vector3(0,.67f,0));
             runtime.ClearFlowerBatches();runtime.CacheFlowerBatches(positions.ToArray(),tints.ToArray(),false,true);
             Capture("daisy-patch",new Vector3(1.5f,1.15f,-2.0f),new Vector3(0,.32f,0));
             for(int pass=0;pass<material.passCount;pass++)ShaderUtil.CompilePass(material,pass,true);
             Check(!ShaderUtil.ShaderHasError(material.shader),"Daisy shader pass compilation failed");
-            Run();Debug.Log("DAISY_RENDER_PASS: production instanced flower renderer, front/back/overhead/patch views, all shader passes, actual pixel coverage. No live-world FPS claim.");
+            Run();Debug.Log("DAISY_RENDER_PASS: production instanced flower renderer, front/back/overhead/patch and four level side views, all shader passes, actual pixel coverage. No live-world FPS claim.");
             void Capture(string name,Vector3 eye,Vector3 look)
             {
                 camera.transform.position=eye;camera.transform.LookAt(look);

@@ -6,6 +6,12 @@ public class FlowerSettings
     public bool enableFlowers = true;
     public GameObject flowerPrefab;
 
+    [Header("Grassland Poppies")]
+    public PoppySettings poppies = new PoppySettings();
+
+    [Header("Grassland Cornflowers")]
+    public CornflowerSettings cornflowers = new CornflowerSettings();
+
     [Header("Grassland Tall Flower")]
     [Tooltip("Optional second flower mesh/material for the grassland mini-patches.")]
     public GameObject tallFlowerPrefab;

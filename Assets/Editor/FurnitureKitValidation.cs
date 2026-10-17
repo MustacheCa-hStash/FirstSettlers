@@ -34,7 +34,8 @@ public static class FurnitureKitValidation
             Check(ids.Add(d.contentId),"Duplicate catalog ID");
             if(!d.contentId.StartsWith("build.furniture."))continue;count++;
             Check(BuildUiContent.Category(d)==7 && d.preserveAuthoredMesh,"Furniture metadata");
-            Check(d.material==catalog.Find("build.prototype.wall").material,"Furniture must reuse the active shared wood material");
+            bool baked=d.contentId==BakedFurnishingsSetup.BedId;
+            Check(baked ? d.material.shader.name=="Custom/BakedStoneWallMatte" : d.material==SplitPlankWallSetup.TrimMaterial,"Furniture material mismatch");
             Check(d.mesh!=null && d.mesh.subMeshCount==1 && !d.mesh.isReadable,"Static instanced mesh import");
             Check((d.mesh.bounds.min-d.LocalBounds.min).sqrMagnitude<.000001f && (d.mesh.bounds.max-d.LocalBounds.max).sqrMagnitude<.000001f,"FBX metre scale/origin: "+d.name);
             Check(d.furnitureSupportPoints.Length>=3 && d.solidBoxes.Length>=3,"Missing feet or shaped collision");
@@ -55,7 +56,7 @@ public static class FurnitureKitValidation
                 bool inside=false;
                 foreach(var r in new[]{new Rect(0,.88305f,1,.10890f),new Rect(0,.75805f,1,.10890f),new Rect(.00805f,.25805f,.23390f,.23390f),new Rect(.25805f,.25805f,.23390f,.23390f),new Rect(.00805f,.13305f,.48390f,.10890f)})
                     if(r.Contains(uv[a])&&r.Contains(uv[b])&&r.Contains(uv[c])){inside=true;break;}
-                Check(inside,"UV triangle crosses atlas cells: "+d.name);
+                Check(baked || inside,"UV triangle crosses atlas cells: "+d.name);
             }
         }
         Check(count==6,"Expected exactly F01-F06");

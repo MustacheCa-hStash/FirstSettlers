@@ -24,7 +24,7 @@ Legacy objects keep their geometry, UVs, transforms and material assignments.
 
 | Model | Geometry | Unity local origin/extent |
 | --- | --- | --- |
-| Split-plank wall | 944 triangles, 16 boards and 3 rails; original detail retained | X=0..4, Y=0..3, Z=−0.125..+0.125 |
+| Split-plank wall | 136 triangles; one profiled panel and 3 rails, with baked detail | X=0..4, Y=0..3, Z=−0.125..+0.125 |
 | Wattle wall | 32 triangles; original woven-sheet UVs retained | Same full-span envelope |
 | Post visual | 12 triangles | X/Z=−0.13..+0.13, Y=0..3.003 |
 | Full framed floor | 324 triangles, 27 components | X/Z=0..4, Y=−0.25..0 |

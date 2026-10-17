@@ -7,7 +7,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using Unity.Profiling;
 
-public static class FoliageGenerator
+public static partial class FoliageGenerator
 {
     private static readonly ProfilerMarker RockConversionMarker = new("FS.Rocks.ConvertPlacement");
     private static ChunkRecord.NativeTerrainData.Lease TryAcquireTerrainMaps(ChunkRecord record)
@@ -839,8 +839,18 @@ public static class FoliageGenerator
         PlantClearancePolicy daisyClearance = CreateFlowerClearancePolicy(
             flowerSettings, worldScale, Mathf.Clamp01(flowerSettings.daisyWeedClearanceScale),
             flowerSettings.daisyWeedTreeExclusionRadius);
+        PoppySettings poppies = flowerSettings.poppies;
+        PlantClearancePolicy poppyClearance = CreateFlowerClearancePolicy(
+            flowerSettings, worldScale, Mathf.Clamp01(poppies?.clearanceScale ?? 0.7f),
+            poppies?.treeExclusionRadius ?? 1.1f);
         float largestMinimum = Mathf.Max(LargestClearanceMinimum(flowerClearance),
             Mathf.Max(LargestClearanceMinimum(tallClearance), LargestClearanceMinimum(daisyClearance)));
+        CornflowerSettings cornflowers = flowerSettings.cornflowers;
+        PlantClearancePolicy cornflowerClearance = CreateFlowerClearancePolicy(
+            flowerSettings, worldScale, Mathf.Clamp01(cornflowers?.clearanceScale ?? .7f),
+            cornflowers?.treeExclusionRadius ?? 1.1f);
+        largestMinimum = Mathf.Max(largestMinimum, Mathf.Max(LargestClearanceMinimum(poppyClearance),
+            LargestClearanceMinimum(cornflowerClearance)));
         using var plannedClearance = PlannedPlantClearanceIndex.Create(record, chunkSize, worldScale, largestMinimum);
 
         int globalCellCountX = globalCellMaxX - globalCellMinX + 1;
@@ -1026,6 +1036,23 @@ public static class FoliageGenerator
                 meshHeightMultiplier,
                 plannedClearance,
                 daisyClearance);
+        }
+
+        for (int family = 0; family < 2; family++)
+        {
+            MeadowFlowerPatchSettings patchSettings = family == 0 ? poppies : cornflowers;
+            if (patchSettings == null || !patchSettings.enabled || patchSettings.prefab == null) continue;
+            using var patchSteps = GenerateMeadowFlowerPatchesIncrementally(record, patchSettings, worldSeed,
+                chunkSize, worldScale, meshHeightMultiplier, plannedClearance,
+                family == 0 ? poppyClearance : cornflowerClearance, family == 1);
+            while (patchSteps.MoveNext())
+            {
+                yield return true;
+                if (!ReferenceEquals(record.FoliageData, foliageData) || revision != foliageData.FlowersRevision ||
+                    !ReferenceEquals(record.HeightMap, originalHeight) || !ReferenceEquals(record.SurfaceTypeMap, originalSurface) ||
+                    !ReferenceEquals(record.BiomeMap, originalBiome) || !ReferenceEquals(record.GroundCoverMap, originalGround) ||
+                    !ReferenceEquals(record.SlopeMap, originalSlope) || !ReferenceEquals(record.WorldFeaturePlan, originalPlan)) yield break;
+            }
         }
 
         foliageData.flowersGenerated = true;
