@@ -19,7 +19,7 @@ Shader "Custom/SpruceOctaImpostor"
         _AutumnOrangeColor("Autumn Orange Color", Color) = (1,0.25,0.055,1)
         _AutumnYellowColor("Autumn Yellow Color", Color) = (0.88,0.61,0.12,1)
         _AutumnVariationStrength("Autumn Palette Variation", Range(0,1)) = 0.62
-        [Enum(Red Maple,0,Sugar Maple,1,Oak,2)] _SeasonPaletteMode("Season Palette Mode", Float) = 0
+        [Enum(Red Maple,0,Sugar Maple,1,Oak,2,Birch,3)] _SeasonPaletteMode("Season Palette Mode", Float) = 0
         _LeafTransmissionColor("Leaf Transmission Tint", Color) = (1,1,1,1)
         [Toggle] _StableLeafTransmission("Stable Two Sided Transmission", Float) = 0
         _Cutoff("Coverage Cutoff", Range(0,1)) = 0.008

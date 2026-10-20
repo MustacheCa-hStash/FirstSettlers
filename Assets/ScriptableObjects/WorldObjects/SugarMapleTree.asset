@@ -18,4 +18,4 @@ MonoBehaviour:
   shortDescription: Wood source
   treeUniformScaleRange: {x: 3, y: 4}
   forestTreeExclusionRadiusRange: {x: 30, y: 34}
-  grasslandTreeExclusionRadiusRange: {x: 18, y: 22}
+  grasslandTreeExclusionRadiusRange: {x: 35, y: 40}

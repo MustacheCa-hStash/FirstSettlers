@@ -107,6 +107,10 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
         => CaptureSpecies(source, "WhitePine", "Assets/Textures/Trees/Impostors/WhitePine", "Assets/Materials/M_Trees/WhitePine/WhitePine_OctaImpostor_M.mat",
             "Hidden/TreeImpostor/WhitePineSemanticCapture");
 
+    public static bool CaptureBirch(TreeImpostorCaptureSetup source)
+        => CaptureSpecies(source, "Birch", "Assets/Textures/Trees/Impostors/Birch", "Assets/Materials/M_Trees/Birch/Birch_OctaImpostor_M.mat",
+            "Hidden/TreeImpostor/BirchSemanticCapture");
+
     static bool CaptureSpecies(TreeImpostorCaptureSetup source, string species, string folder, string materialPath, string shader)
     {
         var window = CreateInstance<TreeImpostorAtlasCaptureWindow>();

@@ -93,6 +93,9 @@ public sealed class TreeImpostorAmbientAtlasBakerWindow : EditorWindow
     public static bool BakeWhitePine(TreeImpostorCaptureSetup source)
         => BakeSpecies(source, "WhitePine", "Assets/Textures/Trees/Impostors/WhitePine");
 
+    public static bool BakeBirch(TreeImpostorCaptureSetup source)
+        => BakeSpecies(source, "Birch", "Assets/Textures/Trees/Impostors/Birch");
+
     static bool BakeSpecies(TreeImpostorCaptureSetup source, string species, string folder)
     {
         var window = CreateInstance<TreeImpostorAmbientAtlasBakerWindow>();

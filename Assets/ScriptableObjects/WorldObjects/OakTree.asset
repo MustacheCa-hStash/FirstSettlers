@@ -17,5 +17,5 @@ MonoBehaviour:
   icon: {fileID: 0}
   shortDescription: Wood source
   treeUniformScaleRange: {x: 6, y: 6.5}
-  forestTreeExclusionRadiusRange: {x: 40, y: 45}
-  grasslandTreeExclusionRadiusRange: {x: 35, y: 40}
+  forestTreeExclusionRadiusRange: {x: 45, y: 50}
+  grasslandTreeExclusionRadiusRange: {x: 45, y: 50}

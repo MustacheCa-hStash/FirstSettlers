@@ -1,0 +1,70 @@
+{
+    "inputs": [
+        {
+            "path": "Assets/Models/Trees/Birch_LOD0_P2640_B1800_L800_v04.fbx",
+            "sha256": "C8375C233C3AC1B90872DEA1A6A29092EE3C26F19E9947C5EF99B8885A0B09A4"
+        },
+        {
+            "path": "Assets/Textures/Trees/Bark/BirchBarkTextureSeamless.png",
+            "sha256": "195AC4124D0B44DD5756CD41A97AC2E175B268E3EC082F9BBED57D457E8AE5B0"
+        },
+        {
+            "path": "Assets/Shaders/BirchLeafTintCutout.shader",
+            "sha256": "B1D287D7FC591BA09E7577561F24294FAE473035DCA3D6AF6FB5ABE54B390708"
+        },
+        {
+            "path": "Assets/Shaders/BirchBarkUnlit.shader",
+            "sha256": "5CE7D74470A8AE1A4F736ED0F26D9D6836253034B3940BA8314A3AD65259DF61"
+        },
+        {
+            "path": "Assets/Prefabs/Birch_LOD0_v04.prefab",
+            "sha256": "1A98115436F258BA2021E7437E732D8594C09B2F689DBEE6D2D705AF8FE836DB"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Birch/M_Birch_Leaf.mat",
+            "sha256": "168475B80752FBB51D115E4BE97F6B8B362EEB7361E3A0A207D5D104C4D5B56C"
+        },
+        {
+            "path": "Assets/Textures/Trees/leafClumpAtlas_Birch.png",
+            "sha256": "60EEF961FBF7A4DC7C9B290C5725AD6599CCE7B1AA45FA90A096B92740F60648"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Birch/M_Birch_Bark.mat",
+            "sha256": "D7B10C2E1755AD9172A4327213C0689F26F965B3A28D7E3B5C8290C00EFF3AC6"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/Birch/Birch_Octa_AlbedoCoverage.png",
+            "sha256": "0289F177DBFD3E64C3DEC2B1B78D07809806AD0F4CAAD1157BB775BDA3CFED90"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/Birch/Birch_Octa_Surface.png",
+            "sha256": "631AA12B97784D512D4DF21C4EA44E57C8F2F1CE69B67B2174738A3B724305C1"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/Birch/Birch_Octa_Depth.png",
+            "sha256": "0C464AA93BE5508937B5FAFE9160E5C72FC3578B5FF03E576D28F8F787996A25"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/Birch/Birch_Octa_MaterialId.png",
+            "sha256": "3A6A28ABF9018E3C55EB7FCA1E20FFECB3F46B59A1D35FE35C6BAB1D8DF32984"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/Birch/Birch_Octa_Ambient.png",
+            "sha256": "FE29127E8762AE5713E8EE3347378BCC7C9CB747D90A20FBD5EDC8FFB7C6D92C"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Birch/Birch_OctaImpostor_M.mat",
+            "sha256": "AE7E894B657D2A48CD368C075E80F322F823433DE9B889F037A1BC6C7C4E850B"
+        },
+        {
+            "path": "Assets/Models/Trees/Birch_OctaImpostor_Runtime.mesh",
+            "sha256": "16D6DBD25AEA7554867D2D5EE59714B28C259B7060F7E4D89E2E0413BCC8053C"
+        },
+        {
+            "path": "Assets/Prefabs/Birch_OctaImpostor_Runtime.prefab",
+            "sha256": "73E44EDE5D82F9FC09543F742F3F1EF4F7EF7E77C0217B1F969DF52C6CEA1AEA"
+        }
+    ]
+}

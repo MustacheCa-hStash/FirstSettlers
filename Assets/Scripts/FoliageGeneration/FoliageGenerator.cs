@@ -4130,6 +4130,17 @@ public static partial class FoliageGenerator
             return;
         }
 
+        if (variant == WorldFeatureVariant.BirchAspenTree || variant == WorldFeatureVariant.GrasslandBirchAspenTree)
+        {
+            // Birch uses absolute autumn golds, shared by near meshes and impostors.
+            leafTint = PickWeightedColor(Hash01(baseHash + 17),
+                new Color(.94f, .75f, .24f, 1f), new Color(.86f, .61f, .13f, 1f),
+                new Color(.98f, .82f, .38f, 1f), Hash01(baseHash + 31), .5f, .86f);
+            barkTint = Color.Lerp(new Color(.96f, .97f, .99f, 1f),
+                new Color(1f, .99f, .96f, 1f), Hash01(baseHash + 43));
+            return;
+        }
+
         if (variant == WorldFeatureVariant.OakTree || variant == WorldFeatureVariant.GrasslandOakTree)
         {
             // Absolute autumn colors consumed by the oak seasonal palette. Keep

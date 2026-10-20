@@ -110,7 +110,7 @@ Material:
     - _CardVariationStrength: 0.16
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _ColorVariationStrength: 0.45
+    - _ColorVariationStrength: 0.04
     - _Cull: 0
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
@@ -122,7 +122,7 @@ Material:
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _LeafContrast: 0.26
-    - _LightWrap: 0.62
+    - _LightWrap: 0.55
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
@@ -133,14 +133,14 @@ Material:
     - _Smoothness: 0.08
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
-    - _SpecularStrength: 0.03
+    - _SpecularStrength: 0.025
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
     - _UseVertexColor: 0
     - _VerticalGradientStrength: 0.22
     - _WindFlutterSpeed: 5
-    - _WindFlutterStrength: 0.05
+    - _WindFlutterStrength: 0.03
     - _WindGustScale: 0.18
     - _WindHeightMax: 7
     - _WindHeightMin: 0
@@ -149,6 +149,15 @@ Material:
     - _WorkflowMode: 1
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1
+    - _AutumnVariationStrength: 0.55
+    - _TreeTintStrength: 0.7
+    - _LeafDetailStrength: 1
+    - _LeafGradientContrast: 1.1
+    - _LeafGradientMidpoint: 0.85
+    - _BacklightingEnabled: 1
+    - _StableBacklighting: 1
+    - _BacklightingStrength: 0.65
+    - _SnowCoverage: 0
     m_Colors:
     - _AutumnGoldColor: {r: 1, g: 0.68, b: 0.16, a: 1}
     - _AutumnOchreColor: {r: 0.78, g: 0.46, b: 0.1, a: 1}
@@ -160,5 +169,9 @@ Material:
     - _SummerLeafColor: {r: 0.18, g: 0.46, b: 0.14, a: 1}
     - _WindDirection: {r: 1, g: 0, b: 0.35, a: 0}
     - _YoungLeafColor: {r: 0.46, g: 0.66, b: 0.2, a: 1}
+    - _AutumnPaleGoldColor: {r: 1, g: 0.84, b: 0.38, a: 1}
+    - _TreeLeafTint: {r: 1, g: 1, b: 1, a: 1}
+    - _BacklightingColor: {r: 1, g: 0.99, b: 0.93, a: 1}
+    - _SnowColor: {r: 0.9, g: 0.94, b: 0.97, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
