@@ -15,6 +15,7 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
     [SerializeField, Range(0, 3)] private int coverageExpansionPixels = 1;
     [SerializeField, Range(0.01f, 1f)] private float coverageExpansionStrength = 0.75f;
     [SerializeField] private bool encodeAlbedoSrgb;
+    private int atlasImportMaxSize = 4096;
     [Header("Species output")]
     [SerializeField] private string speciesName = "Spruce";
     [SerializeField] private string atlasPrefix = "Spruce_Octa";
@@ -111,7 +112,11 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
         => CaptureSpecies(source, "Birch", "Assets/Textures/Trees/Impostors/Birch", "Assets/Materials/M_Trees/Birch/Birch_OctaImpostor_M.mat",
             "Hidden/TreeImpostor/BirchSemanticCapture");
 
-    static bool CaptureSpecies(TreeImpostorCaptureSetup source, string species, string folder, string materialPath, string shader)
+    public static bool CaptureSpruceHQ(TreeImpostorCaptureSetup source)
+        => CaptureSpecies(source, "SpruceHQ", "Assets/Textures/Trees/Impostors/SpruceHQ", "Assets/Materials/M_Trees/SpruceHQ/SpruceHQ_OctaImpostor_M.mat",
+            "Hidden/TreeImpostor/SpruceHQSemanticCapture", true);
+
+    static bool CaptureSpecies(TreeImpostorCaptureSetup source, string species, string folder, string materialPath, string shader, bool highQualityNeedles = false)
     {
         var window = CreateInstance<TreeImpostorAtlasCaptureWindow>();
         try
@@ -127,6 +132,12 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
             // coverage used to rescue subpixel spruce needles.
             window.coverageExpansionPixels = 1; window.coverageExpansionStrength = 0;
             window.encodeAlbedoSrgb = true;
+            if (highQualityNeedles)
+            {
+                window.tileResolution = 1016; window.paddingPixels = 4;
+                window.coverageExpansionPixels = 2; window.coverageExpansionStrength = .75f;
+                window.atlasImportMaxSize = 8192;
+            }
             return window.CaptureAll();
         }
         finally { DestroyImmediate(window); }
@@ -562,10 +573,19 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
         {
             importer.sRGBTexture = sRgb;
             importer.isReadable = true;
-            importer.maxTextureSize = 4096;
+            importer.maxTextureSize = atlasImportMaxSize;
             importer.npotScale = TextureImporterNPOTScale.None;
             importer.alphaIsTransparency = false;
             importer.textureCompression = TextureImporterCompression.Uncompressed;
+            if (atlasImportMaxSize > 4096)
+            {
+                // A rebake must restore alpha-bearing readable data before the
+                // ambient stage; runtime BC7/R8 imports are applied afterwards.
+                var platform=importer.GetPlatformTextureSettings("Standalone");
+                platform.overridden=true; platform.maxTextureSize=atlasImportMaxSize;
+                platform.format=TextureImporterFormat.RGBA32;
+                importer.SetPlatformTextureSettings(platform);
+            }
             if (sRgb)
             {
                 importer.mipMapsPreserveCoverage = true;

@@ -96,14 +96,17 @@ public sealed class TreeImpostorAmbientAtlasBakerWindow : EditorWindow
     public static bool BakeBirch(TreeImpostorCaptureSetup source)
         => BakeSpecies(source, "Birch", "Assets/Textures/Trees/Impostors/Birch");
 
-    static bool BakeSpecies(TreeImpostorCaptureSetup source, string species, string folder)
+    public static bool BakeSpruceHQ(TreeImpostorCaptureSetup source)
+        => BakeSpecies(source, "SpruceHQ", "Assets/Textures/Trees/Impostors/SpruceHQ", 4);
+
+    static bool BakeSpecies(TreeImpostorCaptureSetup source, string species, string folder, int padding = 2)
     {
         var window = CreateInstance<TreeImpostorAmbientAtlasBakerWindow>();
         try
         {
             window.setup = source; window.speciesName = species; window.atlasPrefix = species + "_Octa";
             window.outputFolder = folder;
-            window.sourceFramesPerAxis = 8; window.sourceTilePadding = 2; window.paddingPixels = 2;
+            window.sourceFramesPerAxis = 8; window.sourceTilePadding = padding; window.paddingPixels = padding;
             window.surfaceAtlas = AssetDatabase.LoadAssetAtPath<Texture2D>(window.outputFolder + "/" + species + "_Octa_Surface.png");
             window.depthAtlas = AssetDatabase.LoadAssetAtPath<Texture2D>(window.outputFolder + "/" + species + "_Octa_Depth.png");
             return window.Bake();

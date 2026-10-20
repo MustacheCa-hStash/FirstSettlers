@@ -1,0 +1,102 @@
+{
+    "inputs": [
+        {
+            "path": "Assets/Textures/Trees/leafCard_Spruce_03.png",
+            "sha256": "F1089C4AD5A3D3C1C1E0C804025FD22CC9DAF8E941818F371F4510AB26EBA253"
+        },
+        {
+            "path": "Assets/ScriptableObjects/WorldObjects/SpruceTree.asset",
+            "sha256": "3DA17E0DD527B91E1F31025979B36A3DBD12231F8A8E43D41585BED0817C9958"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Spruce/SpruceTreeBark_M.mat",
+            "sha256": "72ABCE984A09BCD3A8B61B989E16884A821CF514F9B6FC13D7DC66E00072CF12"
+        },
+        {
+            "path": "Assets/Textures/Trees/leafClumpAtlas_Spruce.png",
+            "sha256": "A43B6CFA41BD5A5F0F4A4276DECAC35413E9DCC9D0E884EA4D46002A395EF11A"
+        },
+        {
+            "path": "Assets/Shaders/SpruceBarkUnlit.shader",
+            "sha256": "C29ED9F769C08D123D3083C72D422182C0E8747D480310B603FCD9481C4FE799"
+        },
+        {
+            "path": "Assets/Scripts/Content/WorldObjectDefinition.cs",
+            "sha256": "BEA217B195C3937637B12A61C7424A0D1899D53F141542AA8B45C0CA44B55179"
+        },
+        {
+            "path": "Assets/Models/Trees/Spruce_LOD0_P3310_B2930_L380_v06.fbx",
+            "sha256": "2FBBB9BB938BE35C381F683512E778F166E55CEE574A2DD697C101F8FB1799B3"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Spruce/SpruceTreeLeaf_M.mat",
+            "sha256": "3F8730E07581E9C8577316231D4D671CE0FEC09545DE32A7D4F05FFCE06028E5"
+        },
+        {
+            "path": "Assets/Prefabs/Spruce_LOD0_v06.prefab",
+            "sha256": "37612CC6DBA3C4258DE161D012FC7245C10F20E9B404C0C801E7CBEC7275B367"
+        },
+        {
+            "path": "Assets/Textures/Trees/Bark/SpruceBark.png",
+            "sha256": "637D63DEC65FEBC4C203C140D97E75588C44B94BA4CD71D97836959558FAB581"
+        },
+        {
+            "path": "Assets/Textures/Trees/leafCard_Spruce_03_Snow.png",
+            "sha256": "98E53D20C15D65E9FF8666E6437A5AF419FF7AC59057E206316EC1255C857E4A"
+        },
+        {
+            "path": "Assets/Scripts/FoliageGeneration/Trees/TreeGameplayAuthoring.cs",
+            "sha256": "8BC346EFA8C5C84AC80740666AC5CC348840765480FE0DE053560FB1DC0F3CDD"
+        },
+        {
+            "path": "Assets/Shaders/SpruceLeafTintCutout.shader",
+            "sha256": "E766687565DDCDE6102857472D13577CB038FFE66152AFC303B968EBE71B6404"
+        },
+        {
+            "path": "Assets/Models/Primitives/PrimitiveCone.fbx",
+            "sha256": "8B79DD292F8D3BA208ACE267E5EC7ED04A609A48DEC8AB85BC6D7229A2D97DA2"
+        },
+        {
+            "path": "Assets/UI/Icons/SpruceTreeDataCardSprite.png",
+            "sha256": "81BA3C8F17D27A6B5F48FB7D76F130136D7F508933A0EF81CC7738A1460A581D"
+        },
+        {
+            "path": "Assets/Textures/Trees/Bark/SpruceBarkTextureSeamless.png",
+            "sha256": "A0B1522AD34CFA9F80E16635C159505A444FD0FB5B3CD9C3E58C51DD9CAFB092"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/SpruceHQ/SpruceHQ_Octa_AlbedoCoverage.png",
+            "sha256": "35E6AC66861928C17AC635273267BAAA604DAE475FA485FE0EDCF8AE8EFF1704"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/SpruceHQ/SpruceHQ_Octa_Surface.png",
+            "sha256": "1F7E9718016036AE3ACBBA1EDEFA1E18FEDE4A1097EB5E80DBAEB206D400B86F"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/SpruceHQ/SpruceHQ_Octa_Depth.png",
+            "sha256": "1D8E61CA5860028BC9A30B0AE54DF25EAB533F8EF9CA942879816E7AC4E2BA51"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/SpruceHQ/SpruceHQ_Octa_MaterialId.png",
+            "sha256": "CD82D7334518D3AB7B9DC5D391FDF9C5E88DF9169372D1E6A394BB9E373B0BDD"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/SpruceHQ/SpruceHQ_Octa_Ambient.png",
+            "sha256": "054B46D51ACB7FF4E5AB8C6F798CFE48A6D4BC374F053145683199728318E2F7"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/SpruceHQ/SpruceHQ_OctaImpostor_M.mat",
+            "sha256": "8D13FD96BE879DA210CED56BF8D098E67806D4F9D765581248F344A2709F963E"
+        },
+        {
+            "path": "Assets/Models/Trees/SpruceHQ_OctaImpostor_Runtime.mesh",
+            "sha256": "A88EE0D440228681812812ABFFD09A74ED047F6F902408B34A8AEBC7F38F50CC"
+        },
+        {
+            "path": "Assets/Prefabs/SpruceHQ_OctaImpostor_Runtime.prefab",
+            "sha256": "2BD8F7A7329EF608ECD63CA44F48397689F0F2CCF9D35915A18D3D603FC5A647"
+        }
+    ]
+}

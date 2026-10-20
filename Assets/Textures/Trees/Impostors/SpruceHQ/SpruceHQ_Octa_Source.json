@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/Spruce_LOD0_v06.prefab",
+    "prefabGuid": "74d9d3c86f2b17b448d206d6c4a1ae02",
+    "dependencyHash": "be2b029aeb79fe6598ebeeb2b460b240",
+    "albedoEncoding": "sRGB RGB; linear coverage alpha; full authored evergreen RGB",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.75
+}

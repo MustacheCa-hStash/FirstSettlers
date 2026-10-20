@@ -1413,7 +1413,7 @@ MonoBehaviour:
     sugarMapleTreeBillboardPrefab: {fileID: 945252319243332136, guid: fcba833031280554cb9faba4505d52b7, type: 3}
     birchAspenTreeBillboardPrefab: {fileID: 2700990396640663113, guid: 6d0fa016755a58748ae5b2f1144765ab, type: 3}
     beechTreeBillboardPrefab: {fileID: 0}
-    spruceTreeBillboardPrefab: {fileID: 0}
+    spruceTreeBillboardPrefab: {fileID: 873563193483747003, guid: cdec7d021bf27d849867ca50a20ec4e0, type: 3}
     whitePineTreeBillboardPrefab: {fileID: 5611437650784027450, guid: 5357dd8620d90e04d94dc920317181ad, type: 3}
     oakTreeBillboardPrefab: {fileID: 498396091719528691, guid: 25db6bfe66c513d45acb6716ae47516a, type: 3}
     treeBillboardPrefab: {fileID: 3135895389733779445, guid: faeeaaccb2fb5794a94e5782faafcd7c, type: 3}
