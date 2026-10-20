@@ -87,12 +87,33 @@ public sealed class TreeImpostorAmbientAtlasBakerWindow : EditorWindow
         }
     }
 
-    private void Bake()
+    public static bool BakeOak(TreeImpostorCaptureSetup source)
+        => BakeSpecies(source, "Oak", OakOctaImpostorBaker.AtlasFolder);
+
+    public static bool BakeWhitePine(TreeImpostorCaptureSetup source)
+        => BakeSpecies(source, "WhitePine", "Assets/Textures/Trees/Impostors/WhitePine");
+
+    static bool BakeSpecies(TreeImpostorCaptureSetup source, string species, string folder)
+    {
+        var window = CreateInstance<TreeImpostorAmbientAtlasBakerWindow>();
+        try
+        {
+            window.setup = source; window.speciesName = species; window.atlasPrefix = species + "_Octa";
+            window.outputFolder = folder;
+            window.sourceFramesPerAxis = 8; window.sourceTilePadding = 2; window.paddingPixels = 2;
+            window.surfaceAtlas = AssetDatabase.LoadAssetAtPath<Texture2D>(window.outputFolder + "/" + species + "_Octa_Surface.png");
+            window.depthAtlas = AssetDatabase.LoadAssetAtPath<Texture2D>(window.outputFolder + "/" + species + "_Octa_Depth.png");
+            return window.Bake();
+        }
+        finally { DestroyImmediate(window); }
+    }
+
+    private bool Bake()
     {
         if (!ValidateInputs(out string error))
         {
             Debug.LogError(error, setup);
-            return;
+            return false;
         }
 
         try
@@ -105,10 +126,12 @@ public sealed class TreeImpostorAmbientAtlasBakerWindow : EditorWindow
             AssetDatabase.Refresh();
             ConfigureOutputImporter();
             Debug.Log(speciesName + " ambient atlas bake completed.", setup);
+            return true;
         }
         catch (Exception exception)
         {
             Debug.LogException(exception, setup);
+            return false;
         }
         finally
         {

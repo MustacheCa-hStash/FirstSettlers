@@ -4130,6 +4130,27 @@ public static partial class FoliageGenerator
             return;
         }
 
+        if (variant == WorldFeatureVariant.OakTree || variant == WorldFeatureVariant.GrasslandOakTree)
+        {
+            // Absolute autumn colors consumed by the oak seasonal palette. Keep
+            // forest and grassland oaks deterministic at their placement location.
+            leafTint = PickWeightedColor(
+                Hash01(baseHash + 17),
+                new Color(0.68f, 0.43f, 0.16f, 1f),
+                new Color(0.48f, 0.24f, 0.12f, 1f),
+                new Color(0.40f, 0.16f, 0.18f, 1f),
+                Hash01(baseHash + 31),
+                0.40f,
+                0.82f);
+            // The painted bark already contains its color. Only a quiet, slightly
+            // ashy per-tree multiplier is needed, shared by every rendering path.
+            barkTint = Color.Lerp(
+                new Color(0.92f, 0.94f, 0.96f, 1f),
+                new Color(1.00f, 0.98f, 0.94f, 1f),
+                Hash01(baseHash + 43));
+            return;
+        }
+
         if (variant == WorldFeatureVariant.MapleTree)
         {
             leafTint = Color.white;

@@ -16,9 +16,13 @@ public static class SpruceImpostorGpuValidation
     [MenuItem("Tools/Impostors/Validate Spruce GPU Rendering")]
     public static void Run() => WithPipeline(RunChecks);
 
-    static void RunChecks()
+    public static void ValidateAdditionalSpecies(string prefabPath) => WithPipeline(() => RunChecks(prefabPath));
+
+    static void RunChecks() => RunChecks(PrefabPath);
+
+    static void RunChecks(string prefabPath)
     {
-        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
         Require(prefab != null, "Missing runtime spruce impostor prefab.");
         var mesh = prefab.GetComponent<MeshFilter>().sharedMesh;
         var material = prefab.GetComponent<MeshRenderer>().sharedMaterial;
@@ -31,7 +35,7 @@ public static class SpruceImpostorGpuValidation
         ValidateRouting(prefab, compute);
         ValidateBounds(mesh, material);
         ValidatePixels(mesh, material);
-        Debug.Log("SPRUCE GPU PASS: actual prefab routes to compute; CPU/indirect pixels match at three camera angles with varied scale/yaw/tint; load/handoff fades and camera-facing bounds verified. No FPS benchmark.");
+        Debug.Log("IMPOSTOR GPU PASS (" + prefabPath + "): actual prefab routes to compute; CPU/indirect pixels match at three camera angles with varied scale/yaw/tint; load/handoff fades and camera-facing bounds verified. No FPS benchmark.");
     }
 
     public static void RunBatch()
@@ -80,7 +84,9 @@ public static class SpruceImpostorGpuValidation
             var batches = (IList)typeof(DistantTreeManager).GetField("uniqueBatches", flags).GetValue(manager);
             Require(batches.Count == 1, "Fallback species unexpectedly split the shared spruce batch.");
             var manifest = typeof(DistantTreeManager).GetMethod("Build", flags).Invoke(manager, new object[] {
-                new ChunkCoord(0, 0), new[] { new TreeInstanceData(Vector3.zero, Quaternion.identity, Vector3.one, WorldFeatureVariant.SpruceTree) } });
+                new ChunkCoord(0, 0), new[] { new TreeInstanceData(Vector3.zero, Quaternion.identity, Vector3.one, WorldFeatureVariant.SpruceTree,
+                    Color.white, Color.white, id: TreeId.Generated(1, new ChunkCoord(0,0), TreePlacementSource.Forest, 0)) },
+                TreePlacementDetail.Distant, true });
             var crownAreas = (float[])manifest.GetType().GetField("CrownArea").GetValue(manifest);
             float area = 0; foreach (float value in crownAreas) area += value;
             var originalBounds = prefab.GetComponent<MeshFilter>().sharedMesh.bounds;

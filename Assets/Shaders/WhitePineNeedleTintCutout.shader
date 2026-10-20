@@ -6,6 +6,13 @@ Shader "Custom/WhitePineNeedleSimpleLitCutout"
         [MainColor] _NeedleColor("Needle Color", Color) = (0.12, 0.34, 0.18, 1.0)
         _NeedleShadowColor("Needle Shadow Color", Color) = (0.035, 0.16, 0.08, 1.0)
         _NeedleTipColor("Needle Tip Color", Color) = (0.46, 0.68, 0.34, 1.0)
+        _TreeLeafTint("Per Tree Needle Tint", Color) = (1, 1, 1, 1)
+        [Toggle] _BacklightingEnabled("Needle Backlighting", Float) = 1
+        [Toggle] _StableBacklighting("Stable Two Sided Backlighting", Float) = 1
+        _BacklightStrength("Backlight Strength", Range(0, 2)) = 0.32
+        _BacklightColor("Backlight Color", Color) = (0.94, 1, 0.98, 1)
+        _SnowCoverage("Snow Coverage", Range(0, 1)) = 0
+        _SnowColor("Snow Color", Color) = (0.9, 0.94, 0.97, 1)
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.38
         [Toggle] _AlphaCutoutShadows("Alpha Cutout Shadows", Float) = 1
         _TipStrength("Tip Brightness Strength", Range(0, 1)) = 0.28
@@ -46,14 +53,18 @@ Shader "Custom/WhitePineNeedleSimpleLitCutout"
         Pass
         {
             Name "ForwardNeedles"
-            Tags { "LightMode" = "UniversalForward" }
+            Tags { "LightMode" = "UniversalForwardOnly" }
 
             HLSLPROGRAM
             #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_fog
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
@@ -67,6 +78,8 @@ Shader "Custom/WhitePineNeedleSimpleLitCutout"
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
+                half4 _TreeLeafTint, _BacklightColor, _SnowColor;
+                half _BacklightingEnabled, _StableBacklighting, _BacklightStrength, _SnowCoverage;
                 half4 _NeedleColor;
                 half4 _NeedleShadowColor;
                 half4 _NeedleTipColor;
@@ -107,6 +120,8 @@ Shader "Custom/WhitePineNeedleSimpleLitCutout"
                 float2 uv : TEXCOORD2;
                 float4 shadowCoord : TEXCOORD3;
                 half4 color : COLOR;
+                half fogFactor : TEXCOORD4;
+                half3 vertexLighting : TEXCOORD5;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -162,6 +177,8 @@ Shader "Custom/WhitePineNeedleSimpleLitCutout"
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.shadowCoord = TransformWorldToShadowCoord(positionWS);
                 OUT.color = IN.color;
+                OUT.fogFactor = ComputeFogFactor(OUT.positionCS.z);
+                OUT.vertexLighting = VertexLighting(positionWS, normalInputs.normalWS);
 
                 return OUT;
             }
@@ -192,12 +209,22 @@ Shader "Custom/WhitePineNeedleSimpleLitCutout"
                 needleColor *= strandHighlight * cardVariation;
                 needleColor *= lerp(half3(1.0h, 1.0h, 1.0h), IN.color.rgb, saturate(_UseVertexColor));
 
+                // Evergreen palette: location changes its tint, autumn does not.
+                needleColor *= StandingTreeLeafTint(_TreeLeafTint).rgb;
+                half3 needleNormal = NormalizeNormalPerPixel(IN.normalWS);
+                needleColor = lerp(needleColor, _SnowColor.rgb,
+                    saturate(StandingTreeSnow(_SnowCoverage) * smoothstep(.2h, .8h, needleNormal.y)));
                 InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);
                 inputData.normalWS = normalize(lerp(inputData.normalWS, half3(0.0h, 1.0h, 0.0h), _LightWrap * 0.22h));
 
+                inputData.vertexLighting = IN.vertexLighting;
                 SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(needleColor, atlas.a, _Smoothness, _SpecularStrength);
                 half4 color = ShadeDistantAwareTree(inputData, surfaceData);
-                return half4(saturate(color.rgb), atlas.a);
+                color.rgb += EvaluateTreeLeafBacklighting(inputData, needleColor, needleNormal,
+                    _BacklightStrength * _BacklightingEnabled, _BacklightColor.rgb, _StableBacklighting);
+                if (_DistantTreeEnabled < .5 || _DistantTreeBillboard < .5)
+                    color.rgb = MixFog(color.rgb, IN.fogFactor);
+                return half4(color.rgb, atlas.a);
             }
             ENDHLSL
         }
@@ -217,6 +244,7 @@ Shader "Custom/WhitePineNeedleSimpleLitCutout"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
 
@@ -230,6 +258,8 @@ Shader "Custom/WhitePineNeedleSimpleLitCutout"
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
+                half4 _TreeLeafTint, _BacklightColor, _SnowColor;
+                half _BacklightingEnabled, _StableBacklighting, _BacklightStrength, _SnowCoverage;
                 half4 _NeedleColor;
                 half4 _NeedleShadowColor;
                 half4 _NeedleTipColor;

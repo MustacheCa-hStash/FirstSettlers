@@ -14,6 +14,7 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
     [SerializeField, Range(1, 4)] private int captureSupersample = 2;
     [SerializeField, Range(0, 3)] private int coverageExpansionPixels = 1;
     [SerializeField, Range(0.01f, 1f)] private float coverageExpansionStrength = 0.75f;
+    [SerializeField] private bool encodeAlbedoSrgb;
     [Header("Species output")]
     [SerializeField] private string speciesName = "Spruce";
     [SerializeField] private string atlasPrefix = "Spruce_Octa";
@@ -28,6 +29,7 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
     // semantic captures is essential: expanded albedo must not sample empty
     // normal, depth, or material-ID texels at runtime.
     private int[][] coverageDonors;
+    private int[][] coverageSamples;
 
     [MenuItem("Tools/Impostors/Capture Spruce Octa Atlases")]
     private static void Open() => GetWindow<TreeImpostorAtlasCaptureWindow>("Octa Atlas Capture");
@@ -97,39 +99,69 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
         }
     }
 
-    private void CaptureAll()
+    public static bool CaptureOak(TreeImpostorCaptureSetup source)
+        => CaptureSpecies(source, "Oak", OakOctaImpostorBaker.AtlasFolder, OakOctaImpostorBaker.MaterialPath,
+            "Hidden/TreeImpostor/OakSemanticCapture");
+
+    public static bool CaptureWhitePine(TreeImpostorCaptureSetup source)
+        => CaptureSpecies(source, "WhitePine", "Assets/Textures/Trees/Impostors/WhitePine", "Assets/Materials/M_Trees/WhitePine/WhitePine_OctaImpostor_M.mat",
+            "Hidden/TreeImpostor/WhitePineSemanticCapture");
+
+    static bool CaptureSpecies(TreeImpostorCaptureSetup source, string species, string folder, string materialPath, string shader)
+    {
+        var window = CreateInstance<TreeImpostorAtlasCaptureWindow>();
+        try
+        {
+            window.setup = source;
+            window.speciesName = species; window.atlasPrefix = species + "_Octa";
+            window.outputFolder = folder;
+            window.runtimeMaterialPath = materialPath;
+            window.semanticShaderName = shader;
+            window.framesPerAxis = 8; window.tileResolution = 504;
+            window.paddingPixels = 2; window.captureSupersample = 2;
+            // Oak's broad leaf cards need edge color bleed, not the extra
+            // coverage used to rescue subpixel spruce needles.
+            window.coverageExpansionPixels = 1; window.coverageExpansionStrength = 0;
+            window.encodeAlbedoSrgb = true;
+            return window.CaptureAll();
+        }
+        finally { DestroyImmediate(window); }
+    }
+
+    private bool CaptureAll()
     {
         foreach (string message in setup.ValidateSetup())
         {
             if (message.StartsWith("ERROR"))
             {
                 Debug.LogError("Fix isolated-scene validation errors before capture: " + message, setup);
-                return;
+                return false;
             }
         }
 
         if (!setup.RecalculateBounds(out string boundsMessage))
         {
             Debug.LogError(boundsMessage, setup);
-            return;
+            return false;
         }
 
         Shader shader = Shader.Find(semanticShaderName);
         if (shader == null)
         {
             Debug.LogError("Semantic capture shader was not found: " + semanticShaderName);
-            return;
+            return false;
         }
 
         if (!outputFolder.StartsWith("Assets/", StringComparison.Ordinal))
         {
             Debug.LogError("Output Folder must be under Assets/.");
-            return;
+            return false;
         }
 
         semanticLeaf = CreateSemanticMaterial(shader, setup.LeafMaterial, 0f);
         semanticBark = CreateSemanticMaterial(shader, setup.BarkMaterial, 1f);
         coverageDonors = new int[framesPerAxis * framesPerAxis][];
+        coverageSamples = new int[framesPerAxis * framesPerAxis][];
 
         try
         {
@@ -146,10 +178,12 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
             ConfigureImporters();
             UpdateRuntimeMaterialLayout();
             Debug.Log(speciesName + " octahedral semantic atlases captured successfully.", setup);
+            return true;
         }
         catch (Exception exception)
         {
             Debug.LogException(exception, setup);
+            return false;
         }
         finally
         {
@@ -158,6 +192,7 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
             semanticLeaf = null;
             semanticBark = null;
             coverageDonors = null;
+            coverageSamples = null;
             EditorUtility.ClearProgressBar();
         }
     }
@@ -213,8 +248,22 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
                 camera.Render();
                 RenderTexture.active = rt;
                 captureTile.ReadPixels(new Rect(0, 0, captureResolution, captureResolution), 0, 0, false);
-                Color[] pixels = DownsampleCoverage(captureTile.GetPixels(), captureResolution, tileResolution);
                 int frameIndex = y * framesPerAxis + x;
+                Color[] supersamples = captureTile.GetPixels();
+                Color[] pixels;
+                if (output == Output.AlbedoCoverage)
+                {
+                    pixels = DownsampleCoverage(supersamples, captureResolution, tileResolution, out int[] selectedSamples);
+                    coverageSamples[frameIndex] = selectedSamples;
+                }
+                else
+                {
+                    int[] selectedSamples = coverageSamples?[frameIndex];
+                    if (selectedSamples == null)
+                        throw new InvalidOperationException("Capture albedo before selecting semantic supersamples.");
+                    pixels = new Color[selectedSamples.Length];
+                    for (int i=0;i<pixels.Length;i++) pixels[i] = supersamples[selectedSamples[i]];
+                }
 
                 if (output == Output.AlbedoCoverage)
                 {
@@ -230,6 +279,16 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
                     StabilizeSemanticData(pixels, donors);
                 }
 
+                if (output == Output.AlbedoCoverage && encodeAlbedoSrgb)
+                {
+                    // The render target is linear; an sRGB importer expects
+                    // display-encoded RGB in the PNG. Alpha remains coverage.
+                    for (int i = 0; i < pixels.Length; i++)
+                    {
+                        Color p = pixels[i];
+                        pixels[i] = new Color(Mathf.LinearToGammaSpace(p.r), Mathf.LinearToGammaSpace(p.g), Mathf.LinearToGammaSpace(p.b), p.a);
+                    }
+                }
                 CopyTileWithPadding(pixels, tileResolution, tileResolution, atlas, x * stride + paddingPixels, y * stride + paddingPixels, paddingPixels);
             }
             atlas.Apply(false, false);
@@ -320,16 +379,21 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
         return direction.normalized;
     }
 
-    private static Color[] DownsampleCoverage(Color[] source, int sourceWidth, int targetWidth)
+    private static Color[] DownsampleCoverage(Color[] source, int sourceWidth, int targetWidth, out int[] selectedSamples)
     {
         if (sourceWidth == targetWidth)
+        {
+            selectedSamples = new int[source.Length];
+            for (int i=0;i<selectedSamples.Length;i++) selectedSamples[i]=i;
             return source;
+        }
 
         int scale = sourceWidth / targetWidth;
         if (scale < 1 || sourceWidth != targetWidth * scale)
             throw new InvalidOperationException("Capture supersample size must divide evenly into tile resolution.");
 
         var result = new Color[targetWidth * targetWidth];
+        selectedSamples = new int[result.Length];
         for (int y = 0; y < targetWidth; y++)
         for (int x = 0; x < targetWidth; x++)
         {
@@ -338,14 +402,20 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
             // this is the same coverage-preserving principle used for foliage
             // mipmaps and applies equally to all aligned semantic outputs.
             Color best = Color.clear;
+            int bestIndex = y * scale * sourceWidth + x * scale;
             for (int sy = 0; sy < scale; sy++)
             for (int sx = 0; sx < scale; sx++)
             {
-                Color candidate = source[(y * scale + sy) * sourceWidth + x * scale + sx];
+                int candidateIndex = (y * scale + sy) * sourceWidth + x * scale + sx;
+                Color candidate = source[candidateIndex];
                 if (candidate.a > best.a)
+                {
                     best = candidate;
+                    bestIndex = candidateIndex;
+                }
             }
             result[y * targetWidth + x] = best;
+            selectedSamples[y * targetWidth + x] = bestIndex;
         }
         return result;
     }

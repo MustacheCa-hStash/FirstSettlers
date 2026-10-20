@@ -159,11 +159,13 @@ public sealed class TreeImpostorCaptureSetup : MonoBehaviour
             messages.Add("ERROR: Disable scene fog for semantic capture.");
         if (RenderSettings.skybox != null)
             messages.Add("ERROR: Remove the scene skybox for semantic capture.");
-        if (Object.FindObjectsByType<Light>(FindObjectsInactive.Exclude, FindObjectsSortMode.None).Length > 0)
+        if (System.Array.Exists(Object.FindObjectsByType<Light>(FindObjectsInactive.Exclude, FindObjectsSortMode.None),
+            light => light.gameObject.scene == treeRoot.gameObject.scene))
             messages.Add("ERROR: Disable all scene lights for semantic capture. Later capture passes write material data, not beauty lighting.");
 
         foreach (Renderer renderer in Object.FindObjectsByType<Renderer>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
         {
+            if (renderer.gameObject.scene != treeRoot.gameObject.scene) continue;
             if (!renderer.transform.IsChildOf(treeRoot))
                 messages.Add($"ERROR: Non-tree renderer is active in this scene: {renderer.name}.");
         }

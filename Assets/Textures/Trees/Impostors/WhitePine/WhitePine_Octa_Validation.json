@@ -1,0 +1,70 @@
+{
+    "inputs": [
+        {
+            "path": "Assets/Models/Trees/Tree_Blender_007_WhitePine.fbx",
+            "sha256": "689EA2776EA8C9891978CC450C00EE685814220267DACF492002586B906FF543"
+        },
+        {
+            "path": "Assets/Prefabs/WhitePine_LOD0_v01.prefab",
+            "sha256": "26B14319C1BB1EEC1699E616E3B1D9A24B8FF45C88D08911456DD1C715E64994"
+        },
+        {
+            "path": "Assets/Textures/Trees/Bark/T_WhitePineBark_Stylized.png",
+            "sha256": "AA260F7C7FBC9B233B7E2EFC1A2E6E632662FF48696A5ACA4192F97561D3DB75"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/WhitePine/M_WhitePineLeaves.mat",
+            "sha256": "76705AC38B68660763CD28B2914822DF058A7D274B7ACCE09B8D419E2125E6F0"
+        },
+        {
+            "path": "Assets/Shaders/WhitePineBarkUnlit.shader",
+            "sha256": "ACF554822100135CD4F3509608A2BB056CB64BC83A27338F497CDAC3037B285F"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/WhitePine/M_WhitePineBark.mat",
+            "sha256": "322FB3496A9A6C80F015CDCC2BD50721CD7282DF8A4E0AC212CD1D57CCD49AAD"
+        },
+        {
+            "path": "Assets/Shaders/WhitePineNeedleTintCutout.shader",
+            "sha256": "C141DD5A4605CD582492FD70D7621C485E674FF988C2686B4CAA6625F2862B19"
+        },
+        {
+            "path": "Assets/Textures/Trees/leafClumpAtlas_WhitePine.png",
+            "sha256": "E72C6E3C51D3576E5C914F676EE6237485BB8B3EF5C84941EBE608BFA5B5087C"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/WhitePine/WhitePine_Octa_AlbedoCoverage.png",
+            "sha256": "2C6B8A80C46F1877247BADB7CE7D9D2D8343B1B203567D4EEE76751C10A893CA"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WhitePine/WhitePine_Octa_Surface.png",
+            "sha256": "558DD345B07718861926BEF813FE6032B50B12E817CCCBDE3F025A3B855FD368"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WhitePine/WhitePine_Octa_Depth.png",
+            "sha256": "8826B04460ED04A7E353EA8E04C84733BB24E285F4222AE8F63DD17EF7A4BCB8"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WhitePine/WhitePine_Octa_MaterialId.png",
+            "sha256": "5A5168B6BF829D633699E9D661841640D0D1FE03B478CC43FB770D302D79C5B7"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WhitePine/WhitePine_Octa_Ambient.png",
+            "sha256": "4FF2D0F4CA3F1E3808054B4B76E44C52AA8AFB20C48469E7722DB74009D404B3"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/WhitePine/WhitePine_OctaImpostor_M.mat",
+            "sha256": "F1EC6C32B7F71D5CDF1C03BF2C5360C7296BA13CB9CAAF54F62A9A29C6E72D77"
+        },
+        {
+            "path": "Assets/Models/Trees/WhitePine_OctaImpostor_Runtime.mesh",
+            "sha256": "990D8C4DB8FB9E5B311F67021B42BB4F2B6B1B9AF6135F944893EFC9D1A3B28C"
+        },
+        {
+            "path": "Assets/Prefabs/WhitePine_OctaImpostor_Runtime.prefab",
+            "sha256": "C8A724CBD7B07459420A55C374E8FFF263ADB6444447054C17D71E3655742B34"
+        }
+    ]
+}

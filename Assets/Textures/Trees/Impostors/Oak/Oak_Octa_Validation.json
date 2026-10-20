@@ -1,0 +1,70 @@
+{
+    "inputs": [
+        {
+            "path": "Assets/Textures/Trees/Bark/T_WhiteOakBark_Stylized.png",
+            "sha256": "607DA826786F1CA272775179F0D289AF1F822FCB87563CE218E4280E9DCBF5FC"
+        },
+        {
+            "path": "Assets/Shaders/OakLeafTintCutout.shader",
+            "sha256": "A6370C971CC1E8D87ECD34913932CE095372F7C1957C60022E2BE52F9AFA7DEB"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Oak/M_Oak_Leaf.mat",
+            "sha256": "812257F33208D5E5AE23020EF4325FE88B613A1931ABABBA000CC493A48AB0C2"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Oak/M_Oak_Bark.mat",
+            "sha256": "826B932974C5146CDDA4B716828F0BD3EB7BB04474D6657E4DD2D3D5E791183B"
+        },
+        {
+            "path": "Assets/Textures/Trees/Oak/T_OakLeafCard.png",
+            "sha256": "AEA669E0A0140248C3DF156E5F721925C6D1316834CF31F87707DBC396B314CC"
+        },
+        {
+            "path": "Assets/Prefabs/Oak_LOD0_v03.prefab",
+            "sha256": "EDCF22AB815118062DF09BFBAF7C9FBB21523989B221D7A588A058EC35AF7063"
+        },
+        {
+            "path": "Assets/Shaders/OakBarkUnlit.shader",
+            "sha256": "00E0F4FDD2E6D22E9C943655A9BE8AEB561BB58338A4450A49640BC1DCAD45C5"
+        },
+        {
+            "path": "Assets/Models/Trees/Oak_LOD0_P2461_B1800_L530_v03.fbx",
+            "sha256": "8434E122A1A9838B13D634F5C6EE1333E5853DC59A67F56390D53A87C8F44E3A"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/Oak/Oak_Octa_AlbedoCoverage.png",
+            "sha256": "9D78313D8F30D672B1BAF6225AAE1E6D2F9F1CBED52F77A7832D7911791F8C5D"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/Oak/Oak_Octa_Surface.png",
+            "sha256": "DF9BDB63307EBAAD5C17710352607EC62C5F183D513AEE7FE5145DE201AFBD52"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/Oak/Oak_Octa_Depth.png",
+            "sha256": "88F02AAAA2466A693FBE0373435A3951E23BADFCBFEEFD108817C3588AFCBE5C"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/Oak/Oak_Octa_MaterialId.png",
+            "sha256": "85EE258CECCBB509E7ECB84BEA72C3129C7A957F9F734FDF1787DD5B5BC4CC98"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/Oak/Oak_Octa_Ambient.png",
+            "sha256": "6FAF9844BFAE38CB13D07F18067C8E399CEDEB8D5D6F7631F27A7EADDA81C0DB"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Oak/Oak_OctaImpostor_M.mat",
+            "sha256": "95E721B28AA8E120319813C358B0FF9BBC80A63DAF18D1290C59C6455DDBBE4A"
+        },
+        {
+            "path": "Assets/Models/Trees/Oak_OctaImpostor_Runtime.mesh",
+            "sha256": "FBD4EE229AA5BE40024EC93AC63E026BA3F25A2B739EA3890499B1B76194EA0E"
+        },
+        {
+            "path": "Assets/Prefabs/Oak_OctaImpostor_Runtime.prefab",
+            "sha256": "F3FDC8A10AB99A5EE8B43379C294C5F71F41CDA76DE422EB34A05B27A1EFBA1D"
+        }
+    ]
+}

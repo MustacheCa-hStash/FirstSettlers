@@ -10,7 +10,7 @@ Shader "Custom/SpruceOctaImpostor"
         _LeafSeasonTint("Leaf Season Tint", Color) = (1,1,1,1)
         [PerRendererData] _TreeLeafTint("Per Instance Leaf Tint", Color) = (1,1,1,1)
         _SeasonStrength("Season Strength", Range(0,1)) = 1
-        [Toggle] _UseSeasonPalette("Use Maple Season Palette", Float) = 0
+        [Toggle] _UseSeasonPalette("Use Deciduous Season Palette", Float) = 0
         _TreeTintStrength("Per Tree Autumn Tint Strength", Range(0,1)) = 0.65
         _SeasonAutumnAmount("Season Autumn Amount", Range(0,1)) = 1
         _SummerLeafColor("Summer Leaf Color", Color) = (0.18,0.42,0.12,1)
@@ -19,7 +19,9 @@ Shader "Custom/SpruceOctaImpostor"
         _AutumnOrangeColor("Autumn Orange Color", Color) = (1,0.25,0.055,1)
         _AutumnYellowColor("Autumn Yellow Color", Color) = (0.88,0.61,0.12,1)
         _AutumnVariationStrength("Autumn Palette Variation", Range(0,1)) = 0.62
-        [Enum(Red Maple,0,Sugar Maple,1)] _SeasonPaletteMode("Season Palette Mode", Float) = 0
+        [Enum(Red Maple,0,Sugar Maple,1,Oak,2)] _SeasonPaletteMode("Season Palette Mode", Float) = 0
+        _LeafTransmissionColor("Leaf Transmission Tint", Color) = (1,1,1,1)
+        [Toggle] _StableLeafTransmission("Stable Two Sided Transmission", Float) = 0
         _Cutoff("Coverage Cutoff", Range(0,1)) = 0.008
         _CaptureCenterLS("Capture Center Local", Vector) = (0,3,0,0)
         _CaptureRadius("Capture Radius", Float) = 4.3
@@ -68,6 +70,7 @@ Shader "Custom/SpruceOctaImpostor"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Fog.hlsl"
             #pragma instancing_options procedural:SetupDistantTree
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
@@ -77,6 +80,7 @@ Shader "Custom/SpruceOctaImpostor"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Assets/Shaders/TreeSeasonSimulation.hlsl"
             #include "Assets/Shaders/MapleLeafSeasonPalette.hlsl"
+            #include "Assets/Shaders/OakLeafSeasonPalette.hlsl"
             #include "Assets/Shaders/TreeNightLighting.hlsl"
 
             TEXTURE2D(_AlbedoCoverage); SAMPLER(sampler_AlbedoCoverage);
@@ -87,8 +91,9 @@ Shader "Custom/SpruceOctaImpostor"
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _AlbedoCoverage_TexelSize, _SurfaceAtlas_TexelSize, _DepthAtlas_TexelSize, _MaterialIdAtlas_TexelSize, _AmbientAtlas_TexelSize;
-                half4 _LeafSeasonTint, _SummerLeafColor, _AutumnRedColor, _AutumnCrimsonColor, _AutumnOrangeColor, _AutumnYellowColor, _BarkShadowColor, _BarkHighlightColor;
+                half4 _LeafSeasonTint, _SummerLeafColor, _AutumnRedColor, _AutumnCrimsonColor, _AutumnOrangeColor, _AutumnYellowColor, _BarkShadowColor, _BarkHighlightColor, _LeafTransmissionColor;
                 float4 _CaptureCenterLS;
+                half _StableLeafTransmission;
                 half _SeasonStrength, _UseSeasonPalette, _TreeTintStrength, _SeasonAutumnAmount, _AutumnVariationStrength, _SeasonPaletteMode, _Cutoff, _CaptureRadius, _FramesPerAxis, _AtlasTileResolution, _AmbientTileResolution, _AtlasPadding;
                 half _DepthParallax, _AOStrength, _SkyStrength, _AmbientFloor, _LeafLightWrap, _FoliageBrightness, _BarkBrightness, _BarkColorRemap, _BarkRemapBlackPoint, _BarkRemapWhitePoint, _TransmissionStrength, _WindStrength, _WindSpeed, _DebugView, _DebugFrameX, _DebugFrameY;
             CBUFFER_END
@@ -263,6 +268,20 @@ Shader "Custom/SpruceOctaImpostor"
                 half3 seasonalLeafTint = MapleSeasonLeafColor(materialId.b, _AutumnVariationStrength, season,
                     _SummerLeafColor.rgb, _AutumnYellowColor.rgb, _AutumnOrangeColor.rgb, _AutumnRedColor.rgb,
                     treeTint, _TreeTintStrength, _SeasonPaletteMode);
+                if (_SeasonPaletteMode > 1.5h)
+                {
+                    // Absolute placement colors arrive through raw instance vectors.
+                    #if !defined(UNITY_COLORSPACE_GAMMA)
+                        #if defined(UNITY_INSTANCING_ENABLED) || defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+                            treeTint.rgb = SRGBToLinear(treeTint.rgb);
+                        #else
+                            if (_StandingTreeEnabled > .5h) treeTint.rgb = SRGBToLinear(treeTint.rgb);
+                        #endif
+                    #endif
+                    seasonalLeafTint = OakSeasonLeafColor(materialId.b, _AutumnVariationStrength, season,
+                        _SummerLeafColor.rgb, _AutumnYellowColor.rgb, _AutumnOrangeColor.rgb, _AutumnRedColor.rgb,
+                        treeTint, _TreeTintStrength);
+                }
                 half3 leafTint = lerp(legacyLeafTint, seasonalLeafTint, _UseSeasonPalette);
                 // Maple's stylized bark atlas spans nearly black trunk texels to
                 // near-white twig texels. Remapping it into a bounded grey range
@@ -293,6 +312,15 @@ Shader "Custom/SpruceOctaImpostor"
                 half3 diffuse = baseColor * (sky * occlusion + mainLight.color * direct) * surfaceBrightness;
                 half backlight = pow(saturate(dot(-normalWS, mainLight.direction)), 3.0h) * surface.a * leafWeight * _TransmissionStrength;
                 diffuse += baseColor * mainLight.color * backlight * mainLight.shadowAttenuation;
+                if (_SeasonPaletteMode > 1.5h || _StableLeafTransmission > .5h)
+                {
+                    // Oak captures half-range neutral detail; undo that scale for
+                    // transmission too, and match the source's stable two-sided glow.
+                    diffuse -= baseColor * mainLight.color * backlight * mainLight.shadowAttenuation;
+                    Light transmissionSun = GetMainLight();
+                    diffuse += baseColor * _FoliageBrightness * _LeafTransmissionColor.rgb * transmissionSun.color *
+                        saturate(abs(dot(normalWS, transmissionSun.direction))) * surface.a * leafWeight * _TransmissionStrength;
+                }
                 // Use the same scene fog color and distances as terrain/3D
                 // trees. Keep coverage intact so fully fogged trees blend into
                 // the fog rather than revealing unfogged objects behind them.

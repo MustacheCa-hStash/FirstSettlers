@@ -19,6 +19,9 @@ public static class TreeImpostorGroundingValidation
 
     [MenuItem("Tools/Impostors/Validate Tree Root Anchoring")]
     public static void Run()
+        => RunSpecies("Spruce", "SugarMaple", "RedMaple");
+
+    public static void RunSpecies(params string[] speciesNames)
     {
         var previousPipeline = GraphicsSettings.defaultRenderPipeline;
         var previousQuality = QualitySettings.renderPipeline;
@@ -47,7 +50,7 @@ public static class TreeImpostorGroundingValidation
             var shader = Shader.Find("Custom/SpruceOctaImpostor");
             Require(shader != null && shader.isSupported, "Impostor shader unavailable.");
             int checks = 0;
-            foreach (string species in new[] { "Spruce", "SugarMaple", "RedMaple" })
+            foreach (string species in speciesNames)
             {
                 string path = $"Assets/Materials/M_Trees/{species}/{species}_OctaImpostor_M.mat";
                 var source = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -113,7 +116,7 @@ public static class TreeImpostorGroundingValidation
                 }
                 finally { Object.DestroyImmediate(material); Object.DestroyImmediate(atlas); }
             }
-            Debug.Log($"IMPOSTOR ROOT PASS: {checks} rendered root checks across spruce and both maples, camera pitch/yaw, scale, perspective/orthographic, maximum wind, ordinary/instanced/indirect draws.");
+            Debug.Log($"IMPOSTOR ROOT PASS: {checks} rendered root checks for {string.Join(", ", speciesNames)}, camera pitch/yaw, scale, perspective/orthographic, maximum wind, ordinary/instanced/indirect draws.");
         }
         finally
         {

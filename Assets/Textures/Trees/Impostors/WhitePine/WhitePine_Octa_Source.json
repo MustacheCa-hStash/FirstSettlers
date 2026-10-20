@@ -1,0 +1,14 @@
+{
+    "prefab": "Assets/Prefabs/WhitePine_LOD0_v01.prefab",
+    "prefabGuid": "272060f130eda5545b5b78e8a9ef33d1",
+    "dependencyHash": "516947854baffda3e0c47c6e6aab2cc0",
+    "albedoEncoding": "sRGB RGB; linear coverage alpha; full authored evergreen RGB",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 0,
+    "colorBleedPixels": 1
+}
