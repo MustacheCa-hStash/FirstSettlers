@@ -1,0 +1,16 @@
+{
+  "source_triangles": 4286,
+  "triangles": 1180,
+  "removed_stalks": 192,
+  "fringe_cards": 64,
+  "fringe_quads_per_card": 2,
+  "bake_size": [
+    1024,
+    1024
+  ],
+  "bake_channels": "RG=octahedral Unity object normal, B=short-range AO",
+  "normal_xy_std": 0.29361337423324585,
+  "ao_min": 0.0,
+  "ao_mean": 0.4744255840778351,
+  "triangle_reduction_percent": 72.5
+}

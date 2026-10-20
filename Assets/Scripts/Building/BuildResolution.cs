@@ -93,6 +93,8 @@ public sealed class BuildResolution : IDisposable
     }
     private BuildResolvedState Foundation(BuildPieceRecord p,IReadOnlyList<BuildPieceRecord> pieces,Dictionary<ulong,BuildResolvedState> states)
     {
+        if(p.Definition.preserveAuthoredMesh)
+            return new BuildResolvedState{mesh=BuildTrimUV.Core(p),boxes=new[]{p.Definition.LocalBounds},key="authored-foundation:"+BuildTrimUV.Variation(p.Origin,p.WorldYawStep,p.Definition.uvVariants?.Length??0)};
         var cuts=new List<Bounds>();Bounds b=p.Definition.LocalBounds;
         foreach(var floor in pieces)
             if(floor.Definition.kind==BuildPartKind.Floor && Aligned(p,floor) && Mathf.Abs(floor.Origin.y-p.Origin.y)<.012f)

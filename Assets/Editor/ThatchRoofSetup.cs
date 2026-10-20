@@ -10,6 +10,7 @@ public static class ThatchRoofSetup
 {
     public const string ModelFolder="Assets/Models/Buildings/Wood/Roofs";
     public const string TexturePath="Assets/Textures/Buildings/Wood/thatch-roof-atlas.png";
+    public const string DetailPath="Assets/Textures/Buildings/Wood/thatch-roof-detail.png";
     public const string MaterialPath="Assets/Materials/Buildings/Wood/ThatchRoof.mat";
     public const string ContentId="build.wood.thatch-roof-panel";
     public const string ModelPath=ModelFolder+"/ThatchRoofPanel_4.0Wx2.0Hx2.0D.fbx";
@@ -51,6 +52,18 @@ public static class ThatchRoofSetup
             material.name="Matte thatch roof atlas";AssetDatabase.CreateAsset(material,MaterialPath);
         }
         material.SetTexture("_BaseMap",AssetDatabase.LoadAssetAtPath<Texture2D>(TexturePath));
+        if(File.Exists(DetailPath))
+        {
+            var detailImporter=(TextureImporter)AssetImporter.GetAtPath(DetailPath);
+            detailImporter.textureType=TextureImporterType.Default;detailImporter.sRGBTexture=false;
+            detailImporter.mipmapEnabled=true;detailImporter.wrapMode=TextureWrapMode.Clamp;
+            detailImporter.filterMode=FilterMode.Trilinear;detailImporter.anisoLevel=4;
+            detailImporter.maxTextureSize=1024;detailImporter.textureCompression=TextureImporterCompression.Uncompressed;
+            detailImporter.SaveAndReimport();
+            material.SetTexture("_ThatchDetailMap",AssetDatabase.LoadAssetAtPath<Texture2D>(DetailPath));
+            material.SetFloat("_ThatchBakeEnabled",1);material.SetFloat("_ThatchNormalStrength",1);material.SetFloat("_ThatchOcclusionStrength",.55f);
+            material.EnableKeyword("_THATCH_BAKED");
+        }
         material.enableInstancing=true;EditorUtility.SetDirty(material);
         {
             string path=AssetRoot;
@@ -68,6 +81,10 @@ public static class ThatchRoofSetup
             importer.SaveAndReimport();
             var imported=AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath);
             var generated=WattleWallSetup.BakeStaticMesh(imported,new Vector3(4,2,2),"Thatch roof",out string inspection,true);
+            if(generated.uv2.Length!=generated.vertexCount)
+            {
+                material.DisableKeyword("_THATCH_BAKED");material.SetFloat("_ThatchBakeEnabled",0);
+            }
             if(before!=null)
             {
                 try
@@ -84,7 +101,7 @@ public static class ThatchRoofSetup
             var visual=SaveMesh(generated,path+"-mesh.asset");
             // Verify the structural origin from independently authored timber:
             // eave bottom at y=0; high covering at +Z, never reflected or shifted.
-            if(Mathf.Abs(visual.bounds.max.z-2)>.001f || Mathf.Abs(visual.bounds.min.z+.25f)>.001f || Mathf.Abs(visual.bounds.max.y-(2.12f+Mathf.Sqrt(2)*.30f))>.001f || Mathf.Abs(visual.bounds.max.x-4)>.001f || Mathf.Abs(visual.bounds.min.x)>.001f)
+            if(Mathf.Abs(visual.bounds.max.z-2)>.001f || visual.bounds.min.z<-.55f || visual.bounds.min.z>-.25f || visual.bounds.max.y<2.4f || visual.bounds.max.y>2.55f || Mathf.Abs(visual.bounds.max.x-4)>.001f || Mathf.Abs(visual.bounds.min.x)>.001f)
                 throw new InvalidOperationException("Roof FBX axes/origin disagree: "+inspection);
             bool eave=false,ridge=false;
             foreach(var p in visual.vertices) { eave|=Mathf.Abs(p.y)<.001f && p.z>=-.001f && p.z<=.251f;ridge|=p.y>2.3f && p.z>1.99f; }
@@ -94,14 +111,7 @@ public static class ThatchRoofSetup
             definition.contentId=ContentId; definition.displayName="Thatch roof";
             definition.kind=BuildPartKind.Roof;definition.sizeUnits=new Vector3Int(16,8,8);definition.minimumUnits=Vector3Int.zero;
             definition.wallEndInsetUnits=0;definition.mesh=visual;definition.material=material;
-            var continuation=Object.Instantiate(visual);continuation.name="Thatch roof joined eave";
-            var cv=continuation.vertices;var cu=continuation.uv;
-            for(int i=0;i<cv.Length;i++)if(cv[i].z<0)
-            {
-                float trim=-cv[i].z;cv[i].z=0;cv[i].y+=trim;
-                cu[i].y+=trim*(1008f/2048)/2.5f;
-            }
-            continuation.vertices=cv;continuation.uv=cu;continuation.RecalculateBounds();
+            var continuation=ClipEave(visual);
             definition.roofContinuationMesh=SaveMesh(continuation,path+"-joined-mesh.asset");
             // One straight thin slope plus its eave bearing; no attic wedge.
             definition.occupiedVolumes=new[]{
@@ -111,6 +121,37 @@ public static class ThatchRoofSetup
             Debug.Log(inspection);File.WriteAllText(".utmp/building-prototype/roof-Panel-import.txt",inspection);
         }
         AssetDatabase.SaveAssets();return result;
+    }
+    // Clip at the structural seam instead of flattening frayed geometry onto
+    // z=0. Interpolate UVs/normals and discard removed or degenerate triangles.
+    private static Mesh ClipEave(Mesh source)
+    {
+        var positions=source.vertices;var normals=source.normals;var uv=source.uv;var detail=source.uv2;bool hasDetail=detail.Length==positions.Length;
+        var output=new List<Vector3>();var ns=new List<Vector3>();var us=new List<Vector2>();var ds=new List<Vector2>();var indices=new List<int>();
+        var polygon=new List<(Vector3 p,Vector3 n,Vector2 u,Vector2 d)>();
+        int[] triangles=source.triangles;
+        for(int i=0;i<triangles.Length;i+=3)
+        {
+            polygon.Clear();
+            for(int j=0;j<3;j++)
+            {
+                int a=triangles[i+j],b=triangles[i+(j+1)%3];bool inside=positions[a].z>=0,other=positions[b].z>=0;
+                if(inside)polygon.Add((positions[a],normals[a],uv[a],hasDetail?detail[a]:default));
+                if(inside!=other)
+                {
+                    float t=-positions[a].z/(positions[b].z-positions[a].z);
+                    var p=Vector3.Lerp(positions[a],positions[b],t);p.z=0;
+                    polygon.Add((p,Vector3.Lerp(normals[a],normals[b],t).normalized,Vector2.Lerp(uv[a],uv[b],t),hasDetail?Vector2.Lerp(detail[a],detail[b],t):default));
+                }
+            }
+            for(int j=1;j+1<polygon.Count;j++)
+            {
+                var a=polygon[0];var b=polygon[j];var c=polygon[j+1];
+                if(Vector3.Cross(b.p-a.p,c.p-a.p).sqrMagnitude<1e-12f)continue;
+                foreach(var v in new[]{a,b,c}){indices.Add(output.Count);output.Add(v.p);ns.Add(v.n);us.Add(v.u);ds.Add(v.d);}
+            }
+        }
+        var mesh=new Mesh{name="Thatch roof joined eave"};mesh.SetVertices(output);mesh.SetNormals(ns);mesh.SetUVs(0,us);if(hasDetail)mesh.SetUVs(1,ds);mesh.SetTriangles(indices,0);mesh.RecalculateBounds();return mesh;
     }
     private static Mesh SaveMesh(Mesh generated,string path)
     {

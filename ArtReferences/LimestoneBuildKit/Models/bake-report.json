@@ -1,0 +1,240 @@
+{
+  "atlasSize": 2048,
+  "pixelsPerMetre": 160,
+  "gutterPixels": 16,
+  "colour": "Unlit colour RGB; ambient occlusion alpha",
+  "normals": "Tangent-space +Y",
+  "models": [
+    {
+      "tag": "L01",
+      "sizeMetres": [
+        4,
+        3,
+        0.5
+      ],
+      "sourceStones": 67,
+      "runtimeTriangles": 12,
+      "uvVariants": 3,
+      "files": [
+        "L01_BakedWall.fbx",
+        "L01_BakedWall_UV1.fbx",
+        "L01_BakedWall_UV2.fbx"
+      ]
+    },
+    {
+      "tag": "L02",
+      "sizeMetres": [
+        4,
+        3,
+        0.5
+      ],
+      "sourceStones": 27,
+      "runtimeTriangles": 12,
+      "uvVariants": 3,
+      "files": [
+        "L02_BakedWall.fbx",
+        "L02_BakedWall_UV1.fbx",
+        "L02_BakedWall_UV2.fbx"
+      ]
+    },
+    {
+      "tag": "L03",
+      "sizeMetres": [
+        2,
+        3,
+        0.5
+      ],
+      "sourceStones": 15,
+      "runtimeTriangles": 12,
+      "uvVariants": 3,
+      "files": [
+        "L03_BakedWall.fbx",
+        "L03_BakedWall_UV1.fbx",
+        "L03_BakedWall_UV2.fbx"
+      ]
+    }
+  ],
+  "atlasIslands": [
+    {
+      "tag": "L01",
+      "face": "front",
+      "rectPixels": [
+        88,
+        88,
+        640,
+        480
+      ]
+    },
+    {
+      "tag": "L01",
+      "face": "back",
+      "rectPixels": [
+        760,
+        88,
+        640,
+        480
+      ]
+    },
+    {
+      "tag": "L02",
+      "face": "front",
+      "rectPixels": [
+        88,
+        600,
+        640,
+        480
+      ]
+    },
+    {
+      "tag": "L02",
+      "face": "back",
+      "rectPixels": [
+        88,
+        1112,
+        640,
+        480
+      ]
+    },
+    {
+      "tag": "L03",
+      "face": "front",
+      "rectPixels": [
+        1432,
+        88,
+        320,
+        480
+      ]
+    },
+    {
+      "tag": "L03",
+      "face": "back",
+      "rectPixels": [
+        760,
+        600,
+        320,
+        480
+      ]
+    },
+    {
+      "tag": "L01",
+      "face": "top",
+      "rectPixels": [
+        1112,
+        600,
+        640,
+        80
+      ]
+    },
+    {
+      "tag": "L01",
+      "face": "bottom",
+      "rectPixels": [
+        1112,
+        712,
+        640,
+        80
+      ]
+    },
+    {
+      "tag": "L02",
+      "face": "top",
+      "rectPixels": [
+        1112,
+        824,
+        640,
+        80
+      ]
+    },
+    {
+      "tag": "L02",
+      "face": "bottom",
+      "rectPixels": [
+        1112,
+        936,
+        640,
+        80
+      ]
+    },
+    {
+      "tag": "L01",
+      "face": "left",
+      "rectPixels": [
+        1784,
+        88,
+        80,
+        480
+      ]
+    },
+    {
+      "tag": "L01",
+      "face": "right",
+      "rectPixels": [
+        1784,
+        600,
+        80,
+        480
+      ]
+    },
+    {
+      "tag": "L02",
+      "face": "left",
+      "rectPixels": [
+        760,
+        1112,
+        80,
+        480
+      ]
+    },
+    {
+      "tag": "L02",
+      "face": "right",
+      "rectPixels": [
+        872,
+        1112,
+        80,
+        480
+      ]
+    },
+    {
+      "tag": "L03",
+      "face": "left",
+      "rectPixels": [
+        984,
+        1112,
+        80,
+        480
+      ]
+    },
+    {
+      "tag": "L03",
+      "face": "right",
+      "rectPixels": [
+        1096,
+        1112,
+        80,
+        480
+      ]
+    },
+    {
+      "tag": "L03",
+      "face": "top",
+      "rectPixels": [
+        1208,
+        1048,
+        320,
+        80
+      ]
+    },
+    {
+      "tag": "L03",
+      "face": "bottom",
+      "rectPixels": [
+        1560,
+        1112,
+        320,
+        80
+      ]
+    }
+  ],
+  "sourceSHA256": "1d7b50cc9674a36287a28dfc4e9408ad7008b0e406fce4a74ac7e01b8e405770"
+}

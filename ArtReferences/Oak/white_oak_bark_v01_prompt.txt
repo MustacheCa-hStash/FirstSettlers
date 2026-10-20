@@ -1,0 +1,9 @@
+Generated with the built-in ImageGen tool; opaque background.
+
+Use case: stylized-concept. Asset type: tileable mature WHITE OAK (Quercus alba) bark BASE COLOR texture for a stylized game tree. Input image 1 is a STYLE AND PALETTE REFERENCE only: the project's existing sugar maple bark. Generate a new sibling oak texture matching its restrained painterly broad facets, soft matte gradients, muted warm taupe-gray brown family, low saturation, low value contrast and simplified detail level. Change the bark morphology to mature white oak: shorter irregular vertically oriented scaly plates, chunky shallow rectangular blocks, broken staggered ridges with occasional short cross-furrows; more interrupted and blocky than maple's long flowing strips, while remaining predominantly vertical. Approx. 8–12 main ridge groupings across the width. Keep the same overall medium brightness and quiet color variation as the reference. One square 1024 x 1024 image of a flat orthographic bark surface filling every pixel, opaque. Seamless repeating in BOTH axes, left to right and top to bottom, wrapping plate shapes and colors continuously, no visible border or seams. Neutral even albedo illumination, no global directional lighting, no cast shadows, no cylindrical shading. No trunk silhouette, scene, objects, moss, lichen, knots, text, black outlines, near-black cracks, bright highlights, photoreal grain or tiny noisy details. The only image to deliver is the flat bark texture.
+
+Actual generated dimensions: 1254 x 1254 pixels. Native output preserved.
+Reference: ArtReferences/SugarMaple/sugar_maple_bark_v01.png (style/palette only).
+Morphology: https://naturalresources.extension.iastate.edu/forestry/iowa_trees/trees/white_oak.html
+QA: inspected the native image and a 2 x 2 repeat preview; no obvious seam breaks at preview scale. Seamless generation was requested; pixel-perfect periodicity has not been established.
+

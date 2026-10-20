@@ -4,6 +4,10 @@ Shader "Custom/BuildingWoodMatte"
     {
         [MainTexture] _BaseMap("Ordinary Wood Trim (UV0)", 2D) = "white" {}
         [MainColor] _BaseColor("Texture Tint", Color) = (1, 1, 1, 1)
+        [Toggle(_THATCH_BAKED)] _ThatchBakeEnabled("Baked Thatch Detail", Float) = 0
+        _ThatchDetailMap("Thatch Octahedral Object Normal + AO (UV1)", 2D) = "white" {}
+        _ThatchNormalStrength("Thatch Normal Strength", Range(0, 2)) = 1
+        _ThatchOcclusionStrength("Thatch Crevice Occlusion", Range(0, 1)) = 0.55
         _Saturation("Texture Saturation", Range(0, 1.5)) = 0.9
         _Contrast("Texture Contrast", Range(0.5, 1.5)) = 0.9
         _Brightness("Texture Brightness", Range(0.5, 1.5)) = 1
@@ -34,9 +38,14 @@ Shader "Custom/BuildingWoodMatte"
 
         TEXTURE2D(_BaseMap);
         SAMPLER(sampler_BaseMap);
+        TEXTURE2D(_ThatchDetailMap);
+        SAMPLER(sampler_ThatchDetailMap);
 
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
+            half _ThatchBakeEnabled;
+            half _ThatchNormalStrength;
+            half _ThatchOcclusionStrength;
             half4 _BaseColor;
             half4 _ShadowTint;
             half _Saturation;
@@ -57,6 +66,9 @@ Shader "Custom/BuildingWoodMatte"
             float4 positionOS : POSITION;
             float3 normalOS : NORMAL;
             float2 uv : TEXCOORD0;
+            #if defined(_THATCH_BAKED)
+                float2 detailUV : TEXCOORD1;
+            #endif
             UNITY_VERTEX_INPUT_INSTANCE_ID
         };
 
@@ -68,6 +80,9 @@ Shader "Custom/BuildingWoodMatte"
             half3 normalWS : TEXCOORD2;
             half4 fogAndVertexLight : TEXCOORD3;
             float4 shadowCoord : TEXCOORD4;
+            #if defined(_THATCH_BAKED)
+                float2 detailUV : TEXCOORD5;
+            #endif
             UNITY_VERTEX_INPUT_INSTANCE_ID
             UNITY_VERTEX_OUTPUT_STEREO
         };
@@ -83,10 +98,31 @@ Shader "Custom/BuildingWoodMatte"
             output.positionWS = positions.positionWS;
             output.normalWS = TransformObjectToWorldNormal(input.normalOS);
             output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
+            #if defined(_THATCH_BAKED)
+                output.detailUV=input.detailUV;
+            #endif
             output.shadowCoord = GetShadowCoord(positions);
             output.fogAndVertexLight.x = ComputeFogFactor(positions.positionCS.z);
             output.fogAndVertexLight.yzw = VertexLighting(positions.positionWS, output.normalWS);
             return output;
+        }
+
+        half3 WoodSurfaceNormal(WoodVaryings input)
+        {
+            half3 n=NormalizeNormalPerPixel(input.normalWS);
+            #if defined(_THATCH_BAKED)
+                float2 u1=ddx(input.detailUV),u2=ddy(input.detailUV);
+                // Reused timber/fringe sample a flat corner with constant UV1.
+                if(dot(u1,u1)+dot(u2,u2)>1e-16)
+                {
+                    float2 xy=SAMPLE_TEXTURE2D(_ThatchDetailMap,sampler_ThatchDetailMap,input.detailUV).rg*2-1;
+                    float3 objectNormal=float3(xy,1-abs(xy.x)-abs(xy.y));
+                    float fold=saturate(-objectNormal.z);
+                    objectNormal.xy+=float2(objectNormal.x>=0?-fold:fold,objectNormal.y>=0?-fold:fold);
+                    return NormalizeNormalPerPixel(lerp(n,TransformObjectToWorldNormal(normalize(objectNormal)),_ThatchNormalStrength));
+                }
+            #endif
+            return n;
         }
 
         half3 WoodDiffuse(Light light, half3 normalWS)
@@ -122,6 +158,7 @@ Shader "Custom/BuildingWoodMatte"
             #pragma fragment WoodFragment
             #pragma multi_compile_instancing
             #pragma shader_feature_local_fragment _ALPHATEST_ON
+            #pragma shader_feature_local _THATCH_BAKED
             #pragma multi_compile_fog
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
@@ -144,7 +181,7 @@ Shader "Custom/BuildingWoodMatte"
                 albedo = saturate((albedo - 0.18h) * _Contrast + 0.18h);
                 albedo *= _BaseColor.rgb * _Brightness;
 
-                half3 normalWS = NormalizeNormalPerPixel(input.normalWS);
+                half3 normalWS = WoodSurfaceNormal(input);
                 // A thin weave sheet must receive light on the side facing the camera.
                 // Opaque wood keeps its original normal and back-face-culling behavior.
                 if (_Cull < 0.5h) normalWS *= IS_FRONT_VFACE(facing, 1.0h, -1.0h);
@@ -163,6 +200,9 @@ Shader "Custom/BuildingWoodMatte"
                 half caveAmbient=caveLighting.x;
                 mainLight.shadowAttenuation=TerrainCaveDirectionalShadow(mainLight.shadowAttenuation,GetMainLightShadowParams().x,caveLighting.y);
                 half3 lighting = max(SampleSH(normalWS), TreeNightAmbientFloor(_AmbientFloor).xxx) * ao.indirectAmbientOcclusion * caveAmbient;
+                #if defined(_THATCH_BAKED)
+                    lighting*=lerp(1.0h,SAMPLE_TEXTURE2D(_ThatchDetailMap,sampler_ThatchDetailMap,input.detailUV).b,_ThatchOcclusionStrength);
+                #endif
                 lighting += WoodDiffuse(mainLight, normalWS) * ao.directAmbientOcclusion;
 
                 #if defined(_ADDITIONAL_LIGHTS)
@@ -276,13 +316,14 @@ Shader "Custom/BuildingWoodMatte"
             #pragma fragment WoodDepthNormalsFragment
             #pragma multi_compile_instancing
             #pragma shader_feature_local_fragment _ALPHATEST_ON
+            #pragma shader_feature_local _THATCH_BAKED
             #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
             half4 WoodDepthNormalsFragment(WoodVaryings input, FRONT_FACE_TYPE facing : FRONT_FACE_SEMANTIC) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 WoodClipTexture(input.uv);
-                float3 normalWS = NormalizeNormalPerPixel(input.normalWS);
+                float3 normalWS = WoodSurfaceNormal(input);
                 if (_Cull < 0.5h) normalWS *= IS_FRONT_VFACE(facing, 1.0h, -1.0h);
                 #if defined(_GBUFFER_NORMALS_OCT)
                     float2 octNormal = PackNormalOctQuadEncode(normalWS);

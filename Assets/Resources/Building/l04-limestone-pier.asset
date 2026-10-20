@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: l04-limestone-pier
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.stone.l04-limestone-pier
+  displayName: L04 square limestone pier
+  kind: 3
+  wallPlacementMode: 0
+  sizeUnits: {x: 2, y: 12, z: 2}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: -0.25, y: 0, z: -0.25}
+  jointSockets: []
+  stackRiseUnits: 12
+  wallEndInsetUnits: 0
+  mesh: {fileID: 6953689373734671465, guid: 9ff6b506433d3d04fab2c4060eaafd48, type: 3}
+  preserveAuthoredMesh: 1
+  requiresFullBearing: 0
+  canGroundOnTerrain: 0
+  furnitureWallMounted: 0
+  furnitureSupportPoints: []
+  solidBoxes: []
+  wallOpenings: []
+  gableSlope: 0
+  flipVariant: {fileID: 0}
+  gableRoofSeamMesh: {fileID: 0}
+  uvVariants:
+  - {fileID: 6953689373734671465, guid: 9ff6b506433d3d04fab2c4060eaafd48, type: 3}
+  - {fileID: 8781460576436233680, guid: 17b8816509b7186499de48c56cd0c1f0, type: 3}
+  - {fileID: 6729532586201158524, guid: ddef2645269226347869176753b75dbb, type: 3}
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes: []
+  roofAttachment: 0
+  material: {fileID: 2100000, guid: d7461ce8964723d41a9e1b247aae46a9, type: 2}
+  authoringPrefab: {fileID: 2314345330326098722, guid: 1c3c0e40be23d8647a82a98df562512f, type: 3}
+  flamePrefab: {fileID: 0}
+  maxHealth: 100

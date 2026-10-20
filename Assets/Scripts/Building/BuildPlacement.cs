@@ -258,7 +258,9 @@ public static class BuildPlacement
             }
             else if (definition.kind == BuildPartKind.Floor && target.Definition.kind == BuildPartKind.Foundation && localNormal.y > .6f)
             {
-                origin = new Vector3(bounds.min.x, bounds.max.y - definition.LocalBounds.max.y, bounds.min.z);
+                // Authored masonry foundations keep their full solid mesh. Seat the
+                // floor underside on top; prototype foundations still resolve a finish cap.
+                origin = new Vector3(bounds.min.x, bounds.max.y - (target.Definition.preserveAuthoredMesh ? definition.LocalBounds.min.y : definition.LocalBounds.max.y), bounds.min.z);
                 preview.YawStep = BuildGeometry.Turn(contextTurn);
             }
             else if (target.Definition.kind == BuildPartKind.Wall || target.Definition.kind == BuildPartKind.Corner)

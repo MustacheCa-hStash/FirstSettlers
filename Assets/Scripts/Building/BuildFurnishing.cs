@@ -23,7 +23,7 @@ public static class BuildFurnishing
             Vector3 localNormal=Quaternion.Inverse(BuildGeometry.Rotation(frame.YawStep))*normal;
             if(d.furnitureWallMounted)
             {
-                p.Hint=d.flamePrefab!=null?"Torch on wall face":"Shelf on wall face";
+                p.Hint=d.flamePrefab!=null?"Torch on wall face":d.contentId=="build.wood.l35-braced-door-canopy"?"Canopy on wall face":"Shelf on wall face";
                 p.InvalidAttachment=target.Definition.kind is not (BuildPartKind.Wall or BuildPartKind.Corner) || Mathf.Abs(localNormal.y)>.25f;
                 p.YawStep=BuildGeometry.Turn(BuildPlacement.FacingYaw(localNormal,2)+turn);
                 // Preserve the actual wall face, including 0.125 m timber half-thickness.
@@ -90,6 +90,12 @@ public static class BuildFurnishing
                     }
                     else if(Mathf.Abs(local.y-box.max.y)<.012f && local.x>=box.min.x-.002f && local.x<=box.max.x+.002f &&
                         local.z>=box.min.z-.002f && local.z<=box.max.z+.002f){found=true;break;}
+                }
+                if(!found && p.Definition.furnitureWallMounted)
+                {
+                    Vector3 inward=inverse*(rotation*Vector3.back);
+                    foreach(var volume in states[other.Id].volumes)
+                        if(BuildOccupancy.Contains(volume,local+inward*.008f) && !BuildOccupancy.Contains(volume,local-inward*.008f)){found=true;break;}
                 }
                 if(found)break;
             }

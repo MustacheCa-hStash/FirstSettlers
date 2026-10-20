@@ -1,5 +1,32 @@
 # FirstSettlers Work Notes
 
+## October 17: timber and infill L25/L27/L28/L31/L33/L35
+
+Added six catalog pieces with editable Blender sources, native-scale FBXs, one shared trim material, physical collision hulls and menu thumbnails. L28 keeps a clear 1 × 1 m window without shutters; L31 flips between two triangular slopes. L33 has solid overlapping shingle courses, deep eaves and an exposed timber underside. L35 mounts above a doorway, checking every rear contact against supported wall or gable solids. The final isolated run passed 41,146 new checks and 36,641 existing building regression checks, including 192 stair walks. Use **B → Walls/Roofs** and restart Play mode after import. See the [kit guide, Unity previews and trim sheet](Documentation/TIMBER_INFILL_KIT.md).
+
+## October 17: L04–L09 limestone components
+
+Added the limestone pier, paving, strip footing, limewashed wall, plinth and square doorway, with editable Blender sources, eighteen UV-varied FBXs, shared baked maps, prefabs and menu icons. Paving needs full underside bearing; authored footings retain their geometry and seat paving above their top. The 1.25 × 2.25 m doorway remains clear in mesh and compound collision. Validation passed 3,404 new checks plus 1,400 L01–L03 and 3,544 ordinary-stone regression checks, including sixteen doorway walks and eight terrain-footing cases. Restart Play mode after import. See the [L04–L09 guide and preview](Documentation/LIMESTONE_L04_L09.md).
+
+## October 17: L01–L03 limestone walls
+
+Added coursed, dressed and narrow limestone walls under **B → Walls**, with editable Blender stones, nine UV-varied FBXs, shared baked colour/AO and normal maps, prefabs and rendered icons. Full walls are 4 × 3 × 0.5 m; the narrow wall is 2 × 3 × 0.5 m with matching block scale. Each placed wall uses 12 triangles. The isolated run passed 1,424 limestone checks and 3,538 existing stone checks. Restart Play mode after import. See the [implementation guide and rendered preview](Documentation/LIMESTONE_BUILD_KIT.md).
+
+## October 17: layered thatch roof
+
+The detailed roof is now baked to **1,180 triangles**, a 72.5% reduction, retaining
+the course shapes and fringe. A unique UV1 normal/AO bake supplies the lost relief;
+the detailed Blender source remains available. Matched Unity silhouette agreement
+is 99.3% in the comparison view. See [baking and validation](ArtReferences/ThatchRoof/Redesign/Baked/README.md).
+
+Replaced the flat covering with a detailed first pass: four overlapping courses,
+64 rounded bundles, 192 modeled straw tips and lifted cutout fringe, with warm
+new straw artwork. The 4,286-triangle panel keeps its existing structural module,
+material batching and two thin colliders; uphill visuals now clip at the seam.
+An independent editable Blender source and renders are in the
+[roof redesign guide](ArtReferences/ThatchRoof/Redesign/README.md), including direct
+measurements of Valheim's locally installed roof mesh and a later baking plan.
+
 ## October 16: adaptive surface lighting and mounted torch
 
 Added bounded local flame lighting with cached surface irradiance, spatial light lists, separate moving-occluder shadows, local invalidation and queued refreshes. The revised torch has a 12 m cutoff, wider useful illumination, up to 64 illuminating sources and effects eligible within 96 m. Surface caching was implemented and benchmarked, and remains opt-in because it did not consistently outperform spatial direct lighting. Moving/cheap cases retain live lighting. The grazing shadow-band comparison now uses actual texel centres. **B → Lighting → Mounted torch** places the new fibre-bound torch/wooden holder; **T** equips the development carried variant. A shared 36-frame flame atlas supplies visible fire and mild matching flicker. Restart Play mode after import.

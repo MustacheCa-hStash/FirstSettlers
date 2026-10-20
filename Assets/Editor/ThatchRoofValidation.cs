@@ -12,6 +12,71 @@ public static class ThatchRoofValidation
     private static int checks;
     private static void Check(bool value,string message) { checks++;if(!value)throw new InvalidOperationException(message); }
     private static void Near(Vector3 a,Vector3 b,string message)=>Check((a-b).sqrMagnitude<.000001f,message+" "+a+" != "+b);
+    // Current full-span kit: retain installed catalog order and validate the
+    // redesigned visual independently of the historical eight-option fixture.
+    public static void RunLayeredBatch()
+    {
+        try
+        {
+            ThatchRoofSetup.Rebuild();
+            var catalog=AssetDatabase.LoadAssetAtPath<BuildCatalog>(BuildingPrototypeSetup.CatalogPath);
+            var roof=catalog.Find(ThatchRoofSetup.ContentId);
+            Near(roof.LocalBounds.size,new Vector3(4,2,2),"Structural dimensions");
+            bool baked=roof.material.IsKeywordEnabled("_THATCH_BAKED");
+            Check(baked?roof.mesh.triangles.Length/3<1500:roof.mesh.triangles.Length/3>=4000,"Roof triangle budget");
+            if(baked)
+            {
+                Check(roof.mesh.uv2.Length==roof.mesh.vertexCount && roof.roofContinuationMesh.uv2.Length==roof.roofContinuationMesh.vertexCount,"Detail UVs lost at import/seam");
+                var detail=roof.material.GetTexture("_ThatchDetailMap");Check(detail!=null && detail.width==1024,"Packed bake missing");
+                Check(!((TextureImporter)AssetImporter.GetAtPath(ThatchRoofSetup.DetailPath)).sRGBTexture,"Normal/AO sampled as colour");
+                foreach(var mesh in new[]{roof.mesh,roof.roofContinuationMesh})foreach(var uv in mesh.uv2)
+                    Check(uv.x>=0 && uv.x<=1 && uv.y>=0 && uv.y<=1,"Detail UV escaped bake");
+            }
+            Check(roof.mesh.subMeshCount==1 && roof.material.enableInstancing,"Shared instanced atlas");
+            Check(roof.material.IsKeywordEnabled("_ALPHATEST_ON") && roof.material.GetFloat("_Cull")==0,"Two-sided fringe cutout");
+            Check(roof.authoringPrefab.GetComponentsInChildren<MeshCollider>().Length==2,"Thin roof collision");
+            Check(roof.occupiedVolumes.Length==2,"Attic occupancy changed");
+            Check(roof.roofContinuationMesh.bounds.min.z>=-.00001f,"Continuation overhang crosses seam");
+            foreach(var mesh in new[]{roof.mesh,roof.roofContinuationMesh})
+            {
+                var v=mesh.vertices;var uv=mesh.uv;var n=mesh.normals;var t=mesh.triangles;
+                for(int i=0;i<v.Length;i++)
+                {
+                    Check(Mathf.Abs(n[i].magnitude-1)<.002f,"Invalid roof normal");
+                    Check(uv[i].x>=0 && uv[i].x<=1 && uv[i].y>=0 && uv[i].y<=1,"UV escaped atlas");
+                }
+                for(int i=0;i<t.Length;i+=3)
+                {
+                    Check(Vector3.Cross(v[t[i+1]]-v[t[i]],v[t[i+2]]-v[t[i]]).sqrMagnitude>1e-12f,"Collapsed seam geometry");
+                    var a=uv[t[i]];var b=uv[t[i+1]];var c=uv[t[i+2]];
+                    Check(Mathf.Abs((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x))>1e-11f,"Collapsed seam UV");
+                }
+            }
+            for(int yaw=0;yaw<8;yaw++)
+            {
+                var session=new BuildSession();var frame=session.CreateFrame(new Vector3(0,3,0),yaw);
+                var a=session.Add(roof,frame,Vector3Int.zero,0,false);
+                var b=session.Add(roof,frame,new Vector3Int(0,8,8),0,false);
+                var side=session.Add(roof,frame,new Vector3Int(16,0,0),0,false);
+                var opposite=session.Add(roof,frame,new Vector3Int(16,0,16),4,false);
+                Check(BuildRoof.VisualMesh(b,session)==roof.roofContinuationMesh,"Uphill visual not selected");
+                foreach(var other in new[]{b,side,opposite})
+                {
+                    Check(BuildRoof.Connects(roof,a.Origin,a.WorldYawStep,roof,other.Origin,other.WorldYawStep),"Roof socket disconnected");
+                    Check(!BuildOccupancy.Overlaps(roof,a.Origin,a.WorldYawStep,roof,other.Origin,other.WorldYawStep),"Roof solids overlap");
+                }
+                session.Remove(a.Id);
+                Check(BuildRoof.VisualMesh(b,session)==roof.mesh,"Exposed eave not restored");
+            }
+            ValidateSurfaceUVs(roof,true);
+            Render(catalog);BuildStoneUiAuthoring.BakeThumbnail(roof);AssetDatabase.SaveAssets();
+            Debug.Log("LAYERED THATCH PASS: "+checks+" checks; detailed imported geometry, UVs, clipped joins, 8 rotations, ridge/side/uphill sockets, two colliders, cutouts and instanced rendering.");
+            File.WriteAllText(".utmp/building-prototype/layered-roof-validation.json",JsonUtility.ToJson(new LayeredReport{checks=checks,triangles=roof.mesh.triangles.Length/3,joinedTriangles=roof.roofContinuationMesh.triangles.Length/3},true));
+            BuildingShadowValidation.RunThatchBatch();
+        }
+        catch(Exception ex){Debug.LogException(ex);EditorApplication.Exit(1);}
+    }
+    [Serializable]private class LayeredReport{public int checks,triangles,joinedTriangles;}
     public static void RunBatch()
     {
         try
@@ -210,14 +275,14 @@ public static class ThatchRoofValidation
             Object.DestroyImmediate(host);
         }
     }
-    private static void ValidateSurfaceUVs(BuildDefinition d)
+    private static void ValidateSurfaceUVs(BuildDefinition d,bool fineStrands=false)
     {
         var v=d.mesh.vertices;var uv=d.mesh.uv;var t=d.mesh.triangles;
         for(int i=0;i<t.Length;i+=3)
         {
             Vector2 a=uv[t[i]],b=uv[t[i+1]],c=uv[t[i+2]];
-            Check(Mathf.Abs((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x))>.000001f,"Collapsed face UVs");
-            Check(Vector3.Cross(v[t[i+1]]-v[t[i]],v[t[i+2]]-v[t[i]]).sqrMagnitude>.0000001f,"Degenerate geometry");
+            Check(Mathf.Abs((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x))>(fineStrands?1e-11f:.000001f),"Collapsed face UVs");
+            Check(Vector3.Cross(v[t[i+1]]-v[t[i]],v[t[i+2]]-v[t[i]]).sqrMagnitude>(fineStrands?1e-12f:.0000001f),"Degenerate geometry");
         }
         // Rays from all six directions must hit the opaque, closed thatch shell.
         var obj=new GameObject("Closed thatch face test");var collider=obj.AddComponent<MeshCollider>();collider.sharedMesh=d.mesh;
@@ -240,23 +305,67 @@ public static class ThatchRoofValidation
         var lightObject=new GameObject("Roof sun");var light=lightObject.AddComponent<Light>();light.type=LightType.Directional;light.intensity=1.5f;light.shadows=LightShadows.Soft;lightObject.transform.rotation=Quaternion.Euler(45,-35,0);
         var target=new RenderTexture(1200,800,24,RenderTextureFormat.ARGB32);target.Create();
         var oldPipeline=GraphicsSettings.defaultRenderPipeline;var oldQuality=QualitySettings.renderPipeline;var previous=RenderTexture.active;
+        bool oldAsync=ShaderUtil.allowAsyncCompilation;ShaderUtil.allowAsyncCompilation=false;
         Action<ScriptableRenderContext,Camera> submit=null;
         try
         {
             var pipeline=AssetDatabase.LoadAssetAtPath<RenderPipelineAsset>("Assets/Settings/PC_RPAsset.asset");GraphicsSettings.defaultRenderPipeline=pipeline;QualitySettings.renderPipeline=pipeline;
+            for(int pass=0;pass<l.material.passCount;pass++)ShaderUtil.CompilePass(l.material,pass,true);
+            Check(!ShaderUtil.ShaderHasError(l.material.shader),"Baked roof shader failed to compile");
             camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=new Color(.16f,.19f,.2f);camera.orthographic=true;camera.aspect=1.5f;camera.farClipPlane=4000;
             var renderer=new BuildRenderer(session);
             submit=(_,c)=>{if(c==camera)renderer.Draw(camera,3000,140);};RenderPipelineManager.beginCameraRendering+=submit;
-            void Capture(string name,Vector3 position,Vector3 look,float scale)
+            Color32[] Capture(string name,Vector3 position,Vector3 look,float scale)
             {
                 camera.transform.position=position;camera.transform.LookAt(look);camera.orthographicSize=scale;
                 RenderPipeline.SubmitRenderRequest(camera,new UniversalRenderPipeline.SingleCameraRequest{destination=target});
                 RenderPipeline.SubmitRenderRequest(camera,new UniversalRenderPipeline.SingleCameraRequest{destination=target});
                 RenderTexture.active=target;var pixels=new Texture2D(1200,800,TextureFormat.RGBA32,false);pixels.ReadPixels(new Rect(0,0,1200,800),0,0);pixels.Apply();
-                File.WriteAllBytes(".utmp/building-prototype/"+name+".png",pixels.EncodeToPNG());Object.DestroyImmediate(pixels);
+                var result=pixels.GetPixels32();File.WriteAllBytes(".utmp/building-prototype/"+name+".png",pixels.EncodeToPNG());Object.DestroyImmediate(pixels);
                 Check(renderer.DrawCalls>0,"Actual roof instancing absent");
+                return result;
             }
             Capture("roof-4x8-instanced",new Vector3(12,10,-10),new Vector3(4,3.6f,2),5.5f);
+            if(l.material.IsKeywordEnabled("_THATCH_BAKED"))
+            {
+                foreach(var id in new List<ulong>(session.Pieces.Keys))session.Remove(id);
+                session.Add(l,frame,Vector3Int.zero,0,false);
+                var baked=Capture("roof-baked-comparison",new Vector3(6,5,-6),new Vector3(2,1,1),2.8f);
+                var originalMesh=l.mesh;var originalMaterial=l.material;var control=new Material(originalMaterial);control.DisableKeyword("_THATCH_BAKED");
+                try
+                {
+                    l.material=control;
+                    foreach(var id in new List<ulong>(session.Pieces.Keys))session.Remove(id);
+                    session.Add(l,frame,Vector3Int.zero,0,false);
+                    var flat=Capture("roof-flat-control",new Vector3(6,5,-6),new Vector3(2,1,1),2.8f);
+                    int changed=0;for(int i=0;i<baked.Length;i++)if(Mathf.Abs(baked[i].r-flat[i].r)+Mathf.Abs(baked[i].g-flat[i].g)+Mathf.Abs(baked[i].b-flat[i].b)>6)changed++;
+                    Check(changed>1000,"Bake has no visible effect in the actual shader");
+                    // Rebuild the session after changing its shared material.
+                    foreach(var id in new List<ulong>(session.Pieces.Keys))session.Remove(id);
+                    string path=ThatchRoofSetup.ModelFolder+"/DetailedReference.fbx";
+                    var importer=(ModelImporter)AssetImporter.GetAtPath(path);
+                    if(importer!=null)
+                    {
+                        importer.bakeAxisConversion=true;importer.materialImportMode=ModelImporterMaterialImportMode.None;importer.SaveAndReimport();
+                        var reference=WattleWallSetup.BakeStaticMesh(AssetDatabase.LoadAssetAtPath<GameObject>(path),new Vector3(4,2,2),"Detailed roof reference",out _,true);
+                        try
+                        {
+                            l.mesh=reference;session.Add(l,frame,Vector3Int.zero,0,false);
+                            var detailed=Capture("roof-detailed-comparison",new Vector3(6,5,-6),new Vector3(2,1,1),2.8f);
+                            Color32 background=detailed[0];int intersection=0,union=0;
+                            bool Covered(Color32 c)=>Mathf.Abs(c.r-background.r)+Mathf.Abs(c.g-background.g)+Mathf.Abs(c.b-background.b)>6;
+                            for(int i=0;i<detailed.Length;i++){bool a=Covered(detailed[i]),b=Covered(baked[i]);if(a&&b)intersection++;if(a||b)union++;}
+                            float agreement=(float)intersection/union;Check(agreement>.95f,"Reduced silhouette differs substantially from detailed reference");
+                            File.WriteAllText(".utmp/building-prototype/roof-bake-comparison.json",JsonUtility.ToJson(new BakeComparison{changedPixels=changed,silhouetteIntersectionOverUnion=agreement},true));
+                        }
+                        finally{l.mesh=originalMesh;Object.DestroyImmediate(reference);}
+                    }
+                }
+                finally{l.material=originalMaterial;Object.DestroyImmediate(control);}
+                foreach(var id in new List<ulong>(session.Pieces.Keys))session.Remove(id);
+                session.Add(l,frame,new Vector3Int(0,12,0),0,false);session.Add(l,frame,new Vector3Int(16,12,0),0,false);
+                session.Add(l,frame,new Vector3Int(16,12,16),4,false);session.Add(l,frame,new Vector3Int(32,12,16),4,false);
+            }
             Capture("roof-join-close",new Vector3(6,6,-2),new Vector3(4,4,1),1.2f);
             Capture("roof-underside",new Vector3(4,2.5f,-2),new Vector3(4,4,2),3.2f);
             Capture("roof-ridge",new Vector3(12,7,2),new Vector3(4,4.7f,2),2.8f);
@@ -272,7 +381,9 @@ public static class ThatchRoofValidation
         {
             if(submit!=null)RenderPipelineManager.beginCameraRendering-=submit;
             GraphicsSettings.defaultRenderPipeline=oldPipeline;QualitySettings.renderPipeline=oldQuality;RenderTexture.active=previous;
+            ShaderUtil.allowAsyncCompilation=oldAsync;
             target.Release();Object.DestroyImmediate(target);Object.DestroyImmediate(root);Object.DestroyImmediate(cameraObject);Object.DestroyImmediate(lightObject);
         }
     }
+    [Serializable]private class BakeComparison{public int changedPixels;public float silhouetteIntersectionOverUnion;}
 }

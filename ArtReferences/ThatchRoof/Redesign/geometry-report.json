@@ -1,0 +1,22 @@
+{
+  "bundles": 64,
+  "straw_tips": 192,
+  "fringe_cards": 64,
+  "triangles": 4286,
+  "closed_opaque_components": true,
+  "fringe_boundary_edges": 640,
+  "nondegenerate_triangles_and_uvs": true,
+  "material_slots": 1,
+  "bounds_blender": [
+    [
+      0.0,
+      -0.47603490948677063,
+      -0.13703490793704987
+    ],
+    [
+      4.0,
+      2.0,
+      2.4977500438690186
+    ]
+  ]
+}

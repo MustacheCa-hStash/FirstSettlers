@@ -1486,7 +1486,7 @@ MonoBehaviour:
     receiveTreeShadows: 1
   showTreeExclusionRadiusGizmos: 0
   simulateTreeSeason: 1
-  treeSeasonAutumnAmount: 0.641
+  treeSeasonAutumnAmount: 0
   sampleScale: 600
   mountainWidth: 1.3
   mountainSnowBlendGamma: 0.633

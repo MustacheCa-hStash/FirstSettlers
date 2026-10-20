@@ -12,6 +12,19 @@ public sealed class BuildConvexVolume
 
 public static class BuildOccupancy
 {
+    // Point containment in the authored convex half-spaces; does not substitute
+    // the enclosing box for a triangular gable or a thin sloped roof.
+    public static bool Contains(BuildConvexVolume volume,Vector3 point)
+    {
+        if(volume?.vertices==null || volume.vertices.Length==0 || volume.faceAxes==null || volume.faceAxes.Length==0)return false;
+        foreach(var axis in volume.faceAxes)
+        {
+            float min=float.PositiveInfinity,max=float.NegativeInfinity;
+            foreach(var vertex in volume.vertices){float p=Vector3.Dot(vertex,axis);min=Mathf.Min(min,p);max=Mathf.Max(max,p);}
+            float value=Vector3.Dot(point,axis);if(value<min-.00001f || value>max+.00001f)return false;
+        }
+        return true;
+    }
     public static bool Custom(BuildDefinition d) => d.occupiedVolumes != null && d.occupiedVolumes.Length > 0;
     public static Bounds Bounds(BuildDefinition d)
     {

@@ -66,6 +66,9 @@ public static class BuildingPrototypeSetup
         if(File.Exists(StairExtensionSetup.W22Model))presets.AddRange(StairExtensionSetup.Create());
         if(File.Exists(SquareInfillSetup.Model))presets.Add(SquareInfillSetup.Create(wall));
         if(StoneKitSetup.Available)presets.AddRange(StoneKitSetup.Create());
+        if(LimestoneKitSetup.Available)presets.AddRange(LimestoneKitSetup.Create());
+        if(LimestoneKitExtensionSetup.Available)presets.AddRange(LimestoneKitExtensionSetup.Create());
+        if(TimberInfillKitSetup.Available)presets.AddRange(TimberInfillKitSetup.Create());
         if(FurnitureKitSetup.Available)presets.AddRange(FurnitureKitSetup.Create());
         var torch=AssetDatabase.LoadAssetAtPath<BuildDefinition>(Folder+"/wall-torch.asset");
         if(torch!=null)presets.Add(torch);

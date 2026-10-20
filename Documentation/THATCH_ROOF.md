@@ -1,5 +1,26 @@
 # Single thatched roof
 
+## October 17: layered redesign (current)
+
+The installed runtime model is now baked to **1,180 triangles** (1,164 at an uphill
+join), with an optional 1024² object-normal/AO detail map on UV1. The detailed
+source is preserved. See the [bake and comparison guide](../ArtReferences/ThatchRoof/Redesign/Baked/README.md).
+
+The detailed source uses a closed core, four courses of rounded bundles, modeled straw
+tips and lifted alpha-cutout fringe: **4,286 triangles** per detailed panel.
+It retains the 4 m × 2 m × 2 m structural module and two thin collision volumes.
+The repository now contains an independent editable Blender source. The
+[redesign guide](../ArtReferences/ThatchRoof/Redesign/README.md) records the
+geometry, direct inspection of Valheim's actual mesh/materials, source artwork,
+rebuild commands, captures and intended later baking/reduction workflow.
+
+Run `./Tools/ValidateLayeredThatchRoof.ps1 -Install` for the current full-span
+building kit. The sections below describe the earlier flat roof and its repair;
+their 62-triangle count, exact visual bounds and flat-prism construction are
+historical. The original `BuildComponents.blend` was retained.
+
+## Previous flat roof (historical)
+
 Floor/framing integration now seats roofs at the 3 m storey bearing level.
 See [current floor/framing behavior](FLOOR_FRAMING.md). Source roof shape and UVs remain unchanged.
 

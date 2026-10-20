@@ -34,8 +34,11 @@ public static class StoneKitValidation
     }
     private static void Assets(BuildCatalog catalog)
     {
-        Check(catalog.presets.Length==(catalog.Find(SquareInfillSetup.Id)!=null?13:12)+StoneKitSetup.Ids.Length+
-            (catalog.Find("build.furniture.f01-three-leg-stool")!=null?6:0)+(catalog.Find("build.lighting.wall-torch")!=null?1:0),"Expected existing wood, stone, optional furniture and lighting menu entries");
+        int limestoneCount=0;foreach(var id in LimestoneKitSetup.Ids)if(catalog.Find(id)!=null)limestoneCount++;
+        foreach(var id in LimestoneKitExtensionSetup.Ids)if(catalog.Find(id)!=null)limestoneCount++;
+        int timberCount=0;foreach(var id in TimberInfillKitSetup.Ids)if(catalog.Find(id)!=null)timberCount++;
+        Check(catalog.presets.Length==(catalog.Find(SquareInfillSetup.Id)!=null?13:12)+StoneKitSetup.Ids.Length+limestoneCount+
+            timberCount+(catalog.Find("build.furniture.f01-three-leg-stool")!=null?6:0)+(catalog.Find("build.lighting.wall-torch")!=null?1:0),"Expected existing wood, stone, timber infill, optional furniture and lighting menu entries");
         var ids=new HashSet<string>();foreach(var d in catalog.presets)Check(ids.Add(d.contentId),"Duplicate catalog ID");
         foreach(var id in StoneKitSetup.Ids)
         {

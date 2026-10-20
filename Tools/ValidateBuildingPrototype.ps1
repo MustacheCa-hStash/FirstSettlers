@@ -65,6 +65,9 @@ try {
     $buildingOwned += @(Get-Item 'Assets/Scripts/PlayerMovement/SmoothWalkSurface.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/BuildStoneUiAuthoring.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/StoneKitSetup.cs','Assets/Editor/StoneKitValidation.cs')
+    $buildingOwned += @(Get-Item 'Assets/Editor/LimestoneKitSetup.cs','Assets/Editor/LimestoneKitValidation.cs')
+    $buildingOwned += @(Get-Item 'Assets/Editor/LimestoneKitExtensionSetup.cs','Assets/Editor/LimestoneKitExtensionValidation.cs')
+    $buildingOwned += @(Get-Item 'Assets/Editor/TimberInfillKitSetup.cs','Assets/Editor/TimberInfillKitValidation.cs')
     $buildingOwned += @(Get-Item 'Assets/Editor/BakedStoneWallSetup.cs','Assets/Editor/BakedStoneWallValidation.cs','Assets/Editor/BakedStoneKitSetup.cs','Assets/Editor/BakedStoneKitValidation.cs','Assets/Editor/BakedSplitPlankWallSetup.cs','Assets/Editor/BakedSplitPlankWallValidation.cs','Assets/Editor/BakedFurnishingsSetup.cs','Assets/Editor/BakedFurnishingsValidation.cs','Assets/Shaders/BakedStoneWallMatte.shader')
     $buildingOwned += @(Get-Item 'Assets/Shaders/TerrainSkyAccess.hlsl')
     $buildingOwned += @(Get-Item 'Assets/Editor/WoodSurfaceSetup.cs')
@@ -116,9 +119,16 @@ try {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
     }
     Copy-Item -LiteralPath 'Assets/Editor/BuildStoneUiAuthoring.cs','Assets/Editor/BuildStoneUiAuthoring.cs.meta' -Destination "$buildingProject/Assets/Editor" -Force
+    foreach ($buildingName in 'LimestoneKitSetup','LimestoneKitValidation','LimestoneKitExtensionSetup','LimestoneKitExtensionValidation','TimberInfillKitSetup','TimberInfillKitValidation') {
+        Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
+    }
     if (Test-Path -LiteralPath 'ArtReferences/IronAgeFurniture/Models/furniture-models.json') {
         New-Item -ItemType Directory -Path "$buildingProject/ArtReferences/IronAgeFurniture/Models" -Force | Out-Null
         Copy-Item -LiteralPath 'ArtReferences/IronAgeFurniture/Models/furniture-models.json' -Destination "$buildingProject/ArtReferences/IronAgeFurniture/Models" -Force
+    }
+    if (Test-Path -LiteralPath 'ArtReferences/LimestoneBuildKit/TimberInfill/timber-infill-models.json') {
+        New-Item -ItemType Directory -Path "$buildingProject/ArtReferences/LimestoneBuildKit/TimberInfill" -Force | Out-Null
+        Copy-Item -LiteralPath 'ArtReferences/LimestoneBuildKit/TimberInfill/timber-infill-models.json' -Destination "$buildingProject/ArtReferences/LimestoneBuildKit/TimberInfill" -Force
     }
     Copy-Item -LiteralPath 'Assets/Editor/InventoryUiValidation.cs','Assets/Editor/InventoryUiValidation.cs.meta' -Destination "$buildingProject/Assets/Editor" -Force
     foreach ($buildingName in 'ProjectVersion.txt','TagManager.asset','ProjectSettings.asset') {

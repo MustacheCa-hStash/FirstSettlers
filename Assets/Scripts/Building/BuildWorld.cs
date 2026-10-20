@@ -132,7 +132,7 @@ public sealed class BuildWorld : MonoBehaviour
         var supported=cached?previewSupported:BuildSupportState.Resolve(all,states,p=>Session.NeighboursFor(p,candidate));
         previewStates=states;previewSupported=supported;previewRevision=Session.Revision;previewDefinition=preview.Definition;previewOrigin=preview.Origin;previewYaw=preview.WorldYaw;previewGrounded=preview.Grounded;
         if(!supported.Contains(candidate.Id)){Reject(ref preview,BuildPlacementFailure.Support,preview.Definition.kind==BuildPartKind.Furniture?
-            (preview.Definition.furnitureWallMounted?"Every shelf mounting point needs a supported wall face":"Every furniture foot needs ground or supported flooring"):
+            (preview.Definition.furnitureWallMounted?"Every mounting point needs a supported wall face":"Every furniture foot needs ground or supported flooring"):
             preview.Definition.requiresFullBearing?"Needs foundation coverage beneath the complete paving tile":"Needs a grounded foundation or supported piece");return;}
         foreach(var piece in Session.Pieces.Values)if(piece.Supported && !supported.Contains(piece.Id))
         {Reject(ref preview,BuildPlacementFailure.Support,"Would remove support from an existing piece",piece);return;}

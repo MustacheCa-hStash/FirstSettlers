@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: l06-limestone-footing
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.stone.l06-limestone-footing
+  displayName: L06 limestone strip footing
+  kind: 2
+  wallPlacementMode: 0
+  sizeUnits: {x: 16, y: 2, z: 4}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: 0, y: -0.5, z: -0.5}
+  jointSockets: []
+  stackRiseUnits: 2
+  wallEndInsetUnits: 0
+  mesh: {fileID: -4835875133067481010, guid: 82836f874c6c22e48adfa698ecfb1140, type: 3}
+  preserveAuthoredMesh: 1
+  requiresFullBearing: 0
+  canGroundOnTerrain: 0
+  furnitureWallMounted: 0
+  furnitureSupportPoints: []
+  solidBoxes: []
+  wallOpenings: []
+  gableSlope: 0
+  flipVariant: {fileID: 0}
+  gableRoofSeamMesh: {fileID: 0}
+  uvVariants:
+  - {fileID: -4835875133067481010, guid: 82836f874c6c22e48adfa698ecfb1140, type: 3}
+  - {fileID: 1379276892987280687, guid: 95c876868e4200c478dce66c47339fd7, type: 3}
+  - {fileID: -2385919543137684998, guid: 50d67add645b8d8428cbb8182fde3198, type: 3}
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes: []
+  roofAttachment: 0
+  material: {fileID: 2100000, guid: d7461ce8964723d41a9e1b247aae46a9, type: 2}
+  authoringPrefab: {fileID: 1090672654058600928, guid: e896ae90063ce584f8f3e4d6b0d96c71, type: 3}
+  flamePrefab: {fileID: 0}
+  maxHealth: 100

@@ -110,7 +110,7 @@ public static class WattleWallSetup
         if (filters.Length == 0 || model.GetComponentsInChildren<SkinnedMeshRenderer>(true).Length != 0)
             throw new InvalidOperationException("Wattle must contain static mesh geometry.");
         var vertices = new List<Vector3>(); var normals = new List<Vector3>();
-        var uvs = new List<Vector2>(); var indices = new List<int>();
+        var uvs = new List<Vector2>(); var detailUvs = new List<Vector2>(); bool hasDetailUvs=false; var indices = new List<int>();
         foreach (var filter in filters)
         {
             var source = filter.sharedMesh;
@@ -125,13 +125,15 @@ public static class WattleWallSetup
             using var positions = new NativeArray<Vector3>(data.vertexCount, Allocator.Temp);
             using var ns = new NativeArray<Vector3>(data.vertexCount, Allocator.Temp);
             using var uv = new NativeArray<Vector2>(data.vertexCount, Allocator.Temp);
+            using var uv1 = new NativeArray<Vector2>(data.vertexCount, Allocator.Temp);
             data.GetVertices(positions); data.GetNormals(ns); data.GetUVs(0, uv);
+            if(data.HasVertexAttribute(VertexAttribute.TexCoord1)){data.GetUVs(1,uv1);hasDetailUvs=true;}
             int offset = vertices.Count;
             var normalTransform = transform.inverse.transpose;
             for (int i = 0; i < data.vertexCount; ++i)
             {
                 vertices.Add(transform.MultiplyPoint3x4(positions[i]));
-                normals.Add(normalTransform.MultiplyVector(ns[i]).normalized); uvs.Add(uv[i]);
+                normals.Add(normalTransform.MultiplyVector(ns[i]).normalized); uvs.Add(uv[i]);detailUvs.Add(uv1[i]);
             }
             for (int submesh = 0; submesh < data.subMeshCount; ++submesh)
             {
@@ -168,6 +170,7 @@ public static class WattleWallSetup
         }
         var mesh = new Mesh { name = meshName + " (baked hierarchy, UV0 preserved)", indexFormat = vertices.Count > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16 };
         mesh.SetVertices(vertices); mesh.SetNormals(normals); mesh.SetUVs(0, uvs); mesh.SetTriangles(indices, 0); mesh.RecalculateBounds();
+        if(hasDetailUvs)mesh.SetUVs(1,detailUvs);
         report.AppendLine($"Runtime: vertices={mesh.vertexCount}, triangles={indices.Count / 3}, submeshes={mesh.subMeshCount}, min={mesh.bounds.min:F6}, max={mesh.bounds.max:F6}, UV0={uvs.Count}");
         inspection = report.ToString();
         return mesh;

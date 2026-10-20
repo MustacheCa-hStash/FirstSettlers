@@ -1,0 +1,220 @@
+{
+  "parts": [
+    {
+      "tag": "L25",
+      "slug": "l25-framed-daub-wall",
+      "name": "L25 framed daub wall",
+      "size": [
+        4,
+        3,
+        0.25
+      ],
+      "minimum": [
+        0,
+        0,
+        -0.125
+      ],
+      "file": "L25.fbx",
+      "triangles": 440,
+      "members": 10,
+      "visual_minimum": [
+        0.0,
+        0.0,
+        -0.125
+      ],
+      "visual_maximum": [
+        4.0,
+        3.0,
+        0.125
+      ]
+    },
+    {
+      "tag": "L27",
+      "slug": "l27-framed-doorway",
+      "name": "L27 framed doorway",
+      "size": [
+        4,
+        3,
+        0.25
+      ],
+      "minimum": [
+        0,
+        0,
+        -0.125
+      ],
+      "opening": [
+        1.375,
+        0,
+        2.625,
+        2.25
+      ],
+      "file": "L27.fbx",
+      "triangles": 704,
+      "members": 16,
+      "visual_minimum": [
+        0.0,
+        0.0,
+        -0.125
+      ],
+      "visual_maximum": [
+        4.0,
+        3.0,
+        0.125
+      ]
+    },
+    {
+      "tag": "L28",
+      "slug": "l28-open-window-wall",
+      "name": "L28 open window wall",
+      "size": [
+        4,
+        3,
+        0.25
+      ],
+      "minimum": [
+        0,
+        0,
+        -0.125
+      ],
+      "opening": [
+        1.5,
+        1,
+        2.5,
+        2
+      ],
+      "file": "L28.fbx",
+      "triangles": 748,
+      "members": 17,
+      "visual_minimum": [
+        0.0,
+        0.0,
+        -0.125
+      ],
+      "visual_maximum": [
+        4.0,
+        3.0,
+        0.125
+      ]
+    },
+    {
+      "tag": "L31",
+      "slug": "l31-framed-gable-rising",
+      "name": "L31 framed half-gable \u00b7 rising",
+      "size": [
+        2,
+        2,
+        0.25
+      ],
+      "minimum": [
+        0,
+        0,
+        -0.125
+      ],
+      "slope": "rising",
+      "file": "L31.fbx",
+      "triangles": 152,
+      "members": 5,
+      "visual_minimum": [
+        0.0,
+        0.0,
+        -0.125
+      ],
+      "visual_maximum": [
+        2.0,
+        2.0,
+        0.125
+      ]
+    },
+    {
+      "tag": "L31_Falling",
+      "slug": "l31-framed-gable-falling",
+      "name": "L31 framed half-gable \u00b7 falling",
+      "size": [
+        2,
+        2,
+        0.25
+      ],
+      "minimum": [
+        0,
+        0,
+        -0.125
+      ],
+      "slope": "falling",
+      "file": "L31_Falling.fbx",
+      "triangles": 152,
+      "members": 5,
+      "visual_minimum": [
+        0.0,
+        0.0,
+        -0.125
+      ],
+      "visual_maximum": [
+        2.0,
+        2.0,
+        0.125
+      ]
+    },
+    {
+      "tag": "L33",
+      "slug": "l33-layered-shingle-roof",
+      "name": "L33 layered cleft-shingle roof",
+      "size": [
+        4,
+        2,
+        2
+      ],
+      "minimum": [
+        0,
+        0,
+        0
+      ],
+      "file": "L33.fbx",
+      "triangles": 1980,
+      "members": 125,
+      "visual_minimum": [
+        0.0,
+        0.0,
+        -0.2199999988079071
+      ],
+      "visual_maximum": [
+        4.0,
+        2.262674331665039,
+        2.0
+      ]
+    },
+    {
+      "tag": "L35",
+      "slug": "l35-braced-door-canopy",
+      "name": "L35 braced door canopy",
+      "size": [
+        2,
+        2.25,
+        1.25
+      ],
+      "minimum": [
+        -1,
+        -0.75,
+        0
+      ],
+      "file": "L35.fbx",
+      "triangles": 888,
+      "members": 49,
+      "visual_minimum": [
+        -1.0,
+        -0.75,
+        0.0
+      ],
+      "visual_maximum": [
+        1.0,
+        1.2626744508743286,
+        1.2200000286102295
+      ]
+    }
+  ],
+  "selectable_parts": 6,
+  "source_trim_sha256": "a72fbc0d4e861c909d3fded7e02be8ff5b3d22866db68b92a5d4f9ae0bb658f7",
+  "blend_sha256": "9ec8d71ddc6bdc23e3219751116c8cd074f0c0b5a23a3de3c54127e8f92a45c5",
+  "roof_covering": "Cleft wood shingles with overlapping solid courses; no straw substitution",
+  "window": "Clear 1 x 1 metre aperture, no shutter, glass or leaf",
+  "normal": "Shallow tangent-space grain baked with Blender; live geometry supplies silhouette"
+}
