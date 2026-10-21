@@ -46,6 +46,18 @@ public class CloverSettings
 
     [Header("Grass Blending")]
     [Range(0f, 1f)] public float grassDensityInsidePatch = 0.35f;
+    [Tooltip("Fallback radius for prefabs without a Foliage Exclusion Zone profile. Multiplied by instance scale.")]
     public float grassInfluenceRadius = 0.65f;
+    [Tooltip("Fallback fade width for prefabs without a Foliage Exclusion Zone profile.")]
     public float grassFadePadding = 0.65f;
+
+    // Match the renderer's compacted non-null list, including the single-prefab fallback.
+    public GameObject GetPrefab(int index)
+    {
+        int next = 0;
+        if (cloverClumpPrefabs != null)
+            foreach (var prefab in cloverClumpPrefabs)
+                if (prefab != null && next++ == index) return prefab;
+        return next == 0 && index == 0 ? cloverClumpPrefab : null;
+    }
 }

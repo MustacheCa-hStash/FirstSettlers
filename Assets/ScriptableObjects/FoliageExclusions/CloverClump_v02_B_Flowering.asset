@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1c2e439dacd45a69e8f3a0c23de320b, type: 3}
+  m_Name: CloverClump_v02_B_Flowering
+  m_EditorClassIdentifier: Assembly-CSharp::FoliageExclusionProfile
+  grassRadius: 0.62
+  grassFadePadding: 0.2

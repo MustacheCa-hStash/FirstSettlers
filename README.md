@@ -1,5 +1,14 @@
 # FirstSettlers Work Notes
 
+## October 21: layered tree stands
+
+Tree distribution now uses world-space stands, dominant species palettes and
+bounded neighbour competition across chunk edges. Authored tree sizes and
+exclusion radii are preserved. Controlled mature-tree tuning produces about
+19 trees/ha in forest cores, 4/ha in openings, and 1.5/ha across grassland. Edit
+`Assets/Resources/Foliage/TreeDistribution.asset` and regenerate/restart Play Mode.
+See [density, size checks, implementation and validation](Documentation/TREE_STANDS.md).
+
 ## October 17: timber and infill L25/L27/L28/L31/L33/L35
 
 Added six catalog pieces with editable Blender sources, native-scale FBXs, one shared trim material, physical collision hulls and menu thumbnails. L28 keeps a clear 1 × 1 m window without shutters; L31 flips between two triangular slopes. L33 has solid overlapping shingle courses, deep eaves and an exposed timber underside. L35 mounts above a doorway, checking every rear contact against supported wall or gable solids. The final isolated run passed 41,146 new checks and 36,641 existing building regression checks, including 192 stair walks. Use **B → Walls/Roofs** and restart Play mode after import. See the [kit guide, Unity previews and trim sheet](Documentation/TIMBER_INFILL_KIT.md).

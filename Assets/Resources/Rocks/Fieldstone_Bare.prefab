@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 3102885959145966879}
   - component: {fileID: 237628342213719659}
   - component: {fileID: 593880212205428549}
+  - component: {fileID: 5796059084300137462}
   m_Layer: 8
   m_Name: Fieldstone_Bare
   m_TagString: Untagged
@@ -148,3 +149,16 @@ MonoBehaviour:
   icon: {fileID: 0}
   definition: {fileID: 0}
   breakable: 1
+--- !u!114 &5796059084300137462
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4497479508384655788}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cbe302e75bb4e9cbfbd800462ea7cb5, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::FoliageExclusionZone
+  profile: {fileID: 11400000, guid: 1e2df169d59d6984bb89454c4e16728a, type: 2}

@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 5721627610022177215}
   - component: {fileID: 7249861482948646670}
   - component: {fileID: 904490678036449477}
+  - component: {fileID: 3099959938700922024}
   m_Layer: 8
   m_Name: Pebble_Snow
   m_TagString: Untagged
@@ -148,3 +149,16 @@ MonoBehaviour:
   icon: {fileID: 0}
   definition: {fileID: 0}
   breakable: 1
+--- !u!114 &3099959938700922024
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 285106282080361137}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cbe302e75bb4e9cbfbd800462ea7cb5, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::FoliageExclusionZone
+  profile: {fileID: 11400000, guid: 7f9cbdef572197c488283142680a1fcb, type: 2}

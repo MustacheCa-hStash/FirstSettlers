@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 6456971489730169423}
   - component: {fileID: 7970420846247003934}
   - component: {fileID: 6187181980278608572}
+  - component: {fileID: 6557981143823612040}
   m_Layer: 0
   m_Name: CloverClump_v02_Edge
   m_TagString: Untagged
@@ -90,3 +91,16 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &6557981143823612040
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8386551719801728580}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cbe302e75bb4e9cbfbd800462ea7cb5, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::FoliageExclusionZone
+  profile: {fileID: 11400000, guid: 745a67479a800224b9fbf3835b6b2d35, type: 2}

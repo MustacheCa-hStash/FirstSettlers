@@ -3,6 +3,7 @@ using System.Collections.Generic;
 public class WorldFeaturePlan
 {
     public readonly List<WorldFeaturePlacement> Placements = new List<WorldFeaturePlacement>();
+    public TreeDistributionStats TreeDistributionStats;
     public float[,] CanopyDensityMap { get; }
     public float[,] LocalMoistureAdjustmentMap { get; }
     public byte[,] ForestMembershipMap { get; }

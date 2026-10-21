@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 3839583519098544581}
   - component: {fileID: 6069085552778934499}
   - component: {fileID: 6227109011677343654}
+  - component: {fileID: 8394383381287731989}
   m_Layer: 8
   m_Name: Pebble_Bare
   m_TagString: Untagged
@@ -148,3 +149,16 @@ MonoBehaviour:
   icon: {fileID: 0}
   definition: {fileID: 0}
   breakable: 1
+--- !u!114 &8394383381287731989
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8143393053609213255}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cbe302e75bb4e9cbfbd800462ea7cb5, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::FoliageExclusionZone
+  profile: {fileID: 11400000, guid: 7f9cbdef572197c488283142680a1fcb, type: 2}

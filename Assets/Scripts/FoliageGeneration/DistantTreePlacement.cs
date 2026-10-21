@@ -44,6 +44,9 @@ public static class DistantTreePlacement
         Array.Clear(sampled, 0, sampled.Length); heights.Clear();
         try
         {
+            using var treeHabitats = settings.treeDistribution.Enabled
+                ? new TreeHabitatSampler(seed,sampleScale,octaves,persistence,lacunarity,heightMultiplier,
+                    waterLevel,mountainScale,erosion) : null;
             var context = HeightMapGenerator.CreateSamplingContext(seed, waterLevel, mountainScale, erosion);
             int climateOctaves = ClimateGenerator.GetClimateOctaveCount(octaves);
             float climateMax = ClimateGenerator.GetMaxPossibleNoise(climateOctaves, persistence);
@@ -87,7 +90,8 @@ public static class DistantTreePlacement
             }
             var plan = WorldFeaturePlanGenerator.GenerateTreePlacements(coord, chunkSize, seed,
                 biomes, surfaces, moisture, temperature, slopes, rivers, settings, Sample, scratch.Plan, scratch.Prepared,
-                (x, z) => Height(x, z).Height, waterLevel, (x, z) => Height(x, z).MountainMask);
+                (x, z) => Height(x, z).Height, waterLevel, (x, z) => Height(x, z).MountainMask,
+                treeHabitatSampler: treeHabitats == null ? null : treeHabitats.Sample);
             var trees = new List<TreeInstanceData>();
             foreach (var p in plan.Placements)
             {

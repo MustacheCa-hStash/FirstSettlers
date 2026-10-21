@@ -73,6 +73,7 @@ public static class RockPresetSetup
                     p.distantMesh=lod;p.lodDistance=mesh.bounds.size.x>2?60:30;
                     p.shadowDistance=mesh.bounds.size.x>2?140:45;
                     root.AddComponent<RockQueryTarget>();
+                    FoliageExclusionProfileAuthoring.AttachRock(root, name);
                     PrefabUtility.SaveAsPrefabAsset(root,Folder+"/"+name+"_"+finishes[f]+".prefab");
                 }
                 finally{Object.DestroyImmediate(root);}

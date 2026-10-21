@@ -1,4 +1,4 @@
-param([switch]$PrepareOnly, [switch]$BuildAssets, [switch]$Render, [switch]$Investigate, [switch]$Benchmark, [switch]$Surfaces, [Nullable[int]]$Seed = $null)
+param([switch]$PrepareOnly, [switch]$BuildAssets, [switch]$Render, [switch]$Investigate, [switch]$Benchmark, [switch]$Surfaces, [switch]$Exclusions, [Nullable[int]]$Seed = $null)
 $ErrorActionPreference='Stop'
 if($Benchmark){$Investigate=$true}
 $rockRoot=Split-Path -Parent $PSScriptRoot
@@ -19,7 +19,21 @@ foreach($rockPath in 'Models/Rocks/Presets','Textures/Rock/Presets'){
     Copy-Item -LiteralPath "$rockRoot/Assets/$rockPath" -Destination (Split-Path -Parent "$rockProject/Assets/$rockPath") -Recurse -Force
     Copy-Item -LiteralPath "$rockRoot/Assets/$rockPath.meta" -Destination "$rockProject/Assets/$rockPath.meta" -Force
 }
-foreach($rockName in 'RockPresetSetup','RockPresetValidation','RockPerformanceInvestigation','RockPerformanceValidation','FoliagePublicationValidation','QueryTargetValidation','BillboardGrassStreamingValidation','GrassStreamingValidation') {Copy-Item -LiteralPath "$rockRoot/Assets/Editor/$rockName.cs","$rockRoot/Assets/Editor/$rockName.cs.meta" -Destination "$rockProject/Assets/Editor" -Force}
+foreach($rockName in 'RockPresetSetup','RockPresetValidation','RockPerformanceInvestigation','RockPerformanceValidation','FoliagePublicationValidation','QueryTargetValidation','BillboardGrassStreamingValidation','GrassStreamingValidation','FoliageExclusionProfileAuthoring') {Copy-Item -LiteralPath "$rockRoot/Assets/Editor/$rockName.cs","$rockRoot/Assets/Editor/$rockName.cs.meta" -Destination "$rockProject/Assets/Editor" -Force}
+if(Test-Path "$rockRoot/Assets/ScriptableObjects/FoliageExclusions"){
+    New-Item -ItemType Directory -Path "$rockProject/Assets/ScriptableObjects" -Force | Out-Null
+    Copy-Item -LiteralPath "$rockRoot/Assets/ScriptableObjects/FoliageExclusions","$rockRoot/Assets/ScriptableObjects/FoliageExclusions.meta" -Destination "$rockProject/Assets/ScriptableObjects" -Recurse -Force
+}
+if($Exclusions){
+    New-Item -ItemType Directory -Path "$rockProject/Assets/Prefabs","$rockProject/Assets/Models/Grass+Flowers" -Force | Out-Null
+    Copy-Item -Path "$rockRoot/Assets/Prefabs/Clover*" -Destination "$rockProject/Assets/Prefabs" -Force
+    Copy-Item -Path "$rockRoot/Assets/Models/Grass+Flowers/*" -Destination "$rockProject/Assets/Models/Grass+Flowers" -Force
+    Copy-Item -LiteralPath "$rockRoot/Assets/Models/Grass+Flowers.meta" -Destination "$rockProject/Assets/Models/Grass+Flowers.meta" -Force
+    Copy-Item -LiteralPath "$rockRoot/Assets/Editor/FoliageExclusionValidation.cs","$rockRoot/Assets/Editor/FoliageExclusionValidation.cs.meta" -Destination "$rockProject/Assets/Editor" -Force
+    foreach($rockValidation in 'ShoreAndTreeHabitatValidation','WaterGenerationValidation'){
+        Copy-Item -LiteralPath "$rockRoot/Assets/Editor/$rockValidation.cs","$rockRoot/Assets/Editor/$rockValidation.cs.meta" -Destination "$rockProject/Assets/Editor" -Force
+    }
+}
 if($Investigate){
     New-Item -ItemType Directory -Path "$rockProject/Assets/Scenes","$rockProject/Assets/ScriptableObjects" -Force | Out-Null
     Copy-Item -LiteralPath "$rockRoot/Assets/Scenes/SmearScene.unity","$rockRoot/Assets/Scenes/SmearScene.unity.meta" -Destination "$rockProject/Assets/Scenes" -Force
@@ -35,8 +49,8 @@ foreach($rockDependency in $rockManifest.dependencies.PSObject.Properties){if($r
 foreach($rockPackage in 'com.unity.render-pipelines.universal','com.unity.inputsystem','com.unity.ugui','com.unity.burst','com.unity.collections','com.unity.ai.navigation'){$rockDependencies[$rockPackage]=$rockLock.dependencies.$rockPackage.version}
 @{dependencies=$rockDependencies} | ConvertTo-Json -Depth 5 | Set-Content "$rockProject/Packages/manifest.json"
 if($PrepareOnly){Write-Output $rockProject;return}
-$rockMethod=if($Surfaces){'RockPresetSetup.SurfaceBatch'}elseif($Benchmark){'RockPerformanceInvestigation.BenchmarkBatch'}elseif($Investigate){'RockPerformanceInvestigation.RunBatch'}elseif($BuildAssets){'RockPresetSetup.BuildBatch'}elseif($Render){'RockPresetValidation.RenderBatch'}else{'RockPresetValidation.RunBatch'}
-$rockLog=Join-Path $rockRoot ('.utmp/rocks/'+$(if($Surfaces){'surfaces'}elseif($Investigate){'investigation'}elseif($BuildAssets){'assets'}elseif($Render){'render'}else{'validation'})+'.log')
+$rockMethod=if($Exclusions){'ShoreAndTreeHabitatValidation.RunBatch'}elseif($Surfaces){'RockPresetSetup.SurfaceBatch'}elseif($Benchmark){'RockPerformanceInvestigation.BenchmarkBatch'}elseif($Investigate){'RockPerformanceInvestigation.RunBatch'}elseif($BuildAssets){'RockPresetSetup.BuildBatch'}elseif($Render){'RockPresetValidation.RenderBatch'}else{'RockPresetValidation.RunBatch'}
+$rockLog=Join-Path $rockRoot ('.utmp/rocks/'+$(if($Exclusions){'exclusions'}elseif($Surfaces){'surfaces'}elseif($Investigate){'investigation'}elseif($BuildAssets){'assets'}elseif($Render){'render'}else{'validation'})+'.log')
 $rockArgs=@('-batchmode','-projectPath',$rockProject,'-executeMethod',$rockMethod,'-logFile',$rockLog)
 if($null -ne $Seed){$rockArgs+=@('-rockBenchmarkSeed',$Seed.ToString())}
 if(-not $Render -and -not $Benchmark){$rockArgs+='-nographics'}

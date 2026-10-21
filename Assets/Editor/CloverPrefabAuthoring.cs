@@ -101,6 +101,7 @@ public static class CloverPrefabAuthoring
                 renderer.sharedMaterial = material;
                 renderer.shadowCastingMode = ShadowCastingMode.On;
                 renderer.receiveShadows = true;
+                FoliageExclusionProfileAuthoring.AttachClover(root, name);
                 PrefabUtility.SaveAsPrefabAsset(root, "Assets/Prefabs/" + name + ".prefab");
                 Debug.Log($"CLOVER_BUILT {name}: {mesh.vertexCount} vertices / {mesh.triangles.Length / 3} triangles / bounds {mesh.bounds}");
             }

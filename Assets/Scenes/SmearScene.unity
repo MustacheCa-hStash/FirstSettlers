@@ -1007,9 +1007,9 @@ MonoBehaviour:
     maxQueuedGroundFoliageGenerationWork: 48
     maxQueuedRenderBatchWork: 96
     densityRadius3: 1
-    densityRadius6: 0.79
-    densityRadius10: 0.499
-    densityBeyond10: 0.308
+    densityRadius6: 0.676
+    densityRadius10: 0.437
+    densityBeyond10: 0.244
     uniformScaleRange: {x: 0.9, y: 1.3}
     randomizeYaw: 1
     receiveGrassShadows: 1
@@ -1364,6 +1364,7 @@ MonoBehaviour:
       maxActivationsPerFrame: 8
       activationBudgetMs: 0.5
       maxPooledProxies: 128
+    distributionProfile: {fileID: 11400000, guid: dc97fe38ae8649078e4d2df5a5d58af0, type: 2}
     mapleTreeDefinition: {fileID: 11400000, guid: 8ed7914582bf44269fe9ef862fe300e7, type: 2}
     sugarMapleTreeDefinition: {fileID: 11400000, guid: ab3c9ca526894949af7cae15c3f04792, type: 2}
     birchAspenTreeDefinition: {fileID: 11400000, guid: 8fc83a5cb2704e4f9e80211574f4432d, type: 2}
@@ -1456,7 +1457,7 @@ MonoBehaviour:
     maxForestRocksPerChunk: 2
     forestRockUniformScaleRange: {x: 0.8, y: 1.25}
     forestRockPitchRange: {x: -15, y: 15}
-    maxGrasslandTreesPerChunk: 6
+    maxGrasslandTreesPerChunk: 24
     maxGrasslandRocksPerChunk: 5
     grasslandRockUniformScaleRange: {x: 0.8, y: 1.4}
     grasslandLargeRockUniformScaleRange: {x: 0.85, y: 1.3}

@@ -40,7 +40,8 @@ public static class WorldFeaturePlanGenerator
         float[,] riverMaskMap,
         WorldFeatureGenerationSettings settings,
         float[,] heightMap = null,
-        float waterLevel = 0f, float[,] mountainMaskMap = null)
+        float waterLevel = 0f, float[,] mountainMaskMap = null,
+        System.Func<float,float,TreeHabitatSample> treeHabitatSampler = null)
     {
         int width = biomeMap.GetLength(0);
         int height = biomeMap.GetLength(1);
@@ -65,7 +66,7 @@ public static class WorldFeaturePlanGenerator
             surfaceTypeMap,
             moistureMap,
             slopeMap,
-            riverMaskMap);
+            riverMaskMap, distribution: settings.treeDistribution);
 
         BuildGrasslandStructureFields(
             plan,
@@ -76,7 +77,7 @@ public static class WorldFeaturePlanGenerator
             surfaceTypeMap,
             moistureMap,
             slopeMap,
-            riverMaskMap);
+            riverMaskMap, distribution: settings.treeDistribution);
 
         AddForestBoulders(
             plan,
@@ -103,38 +104,46 @@ public static class WorldFeaturePlanGenerator
         BuildRockInfluenceMap(plan, chunkSize);
         AddSnowRocks(plan, chunkCoord, chunkSize, seed, biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, settings);
 
-        AddForestTrees(
-            plan,
-            chunkCoord,
-            chunkSize,
-            seed,
-            biomeMap,
-            surfaceTypeMap,
-            moistureMap,
-            temperatureMap,
-            slopeMap,
-            riverMaskMap,
-            settings);
+        if(settings.treeDistribution.Enabled)
+            new LayeredTreeDistribution(seed,settings,treeHabitatSampler ?? MapTreeHabitat(chunkCoord,chunkSize,
+                biomeMap,surfaceTypeMap,moistureMap,temperatureMap,slopeMap,riverMaskMap,
+                heightMap==null?null:(x,z)=>heightMap[x,z],mountainMaskMap==null?null:(x,z)=>mountainMaskMap[x,z],waterLevel),waterLevel).Append(plan,chunkCoord,chunkSize);
+        else
+        {
+            AddForestTrees(
+                plan,
+                chunkCoord,
+                chunkSize,
+                seed,
+                biomeMap,
+                surfaceTypeMap,
+                moistureMap,
+                temperatureMap,
+                slopeMap,
+                riverMaskMap,
+                settings);
 
-        AddGrasslandTrees(
-            plan,
-            chunkCoord,
-            chunkSize,
-            seed,
-            biomeMap,
-            surfaceTypeMap,
-            moistureMap,
-            temperatureMap,
-            slopeMap,
-            riverMaskMap,
-            settings);
+            AddGrasslandTrees(
+                plan,
+                chunkCoord,
+                chunkSize,
+                seed,
+                biomeMap,
+                surfaceTypeMap,
+                moistureMap,
+                temperatureMap,
+                slopeMap,
+                riverMaskMap,
+                settings);
 
-        AddTaigaSpruceTrees(plan, chunkCoord, chunkSize, seed, biomeMap, surfaceTypeMap,
-            slopeMap, riverMaskMap, settings);
+            AddTaigaSpruceTrees(plan, chunkCoord, chunkSize, seed, biomeMap, surfaceTypeMap,
+                slopeMap, riverMaskMap, settings);
 
-        AddSnowSpruceTrees(plan, chunkCoord, chunkSize, seed, biomeMap, surfaceTypeMap,
-            moistureMap, temperatureMap, slopeMap, riverMaskMap, settings,
-            sampleHeight: heightMap == null ? null : (x, z) => heightMap[x, z], waterLevel: waterLevel);
+            AddSnowSpruceTrees(plan, chunkCoord, chunkSize, seed, biomeMap, surfaceTypeMap,
+                moistureMap, temperatureMap, slopeMap, riverMaskMap, settings,
+                sampleHeight: heightMap == null ? null : (x, z) => heightMap[x, z], waterLevel: waterLevel);
+
+        }
 
         BuildCanopyDensityMap(plan, chunkCoord, chunkSize, seed);
         UpdateForestUnderstoryFromCanopy(plan, biomeMap, surfaceTypeMap, moistureMap, riverMaskMap);
@@ -187,11 +196,13 @@ public static class WorldFeaturePlanGenerator
         float[,] moisture, float[,] temperature, float[,] slopes, float[,] rivers,
         WorldFeatureGenerationSettings settings, System.Action<int, int> sample,
         WorldFeaturePlan scratchPlan = null, bool[,] scratchPrepared = null,
-        System.Func<int, int, float> sampleHeight = null, float waterLevel = 0f, System.Func<int, int, float> sampleMountainMask = null)
+        System.Func<int, int, float> sampleHeight = null, float waterLevel = 0f, System.Func<int, int, float> sampleMountainMask = null,
+        System.Func<float,float,TreeHabitatSample> treeHabitatSampler = null)
     {
         int size = chunkSize + 3;
         var plan = scratchPlan ?? new WorldFeaturePlan(size, size);
         plan.Placements.Clear();
+        plan.TreeDistributionStats=default;
         var prepared = scratchPrepared ?? new bool[size, size];
         System.Array.Clear(prepared, 0, prepared.Length);
         void Prepare(int x, int z)
@@ -213,8 +224,8 @@ public static class WorldFeaturePlanGenerator
                     sampleHeight, x, z, size, slopes[x, z], rivers[x, z], waterLevel);
             else
                 plan.LocalMoistureAdjustmentMap[x, z] = 0f;
-            BuildForestStructureFields(plan, coord, chunkSize, seed, biomes, surfaces, moisture, slopes, rivers, x, z);
-            BuildGrasslandStructureFields(plan, coord, chunkSize, seed, biomes, surfaces, moisture, slopes, rivers, x, z);
+            BuildForestStructureFields(plan, coord, chunkSize, seed, biomes, surfaces, moisture, slopes, rivers, x, z, settings.treeDistribution);
+            BuildGrasslandStructureFields(plan, coord, chunkSize, seed, biomes, surfaces, moisture, slopes, rivers, x, z, settings.treeDistribution);
             prepared[x, z] = true;
         }
         void PrepareTree(int x, int z)
@@ -237,12 +248,32 @@ public static class WorldFeaturePlanGenerator
         AddForestBoulders(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
         AddGrasslandRocks(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
         AddSnowRocks(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
-        AddForestTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, settings, PrepareTree);
-        AddGrasslandTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, settings, PrepareTree);
-        AddTaigaSpruceTrees(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
-        AddSnowSpruceTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature,
-            slopes, rivers, settings, Prepare, sampleHeight, waterLevel);
+        if(settings.treeDistribution.Enabled)
+            new LayeredTreeDistribution(seed,settings,treeHabitatSampler ?? MapTreeHabitat(coord,chunkSize,
+                biomes,surfaces,moisture,temperature,slopes,rivers,sampleHeight,sampleMountainMask,waterLevel,sample),waterLevel).Append(plan,coord,chunkSize);
+        else
+        {
+            AddForestTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, settings, PrepareTree);
+            AddGrasslandTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, settings, PrepareTree);
+            AddTaigaSpruceTrees(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
+            AddSnowSpruceTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature,
+                slopes, rivers, settings, Prepare, sampleHeight, waterLevel);
+        }
         return plan;
+    }
+
+    private static System.Func<float,float,TreeHabitatSample> MapTreeHabitat(ChunkCoord coord,int chunkSize,
+        BiomeType[,] biomes,SurfaceType[,] surfaces,float[,] moisture,float[,] temperature,float[,] slopes,float[,] rivers,
+        System.Func<int,int,float> height,System.Func<int,int,float> mountain,float water,System.Action<int,int> prepare=null)
+    {
+        return (wx,wz)=>
+        {
+            int x=Mathf.Clamp(Mathf.RoundToInt(wx-coord.x*chunkSize)+1,0,biomes.GetLength(0)-1);
+            int z=Mathf.Clamp(Mathf.RoundToInt(wz-coord.z*chunkSize)+1,0,biomes.GetLength(1)-1);
+            prepare?.Invoke(x,z);
+            return new TreeHabitatSample{Biome=biomes[x,z],Surface=surfaces[x,z],Moisture=moisture[x,z],Temperature=temperature[x,z],
+                Slope=slopes[x,z],River=rivers[x,z],Height=height==null?water+1f:height(x,z),Mountain=mountain==null?0f:mountain(x,z)};
+        };
     }
 
     private static void BuildLocalMoistureAdjustmentMap(
@@ -315,9 +346,10 @@ public static class WorldFeaturePlanGenerator
         SurfaceType[,] surfaceTypeMap,
         float[,] moistureMap,
         float[,] slopeMap,
-        float[,] riverMaskMap, int onlyX = -1, int onlyZ = -1)
+        float[,] riverMaskMap, int onlyX = -1, int onlyZ = -1, TreeDistributionParameters distribution = default)
     {
         ForestStructureFields fields = plan.ForestStructure;
+        var standField = distribution.Enabled ? new TreeStandField.Evaluator(seed,distribution) : null;
         int width = biomeMap.GetLength(0);
         int height = biomeMap.GetLength(1);
 
@@ -335,6 +367,15 @@ public static class WorldFeaturePlanGenerator
 
                 SampleForestTreeStructure(worldX, worldZ, seed, slopeMap[x, z], riverMaskMap[x, z],
                     out float canopyIntent, out float clearing, out float treeCluster, out float rockiness, out float fineBreakup);
+
+                if(distribution.Enabled)
+                {
+                    var stand=standField.Evaluate(worldX,worldZ);
+                    clearing=stand.Clearing;
+                    treeCluster=stand.Forest;
+                    canopyIntent=Mathf.Lerp(.12f,.95f,stand.Forest)*(1f-clearing)*
+                        Mathf.InverseLerp(TerrainSlopePolicy.ForestMaxDegrees,TerrainSlopePolicy.ForestFadeStartDegrees,slopeMap[x,z]);
+                }
 
                 float localMoisture = Mathf.Clamp01(moistureMap[x, z] + plan.LocalMoistureAdjustmentMap[x, z]);
                 float dampShade = Mathf.Clamp01(localMoisture * 0.5f + canopyIntent * 0.34f + riverMaskMap[x, z] * 0.16f);
@@ -486,9 +527,10 @@ public static class WorldFeaturePlanGenerator
         SurfaceType[,] surfaceTypeMap,
         float[,] moistureMap,
         float[,] slopeMap,
-        float[,] riverMaskMap, int onlyX = -1, int onlyZ = -1)
+        float[,] riverMaskMap, int onlyX = -1, int onlyZ = -1, TreeDistributionParameters distribution = default)
     {
         GrasslandStructureFields fields = plan.GrasslandStructure;
+        var standField = distribution.Enabled ? new TreeStandField.Evaluator(seed,distribution) : null;
         int width = biomeMap.GetLength(0);
         int height = biomeMap.GetLength(1);
 
@@ -521,6 +563,8 @@ public static class WorldFeaturePlanGenerator
                 float groveIntent = Mathf.Clamp01((groveNoise - 0.62f) * 2.4f);
                 groveIntent = Mathf.Clamp01(groveIntent * Mathf.Lerp(0.72f, 1.18f, groveFine));
                 groveIntent = Mathf.Clamp01(groveIntent + riparian * 0.56f + GetForestEdgeIntent(plan, biomeMap, x, z) * 0.34f);
+                if(distribution.Enabled)
+                    groveIntent=Mathf.Max(standField.Evaluate(worldX,worldZ).Meadow,riparian*.7f);
                 groveIntent *= slopeSuitability;
 
                 float rockiness = Mathf.Clamp01((rockPatch - 0.50f) * 2.15f);
@@ -790,7 +834,8 @@ public static class WorldFeaturePlanGenerator
                 temperatureMap[paddedX, paddedZ],
                 clearing,
                 cluster,
-                hash);
+                hash,
+                biomeMap[paddedX, paddedZ] != BiomeType.Grassland);
 
             float yaw = Hash01(hash + 79) * 360f;
             float uniformScale = GetTreeScale(settings.GetTreeUniformScaleRange(variant), Hash01(hash + 97));
@@ -930,7 +975,8 @@ public static class WorldFeaturePlanGenerator
         float temperature,
         float clearing,
         float cluster,
-        int hash)
+        int hash,
+        bool allowWhitePine)
     {
         float worldX = chunkCoord.x * chunkSize + sampleX;
         float worldZ = chunkCoord.z * chunkSize + sampleZ;
@@ -964,7 +1010,7 @@ public static class WorldFeaturePlanGenerator
             Mathf.Lerp(0.92f, 1.14f, cluster) *
             SpeciesPatch(worldX, worldZ, seed, 6214);
 
-        float whitePineWeight = 0.08f *
+        float whitePineWeight = (allowWhitePine ? 0.08f : 0f) *
             Mathf.Lerp(0.92f, 1.28f, dryness) *
             Mathf.Lerp(0.88f, 1.22f, clearing) *
             SpeciesPatch(worldX, worldZ, seed, 6215);
@@ -1088,7 +1134,6 @@ public static class WorldFeaturePlanGenerator
                 temperatureMap[paddedX, paddedZ],
                 riparian,
                 grove,
-                fields.RockinessMap[paddedX, paddedZ],
                 hash);
 
             float yaw = Hash01(hash + 79) * 360f;
@@ -1126,7 +1171,6 @@ public static class WorldFeaturePlanGenerator
         float temperature,
         float riparian,
         float grove,
-        float rockiness,
         int hash)
     {
         float worldX = chunkCoord.x * chunkSize + sampleX;
@@ -1155,12 +1199,8 @@ public static class WorldFeaturePlanGenerator
             Mathf.Lerp(1.12f, 0.82f, dryness) *
             SpeciesPatch(worldX, worldZ, seed, 6546);
 
-        float whitePineWeight = 0.10f *
-            Mathf.Lerp(0.82f, 1.38f, dryness) *
-            Mathf.Lerp(0.82f, 1.24f, rockiness) *
-            SpeciesPatch(worldX, worldZ, seed, 6545);
-
-        float totalWeight = oakWeight + birchAspenWeight + mapleWeight + willowWeight + whitePineWeight;
+        // Keep white pine exclusive to forest habitats for readable biome/wood identities.
+        float totalWeight = oakWeight + birchAspenWeight + mapleWeight + willowWeight;
         float roll = Hash01(hash + 173) * totalWeight;
 
         if ((roll -= oakWeight) <= 0f)
@@ -1172,10 +1212,7 @@ public static class WorldFeaturePlanGenerator
         if ((roll -= mapleWeight) <= 0f)
             return WorldFeatureVariant.GrasslandMapleTree;
 
-        if ((roll -= willowWeight) <= 0f)
-            return WorldFeatureVariant.GrasslandWillowTree;
-
-        return WorldFeatureVariant.GrasslandWhitePineTree;
+        return WorldFeatureVariant.GrasslandWillowTree;
     }
 
     private static void AddForestBerryBushes(

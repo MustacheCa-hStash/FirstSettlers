@@ -5,6 +5,9 @@ public class TreeSettings
 {
     [Header("Nearby Tree Gameplay")]
     public TreeGameplaySettings gameplay = new TreeGameplaySettings();
+    [Header("Layered Tree Distribution")]
+    [Tooltip("World-space stands, candidate intensity and finite neighbour competition. Defaults to Resources/Foliage/TreeDistribution. Restart Play Mode or regenerate after editing.")]
+    public TreeDistributionProfile distributionProfile;
     [Header("Tree Datacards")]
     [Tooltip("Species datacards shared by tree scale, placement and query identity. Forest and grassland variants use the same card. Scale and placement changes require world regeneration.")]
     public WorldObjectDefinition mapleTreeDefinition;
@@ -175,8 +178,8 @@ public class TreeSettings
     public Vector2 forestRockPitchRange = new Vector2(-15f, 15f);
 
     [Header("Grassland Tree Placement")]
-    [Tooltip("Maximum planned trees in a grassland chunk. Many grassland chunks will still place fewer or none.")]
-    public int maxGrasslandTreesPerChunk = 8;
+    [Tooltip("Grassland count guard. With layered distribution, the profile controls population; keep this guard above expected grove counts. The legacy planner also treats this as its maximum.")]
+    public int maxGrasslandTreesPerChunk = 24;
 
     [Header("Grassland Rock Placement")]
     [Tooltip("Maximum planned rock or boulder placements in a grassland chunk.")]
@@ -186,7 +189,7 @@ public class TreeSettings
     public Vector2 grasslandLargeRockUniformScaleRange = new Vector2(95f, 135f);
     public Vector2 grasslandRockPitchRange = new Vector2(-12f, 12f);
 
-    [Tooltip("Grass exclusion radius around instantiated forest rocks.")]
+    [Tooltip("Fallback grass exclusion radius for rock prefabs without a Foliage Exclusion Zone profile. Configured rocks use their baked ground-contact hull. Restart Play Mode or regenerate after editing profiles.")]
     public float rockGrassExclusionRadius = 1.25f;
 
     [Header("Rock Rendering and Pooled Physics")]
@@ -217,4 +220,21 @@ public class TreeSettings
 
     public GameObject GetNearPrefab(WorldFeatureVariant variant) =>
         TreeSpeciesCatalog.TryGet(variant, out var species) ? species.NearPrefab(this) : treeLOD0GameObjectPrefab;
+
+    public GameObject GetRockPrefab(WorldFeatureVariant variant, int prefabIndex)
+    {
+        GameObject[] prefabs;
+        GameObject fallback;
+        switch (variant)
+        {
+            case WorldFeatureVariant.SnowBoulder: prefabs = snowRockPrefabs; fallback = null; break;
+            case WorldFeatureVariant.SnowLargeBoulder: prefabs = snowLargeRockPrefabs; fallback = null; break;
+            case WorldFeatureVariant.GrasslandLargeBoulder: prefabs = grasslandLargeRockPrefabs; fallback = grasslandLargeRockFallbackPrefab; break;
+            case WorldFeatureVariant.GrasslandBoulder: prefabs = grasslandRockPrefabs; fallback = grasslandRockFallbackPrefab; break;
+            default: prefabs = forestRockPrefabs; fallback = forestRockFallbackPrefab; break;
+        }
+        if (prefabs == null || prefabs.Length == 0) return fallback;
+        var selected = prefabs[Mathf.Clamp(prefabIndex, 0, prefabs.Length - 1)];
+        return selected != null ? selected : fallback;
+    }
 }

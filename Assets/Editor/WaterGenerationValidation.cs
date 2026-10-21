@@ -33,10 +33,12 @@ public static class WaterGenerationValidation
         {
             TerrainWaterSettings settings = new TerrainWaterSettings(surfaceY, 200f, 0.3f);
             float level = settings.WaterLevel;
-            Require(SurfaceTypeClassifier.Classify(level + 0.005f, 0f, 0f, BiomeType.Forest, level) == SurfaceType.Sand, "Lake shore is not sand.");
+            Require(SurfaceTypeClassifier.Classify(level + 0.0015f, 0f, 0f, BiomeType.Forest, level) == SurfaceType.Sand, "Lake shore is not sand.");
+            Require(SurfaceTypeClassifier.Classify(level + 0.005f, 0f, 0f, BiomeType.Forest, level) == SurfaceType.Grass, "Outer two thirds of the old shore still exclude grass.");
             Require(SurfaceTypeClassifier.Classify(level + 0.015f, 0f, 0f, BiomeType.Forest, level) == SurfaceType.Grass, "Old outer lake shore still excludes grass.");
             Require(SurfaceTypeClassifier.Classify(level + 0.04f, 0f, 0.65f, BiomeType.Forest, level) == SurfaceType.Grass, "Old outer river bank still excludes grass.");
-            Require(SurfaceTypeClassifier.Classify(level + 0.025f, 0f, 0.73f, BiomeType.Forest, level) == SurfaceType.Mud, "River shore is not mud.");
+            Require(SurfaceTypeClassifier.Classify(level + 0.025f, 0f, 0.73f, BiomeType.Forest, level) == SurfaceType.Grass, "Old outer river bank still excludes grass.");
+            Require(SurfaceTypeClassifier.Classify(level + 0.025f, 0f, 0.80f, BiomeType.Forest, level) == SurfaceType.Mud, "River shore is not mud.");
             float[,] heights = new float[size + 3, size + 3];
             float[,] masks = new float[size + 3, size + 3];
             float[,] slopes = new float[size + 3, size + 3];

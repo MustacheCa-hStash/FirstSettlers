@@ -195,7 +195,7 @@ public class ChunkManager : IChunkLookup
         deferredFarTerrainTileContentRetries = new List<FarTerrainPatchKey>(maxChunks);
         frustumVisibleCoordSet = new HashSet<ChunkCoord>(maxChunks);
 
-        worldFeatureGenerationSettings = TreeGenerationSnapshot.Create(foliage.Trees);
+        worldFeatureGenerationSettings = TreeGenerationSnapshot.Create(foliage.Trees, generation.WorldScale);
         terrainRequestManager = new TerrainRequestManager(
             workers.TerrainData,
             workers.FarTerrain,

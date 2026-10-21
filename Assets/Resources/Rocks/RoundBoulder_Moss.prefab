@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 6851179104783144460}
   - component: {fileID: 3618601204161434569}
   - component: {fileID: 1820706114767894}
+  - component: {fileID: 6176494817153843285}
   m_Layer: 8
   m_Name: RoundBoulder_Moss
   m_TagString: Untagged
@@ -148,3 +149,16 @@ MonoBehaviour:
   icon: {fileID: 0}
   definition: {fileID: 0}
   breakable: 1
+--- !u!114 &6176494817153843285
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2244469234222405335}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cbe302e75bb4e9cbfbd800462ea7cb5, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::FoliageExclusionZone
+  profile: {fileID: 11400000, guid: 52f97e8498c5c544bb7a749c48b1072d, type: 2}

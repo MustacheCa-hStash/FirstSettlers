@@ -8,6 +8,8 @@ public struct CloverInstanceData
     public uint selectionRank;
     public float grassInfluenceRadius;
     public int prefabIndex;
+    // Negative retains the legacy global fade width for prefabs without profiles.
+    public float grassFadePadding;
 
     public CloverInstanceData(
         Vector3 localPosition,
@@ -15,7 +17,8 @@ public struct CloverInstanceData
         Vector3 localScale,
         uint selectionRank,
         float grassInfluenceRadius,
-        int prefabIndex)
+        int prefabIndex,
+        float grassFadePadding = -1f)
     {
         this.localPosition = localPosition;
         this.localRotation = localRotation;
@@ -23,5 +26,6 @@ public struct CloverInstanceData
         this.selectionRank = selectionRank;
         this.grassInfluenceRadius = grassInfluenceRadius;
         this.prefabIndex = prefabIndex;
+        this.grassFadePadding = grassFadePadding;
     }
 }

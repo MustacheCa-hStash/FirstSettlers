@@ -257,6 +257,9 @@ public class TerrainRequestManager : System.IDisposable
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainWaterStateMap, stageStart);
 
                     stageStart = TerrainGenerationProfiler.GetTimestamp();
+                    using var treeHabitats = worldFeatureGenerationSettings.treeDistribution.Enabled
+                        ? new TreeHabitatSampler(seed,sampleScale,octaves,persistence,lacunarity,meshHeightMultiplier,
+                            waterSettings.WaterLevel,mountainHorizontalScale,erosion) : null;
                     WorldFeaturePlan worldFeaturePlan = WorldFeaturePlanGenerator.Generate(
                         chunkCoord,
                         chunkSize,
@@ -269,7 +272,8 @@ public class TerrainRequestManager : System.IDisposable
                         riverMaskMap,
                         worldFeatureGenerationSettings,
                         finalHeightMap,
-                        waterSettings.WaterLevel, mountainMaskMap);
+                        waterSettings.WaterLevel, mountainMaskMap,
+                        treeHabitatSampler: treeHabitats == null ? null : treeHabitats.Sample);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainWorldFeaturePlan, stageStart);
 
                     nativeCanopyDensities = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.CanopyDensityMap, Allocator.Persistent, out unusedMapWidth, out unusedMapHeight);

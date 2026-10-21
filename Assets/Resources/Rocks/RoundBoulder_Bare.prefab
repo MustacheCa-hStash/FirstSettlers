@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 6983382179566334267}
   - component: {fileID: 4825787214493661921}
   - component: {fileID: 7379780808187681684}
+  - component: {fileID: 3939312632077556248}
   m_Layer: 8
   m_Name: RoundBoulder_Bare
   m_TagString: Untagged
@@ -148,3 +149,16 @@ MonoBehaviour:
   icon: {fileID: 0}
   definition: {fileID: 0}
   breakable: 1
+--- !u!114 &3939312632077556248
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2675817657140658245}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cbe302e75bb4e9cbfbd800462ea7cb5, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::FoliageExclusionZone
+  profile: {fileID: 11400000, guid: 52f97e8498c5c544bb7a749c48b1072d, type: 2}

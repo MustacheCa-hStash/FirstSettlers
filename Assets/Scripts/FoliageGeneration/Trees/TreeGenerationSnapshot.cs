@@ -3,12 +3,16 @@ using UnityEngine;
 // Main-thread authored bindings become plain worker values. No Unity assets cross the worker boundary.
 public static class TreeGenerationSnapshot
 {
-    public static WorldFeatureGenerationSettings Create(TreeSettings treeSettings)
+    public static WorldFeatureGenerationSettings Create(TreeSettings treeSettings, float worldScale = .3f)
     {
         WorldFeatureGenerationSettings settings = WorldFeatureGenerationSettings.Default;
 
         if (treeSettings == null)
             return settings;
+
+        var distribution = treeSettings.distributionProfile != null ? treeSettings.distributionProfile :
+            Resources.Load<TreeDistributionProfile>("Foliage/TreeDistribution");
+        if (distribution != null) settings.treeDistribution = distribution.Snapshot(worldScale);
 
         settings.treeUniformScaleRange = treeSettings.treeUniformScaleRange;
         // Snapshot Unity assets on the main thread; near/distant workers receive plain values only.
