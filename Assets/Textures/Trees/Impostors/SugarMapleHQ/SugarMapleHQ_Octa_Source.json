@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/SugarMaple_LOD0_v04.prefab",
+    "prefabGuid": "6377fe2b33afae54cafea770d5e136c6",
+    "dependencyHash": "fc4622265a1b80adaf928e8707dfdf30",
+    "albedoEncoding": "sRGB half-range neutral detail; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.5
+}

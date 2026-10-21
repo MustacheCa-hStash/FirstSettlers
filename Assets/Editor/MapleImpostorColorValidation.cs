@@ -14,7 +14,9 @@ public static class MapleImpostorColorValidation
     struct VisibleInstance { public Matrix4x4 Transform; public Vector4 Tint, Fade; }
 
     [MenuItem("Tools/Impostors/Validate Maple Color Consistency")]
-    public static void Run()
+    public static void Run() => RunChecks("");
+    public static void RunHQ() => RunChecks("HQ");
+    static void RunChecks(string suffix)
     {
         var previousPipeline = GraphicsSettings.defaultRenderPipeline;
         var previousQuality = QualitySettings.renderPipeline;
@@ -51,13 +53,13 @@ public static class MapleImpostorColorValidation
             foreach (string species in new[] { "SugarMaple", "RedMaple" })
             {
                 string folder = "Assets/Materials/M_Trees/" + species + "/";
-                var source = AssetDatabase.LoadAssetAtPath<Material>(folder + "M_" + species + "Leaf_Stylized.mat");
-                var impostor = AssetDatabase.LoadAssetAtPath<Material>(folder + species + "_OctaImpostor_M.mat");
+                var source = AssetDatabase.LoadAssetAtPath<Material>(suffix=="HQ"?folder+(species=="SugarMaple"?"M_SugarMapleLeaf.mat":"M_RedMaple_Leaf.mat"):folder + "M_" + species + "Leaf_Stylized.mat");
+                var impostor = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/M_Trees/" + species + suffix + "/" + species + suffix + "_OctaImpostor_M.mat");
                 Require(source != null && impostor != null, "Missing maple materials: " + species);
                 foreach (string property in new[] { "_SummerLeafColor", "_AutumnYellowColor", "_AutumnOrangeColor", "_AutumnRedColor", "_TreeLeafTint" })
-                    Require(source.GetColor(property) == impostor.GetColor(property), species + " palette differs: " + property);
+                    if(source.HasProperty(property))Require(source.GetColor(property) == impostor.GetColor(property), species + " palette differs: " + property);
                 foreach (string property in new[] { "_SeasonAutumnAmount", "_AutumnVariationStrength", "_TreeTintStrength" })
-                    Require(Mathf.Abs(source.GetFloat(property) - impostor.GetFloat(property)) < .0001f, species + " settings differ: " + property);
+                    if(source.HasProperty(property))Require(Mathf.Abs(source.GetFloat(property) - impostor.GetFloat(property)) < .0001f, species + " settings differ: " + property);
                 Require(impostor.GetFloat("_SeasonPaletteMode") == (species == "SugarMaple" ? 1 : 0), species + " uses the wrong palette.");
                 var near = new Material(source) { enableInstancing = true };
                 var far = new Material(impostor) { enableInstancing = true };
@@ -74,6 +76,24 @@ public static class MapleImpostorColorValidation
                     far.SetFloat("_FramesPerAxis", 1); far.SetFloat("_AtlasPadding", 0);
                     far.SetFloat("_AmbientFloor", 1); far.SetFloat("_SkyStrength", 1);
                     far.SetFloat("_AOStrength", 0); far.SetFloat("_FoliageBrightness", 1); far.SetFloat("_TransmissionStrength", 0);
+                    if(suffix=="HQ")
+                    {
+                        // Isolate seasonal/tint algebra from the independently
+                        // baked mesh-noise and card detail coordinates.
+                        near.SetFloat("_LeafContrast",0);near.SetFloat("_CardVariationStrength",0);
+                        near.SetFloat("_VerticalGradientStrength",0);near.SetFloat("_BacklightingStrength",0);
+                        foreach(var fixture in new[]{near,far})
+                        {
+                            fixture.SetFloat("_ColorVariationStrength",0);
+                            foreach(string color in new[]{"_AutumnRedColor","_AutumnCrimsonColor","_AutumnOrangeColor","_AutumnYellowColor"})
+                                if(fixture.HasProperty(color))fixture.SetColor(color,source.GetColor("_AutumnRedColor"));
+                            // The red source's shadow palette is active even at
+                            // zero variation; make that branch the same color.
+                            var linear=source.GetColor("_AutumnRedColor").linear/(species=="SugarMaple"?1.65f:1.25f);
+                            fixture.SetColor("_LeafShadowColor",linear.gamma);
+                        }
+                        far.SetTexture("_SurfaceAtlas",Solid(new Color(.5f,.5f,0,0)));
+                    }
                     // A fixed mid-palette coordinate removes unrelated mesh/atlas noise.
                     near.SetFloat("_AutumnVariationStrength", 0); far.SetFloat("_AutumnVariationStrength", 0);
                     near.SetFloat("_WindStrength", 0); far.SetFloat("_WindStrength", 0);

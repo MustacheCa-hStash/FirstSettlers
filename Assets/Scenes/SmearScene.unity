@@ -1409,20 +1409,20 @@ MonoBehaviour:
     - {fileID: 3862683304946002644, guid: 599b50f6d53ddc34ca18e1f19ece1234, type: 3}
     - {fileID: 4232927202736571705, guid: f892c41872fd7434ba565ae8e5345b1b, type: 3}
     grasslandLargeRockFallbackPrefab: {fileID: 0}
-    mapleTreeBillboardPrefab: {fileID: 5258689384055247090, guid: f94da246162a5e540b5f14769fba84c6, type: 3}
-    sugarMapleTreeBillboardPrefab: {fileID: 945252319243332136, guid: fcba833031280554cb9faba4505d52b7, type: 3}
-    birchAspenTreeBillboardPrefab: {fileID: 2700990396640663113, guid: 6d0fa016755a58748ae5b2f1144765ab, type: 3}
+    mapleTreeBillboardPrefab: {fileID: 3574972845296470361, guid: 2815dda5dea1f1749bd94718b8b32a8e, type: 3}
+    sugarMapleTreeBillboardPrefab: {fileID: 529389507921539674, guid: c9c472a094f08c7488881f83f216f92e, type: 3}
+    birchAspenTreeBillboardPrefab: {fileID: 1339273002019901405, guid: 22fa1c0945ad60d42bd2b0f9f49735ad, type: 3}
     beechTreeBillboardPrefab: {fileID: 0}
     spruceTreeBillboardPrefab: {fileID: 873563193483747003, guid: cdec7d021bf27d849867ca50a20ec4e0, type: 3}
-    whitePineTreeBillboardPrefab: {fileID: 5611437650784027450, guid: 5357dd8620d90e04d94dc920317181ad, type: 3}
-    oakTreeBillboardPrefab: {fileID: 498396091719528691, guid: 25db6bfe66c513d45acb6716ae47516a, type: 3}
-    treeBillboardPrefab: {fileID: 3135895389733779445, guid: faeeaaccb2fb5794a94e5782faafcd7c, type: 3}
-    grasslandMapleTreeBillboardPrefab: {fileID: 5258689384055247090, guid: f94da246162a5e540b5f14769fba84c6, type: 3}
-    grasslandBirchAspenTreeBillboardPrefab: {fileID: 2700990396640663113, guid: 6d0fa016755a58748ae5b2f1144765ab, type: 3}
-    grasslandWhitePineTreeBillboardPrefab: {fileID: 5611437650784027450, guid: 5357dd8620d90e04d94dc920317181ad, type: 3}
-    grasslandOakTreeBillboardPrefab: {fileID: 498396091719528691, guid: 25db6bfe66c513d45acb6716ae47516a, type: 3}
+    whitePineTreeBillboardPrefab: {fileID: 1974424947722955149, guid: 9ab34920e814e33409c2593ea59e9a89, type: 3}
+    oakTreeBillboardPrefab: {fileID: 3549987578430857791, guid: 67e324dce43fbd949be87d35478c5195, type: 3}
+    treeBillboardPrefab: {fileID: 873563193483747003, guid: cdec7d021bf27d849867ca50a20ec4e0, type: 3}
+    grasslandMapleTreeBillboardPrefab: {fileID: 3574972845296470361, guid: 2815dda5dea1f1749bd94718b8b32a8e, type: 3}
+    grasslandBirchAspenTreeBillboardPrefab: {fileID: 1339273002019901405, guid: 22fa1c0945ad60d42bd2b0f9f49735ad, type: 3}
+    grasslandWhitePineTreeBillboardPrefab: {fileID: 1974424947722955149, guid: 9ab34920e814e33409c2593ea59e9a89, type: 3}
+    grasslandOakTreeBillboardPrefab: {fileID: 3549987578430857791, guid: 67e324dce43fbd949be87d35478c5195, type: 3}
     grasslandWillowTreeBillboardPrefab: {fileID: 0}
-    grasslandTreeBillboardFallbackPrefab: {fileID: 3135895389733779445, guid: faeeaaccb2fb5794a94e5782faafcd7c, type: 3}
+    grasslandTreeBillboardFallbackPrefab: {fileID: 873563193483747003, guid: cdec7d021bf27d849867ca50a20ec4e0, type: 3}
     treeUniformScaleRange: {x: 1.3, y: 1.5}
     grassExclusionRadius: 0.5
     bushGrassExclusionRadius: 0.45

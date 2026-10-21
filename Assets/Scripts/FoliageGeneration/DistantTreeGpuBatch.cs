@@ -106,7 +106,7 @@ public sealed class DistantTreeGpuBatch : IDisposable
 
     public static Bounds RenderingBounds(Bounds local, Material material)
     {
-        if (material.shader.name == "Custom/SpruceOctaImpostor")
+        if ((material.shader.name == "Custom/SpruceOctaImpostor" || material.shader.name == "Custom/TreeHQOctaImpostor"))
         {
             // The selected capture's projected root is anchored to the tree
             // origin. Include both the rotating square and its root-to-center
@@ -125,7 +125,7 @@ public sealed class DistantTreeGpuBatch : IDisposable
     // non-uniform scale, and mesh offsets. Bounds are relative to the tree origin.
     public static Vector4 CalculateBounds(Bounds local, Matrix4x4 transform, Material material = null)
     {
-        if (material != null && material.shader.name == "Custom/SpruceOctaImpostor")
+        if (material != null && (material.shader.name == "Custom/SpruceOctaImpostor" || material.shader.name == "Custom/TreeHQOctaImpostor"))
         {
             Vector3 captureCenter = material.GetVector("_CaptureCenterLS");
             // Match the shader: its billboard uses the X-column length as a

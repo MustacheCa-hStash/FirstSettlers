@@ -1,0 +1,96 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: RedMapleHQ_OctaImpostor_M
+  m_Shader: {fileID: 4800000, guid: 56ab806928c34b30a8fd87e14baaf187, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _LEGACYMAPLEPALETTE_ON
+  - _STABLELEAFTRANSMISSION_ON
+  - _USESEASONPALETTE_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _AlbedoCoverage:
+        m_Texture: {fileID: 2800000, guid: 9e0fadeb5bee1394a9161c1d62f884ba, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _AmbientAtlas:
+        m_Texture: {fileID: 2800000, guid: ce85ee1d6660ed14c9f33067bd2c447b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DepthAtlas:
+        m_Texture: {fileID: 2800000, guid: 0b6e69af2f8ab8a42a5ba38949865e72, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MaterialIdAtlas:
+        m_Texture: {fileID: 2800000, guid: 17e97e4508274174e8930872849eba78, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SurfaceAtlas:
+        m_Texture: {fileID: 2800000, guid: 8e73429d790b1ba4f84f6159db05a306, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AOStrength: 0.4
+    - _AmbientFloor: 0.3
+    - _AmbientTileResolution: 128
+    - _AtlasPadding: 4
+    - _AtlasTileResolution: 1016
+    - _AutumnVariationStrength: 0.62
+    - _BarkBrightness: 1
+    - _BarkColorRemap: 0
+    - _BarkRemapBlackPoint: 0.08
+    - _BarkRemapWhitePoint: 0.9
+    - _CaptureRadius: 12.175477
+    - _ColorVariationStrength: 0.62
+    - _Cutoff: 0.012
+    - _DebugFrameX: 0
+    - _DebugFrameY: 0
+    - _DebugView: 0
+    - _DepthParallax: 0.45
+    - _FoliageBrightness: 1.3918499
+    - _FramesPerAxis: 8
+    - _LeafLightWrap: 0.62
+    - _LegacyMaplePalette: 1
+    - _SeasonAutumnAmount: 1
+    - _SeasonPaletteMode: 0
+    - _SeasonStrength: 1
+    - _SkyStrength: 1
+    - _StableLeafTransmission: 1
+    - _TransmissionStrength: 1
+    - _TreeTintStrength: 0.65
+    - _UseSeasonPalette: 1
+    - _WindSpeed: 1.15
+    - _WindStrength: 0.035
+    m_Colors:
+    - _AutumnCrimsonColor: {r: 0.47999996, g: 0.025, b: 0.04, a: 1}
+    - _AutumnOrangeColor: {r: 1, g: 0.24999997, b: 0.054999977, a: 1}
+    - _AutumnRedColor: {r: 0.88, g: 0.059999965, b: 0.035, a: 1}
+    - _AutumnYellowColor: {r: 0.88, g: 0.61, b: 0.11999995, a: 1}
+    - _BarkHighlightColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+    - _BarkShadowColor: {r: 0.14999998, g: 0.14999998, b: 0.14999998, a: 1}
+    - _CaptureCenterLS: {r: -0.60078, g: 8.058559, b: -0.0983839, a: 0}
+    - _LeafSeasonTint: {r: 1, g: 1, b: 1, a: 1}
+    - _LeafShadowColor: {r: 0.15999997, g: 0.018, b: 0.018, a: 1}
+    - _LeafTransmissionColor: {r: 1, g: 1, b: 1, a: 1}
+    - _SummerLeafColor: {r: 0.17999998, g: 0.41999996, b: 0.11999995, a: 1}
+    - _TreeLeafTint: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

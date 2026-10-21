@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/Birch_LOD0_v04.prefab",
+    "prefabGuid": "fe4a12ed830904b42abf5a9d5b7572d0",
+    "dependencyHash": "228fac7b171cbf7d288fe4d7c361e595",
+    "albedoEncoding": "sRGB half-range neutral detail; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.5
+}

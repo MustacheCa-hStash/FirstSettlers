@@ -14,7 +14,9 @@ public static class BirchImpostorColorValidation
     struct VisibleInstance { public Matrix4x4 Transform; public Vector4 Tint, Fade; }
 
     [MenuItem("Tools/Impostors/Birch/Validate Birch Color Consistency")]
-    public static void Run()
+    public static void Run() => RunChecks("");
+    public static void RunHQ() => RunChecks("HQ");
+    static void RunChecks(string suffix)
     {
         var previousPipeline = GraphicsSettings.defaultRenderPipeline;
         var previousQuality = QualitySettings.renderPipeline;
@@ -52,7 +54,7 @@ public static class BirchImpostorColorValidation
             {
                 string folder = "Assets/Materials/M_Trees/" + species + "/";
                 var source = AssetDatabase.LoadAssetAtPath<Material>(BirchOctaImpostorBaker.LeafPath);
-                var impostor = AssetDatabase.LoadAssetAtPath<Material>(folder + species + "_OctaImpostor_M.mat");
+                var impostor = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/M_Trees/" + species + suffix + "/" + species + suffix + "_OctaImpostor_M.mat");
                 Require(source != null && impostor != null, "Missing birch materials: " + species);
                 Require(impostor.GetFloat("_SeasonPaletteMode") == 3, "Birch palette mode.");
                 Require(impostor.GetColor("_AutumnYellowColor") == source.GetColor("_AutumnGoldColor") &&

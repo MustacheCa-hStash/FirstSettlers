@@ -1,0 +1,91 @@
+{
+    "configuration": "{\"species\":\"RedMaple\",\"sourcePrefab\":\"Assets/Prefabs/RedMaple_LOD0_v03.prefab\",\"leafPath\":\"Assets/Materials/M_Trees/RedMaple/M_RedMaple_Leaf.mat\",\"barkPath\":\"Assets/Materials/M_Trees/RedMaple/M_RedMapleBark_Stylized.mat\",\"leafTexture\":\"Assets/Textures/Trees/RedMapleLeafCard.png\",\"barkTexture\":\"Assets/Textures/Trees/Bark/T_SugarMapleBark_Stylized.png\",\"sourceSlot\":\"mapleTreePrefab\",\"variant\":\"MapleTree\",\"shaderName\":\"Hidden/TreeImpostor/RedMapleHQSemanticCapture\",\"billboardSlots\":[\"mapleTreeBillboardPrefab\",\"grasslandMapleTreeBillboardPrefab\"],\"paletteMode\":0,\"expansion\":0.5}",
+    "inputs": [
+        {
+            "path": "Assets/Shaders/RedMapleLeafTintCutout.shader",
+            "sha256": "02EEDFEC0A4DC04F0ADED71BAF8E14DB727E738EACB732ED0D2F060391500428"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/RedMaple/M_RedMapleBark_Stylized.mat",
+            "sha256": "AAF371B9BBCF33A0B1C84A5675318F25A41EEAA82A0E47CEC1C92237C5651513"
+        },
+        {
+            "path": "Assets/Textures/Trees/Bark/T_SugarMapleBark_Stylized.png",
+            "sha256": "B078FD2816E535A4FFDD7AD2973B190BD9A2F5921774EC0BB4CEFC2AA0E87A89"
+        },
+        {
+            "path": "Assets/Textures/Trees/leafClumpAtlas_RedMaple.png",
+            "sha256": "BBD2C135FBA9266E2F2C8BE6AE105BD20974EFE6BA58FF258C000EB1AF67C6E4"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/RedMaple/M_RedMaple_Leaf.mat",
+            "sha256": "EAEB2DF89B52FADC346430506E8BA8BF778D5FA24CC0E9DC02ECA95CAB0C008F"
+        },
+        {
+            "path": "Assets/Models/Trees/RedMaple_LOD0_P3120_B1900_L1152_v03.fbx",
+            "sha256": "0B5AA95B70DF832AFB203C53816E93B9B62C60A9C73156C2D7C1C789199C6C2F"
+        },
+        {
+            "path": "Assets/Textures/Trees/RedMapleLeafCard.png",
+            "sha256": "E3B3C7E88F35D56C7E38D65B5E457B36FB63A52456F7586C6851BC84C9A5A4F6"
+        },
+        {
+            "path": "Assets/Shaders/RedMapleStylizedBark.shader",
+            "sha256": "4B64F70E6A84AB5EEB2219DCC01B3A6B0FE992477F0215BAB3C2DEA588BA4AE9"
+        },
+        {
+            "path": "Assets/Prefabs/RedMaple_LOD0_v03.prefab",
+            "sha256": "A2549F30CCBBD70F6DAFF1BA97AE9AAC225E0420D8C40E12304E24909DC0517A"
+        },
+        {
+            "path": "Assets/Shaders/RedMapleHQImpostorSemanticCapture.shader",
+            "sha256": "4D27FD9CC7B2BB0986485194A97A3DF462351B0E53BF273B29CEF38E8571444A"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
+            "sha256": "910F2517A2BABBCFF2AFECD903A799D8B25B10344A32F3C967A407C77AA31D02"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAmbientAtlasBakerWindow.cs",
+            "sha256": "D4BC380FD35CCD293B11A6FA75345E545C66FEB3DA58B16E0750DEF105EC1796"
+        },
+        {
+            "path": "Assets/Shaders/TreeHQOctaImpostor.shader",
+            "sha256": "0554B3ED1550010554F84BEE5D1D761EDE69F3C6B0D013D6ABA4C85DDF0BE142"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/RedMapleHQ/RedMapleHQ_Octa_AlbedoCoverage.png",
+            "sha256": "5A9263F3ECAA7B3156FADEC9176B14265B8034D1376513494A6D1B9BF5F4E9D6"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/RedMapleHQ/RedMapleHQ_Octa_Surface.png",
+            "sha256": "F3908D17B615F5D4F54430D7A13478F379A7AD2B6BF97AA77A1DE6BDD1781D46"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/RedMapleHQ/RedMapleHQ_Octa_Depth.png",
+            "sha256": "F9E885A348F776FDB357D15337475399FF85DC5BA1FA2700B18B39514509385F"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/RedMapleHQ/RedMapleHQ_Octa_MaterialId.png",
+            "sha256": "0B976D6247E743B89D043AE8111B58058BDAC9B92C0DFCA6E0F823C3F06202FE"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/RedMapleHQ/RedMapleHQ_Octa_Ambient.png",
+            "sha256": "818C947E93745787EE70BAF01FC4F85E4FB73894C74E44C05379B6648AD5A394"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/RedMapleHQ/RedMapleHQ_OctaImpostor_M.mat",
+            "sha256": "3A0B9D1B29C02859658185D675DA610D63BDA8A6995384828243A1695457A287"
+        },
+        {
+            "path": "Assets/Models/Trees/RedMapleHQ_OctaImpostor_Runtime.mesh",
+            "sha256": "6045B16ABDD515D5C91F9B40A2AFFDF6D30476549A24C05BFB3BCB652D51CA74"
+        },
+        {
+            "path": "Assets/Prefabs/RedMapleHQ_OctaImpostor_Runtime.prefab",
+            "sha256": "217F330D789BB32A7F6184877A02E7E54575710EAD8284B8F39C4458E7A11FF3"
+        }
+    ]
+}

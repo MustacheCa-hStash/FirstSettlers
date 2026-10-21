@@ -1,0 +1,88 @@
+{
+  "species": [
+    {
+      "species": "RedMaple",
+      "sourcePrefab": "Assets/Prefabs/RedMaple_LOD0_v03.prefab",
+      "leafPath": "Assets/Materials/M_Trees/RedMaple/M_RedMaple_Leaf.mat",
+      "barkPath": "Assets/Materials/M_Trees/RedMaple/M_RedMapleBark_Stylized.mat",
+      "leafTexture": "Assets/Textures/Trees/RedMapleLeafCard.png",
+      "barkTexture": "Assets/Textures/Trees/Bark/T_SugarMapleBark_Stylized.png",
+      "paletteMode": 0,
+      "sourceSlot": "mapleTreePrefab",
+      "billboardSlots": [
+        "mapleTreeBillboardPrefab",
+        "grasslandMapleTreeBillboardPrefab"
+      ],
+      "variant": "MapleTree",
+      "expansion": 0.5,
+      "shaderName": "Hidden/TreeImpostor/RedMapleHQSemanticCapture"
+    },
+    {
+      "species": "SugarMaple",
+      "sourcePrefab": "Assets/Prefabs/SugarMaple_LOD0_v04.prefab",
+      "leafPath": "Assets/Materials/M_Trees/SugarMaple/M_SugarMapleLeaf.mat",
+      "barkPath": "Assets/Materials/M_Trees/SugarMaple/M_SugarMapleBark_Stylized.mat",
+      "leafTexture": "Assets/Textures/Trees/SugarMapleLeafCard.png",
+      "barkTexture": "Assets/Textures/Trees/Bark/T_SugarMapleBark_Stylized.png",
+      "paletteMode": 1,
+      "sourceSlot": "sugarMapleTreePrefab",
+      "billboardSlots": [
+        "sugarMapleTreeBillboardPrefab"
+      ],
+      "variant": "SugarMapleTree",
+      "expansion": 0.5,
+      "shaderName": "Hidden/TreeImpostor/SugarMapleHQSemanticCapture"
+    },
+    {
+      "species": "Oak",
+      "sourcePrefab": "Assets/Prefabs/Oak_LOD0_v03.prefab",
+      "leafPath": "Assets/Materials/M_Trees/Oak/M_Oak_Leaf.mat",
+      "barkPath": "Assets/Materials/M_Trees/Oak/M_Oak_Bark.mat",
+      "leafTexture": "Assets/Textures/Trees/Oak/T_OakLeafCard.png",
+      "barkTexture": "Assets/Textures/Trees/Bark/T_WhiteOakBark_Stylized.png",
+      "paletteMode": 2,
+      "sourceSlot": "oakTreePrefab",
+      "billboardSlots": [
+        "oakTreeBillboardPrefab",
+        "grasslandOakTreeBillboardPrefab"
+      ],
+      "variant": "OakTree",
+      "expansion": 0.5,
+      "shaderName": "Hidden/TreeImpostor/OakSemanticCapture"
+    },
+    {
+      "species": "Birch",
+      "sourcePrefab": "Assets/Prefabs/Birch_LOD0_v04.prefab",
+      "leafPath": "Assets/Materials/M_Trees/Birch/M_Birch_Leaf.mat",
+      "barkPath": "Assets/Materials/M_Trees/Birch/M_Birch_Bark.mat",
+      "leafTexture": "Assets/Textures/Trees/leafClumpAtlas_Birch.png",
+      "barkTexture": "Assets/Textures/Trees/Bark/BirchBarkTextureSeamless.png",
+      "paletteMode": 3,
+      "sourceSlot": "birchAspenTreePrefab",
+      "billboardSlots": [
+        "birchAspenTreeBillboardPrefab",
+        "grasslandBirchAspenTreeBillboardPrefab"
+      ],
+      "variant": "BirchAspenTree",
+      "expansion": 0.5,
+      "shaderName": "Hidden/TreeImpostor/BirchSemanticCapture"
+    },
+    {
+      "species": "WhitePine",
+      "sourcePrefab": "Assets/Prefabs/WhitePine_LOD0_v01.prefab",
+      "leafPath": "Assets/Materials/M_Trees/WhitePine/M_WhitePineLeaves.mat",
+      "barkPath": "Assets/Materials/M_Trees/WhitePine/M_WhitePineBark.mat",
+      "leafTexture": "Assets/Textures/Trees/leafClumpAtlas_WhitePine.png",
+      "barkTexture": "Assets/Textures/Trees/Bark/T_WhitePineBark_Stylized.png",
+      "paletteMode": -1,
+      "sourceSlot": "whitePineTreePrefab",
+      "billboardSlots": [
+        "whitePineTreeBillboardPrefab",
+        "grasslandWhitePineTreeBillboardPrefab"
+      ],
+      "variant": "WhitePineTree",
+      "expansion": 0.75,
+      "shaderName": "Hidden/TreeImpostor/WhitePineSemanticCapture"
+    }
+  ]
+}

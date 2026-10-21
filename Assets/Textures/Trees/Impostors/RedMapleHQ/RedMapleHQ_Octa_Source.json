@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/RedMaple_LOD0_v03.prefab",
+    "prefabGuid": "6ab64d9769b56e9499c1190271e4079b",
+    "dependencyHash": "c0409796ee5b67f64a456f32da60e25d",
+    "albedoEncoding": "sRGB half-range neutral detail; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.5
+}

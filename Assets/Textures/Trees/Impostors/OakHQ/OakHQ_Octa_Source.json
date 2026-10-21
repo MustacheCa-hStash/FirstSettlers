@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/Oak_LOD0_v03.prefab",
+    "prefabGuid": "8f20ef2fc57ded44fa9708e329628678",
+    "dependencyHash": "469e0048cbd67268d22073ebc5ce992e",
+    "albedoEncoding": "sRGB half-range neutral detail; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.5
+}

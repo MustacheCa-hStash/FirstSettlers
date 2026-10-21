@@ -99,6 +99,9 @@ public sealed class TreeImpostorAmbientAtlasBakerWindow : EditorWindow
     public static bool BakeSpruceHQ(TreeImpostorCaptureSetup source)
         => BakeSpecies(source, "SpruceHQ", "Assets/Textures/Trees/Impostors/SpruceHQ", 4);
 
+    public static bool BakeTreeHQ(TreeImpostorCaptureSetup source, string species)
+        => BakeSpecies(source,species+"HQ","Assets/Textures/Trees/Impostors/"+species+"HQ",4);
+
     static bool BakeSpecies(TreeImpostorCaptureSetup source, string species, string folder, int padding = 2)
     {
         var window = CreateInstance<TreeImpostorAmbientAtlasBakerWindow>();

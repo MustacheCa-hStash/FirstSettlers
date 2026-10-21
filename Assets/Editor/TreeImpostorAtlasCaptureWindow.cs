@@ -116,7 +116,11 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
         => CaptureSpecies(source, "SpruceHQ", "Assets/Textures/Trees/Impostors/SpruceHQ", "Assets/Materials/M_Trees/SpruceHQ/SpruceHQ_OctaImpostor_M.mat",
             "Hidden/TreeImpostor/SpruceHQSemanticCapture", true);
 
-    static bool CaptureSpecies(TreeImpostorCaptureSetup source, string species, string folder, string materialPath, string shader, bool highQualityNeedles = false)
+    public static bool CaptureTreeHQ(TreeImpostorCaptureSetup source, string species, string shader, float expansion)
+        => CaptureSpecies(source, species+"HQ", "Assets/Textures/Trees/Impostors/"+species+"HQ",
+            "Assets/Materials/M_Trees/"+species+"HQ/"+species+"HQ_OctaImpostor_M.mat",shader,true,expansion);
+
+    static bool CaptureSpecies(TreeImpostorCaptureSetup source, string species, string folder, string materialPath, string shader, bool highQualityNeedles = false, float expansion = .75f)
     {
         var window = CreateInstance<TreeImpostorAtlasCaptureWindow>();
         try
@@ -135,7 +139,7 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
             if (highQualityNeedles)
             {
                 window.tileResolution = 1016; window.paddingPixels = 4;
-                window.coverageExpansionPixels = 2; window.coverageExpansionStrength = .75f;
+                window.coverageExpansionPixels = 2; window.coverageExpansionStrength = expansion;
                 window.atlasImportMaxSize = 8192;
             }
             return window.CaptureAll();

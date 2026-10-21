@@ -14,7 +14,9 @@ public static class OakImpostorColorValidation
     struct VisibleInstance { public Matrix4x4 Transform; public Vector4 Tint, Fade; }
 
     [MenuItem("Tools/Impostors/Oak/Validate Oak Color Consistency")]
-    public static void Run()
+    public static void Run() => RunChecks("");
+    public static void RunHQ() => RunChecks("HQ");
+    static void RunChecks(string suffix)
     {
         var previousPipeline = GraphicsSettings.defaultRenderPipeline;
         var previousQuality = QualitySettings.renderPipeline;
@@ -52,7 +54,7 @@ public static class OakImpostorColorValidation
             {
                 string folder = "Assets/Materials/M_Trees/" + species + "/";
                 var source = AssetDatabase.LoadAssetAtPath<Material>(OakOctaImpostorBaker.LeafPath);
-                var impostor = AssetDatabase.LoadAssetAtPath<Material>(folder + species + "_OctaImpostor_M.mat");
+                var impostor = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/M_Trees/" + species + suffix + "/" + species + suffix + "_OctaImpostor_M.mat");
                 Require(source != null && impostor != null, "Missing oak materials: " + species);
                 Require(impostor.GetFloat("_SeasonPaletteMode") == 2, "Oak palette mode.");
                 Require(impostor.GetColor("_AutumnYellowColor") == source.GetColor("_AutumnOchreColor") &&
