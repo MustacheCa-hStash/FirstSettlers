@@ -172,6 +172,8 @@ public class ChunkRuntime
 
     public void SetMeshes(Mesh terrainMesh, Mesh waterMesh, int lod)
     {
+        bool visualLodChange = currentLOD >= 0 && currentLOD != lod &&
+            terrainMeshFilter.sharedMesh != null && terrainMesh != null && sculptSurface?.HasRender != true;
         if (terrainMeshFilter.sharedMesh != terrainMesh)
             terrainMeshFilter.sharedMesh = terrainMesh;
 
@@ -180,7 +182,7 @@ public class ChunkRuntime
         waterRoot.SetActive(hasWater);
 
         currentLOD = lod;
-        RefreshFlameGeometry();
+        RefreshFlameGeometry(visualLodChange);
     }
 
     public void ApplyCollider(Mesh colliderMesh)
@@ -234,12 +236,12 @@ public class ChunkRuntime
         sculptSurface?.SetRenderVisible(renderVisible&&!terrainHandoffHidden,!terrainHandoffHidden);
         RefreshFlameGeometry();
     }
-    private void RefreshFlameGeometry()
+    private void RefreshFlameGeometry(bool visualLodChange = false)
     {
         Mesh mesh=sculptSurface?.HasRender==true?sculptSurface.RenderMesh:terrainMeshFilter!=null?terrainMeshFilter.sharedMesh:null;
         if(mesh==null || terrainHandoffHidden || root==null || !visible){LocalFlameGeometry.Remove(this);return;}
         flamePart[0]=new LocalFlameGeometry.Part(mesh,sculptSurface?.HasRender==true?Matrix4x4.identity:root.transform.localToWorldMatrix);
-        LocalFlameGeometry.Set(this,flamePart);
+        LocalFlameGeometry.Set(this,flamePart,refreshOnly:visualLodChange);
     }
 
     public bool TryGetVisibleWaterBounds(out Bounds bounds)

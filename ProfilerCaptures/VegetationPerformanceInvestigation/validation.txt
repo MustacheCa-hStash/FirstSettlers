@@ -1,0 +1,5 @@
+TORCH_LOD_REFRESH_PASS: four cached torches remain lit with one refresh per frame; real geometry invalidates immediately.
+Distant tree compute correctness passed: shader variants, scaled bounds, >1023 instances, culling, ordering, tint/fade, thinning, capacity growth and slot reuse. No benchmark run.
+VEGETATION_REFRESH_PASS: retained far support, preferred replacement, negative coordinates, unpublished/hidden rejection, empty tree publication, canopy removal, prepopulated registry and stable ordering parity; existing GPU suite passed.
+Existing LocalFlameValidation.Run: 68 checks; blocked receiver 0; cached/baseline difference 0.
+TreeRenderPerformance.RunBatch: TREE_RENDER_PERFORMANCE_PASS.

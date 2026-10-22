@@ -107,6 +107,9 @@ public class TreeSettings
     [InspectorName("Mesh Detail Radius (chunk widths)"), Tooltip("Retained serialized setting: meshes remain fully visible through radius + 1 chunk widths and fade to billboards across the following chunk width. Distance is measured per tree in XZ.")]
     public int gameObjectTreeChunkRingRadius = 1;
 
+    [Range(1, 8), Tooltip("World-aligned chunk widths grouped into each standing-tree draw region. 1 keeps per-chunk draws; larger regions reduce submissions with broader camera/shadow culling bounds. Does not change tree detail or coverage.")]
+    public int standingTreeBatchSizeChunks = 4;
+
     [HideInInspector, Tooltip("Legacy billboard ring start; retained for serialized compatibility.")]
     public int billboardTreeChunkStartRingRadius = 2;
 

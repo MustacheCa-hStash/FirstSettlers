@@ -1,0 +1,4 @@
+Device: NVIDIA GeForce RTX 5090; reported VRAM 32187 MiB
+Estimated graphics-driver allocation before fixture: 23216269
+Estimated graphics-driver allocation after loading originals and all reduced copies: 2898106565
+Originals and reduced variants coexist in this test; reduced variants do not free originals. Texture byte sums describe format/mip payload, not observed process VRAM residency.

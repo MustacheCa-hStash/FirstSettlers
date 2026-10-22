@@ -21,6 +21,24 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
         public readonly MaterialPropertyBlock Properties = new MaterialPropertyBlock();
     }
     private struct Part { public Batch Batch; public Matrix4x4 Local; }
+    private struct SpatialTree
+    {
+        public ChunkCoord Region;
+        public int Sequence;
+        public TreeInstanceData Tree;
+        public Matrix4x4 Matrix;
+        public float Handoff, Load;
+    }
+    private sealed class SpatialComparer : IComparer<SpatialTree>
+    {
+        public static readonly SpatialComparer Instance = new();
+        public int Compare(SpatialTree a, SpatialTree b)
+        {
+            int result = a.Region.z.CompareTo(b.Region.z);
+            if (result == 0) result = a.Region.x.CompareTo(b.Region.x);
+            return result != 0 ? result : a.Sequence.CompareTo(b.Sequence);
+        }
+    }
     private sealed class Definition
     {
         public Part[][] Levels;
@@ -33,9 +51,14 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
     private readonly Dictionary<Material, Material> materials = new();
     private readonly Dictionary<Mesh, Mesh> meshes = new();
     private readonly List<Batch> batches = new(), touched = new();
+    private readonly List<SpatialTree> spatialTrees = new();
     private Camera camera;
+    private Vector3 cameraPosition;
+    private float screenHeightScale;
+    private bool orthographic;
     private readonly TreeRegistry flameRegistry;
     private readonly List<TreeRecord> flameTrees=new();
+    private readonly Dictionary<ChunkCoord, Bounds> flameChunkBounds = new();
     public RenderGeometryStats RenderStats { get; private set; }
     public int DrawCalls { get; private set; }
 
@@ -46,11 +69,35 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
         if(registry!=null){registry.ChunkChanged+=FlameChunkChanged;LocalFlameGeometry.RegisterProvider(this);}
         foreach (var species in TreeSpeciesCatalog.All)
             Add(species.Variant, species.NearPrefab(settings));
+        if (registry != null)
+        {
+            var existingChunks = new HashSet<ChunkCoord>();
+            foreach (var tree in registry.Records) existingChunks.Add(tree.Chunk);
+            foreach (var coord in existingChunks) FlameChunkChanged(coord);
+        }
     }
     private void FlameChunkChanged(ChunkCoord coord)
     {
-        float size=flameRegistry.ChunkWorldSize;
-        LocalFlameGeometry.NotifyChanged(new Bounds(new Vector3((coord.x+.5f)*size,0,(coord.z+.5f)*size),new Vector3(size+90,10000000,size+90)));
+        bool changed = flameChunkBounds.Remove(coord, out var bounds);
+        bool hasCurrent = false;
+        Bounds current = default;
+        foreach (var tree in flameRegistry.GetChunk(coord))
+        {
+            if (tree.State != TreeState.Standing || !variants.TryGetValue(tree.Placement.variant, out var definition)) continue;
+            var matrix = Matrix4x4.TRS(tree.WorldPosition, tree.Placement.localRotation, tree.Placement.localScale);
+            var treeBounds = TransformBounds(definition.Bounds, matrix);
+            if (hasCurrent) current.Encapsulate(treeBounds);
+            else { current = treeBounds; hasCurrent = true; }
+        }
+        if (hasCurrent)
+        {
+            flameChunkBounds.Add(coord, current);
+            if (changed) bounds.Encapsulate(current);
+            else bounds = current;
+        }
+        // Empty placement publications have no shadow geometry. Real changes
+        // invalidate both the old and new canopy, including removals and moves.
+        if (changed || hasCurrent) LocalFlameGeometry.NotifyChanged(bounds);
     }
     public void CollectFlameGeometry(Vector3 position,float range,List<LocalFlameGeometry.Part> output)
     {
@@ -162,20 +209,54 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
     public bool Supports(WorldFeatureVariant variant) => variants.ContainsKey(variant);
     public Bounds BoundsFor(WorldFeatureVariant variant, Matrix4x4 matrix) =>
         variants.TryGetValue(variant, out var definition) ? TransformBounds(definition.Bounds, matrix) : new Bounds(matrix.GetColumn(3), Vector3.zero);
-    public void BeginFrame(Camera camera) { this.camera = camera; RenderStats = default; DrawCalls = 0; }
+    public void BeginFrame(Camera camera)
+    {
+        spatialTrees.Clear();
+        this.camera = camera; RenderStats = default; DrawCalls = 0;
+        if (camera == null) return;
+        cameraPosition = camera.transform.position;
+        orthographic = camera.orthographic;
+        screenHeightScale = QualitySettings.lodBias / (2f * (orthographic ? camera.orthographicSize :
+            Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * .5f)));
+    }
+
+    public void SubmitSpatial(ChunkCoord chunk, TreeInstanceData tree, Matrix4x4 matrix, float billboardFade, float loadFade)
+    {
+        if (billboardFade >= 1f || loadFade <= 0f || !variants.ContainsKey(tree.variant)) return;
+        int span = Mathf.Clamp(settings.standingTreeBatchSizeChunks, 1, 8);
+        spatialTrees.Add(new SpatialTree
+        {
+            Region = new ChunkCoord(FloorRegion(chunk.x, span), FloorRegion(chunk.z, span)),
+            Sequence = spatialTrees.Count, Tree = tree, Matrix = matrix, Handoff = billboardFade, Load = loadFade
+        });
+    }
+
+    private static int FloorRegion(int coordinate, int span) => coordinate >= 0 ? coordinate / span : (coordinate + 1) / span - 1;
+
+    public void EndFrame()
+    {
+        spatialTrees.Sort(SpatialComparer.Instance);
+        for (int i = 0; i < spatialTrees.Count; i++)
+        {
+            var tree = spatialTrees[i];
+            if (i > 0 && tree.Region != spatialTrees[i - 1].Region) EndChunk();
+            Submit(tree.Tree, tree.Matrix, tree.Handoff, tree.Load);
+        }
+        EndChunk();
+        spatialTrees.Clear();
+    }
 
     // A distance handoff is supplied by the world renderer. Prefab LODs remain screen-size based.
     public void Submit(TreeInstanceData tree, Matrix4x4 matrix, float billboardFade, float loadFade)
     {
         if (billboardFade >= 1f || loadFade <= 0f || !variants.TryGetValue(tree.variant, out var definition)) return;
         float screenHeight = float.MaxValue;
-        if (camera != null)
+        if (camera != null && definition.Levels.Length > 1)
         {
             float size = definition.Bounds.size.y * Mathf.Max(Mathf.Abs(tree.localScale.x), Mathf.Abs(tree.localScale.y), Mathf.Abs(tree.localScale.z));
             Vector3 center = matrix.MultiplyPoint3x4(definition.Bounds.center);
-            screenHeight = camera.orthographic ? size / (2f * camera.orthographicSize) :
-                size / (2f * Mathf.Max(.01f, Vector3.Distance(camera.transform.position, center)) * Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * .5f));
-            screenHeight *= QualitySettings.lodBias;
+            screenHeight = size * screenHeightScale;
+            if (!orthographic) screenHeight /= Mathf.Max(.01f, Vector3.Distance(cameraPosition, center));
         }
         int level = 0;
         while (level < definition.Levels.Length - 1 && screenHeight < definition.Thresholds[level]) level++;
@@ -212,7 +293,8 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
         }
     }
 
-    // Keep Unity's draw bounds local to a logical chunk, including off-screen shadow casters.
+    // Flush a region without dropping off-screen shadow casters. Legacy callers
+    // can still use this directly for per-chunk submission.
     public void EndChunk() { foreach (var b in touched) Flush(b); touched.Clear(); }
     private void Flush(Batch b)
     {
@@ -238,7 +320,7 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
         if(flameRegistry!=null){flameRegistry.ChunkChanged-=FlameChunkChanged;LocalFlameGeometry.RemoveProvider(this);}
         foreach (var material in materials.Values) DestroyOwned(material);
         foreach (var mesh in meshes.Values) DestroyOwned(mesh);
-        materials.Clear(); meshes.Clear(); variants.Clear(); definitions.Clear(); batches.Clear(); touched.Clear();
+        materials.Clear(); meshes.Clear(); variants.Clear(); definitions.Clear(); batches.Clear(); touched.Clear(); flameChunkBounds.Clear(); spatialTrees.Clear();
     }
     private static void DestroyOwned(UnityEngine.Object value)
     {

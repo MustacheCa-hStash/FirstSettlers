@@ -84,6 +84,7 @@ public sealed class LocalFlameLighting : MonoBehaviour
         Instance=this;for(int i=0;i<Capacity;i++)slots[i]=new Slot();
         casterProperties=new MaterialPropertyBlock();
         LocalFlameGeometry.Changed+=Invalidate;
+        LocalFlameGeometry.RefreshRequested+=Refresh;
         RenderPipelineManager.beginCameraRendering+=BeginCamera;
         SceneManager.sceneLoaded+=SceneLoaded;
     }
@@ -119,13 +120,16 @@ public sealed class LocalFlameLighting : MonoBehaviour
         nextSelection=0;
     }
     public void Invalidate(Bounds changed)
+        => MarkDirty(changed,false);
+    void Refresh(Bounds changed) => MarkDirty(changed,true);
+    void MarkDirty(Bounds changed,bool retainCachedShadow)
     {
         SurfaceCache?.GeometryChanged(changed);
         for(int i=0;i<Capacity;i++)
         {
             var s=slots[i];if(s.Source==null)continue;
             if(changed.SqrDistance(s.Source.Position)<=s.Source.range*s.Source.range)
-            {s.Dirty=true;s.Valid=false;SurfaceCache?.Invalidate(new Bounds(s.Source.Position,Vector3.one*s.Source.range*2));}
+            {s.Dirty=true;s.Valid &= retainCachedShadow;SurfaceCache?.Invalidate(new Bounds(s.Source.Position,Vector3.one*s.Source.range*2));}
         }
     }
     public void InvalidateAll(){for(int i=0;i<Capacity;i++){slots[i].Dirty=true;slots[i].Valid=false;}SurfaceCache?.InvalidateAll();}
@@ -236,7 +240,13 @@ public sealed class LocalFlameLighting : MonoBehaviour
                     StaticRefreshes++;TotalStaticRefreshes++;if(!moving)admission--;
                     if(source.stationary)SurfaceCache?.Invalidate(new Bounds(position,Vector3.one*range*2));
                 }
-                else {PendingRefreshes++;source.HasLight=false;continue;}
+                else
+                {
+                    PendingRefreshes++;
+                    // LOD-only changes keep the last valid shadow until this
+                    // slot's turn. New geometry/edits still suppress stale light.
+                    if(!s.Valid){source.HasLight=false;continue;}
+                }
             }
             LocalFlameGeometry.Query(position,range,dynamicGroups,true);
             if(dynamicGroups.Count>0 || s.HadDynamic)
@@ -315,6 +325,7 @@ public sealed class LocalFlameLighting : MonoBehaviour
         if(Instance!=this)return;
         RenderPipelineManager.beginCameraRendering-=BeginCamera;SceneManager.sceneLoaded-=SceneLoaded;
         LocalFlameGeometry.Changed-=Invalidate;Shader.SetGlobalInt(CountId,0);
+        LocalFlameGeometry.RefreshRequested-=Refresh;
         commands?.Release();CoreUtils.Destroy(depthMaterial);
         SurfaceCache?.Dispose();grid.Dispose();Shader.SetGlobalInt("_FSSurfaceEnabled",0);
         if(staticAtlas!=null){staticAtlas.Release();CoreUtils.Destroy(staticAtlas);}

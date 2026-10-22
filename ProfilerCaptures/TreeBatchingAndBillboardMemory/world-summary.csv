@@ -1,0 +1,9 @@
+phase,samples,worldCpuMedianMs,treesCpuMedianMs,nearDrawCalls,nearVertices,nearInstances,framesWithNoTorch
+Grassland-stationary-chunk,1995,0.916,0.3686,14,21497,14,0
+Grassland-stationary-spatial,2014,0.9056,0.3673,14,21497,14,0
+Grassland-rotate,3878,0.9346,0.3798,14,21497,14,0
+Grassland-small-movement,4176,1.6082,0.38,14,21497,14,0
+Forest-stationary-chunk,1967,1.3315,0.7455,142,379072,218,0
+Forest-stationary-spatial,2198,1.1259,0.5596,56,379072,218,0
+Forest-rotate,4303,1.1402,0.5677,56,379072,218,0
+Forest-small-movement,4613,1.804,0.567,56,379072,218,0

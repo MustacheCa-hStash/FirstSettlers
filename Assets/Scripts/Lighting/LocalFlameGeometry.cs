@@ -40,13 +40,17 @@ public static class LocalFlameGeometry
     static readonly Dictionary<Vector3Int,HashSet<Group>> cells=new();
     static int queryStamp;
     public static event Action<Bounds> Changed;
+    // A published surface changed only its visual LOD. Cached shadows can stay
+    // visible while their replacement is admitted; physical edits use Changed.
+    public static event Action<Bounds> RefreshRequested;
     public static int Count=>groups.Count;
     public static Vector3Int Cell(Vector3 p)=>new(Mathf.FloorToInt(p.x/CellSize),Mathf.FloorToInt(p.y/CellSize),Mathf.FloorToInt(p.z/CellSize));
 
-    public static void Set(object owner,IReadOnlyList<Part> parts,bool dynamic=false)
+    public static void Set(object owner,IReadOnlyList<Part> parts,bool dynamic=false,bool refreshOnly=false)
     {
         if(parts.Count==0){Remove(owner);return;}
         groups.TryGetValue(owner,out var group);
+        refreshOnly &= group != null && !group.Dynamic && !dynamic;
         if(group!=null && group.Dynamic==dynamic && group.Parts.Length==parts.Count)
         {
             bool same=true;
@@ -57,14 +61,16 @@ public static class LocalFlameGeometry
         if(group!=null)
         {
             Index(group,false);
-            if(!group.Dynamic)Changed?.Invoke(group.Bounds);
+            if(!group.Dynamic)Notify(group.Bounds,refreshOnly);
         }
         else {group=new Group{Owner=owner};groups.Add(owner,group);}
         if(group.Parts==null || group.Parts.Length!=parts.Count)group.Parts=new Part[parts.Count];
         for(int i=0;i<parts.Count;i++)group.Parts[i]=parts[i];
         group.Bounds=bounds;group.Dynamic=dynamic;Index(group,true);
-        if(!dynamic)Changed?.Invoke(bounds);
+        if(!dynamic)Notify(bounds,refreshOnly);
     }
+    static void Notify(Bounds bounds,bool refreshOnly)
+    {if(refreshOnly)RefreshRequested?.Invoke(bounds);else Changed?.Invoke(bounds);}
     public static void Remove(object owner)
     {
         if(owner==null || !groups.Remove(owner,out var group))return;
@@ -92,7 +98,7 @@ public static class LocalFlameGeometry
                 if(group.Dynamic==dynamic && group.Bounds.SqrDistance(position)<=radius*radius)output.Add(group);
             }
     }
-    public static void Reset(){groups.Clear();cells.Clear();providers.Clear();Changed=null;queryStamp=0;}
+    public static void Reset(){groups.Clear();cells.Clear();providers.Clear();Changed=null;RefreshRequested=null;queryStamp=0;}
 }
 
 /// <summary>Add to spawned doors/actors/props. Static meshes notify only on geometry/pose changes; skinned actors remain dynamic.</summary>

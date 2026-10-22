@@ -71,6 +71,7 @@ public sealed class DistantTreeManager : IDisposable
     private static readonly ProfilerMarker UpdateMarker = new("FS.DistantTrees.Update");
     public RenderGeometryStats RenderStats { get; private set; }
     public RenderGeometryStats MeshRenderStats => standingTrees.RenderStats;
+    public int MeshDrawCalls => standingTrees.DrawCalls;
 
     public DistantTreeManager(TreeSettings settings, int seed, int chunkSize, float sampleScale,
         int octaves, float persistence, float lacunarity, float worldScale, float heightMultiplier,
@@ -197,7 +198,7 @@ public sealed class DistantTreeManager : IDisposable
         float heightStep = Mathf.Max(0f, settings.distantTreeHeightBlendSpeed) * Time.unscaledDeltaTime;
         foreach (var coord in wanted)
         {
-            if (!manager.TryGetDistantTreeSurface(coord, out var runtime, out var heights, out var origin, out float surfaceSize)) continue;
+            if (!manager.TryGetDistantTreeSurface(coord, center, out var runtime, out var heights, out var origin, out float surfaceSize)) continue;
             if (!cache.TryGetValue(coord, out var manifest))
             {
                 // Reuse the authoritative near list whenever it already exists.
@@ -251,6 +252,7 @@ public sealed class DistantTreeManager : IDisposable
                 cache[coord] = manifest;
             }
             manifest.LastUsed = Time.frameCount;
+            if (manifest.Trees.Length == 0) continue;
             manifest.LoadFade = Mathf.MoveTowards(manifest.LoadFade, 1f, fadeStep);
 
             // Bounds include billboard rotation and tree heights. Coarse ground conformity can
@@ -282,7 +284,7 @@ public sealed class DistantTreeManager : IDisposable
                 matrix.m13 = renderHeight;
                 float meshCoverage = hasBillboard ? manifest.LoadFade :
                     Mathf.Min(manifest.LoadFade, Mathf.Clamp01((maxDistance - distance) / outerWidth));
-                standingTrees.Submit(tree, matrix, billboardTransition, meshCoverage);
+                standingTrees.SubmitSpatial(coord, tree, matrix, billboardTransition, meshCoverage);
                 if (!hasBillboard || billboardTransition <= 0f || !billboardVisible) continue;
                 if (gpuEnabled && batch.Gpu != null)
                 {
@@ -332,8 +334,8 @@ public sealed class DistantTreeManager : IDisposable
                 }
                 else Append(batch, instance, camera);
             }
-            standingTrees.EndChunk();
         }
+        standingTrees.EndFrame();
         foreach (var batch in uniqueBatches)
         {
             if (orderByDepth) DrawOrdered(batch, camera);
@@ -403,23 +405,32 @@ public sealed class DistantTreeManager : IDisposable
                 else { m.Bounds.Encapsulate(minimum); m.Bounds.Encapsulate(maximum); }
             }
         }
-        // Farthest-point order protects spatial representatives instead of one corner of a stand.
-        var chosen = new bool[count];
-        for (int rank = 0; rank < count; rank++)
-        {
-            int best = -1; float score = -1f;
-            for (int i = 0; i < count; i++)
-            {
-                if (chosen[i]) continue;
-                float nearest = rank == 0 ? 1f - m.Priority[i] : float.MaxValue;
-                for (int j = 0; j < count; j++)
-                    if (chosen[j]) nearest = Mathf.Min(nearest, (trees[i].localPosition - trees[j].localPosition).sqrMagnitude);
-                if (nearest > score) { best = i; score = nearest; }
-            }
-            chosen[best] = true; m.ProtectionOrder[best] = rank;
-        }
+        FillProtectionOrder(trees, m.Priority, m.ProtectionOrder);
         m.Grounding = new DistantTreeGrounding(m.Trees, m.Matrices, m.Height);
         return m;
+    }
+
+    // Cache each candidate's nearest chosen neighbour instead of rescanning all
+    // previously chosen trees. Same deterministic order, quadratic rather than cubic work.
+    private static void FillProtectionOrder(TreeInstanceData[] trees, float[] priority, int[] order)
+    {
+        var nearest = new float[trees.Length];
+        for (int i = 0; i < nearest.Length; i++) nearest[i] = 1f - priority[i];
+        for (int rank = 0; rank < trees.Length; rank++)
+        {
+            int best = -1; float score = -1f;
+            for (int i = 0; i < trees.Length; i++)
+            {
+                if (nearest[i] > score) { best = i; score = nearest[i]; }
+            }
+            nearest[best] = -1f; order[best] = rank;
+            for (int i = 0; i < trees.Length; i++)
+            {
+                if (nearest[i] < 0f) continue;
+                float distance = (trees[i].localPosition - trees[best].localPosition).sqrMagnitude;
+                nearest[i] = rank == 0 ? distance : Mathf.Min(nearest[i], distance);
+            }
+        }
     }
 
     private void InvalidateCrowding(ChunkCoord coord)

@@ -1,0 +1,9 @@
+SPATIAL_TREE_VALIDATION_PASS: shuffled chunks, negative/extreme coordinates, mixed per-instance attributes and fades, 1001 instances, frame reset and duplicate EndFrame.
+Distant tree compute correctness passed: shader variants, scaled bounds, >1023 instances, culling, ordering, tint/fade, thinning, capacity growth and slot reuse. No benchmark run.
+STANDING TREE PASS: registry state filtering, shared bark/foliage, instanced snow, wind, LOD mask partition, submeshes, bounded batches, unchanged prefab assets and scene shader variants.
+TORCH_LOD_REFRESH_PASS: four cached torches remain lit with one refresh per frame; real geometry invalidates immediately.
+Distant tree compute correctness passed: shader variants, scaled bounds, >1023 instances, culling, ordering, tint/fade, thinning, capacity growth and slot reuse. No benchmark run.
+VEGETATION_REFRESH_PASS: retained far support, preferred replacement, negative coordinates, unpublished/hidden rejection, empty tree publication, canopy removal, prepopulated registry and stable ordering parity; existing GPU suite passed.
+Shadow-disabled study: 240 records, zero changed pixels and zero steady submission allocation.
+Running-world capture: VEGETATION_INVESTIGATION_COMPLETE errors=0.
+Billboard memory study: BILLBOARD_MEMORY_STUDY_PASS, exit 0.

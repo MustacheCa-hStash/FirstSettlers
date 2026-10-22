@@ -1,0 +1,162 @@
+[
+  {
+    "variant": "a-open-corners",
+    "state": "pop",
+    "scene": "meadow",
+    "width": 3316,
+    "height": 1848,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 6062030,
+    "savedFullFrame": true
+  },
+  {
+    "variant": "a-open-corners",
+    "state": "empty",
+    "scene": "meadow",
+    "width": 3316,
+    "height": 1848,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 6100393,
+    "savedFullFrame": false
+  },
+  {
+    "variant": "b-smoke-tiles",
+    "state": "pop",
+    "scene": "meadow",
+    "width": 3316,
+    "height": 1848,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 5971853,
+    "savedFullFrame": true
+  },
+  {
+    "variant": "b-smoke-tiles",
+    "state": "empty",
+    "scene": "meadow",
+    "width": 3316,
+    "height": 1848,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 5972692,
+    "savedFullFrame": false
+  },
+  {
+    "variant": "c-stone-underlines",
+    "state": "pop",
+    "scene": "meadow",
+    "width": 3316,
+    "height": 1848,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 6058335,
+    "savedFullFrame": true
+  },
+  {
+    "variant": "c-stone-underlines",
+    "state": "empty",
+    "scene": "meadow",
+    "width": 3316,
+    "height": 1848,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 6113147,
+    "savedFullFrame": false
+  },
+  {
+    "variant": "d-floating-icons",
+    "state": "pop",
+    "scene": "meadow",
+    "width": 3316,
+    "height": 1848,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 6068736,
+    "savedFullFrame": true
+  },
+  {
+    "variant": "d-floating-icons",
+    "state": "empty",
+    "scene": "meadow",
+    "width": 3316,
+    "height": 1848,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 6108434,
+    "savedFullFrame": false
+  },
+  {
+    "variant": "a-open-corners",
+    "state": "pop",
+    "scene": "forest",
+    "width": 3321,
+    "height": 1839,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 6041381,
+    "savedFullFrame": false
+  },
+  {
+    "variant": "a-open-corners",
+    "state": "empty",
+    "scene": "forest",
+    "width": 3321,
+    "height": 1839,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 6079744,
+    "savedFullFrame": false
+  },
+  {
+    "variant": "b-smoke-tiles",
+    "state": "pop",
+    "scene": "forest",
+    "width": 3321,
+    "height": 1839,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 5951118,
+    "savedFullFrame": false
+  },
+  {
+    "variant": "b-smoke-tiles",
+    "state": "empty",
+    "scene": "forest",
+    "width": 3321,
+    "height": 1839,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 5951553,
+    "savedFullFrame": false
+  },
+  {
+    "variant": "c-stone-underlines",
+    "state": "pop",
+    "scene": "forest",
+    "width": 3321,
+    "height": 1839,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 6037686,
+    "savedFullFrame": false
+  },
+  {
+    "variant": "c-stone-underlines",
+    "state": "empty",
+    "scene": "forest",
+    "width": 3321,
+    "height": 1839,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 6092498,
+    "savedFullFrame": false
+  },
+  {
+    "variant": "d-floating-icons",
+    "state": "pop",
+    "scene": "forest",
+    "width": 3321,
+    "height": 1839,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 6047598,
+    "savedFullFrame": false
+  },
+  {
+    "variant": "d-floating-icons",
+    "state": "empty",
+    "scene": "forest",
+    "width": 3321,
+    "height": 1839,
+    "changedOutsideUI": 0,
+    "comparedOutsideUI": 6087674,
+    "savedFullFrame": false
+  }
+]

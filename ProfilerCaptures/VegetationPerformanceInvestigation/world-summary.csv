@@ -1,0 +1,13 @@
+capture,phase,samples,worldCpuMedianMs,treesCpuMedianMs,torchCpuMedianMs,registryChanges,geometryChanges,framesWithNoTorch
+before,Grassland-stationary,3919,0.9705,0.4160,0.0095,0,0,0
+before,Grassland-rotate,3786,0.9847,0.4257,0.0095,0,0,0
+before,Grassland-small-movement,4090,1.6665,0.4216,0.0097,36,44,0
+before,Forest-stationary,3841,1.3722,0.7822,0.0093,0,0,0
+before,Forest-rotate,3818,1.3706,0.7905,0.0093,0,0,0
+before,Forest-small-movement,4249,2.0379,0.7877,0.0095,28,53,0
+after-initial-fixes,Grassland-stationary,3616,0.9652,0.3742,0.0093,0,0,0
+after-initial-fixes,Grassland-rotate,3532,0.9927,0.3865,0.0094,0,0,0
+after-initial-fixes,Grassland-small-movement,4169,1.6152,0.3829,0.0095,4,2,0
+after-initial-fixes,Forest-stationary,3989,1.3147,0.7319,0.0091,0,0,0
+after-initial-fixes,Forest-rotate,3917,1.3202,0.7413,0.0091,0,0,0
+after-initial-fixes,Forest-small-movement,4286,1.9937,0.7399,0.0092,28,39,0

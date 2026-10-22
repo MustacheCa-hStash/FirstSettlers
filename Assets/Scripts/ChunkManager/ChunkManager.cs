@@ -308,29 +308,53 @@ public class ChunkManager : IChunkLookup
 
     public bool TryGetDistantTreeSurface(ChunkCoord coord, out ChunkRuntime runtime,
         out float[,] heights, out Vector2 origin, out float size)
+        => TryGetDistantTreeSurface(coord, GetViewerChunkCoord(), out runtime, out heights, out origin, out size);
+
+    public bool TryGetDistantTreeSurface(ChunkCoord coord, ChunkCoord viewerCoord, out ChunkRuntime runtime,
+        out float[,] heights, out Vector2 origin, out float size)
     {
         loadedChunks.TryGetValue(coord, out runtime);
         heights = null;
         origin = new Vector2(coord.x * chunkSize * worldScale, coord.z * chunkSize * worldScale);
         size = chunkSize * worldScale;
-        if (runtime != null && runtime.IsVisible)
+        if (runtime != null && runtime.IsVisible && runtime.CurrentLOD >= 0)
         {
-            if (runtime.CurrentLOD < 0) return false;
             if (runtime.CurrentLOD == FarTerrainLOD)
                 heights = runtime.ChunkRecord.FarTreeHeightGrid;
             return true;
         }
-        if (coveragePolicy.TryGetFarTerrainPatch(GetViewerChunkCoord(), coord, out FarTerrainPatchKey patch) &&
-            loadedFarTerrainTiles.TryGetValue(patch, out var far) && far.IsVisible &&
-            farTerrainTileRecords.TryGetValue(patch, out var record) && record.HasTerrain)
+        if (coveragePolicy.TryGetFarTerrainPatch(viewerCoord, coord, out FarTerrainPatchKey patch) &&
+            TryGetFarTreeSurface(patch, out heights))
         {
-            heights = record.FarTreeHeightGrid;
             size *= patch.SizeInChunks;
             origin = new Vector2(patch.Origin.x * patch.SizeInChunks * chunkSize * worldScale,
                 patch.Origin.z * patch.SizeInChunks * chunkSize * worldScale);
             return heights != null;
         }
+        // Terrain handoffs retain the outgoing leaf until its replacement is attached.
+        // Keep its trees too: the desired leaf can change at a chunk boundary while
+        // the old mesh is still the only published support. World-aligned ancestors
+        // and descendants give a bounded lookup, without scanning every loaded tile.
+        for (int patchSize = farTerrainMacroTileSize; patchSize <= TerrainCoveragePolicy.FarTerrainMaxPatchSizeInChunks; patchSize <<= 1)
+        {
+            var retained = new FarTerrainPatchKey(new ChunkCoord(
+                coord.x >= 0 ? coord.x / patchSize : (coord.x + 1) / patchSize - 1,
+                coord.z >= 0 ? coord.z / patchSize : (coord.z + 1) / patchSize - 1), patchSize);
+            if (retained == patch || !TryGetFarTreeSurface(retained, out heights)) continue;
+            size = chunkSize * worldScale * patchSize;
+            origin = new Vector2(retained.Origin.x * size, retained.Origin.z * size);
+            return true;
+        }
         return false;
+    }
+
+    private bool TryGetFarTreeSurface(FarTerrainPatchKey patch, out float[,] heights)
+    {
+        heights = null;
+        if (!loadedFarTerrainTiles.TryGetValue(patch, out var far) || !far.IsVisible || !far.HasTerrainMesh ||
+            !farTerrainTileRecords.TryGetValue(patch, out var record) || !record.HasTerrain) return false;
+        heights = record.FarTreeHeightGrid;
+        return heights != null;
     }
 
     public ChunkCoord GetViewerChunkCoord()
