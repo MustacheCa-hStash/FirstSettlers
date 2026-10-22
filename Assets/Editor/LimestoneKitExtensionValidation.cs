@@ -64,8 +64,9 @@ public static class LimestoneKitExtensionValidation
         {
             var d = catalog.Find(LimestoneKitExtensionSetup.Ids[part]); float width = LimestoneKitExtensionSetup.Sizes[part].x;
             Check(d != null && d.kind == (part == 0 ? BuildPartKind.Corner : part == 1 ? BuildPartKind.Floor : part == 2 ? BuildPartKind.Foundation : BuildPartKind.Wall) && d.material == shared, "Limestone definition missing");
-            Near(d.LocalBounds.min, LimestoneKitExtensionSetup.Minima[part], "Native minimum");
-            Near(d.LocalBounds.max, LimestoneKitExtensionSetup.Minima[part] + LimestoneKitExtensionSetup.Sizes[part], "Native maximum");
+            var installed=BuildKitDimensions.InstalledBounds(d,LimestoneKitExtensionSetup.Minima[part],LimestoneKitExtensionSetup.Sizes[part]);
+            Near(d.LocalBounds.min, installed.min, "Native minimum");
+            Near(d.LocalBounds.max, installed.max, "Native maximum");
             Check(d.StackRise == (part == 1 ? .25f : part == 2 || part == 4 ? .5f : 3) && d.WallEndInset == 0 && d.preserveAuthoredMesh, "Full-span fitting contract missing");
             Check(d.jointCoverVariants.Length == 0 && !d.canGroundOnTerrain, "Limestone gained timber covers or new grounding rules");
             Check(d.jointSockets.Length == new[] {0,0,0,17,17,12}[part], "Incorrect short/full span sockets");
@@ -81,7 +82,7 @@ public static class LimestoneKitExtensionValidation
             Vector3[] firstVertices = null; Vector2[] firstUvs = null;
             foreach (var mesh in d.uvVariants)
             {
-                Check(!mesh.isReadable && mesh.subMeshCount == 1 && mesh.GetIndexCount(0) == LimestoneKitExtensionSetup.Triangles[part] * 3, "Runtime wall must be one closed 12-triangle solid");
+                Check(mesh.subMeshCount == 1 && mesh.GetIndexCount(0) == LimestoneKitExtensionSetup.Triangles[part] * 3, "Runtime wall must be one closed 12-triangle solid");
                 Near(mesh.bounds.min, d.LocalBounds.min, "Imported min"); Near(mesh.bounds.max, d.LocalBounds.max, "Imported max");
                 using var data = MeshUtility.AcquireReadOnlyMeshData(mesh); var source = data[0];
                 using var vertices = new NativeArray<Vector3>(source.vertexCount, Allocator.Temp);

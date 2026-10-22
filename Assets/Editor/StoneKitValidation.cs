@@ -36,6 +36,8 @@ public static class StoneKitValidation
     {
         int limestoneCount=0;foreach(var id in LimestoneKitSetup.Ids)if(catalog.Find(id)!=null)limestoneCount++;
         foreach(var id in LimestoneKitExtensionSetup.Ids)if(catalog.Find(id)!=null)limestoneCount++;
+        foreach(var id in LimestoneCourtyardSetup.Ids)if(catalog.Find(id)!=null)limestoneCount++;
+        foreach(var id in LimestoneAccessSetup.Ids)if(catalog.Find(id)!=null)limestoneCount++;
         int timberCount=0;foreach(var id in TimberInfillKitSetup.Ids)if(catalog.Find(id)!=null)timberCount++;
         Check(catalog.presets.Length==(catalog.Find(SquareInfillSetup.Id)!=null?13:12)+StoneKitSetup.Ids.Length+limestoneCount+
             timberCount+(catalog.Find("build.furniture.f01-three-leg-stool")!=null?6:0)+(catalog.Find("build.lighting.wall-torch")!=null?1:0),"Expected existing wood, stone, timber infill, optional furniture and lighting menu entries");

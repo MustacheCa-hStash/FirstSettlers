@@ -16,9 +16,9 @@ MonoBehaviour:
   displayName: L03 narrow limestone wall
   kind: 0
   wallPlacementMode: 0
-  sizeUnits: {x: 8, y: 12, z: 2}
+  sizeUnits: {x: 8, y: 12, z: 1}
   minimumUnits: {x: 0, y: 0, z: 0}
-  boundsOffset: {x: 0, y: 0, z: -0.25}
+  boundsOffset: {x: 0, y: 0, z: -0.125}
   jointSockets:
   - localPosition: {x: 0, y: 0, z: 0}
     outward: {x: -1, y: 0, z: 0}
@@ -49,11 +49,14 @@ MonoBehaviour:
     interior: 0
   stackRiseUnits: 12
   wallEndInsetUnits: 0
-  mesh: {fileID: 1294904483442943612, guid: 011e9b1ab4e748e49b86c13aaec5349a, type: 3}
+  mesh: {fileID: 4300000, guid: 3241a746b8e14124bb5a6e68ace3cca0, type: 2}
   preserveAuthoredMesh: 1
   requiresFullBearing: 0
   canGroundOnTerrain: 0
+  topCourseDepth: 0
+  wallBaseAttachment: 0
   furnitureWallMounted: 0
+  relaxedWallMount: 0
   furnitureSupportPoints: []
   solidBoxes: []
   wallOpenings: []
@@ -61,9 +64,9 @@ MonoBehaviour:
   flipVariant: {fileID: 0}
   gableRoofSeamMesh: {fileID: 0}
   uvVariants:
-  - {fileID: 1294904483442943612, guid: 011e9b1ab4e748e49b86c13aaec5349a, type: 3}
-  - {fileID: 1294904483442943612, guid: c001726c341195d459ec2e6ede08d1a5, type: 3}
-  - {fileID: 1294904483442943612, guid: b74c5d75c7bca564b9eb8254d495429b, type: 3}
+  - {fileID: 4300000, guid: 3241a746b8e14124bb5a6e68ace3cca0, type: 2}
+  - {fileID: 4300000, guid: c37c0013f7ae96940a3b6c70b4321ce2, type: 2}
+  - {fileID: 4300000, guid: 10962d79ba82d704c853452892dc5c0f, type: 2}
   floorOpeningUvVariants: []
   jointCoverVariants: []
   jointCoverMaterial: {fileID: 0}

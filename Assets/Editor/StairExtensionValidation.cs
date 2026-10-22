@@ -49,9 +49,11 @@ public static class StairExtensionValidation
                 camera.transform.position=fixedStair.Origin+q*local;camera.transform.rotation=Quaternion.LookRotation(direction,q*Vector3.forward);Physics.SyncTransforms();
                 typeof(BuildingController).GetMethod("LateUpdate",fields).Invoke(controller,null);var preview=controller.Preview;
                 C(preview.Definition==selectedDefinition && preview.StairAimTarget==fixedStair.Id,"Actual underside ray lost target: inside="+inside+" yaw="+yaw);
-                C(preview.Hint.Contains("downward"),"Actual underside ray suggested upward flight: inside="+inside+" hint="+preview.Hint);
+                C(preview.Hint.Contains(inside?"downward":"alongside"),"Actual stair face selected wrong attachment: inside="+inside+" hint="+preview.Hint);
                 C(preview.Valid,"Actual underside preview rejected: "+preview.Message);
-                Near(BuildStairAttachment.High(new BuildPieceRecord{Definition=preview.Definition,Origin=preview.Origin,WorldYawStep=(byte)preview.WorldYaw}),BuildStairAttachment.Low(fixedStair),"Controller downward socket mismatch");
+                var candidate=new BuildPieceRecord{Definition=preview.Definition,Origin=preview.Origin,WorldYawStep=(byte)preview.WorldYaw};
+                if(inside)Near(BuildStairAttachment.High(candidate),BuildStairAttachment.Low(fixedStair),"Controller downward socket mismatch");
+                else C(BuildStairAttachment.Connects(candidate,fixedStair,fixedStair.Resolved),"Actual side aim lacks aligned attachment");
             }
             camera.transform.position=fixedStair.Origin+q*new Vector3(.625f,fixedDefinition.LocalBounds.size.y+1,1.25f);
             camera.transform.rotation=Quaternion.LookRotation(Vector3.down,q*Vector3.forward);Physics.SyncTransforms();

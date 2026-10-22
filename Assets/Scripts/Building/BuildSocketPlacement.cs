@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>Full-span profiles snap their boundary lines/endpoints, independently of half-thickness bounds.</summary>
 public static class BuildSocketPlacement
 {
-    public static bool Solve(BuildDefinition d,Vector3 hit,Vector3 normal,BuildPieceRecord target,int turn,Vector3Int nudge,Vector3? viewer,bool preferTop,out BuildPreview preview)
+    public static bool Solve(BuildDefinition d,Vector3 hit,Vector3 normal,BuildPieceRecord target,int turn,Vector3Int nudge,Vector3? viewer,bool preferTop,out BuildPreview preview,int? lockedWorldYaw=null)
     {
         preview=default;if(target==null)return false;
         var q=BuildGeometry.Rotation(target.WorldYawStep);var inverse=Quaternion.Inverse(q);var point=inverse*(hit-target.Origin);var n=inverse*normal;
@@ -12,7 +12,7 @@ public static class BuildSocketPlacement
         bool post=target.Definition.kind==BuildPartKind.Corner && b.min.x<0 && b.min.z<0;
         bool selectedWall=d.kind==BuildPartKind.Wall && d.jointSockets?.Length>0;
         bool selectedPost=d.kind==BuildPartKind.Corner && d.LocalBounds.min.x<0 && d.LocalBounds.min.z<0;
-        bool upper=!target.Definition.IsHalfGable && (n.y>.6f || point.y>=b.center.y);Vector3 origin;int yaw=BuildGeometry.Turn(turn);string hint;bool top=false;
+        bool upper=!target.Definition.IsHalfGable && BuildPlacement.IsUpperHit(b,point,n);Vector3 origin;int yaw=BuildGeometry.Turn(turn);string hint;bool top=false;
         if(selectedPost && wall)
         {
             origin=new Vector3(point.x<b.center.x?0:b.max.x,n.y>.6f?b.min.y+target.Definition.StackRise:b.min.y,0);hint="Post at wall endpoint";
@@ -60,14 +60,14 @@ public static class BuildSocketPlacement
         }
         else if(selectedWall && post)
         {
-            yaw=BuildGeometry.Turn((upper?0:Side(n)+2)+turn);origin=new Vector3(0,upper?b.min.y+target.Definition.StackRise:b.min.y,0);hint=upper?"Wall above post":"Wall from post centre";
+            yaw=lockedWorldYaw.HasValue?BuildGeometry.Turn(lockedWorldYaw.Value-target.WorldYawStep):BuildGeometry.Turn((upper?0:Side(n)+2)+turn);origin=new Vector3(0,upper?b.min.y+target.Definition.StackRise:b.min.y,0);hint=upper?"Wall above post":"Wall from post centre";
         }
         else if(d.kind==BuildPartKind.Floor && wall && n.y>=-.6f)
         {
             var shape=BuildGeometry.WorldBounds(d.LocalBounds,Vector3.zero,yaw);
             bool positive=Mathf.Abs(n.z)>.5f?n.z>0:view.z>=0;
             top=n.y>.6f || point.y>b.max.y+(preferTop?-.03f:.03f);
-            origin=new Vector3(b.center.x-shape.center.x,top?b.min.y+target.Definition.StackRise-shape.max.y:BuildGeometry.Tick(point.y)*BuildGeometry.Unit-shape.max.y,positive?-shape.min.z:-shape.max.z);
+            origin=new Vector3(BuildGeometry.Tick(point.x-shape.center.x)*BuildGeometry.Unit,top?b.min.y+target.Definition.StackRise-shape.max.y:BuildGeometry.Tick(point.y)*BuildGeometry.Unit-shape.max.y,positive?(top?0:b.max.z)-shape.min.z:(top?0:b.min.z)-shape.max.z);
             hint=top?"Floor at storey level":"Floor from wall boundary";
         }
         else if(d.kind==BuildPartKind.Floor && post && n.y>=-.6f)

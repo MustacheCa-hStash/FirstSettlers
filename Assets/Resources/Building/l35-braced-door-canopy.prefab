@@ -11,12 +11,12 @@ GameObject:
   - component: {fileID: 7356828781093109142}
   - component: {fileID: 660395941554757241}
   - component: {fileID: 28833656275070361}
-  - component: {fileID: 7439830225636873316}
-  - component: {fileID: 3393798648983499964}
-  - component: {fileID: 4920701140390958212}
-  - component: {fileID: 6353590157503842936}
-  - component: {fileID: 7498665552734330341}
-  - component: {fileID: 811500750556864568}
+  - component: {fileID: 8854488844365688367}
+  - component: {fileID: 1038926482913803435}
+  - component: {fileID: 5221653112239060192}
+  - component: {fileID: 6448597357702798657}
+  - component: {fileID: 408802319174847146}
+  - component: {fileID: 3475533985657904941}
   m_Layer: 8
   m_Name: l35-braced-door-canopy
   m_TagString: Untagged
@@ -96,7 +96,7 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &7439830225636873316
+--- !u!64 &8854488844365688367
 MeshCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -118,7 +118,7 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300000, guid: ee79b237e7a90344891d94a14aa3a463, type: 2}
---- !u!64 &3393798648983499964
+--- !u!64 &1038926482913803435
 MeshCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -140,7 +140,7 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300000, guid: 3db9fb9a5d13a5f4891a5c61b1187055, type: 2}
---- !u!64 &4920701140390958212
+--- !u!64 &5221653112239060192
 MeshCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -162,7 +162,7 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300000, guid: 020abe92416bded4e852ad5f0e601569, type: 2}
---- !u!64 &6353590157503842936
+--- !u!64 &6448597357702798657
 MeshCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -184,7 +184,7 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300000, guid: 0234cff4c3104e64caffda485414c7de, type: 2}
---- !u!64 &7498665552734330341
+--- !u!64 &408802319174847146
 MeshCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -206,7 +206,7 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300000, guid: c8d2a91d3bfabdb46aedf4f17333d049, type: 2}
---- !u!64 &811500750556864568
+--- !u!64 &3475533985657904941
 MeshCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

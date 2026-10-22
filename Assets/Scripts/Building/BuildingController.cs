@@ -21,6 +21,7 @@ public sealed class BuildingController : MonoBehaviour
     private readonly List<BuildPieceRecord> candidates = new();
     private readonly RaycastHit[] jointGuideHits = new RaycastHit[16];
     private int worldHeading, contextTurn, suppressPlaceUntil;
+    private int? manualHeading;
     private Vector3Int nudge;
     private BuildInputCommand pending;
     private LocalPlayerInput input;
@@ -82,10 +83,13 @@ public sealed class BuildingController : MonoBehaviour
     public void Select(BuildDefinition definition)
     {
         if (!Active || definition == null) return;
+        bool changed=selected!=definition && selected?.flipVariant!=definition;
         selected = definition; MenuOpen = false; nudge = default; contextTurn = 0; target = null; pending = default;
+        if(changed)manualHeading=null;
         menus?.Close(this, false);
         skyGuide = default; Preview = default;
-        if (definition.IsWallInfill && viewCamera != null) worldHeading = BuildPlacement.FacingYaw(-viewCamera.transform.forward);
+        if (changed && definition.IsWallInfill && viewCamera != null) worldHeading = BuildPlacement.FacingYaw(-viewCamera.transform.forward);
+        else if(changed && definition.kind==BuildPartKind.Stair && viewCamera!=null)worldHeading=BuildPlacement.FacingYaw(viewCamera.transform.forward,2);
         suppressPlaceUntil = Time.frameCount + 1;
         RequestGameplayCursor(); view?.SetState(true, false);
     }
@@ -142,12 +146,17 @@ public sealed class BuildingController : MonoBehaviour
         }
         bool preferTop = nextTarget == target && Preview.TopAttachment;
         if (nextTarget != target) { target = nextTarget; contextTurn = 0; nudge = default; }
-        if (target == null) worldHeading = BuildGeometry.Turn(worldHeading + command.Turn);
-        else contextTurn = BuildGeometry.Turn(contextTurn + command.Turn);
+        // Manual orientation belongs to the selected tool, not to the aimed record.
+        if(command.Turn!=0)
+        {
+            int current=manualHeading??(Preview.Definition==selected?Preview.WorldYaw:worldHeading);
+            manualHeading=BuildGeometry.Turn(current+command.Turn);
+        }
+        if(manualHeading.HasValue && target==null)worldHeading=manualHeading.Value;
         int gridYaw = target != null ? world.Session.Frame(target.OwnFrameId).YawStep : worldHeading;
         nudge += BuildGeometry.ViewRelativeNudge(command.Nudge, viewCamera.transform.rotation, gridYaw);
         var preview = BuildPlacement.Solve(selected, aimPoint, aimNormal, target,
-            target != null ? world.Session.Frame(target.OwnFrameId) : null, worldHeading, contextTurn, nudge, ray.origin, preferTop);
+            target != null ? world.Session.Frame(target.OwnFrameId) : null, worldHeading, contextTurn, nudge, ray.origin, preferTop,manualHeading);
         if (guided) preview.Hint = (selected.kind==BuildPartKind.Stair && target?.Definition.kind==BuildPartKind.Stair?"Underside guide · ":"Sky guide · ") + preview.Hint;
         world.Validate(ref preview);
         // Nudges cannot extend an interaction into arbitrary distant construction.
@@ -199,7 +208,9 @@ public sealed class BuildingController : MonoBehaviour
     {
         direct = nextTarget = null; guided = false;
         bool physicalHit=Physics.Raycast(ray,out var hit,reach,GameplayLayers.SolidSurfaceMask,QueryTriggerInteraction.Ignore);
-        if(selected.kind==BuildPartKind.Stair && TryStairUnderside(ray,physicalHit?hit:(RaycastHit?)null,out var underside,out point,out normal))
+        var hitPiece=physicalHit?hit.collider.GetComponentInParent<BuildGameplayProxy>()?.Record:null;
+        bool stairSide=hitPiece?.Definition.kind==BuildPartKind.Stair && Mathf.Abs((Quaternion.Inverse(BuildGeometry.Rotation(hitPiece.WorldYawStep))*hit.normal).x)>.5f;
+        if(selected.kind==BuildPartKind.Stair && !stairSide && TryStairUnderside(ray,physicalHit?hit:(RaycastHit?)null,out var underside,out point,out normal))
         {direct=nextTarget=underside;guided=true;skyGuide=default;return true;}
         if (physicalHit)
         {

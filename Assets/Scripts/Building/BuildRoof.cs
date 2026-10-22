@@ -40,7 +40,7 @@ public static class BuildRoof
         return false;
     }
     public static Vector3 Snap(BuildDefinition definition,BuildPieceRecord target,Vector3 point,Vector3 normal,
-        int turn,Vector3? viewer,out int yaw,out string hint)
+        int turn,Vector3? viewer,out int yaw,out string hint,int? lockedWorldYaw=null)
     {
         Bounds b=target.Definition.LocalBounds;
         yaw=BuildGeometry.Turn(turn);
@@ -62,7 +62,8 @@ public static class BuildRoof
             bool reverse=false;
             if(viewer.HasValue)
                 reverse=BuildGeometry.LocalPoint(new BuildGridFrame{Origin=target.Origin,YawStep=target.WorldYawStep},viewer.Value).z<b.center.z;
-            yaw=BuildGeometry.Turn((reverse?4:0)+turn);
+            yaw=lockedWorldYaw.HasValue?BuildGeometry.Turn(lockedWorldYaw.Value-target.WorldYawStep):BuildGeometry.Turn((reverse?4:0)+turn);
+            reverse=yaw==4;
             float viewerX=viewer.HasValue?BuildGeometry.LocalPoint(new BuildGridFrame{Origin=target.Origin,YawStep=target.WorldYawStep},viewer.Value).x:b.max.x;
             bool centred=target.Definition.jointSockets?.Length>0 || target.Definition.kind==BuildPartKind.Corner && b.min.x<0 && b.min.z<0;
             float start=target.Definition.kind==BuildPartKind.Wall? b.min.x-target.Definition.WallEndInset:
@@ -80,7 +81,7 @@ public static class BuildRoof
             // A four-metre triangular infill spans both roof halves. Its base
             // belongs on the eave reference, not below a nominal attic box.
             bool left=point.x<Width*.5f;
-            yaw=BuildGeometry.Turn(6+turn);
+            yaw=lockedWorldYaw.HasValue?BuildGeometry.Turn(lockedWorldYaw.Value-target.WorldYawStep):BuildGeometry.Turn(6+turn);
             hint="Gable infill at roof end";
             return new Vector3(left?definition.LocalBounds.size.z:Width,0,definition.WallEndInset);
         }

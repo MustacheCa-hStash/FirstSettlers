@@ -1,0 +1,123 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: l24-plain-limestone-buttress
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.stone.l24-plain-limestone-buttress
+  displayName: L24 plain limestone buttress
+  kind: 3
+  wallPlacementMode: 0
+  sizeUnits: {x: 4, y: 12, z: 4}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: 0, y: 0, z: 0}
+  jointSockets: []
+  stackRiseUnits: 12
+  wallEndInsetUnits: 0
+  mesh: {fileID: 4300000, guid: 7c9e7c7eb3e99e743bc108f5de9fd4cd, type: 2}
+  preserveAuthoredMesh: 1
+  requiresFullBearing: 1
+  canGroundOnTerrain: 1
+  topCourseDepth: 0
+  wallBaseAttachment: 1
+  furnitureWallMounted: 0
+  furnitureSupportPoints: []
+  solidBoxes: []
+  wallOpenings: []
+  gableSlope: 0
+  flipVariant: {fileID: 0}
+  gableRoofSeamMesh: {fileID: 0}
+  uvVariants: []
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes:
+  - mesh: {fileID: 4300000, guid: 90a319a574cd40b498f8fbc2544a1794, type: 2}
+    vertices:
+    - {x: 0, y: 0, z: 0}
+    - {x: 1, y: 0, z: 0}
+    - {x: 0, y: 1, z: 0}
+    - {x: 1, y: 1, z: 0}
+    - {x: 0, y: 0, z: 1}
+    - {x: 1, y: 0, z: 1}
+    - {x: 0, y: 1, z: 1}
+    - {x: 1, y: 1, z: 1}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: -1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0.70710677, y: 0.70710677, z: 0}
+    - {x: 0, y: -1, z: 0}
+    - {x: -1, y: 0, z: 0}
+    - {x: 0.70710677, y: 0, z: 0.70710677}
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: 0.70710677, z: 0.70710677}
+    bounds:
+      m_Center: {x: 0.5, y: 0.5, z: 0.5}
+      m_Extent: {x: 0.5, y: 0.5, z: 0.5}
+  - mesh: {fileID: 4300000, guid: 57f7174896bf65f4aabc0055ba30e5dd, type: 2}
+    vertices:
+    - {x: 0, y: 1, z: 0}
+    - {x: 1, y: 1, z: 0}
+    - {x: 0, y: 2, z: 0}
+    - {x: 1, y: 2, z: 0}
+    - {x: 0, y: 1, z: 0.75}
+    - {x: 1, y: 1, z: 0.75}
+    - {x: 0, y: 2, z: 0.75}
+    - {x: 1, y: 2, z: 0.75}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: -1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0.70710677, y: 0.70710677, z: 0}
+    - {x: 0, y: -1, z: 0}
+    - {x: -1, y: 0, z: 0}
+    - {x: 0.8, y: 0, z: 0.6}
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: 0.8, z: 0.6}
+    bounds:
+      m_Center: {x: 0.5, y: 1.5, z: 0.375}
+      m_Extent: {x: 0.5, y: 0.5, z: 0.375}
+  - mesh: {fileID: 4300000, guid: 116613583f689b143b9aa547d147738e, type: 2}
+    vertices:
+    - {x: 0, y: 2, z: 0}
+    - {x: 1, y: 2, z: 0}
+    - {x: 0, y: 3, z: 0}
+    - {x: 1, y: 3, z: 0}
+    - {x: 0, y: 2, z: 0.5}
+    - {x: 1, y: 2, z: 0.5}
+    - {x: 0, y: 3, z: 0.5}
+    - {x: 1, y: 3, z: 0.5}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: -1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0.70710677, y: 0.70710677, z: 0}
+    - {x: 0, y: -1, z: 0}
+    - {x: -1, y: 0, z: 0}
+    - {x: 0.8944272, y: 0, z: 0.4472136}
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: 0.8944272, z: 0.4472136}
+    bounds:
+      m_Center: {x: 0.5, y: 2.5, z: 0.25}
+      m_Extent: {x: 0.5, y: 0.5, z: 0.25}
+  roofAttachment: 0
+  material: {fileID: 2100000, guid: 5cff5b9bce5c3a242961662fdd199173, type: 2}
+  authoringPrefab: {fileID: 8835748881898223297, guid: 50ddc6597fa85c84cbe7abbd2fec3209, type: 3}
+  flamePrefab: {fileID: 0}
+  maxHealth: 100

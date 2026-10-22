@@ -27,6 +27,8 @@ public sealed class BuildWorld : MonoBehaviour
     private bool previewGrounded;
     private Dictionary<ulong,BuildResolvedState> previewStates;
     private HashSet<ulong> previewSupported;
+    private bool previewSupportLoss;
+    public bool PreviewUsedFullSupport { get; private set; }
     public BuildSession Session { get; private set; }
     public BuildCatalog Catalog => catalog;
     public Camera Camera { get; set; }
@@ -96,7 +98,7 @@ public sealed class BuildWorld : MonoBehaviour
         DebugPreview=preview;
         preview.Grounded=false;
         if(preview.InvalidAttachment)
-        {Reject(ref preview,BuildPlacementFailure.Support,preview.Definition.furnitureWallMounted?"Aim at a supported wall face":"Aim at ground or the top of a floor; furniture cannot carry building pieces");return;}
+        {Reject(ref preview,BuildPlacementFailure.Support,preview.Definition.topCourseDepth>0?"Aim at a full 4 m wall with a solid top course":preview.Definition.furnitureWallMounted?"Aim at a supported wall face":"Aim at ground or the top of a floor; furniture cannot carry building pieces");return;}
         Bounds terrainBounds=BuildGeometry.WorldBounds(preview.Definition.LocalBounds,preview.Origin,preview.WorldYaw);
         if(TerrainGuard!=null&&!TerrainGuard.CanMove((Unity.Mathematics.float3)terrainBounds.min,(Unity.Mathematics.float3)terrainBounds.max,0,0))
         {Reject(ref preview,BuildPlacementFailure.Terrain,"Waiting for current terrain collision");return;}
@@ -106,6 +108,12 @@ public sealed class BuildWorld : MonoBehaviour
         var candidate=new BuildPieceRecord{Id=ulong.MaxValue,Definition=preview.Definition,Origin=preview.Origin,
             WorldYawStep=(byte)preview.WorldYaw,Grounded=preview.Grounded};
         candidate.WorldBounds=BuildSession.IndexBounds(preview.Definition,candidate.Origin,candidate.WorldYawStep);
+        var nearby=Session.NeighboursFor(candidate);
+        if(preview.Definition.topCourseDepth>0)
+        {
+            bool fitted=false;foreach(var wall in nearby)fitted|=BuildTopCourse.Fits(wall,candidate);
+            if(!fitted){Reject(ref preview,BuildPlacementFailure.Support,"Cornice must replace the complete top course of a matching wall");return;}
+        }
         bool cached=previewRevision==Session.Revision && previewDefinition==preview.Definition && previewOrigin==preview.Origin && previewYaw==preview.WorldYaw && previewGrounded==preview.Grounded;
         var states=cached?previewStates:Session.ResolvePreview(candidate);var state=states[candidate.Id];preview.Resolved=state;
         DebugStates=states;
@@ -117,7 +125,7 @@ public sealed class BuildWorld : MonoBehaviour
         if(state.boxes.Length+state.volumes.Length==0)
         {Reject(ref preview,BuildPlacementFailure.Joint,"No compatible floor joint at this orientation");return;}
         if(state.invalidJoint)Warn(ref preview,BuildPlacementWarning.UnresolvedJoint);
-        foreach(var piece in Session.Pieces.Values)
+        foreach(var piece in nearby)
         {
             Bounds area=candidate.WorldBounds;area.Expand(.04f);if(!area.Intersects(piece.WorldBounds))continue;
             var other=states[piece.Id];
@@ -128,14 +136,30 @@ public sealed class BuildWorld : MonoBehaviour
             var warning=BuildPlacementPolicy.Assess(candidate,state,piece,other);
             if(warning!=BuildPlacementWarning.None)Warn(ref preview,warning,piece);
         }
-        var all=new List<BuildPieceRecord>(Session.Pieces.Values){candidate};
-        var supported=cached?previewSupported:BuildSupportState.Resolve(all,states,p=>Session.NeighboursFor(p,candidate));
+        HashSet<ulong> supported;
+        if(cached)supported=previewSupported;
+        else
+        {
+            // Added contact cannot revoke existing support unless fitting changed
+            // an existing physical solid. Most cursor poses need only local checks.
+            bool changed=false;foreach(var p in nearby)changed|=!states[p.Id].SameSolids(p.Resolved);
+            PreviewUsedFullSupport=changed;previewSupportLoss=false;
+            if(changed)
+            {
+                supported=Session.PreviewSupport(candidate,states);
+                foreach(var p in Session.Pieces.Values)if(p.Supported&&!supported.Contains(p.Id)){previewSupportLoss=true;break;}
+            }
+            else
+            {
+                supported=new HashSet<ulong>();
+                if(BuildSupportState.CandidateSupported(candidate,nearby,states))supported.Add(candidate.Id);
+            }
+        }
         previewStates=states;previewSupported=supported;previewRevision=Session.Revision;previewDefinition=preview.Definition;previewOrigin=preview.Origin;previewYaw=preview.WorldYaw;previewGrounded=preview.Grounded;
         if(!supported.Contains(candidate.Id)){Reject(ref preview,BuildPlacementFailure.Support,preview.Definition.kind==BuildPartKind.Furniture?
-            (preview.Definition.furnitureWallMounted?"Every mounting point needs a supported wall face":"Every furniture foot needs ground or supported flooring"):
+            (preview.Definition.furnitureWallMounted?(preview.Definition.relaxedWallMount?"Needs contact with supported construction":"Every mounting point needs a supported wall face"):"Every furniture foot needs ground or supported flooring"):
             preview.Definition.requiresFullBearing?"Needs foundation coverage beneath the complete paving tile":"Needs a grounded foundation or supported piece");return;}
-        foreach(var piece in Session.Pieces.Values)if(piece.Supported && !supported.Contains(piece.Id))
-        {Reject(ref preview,BuildPlacementFailure.Support,"Would remove support from an existing piece",piece);return;}
+        if(previewSupportLoss){Reject(ref preview,BuildPlacementFailure.Support,"Would remove support from an existing piece");return;}
         Bounds local=state.Bounds;
         int count=Physics.OverlapBoxNonAlloc(preview.Origin+BuildGeometry.Rotation(preview.WorldYaw)*local.center,
             Vector3.Max(local.extents-Vector3.one*.003f,Vector3.one*.001f),overlaps,BuildGeometry.Rotation(preview.WorldYaw),
@@ -170,7 +194,10 @@ public sealed class BuildWorld : MonoBehaviour
                 preview.BlockingCollider=collider;preview.Message+=" · "+collider.name;return;
             }
         }
-        buildingRenderer?.SetPreview(states);
+        // The renderer receives only existing pieces whose appearance actually changes.
+        var visualChanges=new Dictionary<ulong,BuildResolvedState>();
+        foreach(var p in nearby)if(!states[p.Id].SameVisuals(p.Resolved))visualChanges[p.Id]=states[p.Id];
+        buildingRenderer?.SetPreview(visualChanges.Count>0?visualChanges:null);
         preview.Valid=true;preview.Message=state.invalidJoint?"Ready to place · joint fitting unavailable; full shape retained":state.cuts.Length>0?"Ready to place · fitted opening":"Ready to place";
     }
     private static void Reject(ref BuildPreview preview,BuildPlacementFailure failure,string message,BuildPieceRecord piece=null)

@@ -66,6 +66,7 @@ public static class LimestoneKitExtensionSetup
                     sockets.Add(new BuildJointSocket { localPosition = new(j * .25f, 0, 0), outward = j == 0 ? Vector3.left : Vector3.right, interior = j > 0 && j < 16 });
             d.jointSockets = sockets.ToArray();
             BakedStoneWallSetup.ApplyMeshes(d, LimestoneKitSetup.Models + "/L0" + (i + 4) + "_Baked");
+            BuildKitDimensions.Apply(d);
             bool existing = AssetDatabase.LoadAssetAtPath<GameObject>(path + ".prefab") != null;
             var root = existing ? PrefabUtility.LoadPrefabContents(path + ".prefab") : new GameObject(Names[i]);
             try

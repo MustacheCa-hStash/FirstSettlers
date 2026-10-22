@@ -98,7 +98,7 @@ public sealed class BuildResolution : IDisposable
         var cuts=new List<Bounds>();Bounds b=p.Definition.LocalBounds;
         foreach(var floor in pieces)
             if(floor.Definition.kind==BuildPartKind.Floor && Aligned(p,floor) && Mathf.Abs(floor.Origin.y-p.Origin.y)<.012f)
-                foreach(var solid in states[floor.Id].boxes)AddCut(cuts,Relative(solid,floor,p),b);
+                foreach(var solid in (states.TryGetValue(floor.Id,out var floorState)?floorState:floor.Resolved).boxes)AddCut(cuts,Relative(solid,floor,p),b);
         if(cuts.Count==0)return new BuildResolvedState{mesh=p.Definition.mesh,boxes=new[]{b},key="full"};
         var boxes=new List<Bounds>{Box(b.min,new Vector3(b.max.x,b.max.y-Band,b.max.z))};
         boxes.AddRange(Subtract(new[]{Box(new Vector3(b.min.x,b.max.y-Band,b.min.z),b.max)},cuts));Sort(boxes);
@@ -113,10 +113,26 @@ public sealed class BuildResolution : IDisposable
         if(d.kind==BuildPartKind.Roof && d.roofContinuationMesh!=null)
             foreach(var other in pieces)if(BuildRoof.IsBelow(d,p.Origin,p.WorldYawStep,other.Definition,other.Origin,other.WorldYawStep)){core=d.roofContinuationMesh;break;}
         var boxes=new List<Bounds>();var volumes=BuildOccupancy.Custom(d)?d.occupiedVolumes:Array.Empty<BuildConvexVolume>();
+        foreach(var course in pieces)if(BuildTopCourse.Fits(p,course))
+        {
+            float level=d.LocalBounds.max.y-course.Definition.topCourseDepth;string fittedKey=d.contentId+":top-course:"+core.GetInstanceID()+":"+level;
+            if(!meshes.TryGetValue(fittedKey,out var fitted)){fitted=BuildTopCourse.Clip(core,level,false);meshes.Add(fittedKey,fitted);}core=fitted;
+            var fittedVolumes=new List<BuildConvexVolume>();int i=0;
+            foreach(var volume in volumes)
+            {
+                if(volume.bounds.min.y>=level){i++;continue;}
+                if(volume.bounds.max.y<=level){fittedVolumes.Add(volume);i++;continue;}
+                string hullKey=fittedKey+":hull:"+(i++);
+                if(!meshes.TryGetValue(hullKey,out var hull)){hull=BuildTopCourse.Clip(volume.mesh,level,true);meshes.Add(hullKey,hull);}
+                fittedVolumes.Add(BuildTopCourse.Volume(hull));
+            }
+            volumes=fittedVolumes.ToArray();break;
+        }
         if(volumes.Length==0)
         {
             if(d.solidBoxes!=null && d.solidBoxes.Length>0)boxes.AddRange(d.solidBoxes);
             else boxes.Add(d.LocalBounds);
+            if(core!=BuildTrimUV.Core(p) && d.kind==BuildPartKind.Wall)for(int i=0;i<boxes.Count;i++)boxes[i]=Box(boxes[i].min,new Vector3(boxes[i].max.x,Mathf.Min(boxes[i].max.y,core.bounds.max.y),boxes[i].max.z));
         }
         var headers=new List<Bounds>();
         if(!d.preserveAuthoredMesh && d.kind is BuildPartKind.Wall or BuildPartKind.Corner or BuildPartKind.Roof)
@@ -131,9 +147,10 @@ public sealed class BuildResolution : IDisposable
                     bearing|=Aligned(p,other) && Mathf.Abs(ob.max.y-foot.min.y)<.012f && PlanOverlap(ob,foot);
                 if(other.Definition.kind==BuildPartKind.Floor && Mathf.Abs(ob.max.y)<.012f && Aligned(p,other))
                 {
-                    foreach(var box in floors[other.Id].boxes)AddCut(cut,Relative(box,other,p),foot);
+                    var floorState=floors.TryGetValue(other.Id,out var resolvedFloor)?resolvedFloor:other.Resolved;
+                    foreach(var box in floorState.boxes)AddCut(cut,Relative(box,other,p),foot);
                     // A stairwell stays empty even when duplicate bearing geometry is suppressed/restored.
-                    foreach(var hole in floors[other.Id].cuts)AddCut(cut,Relative(hole,other,p),foot);
+                    foreach(var hole in floorState.cuts)AddCut(cut,Relative(hole,other,p),foot);
                 }
                 if(other.Definition.kind==BuildPartKind.Stair)
                 {var hole=StairFloorCut(other,p);if(hole.HasValue && Aligned(p,other))AddCut(cut,hole.Value,foot);}

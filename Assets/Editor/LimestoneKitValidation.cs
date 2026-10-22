@@ -64,8 +64,8 @@ public static class LimestoneKitValidation
         {
             var d = catalog.Find(LimestoneKitSetup.Ids[part]); float width = part == 2 ? 2 : 4;
             Check(d != null && d.kind == BuildPartKind.Wall && d.material == shared, "Limestone definition missing");
-            Near(d.LocalBounds.min, new Vector3(0, 0, -.25f), "Wall base/thickness centreline");
-            Near(d.LocalBounds.max, new Vector3(width, 3, .25f), "Wall size");
+            Near(d.LocalBounds.min, new Vector3(0, 0, -.125f), "Wall base/thickness centreline");
+            Near(d.LocalBounds.max, new Vector3(width, 3, .125f), "Wall size");
             Check(d.StackRise == 3 && d.WallEndInset == 0 && d.preserveAuthoredMesh, "Full-span fitting contract missing");
             Check(d.jointCoverVariants.Length == 0 && !d.canGroundOnTerrain, "Limestone gained timber covers or new grounding rules");
             Check(d.jointSockets.Length == (int)(width * 4) + 1, "Incorrect short/full span sockets");
@@ -78,7 +78,7 @@ public static class LimestoneKitValidation
             Vector3[] firstVertices = null; Vector2[] firstUvs = null;
             foreach (var mesh in d.uvVariants)
             {
-                Check(!mesh.isReadable && mesh.subMeshCount == 1 && mesh.GetIndexCount(0) == 36, "Runtime wall must be one closed 12-triangle solid");
+                Check(mesh.subMeshCount == 1 && mesh.GetIndexCount(0) == 36, "Runtime wall must be one closed 12-triangle solid");
                 Near(mesh.bounds.min, d.LocalBounds.min, "Imported min"); Near(mesh.bounds.max, d.LocalBounds.max, "Imported max");
                 using var data = MeshUtility.AcquireReadOnlyMeshData(mesh); var source = data[0];
                 using var vertices = new NativeArray<Vector3>(source.vertexCount, Allocator.Temp);
@@ -111,7 +111,7 @@ public static class LimestoneKitValidation
                         edges.TryGetValue(key, out int count); edges[key] = count + 1;
                     }
                 }
-                Check(Math.Abs(volume - width * 3 * .5) < .001, "Incorrect solid volume");
+                Check(Math.Abs(volume - width * 3 * .25) < .001, "Incorrect solid volume");
                 foreach (int count in edges.Values) Check(count == 2, "Wall is not closed/manifold");
                 if (firstVertices == null) { firstVertices = vertices.ToArray(); firstUvs = uvs.ToArray(); }
                 else
@@ -178,7 +178,7 @@ public static class LimestoneKitValidation
             Near(collider.size, d.LocalBounds.size, "Runtime wall collider size");
             var ray = new Ray(origin + q * new Vector3(width / 2, 1.5f, -2), q * Vector3.forward);
             Check(collider.Raycast(ray, out var hit, 4), "Wall does not block traversal ray");
-            Check(Mathf.Abs(hit.distance - 1.75f) < .001f, "Wall thickness changed in collision");
+            Check(Mathf.Abs(hit.distance - 1.875f) < .001f, "Wall thickness changed in collision");
         }
         session.Remove(footing.Id);
         Check(!first.Supported && !upper.Supported, "Walls retained support after footing removal");

@@ -72,6 +72,7 @@ public static class LimestoneKitSetup
             d.solidBoxes = Array.Empty<Bounds>(); d.wallOpenings = Array.Empty<Bounds>();
             d.occupiedVolumes = Array.Empty<BuildConvexVolume>();
             BakedStoneWallSetup.ApplyMeshes(d, Models + "/L0" + (i + 1) + "_BakedWall");
+            BuildKitDimensions.Apply(d);
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path + ".prefab") != null;
             var root = existing ? PrefabUtility.LoadPrefabContents(path + ".prefab") : new GameObject(names[i]);
             try

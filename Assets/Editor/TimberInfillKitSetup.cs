@@ -60,6 +60,7 @@ public static class TimberInfillKitSetup
             d.roofContinuationMesh = null; d.gableRoofSeamMesh = null; d.roofAttachment = gable ? RoofAttachmentMode.Gable : RoofAttachmentMode.None;
             d.gableSlope = !gable ? GableSlope.None : p.slope == "falling" ? GableSlope.Falling : GableSlope.Rising; d.flipVariant = null;
             d.furnitureWallMounted = canopy;
+            d.relaxedWallMount = canopy;
             d.furnitureSupportPoints = canopy ? new[] {new Vector3(-.85f,-.65f,0), new Vector3(.85f,-.65f,0),new Vector3(-.85f,.92f,0),new Vector3(.85f,.92f,0)} : Array.Empty<Vector3>();
             var sockets = new List<BuildJointSocket>();
             if (d.kind == BuildPartKind.Wall)

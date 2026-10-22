@@ -30,6 +30,13 @@ public sealed class BuildResolvedState
     public bool invalidJoint;
     public BuildJointContact[] joints=Array.Empty<BuildJointContact>();
     public BuildRenderAttachment[] attachments=Array.Empty<BuildRenderAttachment>();
+    public bool SameSolids(BuildResolvedState other)
+    {
+        if(other==null || boxes.Length!=other.boxes.Length || volumes.Length!=other.volumes.Length)return false;
+        for(int i=0;i<boxes.Length;i++)if(boxes[i]!=other.boxes[i])return false;
+        for(int i=0;i<volumes.Length;i++)if(volumes[i]!=other.volumes[i])return false;
+        return true;
+    }
     public bool SameVisuals(BuildResolvedState other)
     {
         if(other==null || mesh!=other.mesh || auxiliaryMesh!=other.auxiliaryMesh || attachments.Length!=other.attachments.Length)return false;

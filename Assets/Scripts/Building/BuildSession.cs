@@ -93,7 +93,7 @@ public sealed class BuildSession : IDisposable
     public void RecomputeSupport()
     {
         using var scope = SupportMarker.Auto();
-        bool fullBearing=false;foreach(var p in pieces.Values)fullBearing|=p.Definition.requiresFullBearing || p.Definition.kind==BuildPartKind.Furniture;
+        bool fullBearing=false;foreach(var p in pieces.Values)fullBearing|=p.Definition.requiresFullBearing || p.Definition.topCourseDepth>0 || p.Definition.kind==BuildPartKind.Furniture;
         if(fullBearing)
         {
             var list=new List<BuildPieceRecord>(pieces.Values);var states=new Dictionary<ulong,BuildResolvedState>();
@@ -144,7 +144,41 @@ public sealed class BuildSession : IDisposable
         }
     }
     public Dictionary<ulong,BuildResolvedState> ResolvePreview(BuildPieceRecord candidate)
-    {var list=new List<BuildPieceRecord>(pieces.Values);list.Add(candidate);return resolution.Resolve(list,p=>NeighboursFor(p,candidate));}
+    {
+        // Only direct neighbours can change because of the incoming record. One
+        // additional ring supplies complete joint ownership and floor dependencies.
+        var direct=NeighboursFor(candidate);var local=new List<BuildPieceRecord>(direct){candidate};
+        var ids=new HashSet<ulong>{candidate.Id};foreach(var p in direct)ids.Add(p.Id);
+        foreach(var p in direct)foreach(var other in NeighboursFor(p))if(ids.Add(other.Id))local.Add(other);
+        PreviewResolutionCount=local.Count;
+        var resolved=resolution.Resolve(local,p=>NeighboursFor(p,candidate));
+        var result=new Dictionary<ulong,BuildResolvedState>{{candidate.Id,resolved[candidate.Id]}};
+        foreach(var p in direct)result[p.Id]=resolved[p.Id];
+        return result;
+    }
+    public int PreviewResolutionCount { get; private set; }
+    public HashSet<ulong> PreviewSupport(BuildPieceRecord candidate,Dictionary<ulong,BuildResolvedState> proposed)
+    {
+        // Reuse committed graph edges everywhere that fitting left solids intact.
+        // Only changed solids and their incident neighbours require contact tests.
+        var dirty=new Dictionary<ulong,BuildPieceRecord>{{candidate.Id,candidate}};
+        foreach(var pair in proposed)if(pair.Key!=candidate.Id && pieces.TryGetValue(pair.Key,out var p) && !pair.Value.SameSolids(p.Resolved))
+        {
+            dirty[p.Id]=p;foreach(var neighbour in NeighboursFor(p,candidate))dirty[neighbour.Id]=neighbour;
+        }
+        foreach(var neighbour in NeighboursFor(candidate))dirty[neighbour.Id]=neighbour;
+        var links=new Dictionary<ulong,List<ulong>>();
+        BuildResolvedState State(BuildPieceRecord p)=>proposed.TryGetValue(p.Id,out var value)?value:p.Resolved;
+        foreach(var p in dirty.Values)
+        {
+            var ids=new List<ulong>();foreach(var other in NeighboursFor(p,candidate))
+                if(other.Id!=p.Id && BuildResolvedGeometry.Connects(p,State(p),other,State(other)))ids.Add(other.Id);
+            links[p.Id]=ids;
+        }
+        var all=new List<BuildPieceRecord>(pieces.Values){candidate};var states=new Dictionary<ulong,BuildResolvedState>();
+        foreach(var p in all)states[p.Id]=State(p);
+        return BuildSupportState.Resolve(all,states,p=>NeighboursFor(p,candidate),p=>links.TryGetValue(p.Id,out var ids)?ids:p.Connections);
+    }
     public IReadOnlyList<BuildPieceRecord> NeighboursFor(BuildPieceRecord p,BuildPieceRecord extra=null)
     {
         var output=new List<BuildPieceRecord>();Bounds b=p.WorldBounds;b.Expand(.04f);Query(b,output);

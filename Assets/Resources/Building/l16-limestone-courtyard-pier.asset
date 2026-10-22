@@ -1,0 +1,145 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: l16-limestone-courtyard-pier
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.stone.l16-limestone-courtyard-pier
+  displayName: L16 limestone courtyard pier
+  kind: 3
+  wallPlacementMode: 0
+  sizeUnits: {x: 3, y: 6, z: 3}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: -0.375, y: 0, z: -0.375}
+  jointSockets: []
+  stackRiseUnits: 6
+  wallEndInsetUnits: 0
+  mesh: {fileID: 4300000, guid: 42b234bcab2b20b4ea63fa94dd0e3c68, type: 2}
+  preserveAuthoredMesh: 1
+  requiresFullBearing: 0
+  canGroundOnTerrain: 1
+  furnitureWallMounted: 0
+  furnitureSupportPoints: []
+  solidBoxes: []
+  wallOpenings: []
+  gableSlope: 0
+  flipVariant: {fileID: 0}
+  gableRoofSeamMesh: {fileID: 0}
+  uvVariants: []
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes:
+  - mesh: {fileID: 4300000, guid: 51c91422e91684e4fa94b776d2788246, type: 2}
+    vertices:
+    - {x: -0.325, y: 0, z: -0.325}
+    - {x: 0.325, y: 0, z: -0.325}
+    - {x: 0.325, y: 1.25, z: -0.325}
+    - {x: -0.325, y: 1.25, z: -0.325}
+    - {x: -0.325, y: 0, z: 0.325}
+    - {x: 0.325, y: 0, z: 0.325}
+    - {x: 0.325, y: 1.25, z: 0.325}
+    - {x: -0.325, y: 1.25, z: 0.325}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0.46135274, y: -0.8872168, z: 0}
+    - {x: -1, y: 0, z: 0}
+    - {x: 0, y: 1, z: 0}
+    - {x: 0.46135274, y: 0.8872168, z: 0}
+    - {x: 0.70710677, y: 0, z: 0.70710677}
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: 0.8872168, z: 0.46135274}
+    - {x: -0.70710677, y: 0, z: 0.70710677}
+    - {x: 0, y: -0.8872168, z: 0.46135274}
+    bounds:
+      m_Center: {x: 0, y: 0.625, z: 0}
+      m_Extent: {x: 0.325, y: 0.625, z: 0.325}
+  - mesh: {fileID: 4300000, guid: 64e4bdf3302725843aa200ed2f464596, type: 2}
+    vertices:
+    - {x: -0.375, y: 1.28, z: -0.345}
+    - {x: -0.345, y: 1.28, z: -0.375}
+    - {x: -0.345, y: 1.25, z: -0.345}
+    - {x: 0.375, y: 1.28, z: -0.345}
+    - {x: 0.345, y: 1.25, z: -0.345}
+    - {x: 0.345, y: 1.28, z: -0.375}
+    - {x: 0.345, y: 1.5, z: -0.345}
+    - {x: 0.375, y: 1.47, z: -0.345}
+    - {x: 0.345, y: 1.47, z: -0.375}
+    - {x: -0.375, y: 1.47, z: -0.345}
+    - {x: -0.345, y: 1.5, z: -0.345}
+    - {x: -0.345, y: 1.47, z: -0.375}
+    - {x: -0.375, y: 1.28, z: 0.345}
+    - {x: -0.345, y: 1.25, z: 0.345}
+    - {x: -0.345, y: 1.28, z: 0.375}
+    - {x: 0.345, y: 1.25, z: 0.345}
+    - {x: 0.375, y: 1.28, z: 0.345}
+    - {x: 0.345, y: 1.28, z: 0.375}
+    - {x: 0.375, y: 1.47, z: 0.345}
+    - {x: 0.345, y: 1.5, z: 0.345}
+    - {x: 0.345, y: 1.47, z: 0.375}
+    - {x: -0.375, y: 1.47, z: 0.345}
+    - {x: -0.345, y: 1.47, z: 0.375}
+    - {x: -0.345, y: 1.5, z: 0.345}
+    faceAxes:
+    - {x: -0.5773501, y: -0.5773506, z: -0.5773501}
+    - {x: 0.5773501, y: -0.5773506, z: -0.5773501}
+    - {x: 0.5773501, y: 0.5773506, z: -0.5773501}
+    - {x: -0.5773501, y: 0.5773506, z: -0.5773501}
+    - {x: -0.7071068, y: 0, z: -0.7071068}
+    - {x: 0, y: 0.7071071, z: -0.7071064}
+    - {x: 0.7071068, y: 0, z: -0.7071068}
+    - {x: 0, y: -0.7071071, z: -0.7071064}
+    - {x: -0.7071064, y: -0.7071071, z: 0}
+    - {x: 0.7071064, y: -0.7071071, z: 0}
+    - {x: -1, y: 0, z: 0}
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    edgeAxes:
+    - {x: 0.7071068, y: 0, z: -0.7071068}
+    - {x: 0, y: -0.7071064, z: 0.7071071}
+    - {x: -0.7071071, y: 0.7071064, z: 0}
+    - {x: -0.7071071, y: -0.7071064, z: 0}
+    - {x: 0.7071068, y: 0, z: 0.7071068}
+    - {x: 0, y: 0.7071064, z: 0.7071071}
+    - {x: 0.15409961, y: 0.9759645, z: -0.15409961}
+    - {x: 0, y: -1, z: 0}
+    - {x: -0.99811494, y: 0.04339626, z: 0.043396305}
+    - {x: 1, y: 0, z: 0}
+    - {x: 0.15409961, y: 0.9759645, z: 0.15409961}
+    - {x: 0.99811494, y: -0.04339626, z: 0.043396305}
+    - {x: -0.15409961, y: 0.9759645, z: -0.15409961}
+    - {x: 0.99811494, y: 0.04339626, z: 0.043396305}
+    - {x: -0.15409961, y: 0.9759645, z: 0.15409961}
+    - {x: -0.99811494, y: -0.04339626, z: 0.043396305}
+    - {x: -0.043396305, y: 0.04339626, z: 0.99811494}
+    - {x: 0, y: 0, z: -1}
+    - {x: -0.043396305, y: -0.04339626, z: 0.99811494}
+    - {x: 0.043396305, y: -0.04339626, z: 0.99811494}
+    - {x: 0.043396305, y: 0.04339626, z: 0.99811494}
+    - {x: 0, y: -0.2654813, z: 0.96411604}
+    - {x: 0.96411604, y: -0.2654813, z: 0}
+    - {x: 0, y: 0.2654813, z: 0.96411604}
+    - {x: 0.96411604, y: 0.2654813, z: 0}
+    bounds:
+      m_Center: {x: 0, y: 1.375, z: 0}
+      m_Extent: {x: 0.375, y: 0.125, z: 0.375}
+  roofAttachment: 0
+  material: {fileID: 2100000, guid: ad36acbf8b50a36438f9ee2bfa3b2535, type: 2}
+  authoringPrefab: {fileID: 2987430962979323100, guid: db144f657227c524bbf9ea019eaca2be, type: 3}
+  flamePrefab: {fileID: 0}
+  maxHealth: 100

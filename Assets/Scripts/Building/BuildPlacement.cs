@@ -31,10 +31,16 @@ public static class BuildPlacement
 {
     public static BuildPreview Solve(BuildDefinition definition, Vector3 hit, Vector3 normal, BuildPieceRecord target,
         BuildGridFrame targetFrame, int worldHeading, int contextTurn, Vector3Int nudge, Vector3? viewerPosition = null,
-        bool preferTopAttachment = false)
+        bool preferTopAttachment = false, int? lockedWorldYaw = null)
     {
+        if(target==null && lockedWorldYaw.HasValue)worldHeading=lockedWorldYaw.Value;
+        int baseYaw=target?.WorldYawStep??worldHeading;
+        int Yaw(int automatic)=>lockedWorldYaw.HasValue?BuildGeometry.Turn(lockedWorldYaw.Value-baseYaw):BuildGeometry.Turn(automatic);
+        if(lockedWorldYaw.HasValue)contextTurn=BuildGeometry.Turn(lockedWorldYaw.Value-baseYaw);
+        if(BuildTopCourse.Solve(definition,target,nudge,contextTurn,out var coursePreview,lockedWorldYaw))return coursePreview;
+        if(BuildWallBasePlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,out var basePreview,lockedWorldYaw))return basePreview;
         if(definition.kind==BuildPartKind.Furniture || target?.Definition.kind==BuildPartKind.Furniture)
-            return BuildFurnishing.Solve(definition,hit,normal,target,targetFrame,worldHeading,contextTurn,nudge);
+            return BuildFurnishing.Solve(definition,hit,normal,target,targetFrame,worldHeading,contextTurn,nudge,lockedWorldYaw);
         var preview = new BuildPreview { Definition = definition, Hint = "Ground grid" };
         if (target == null)
         {
@@ -54,21 +60,22 @@ public static class BuildPlacement
             Bounds bounds = target.Definition.LocalBounds;
             Vector3 point = BuildGeometry.LocalPoint(targetFrame, hit);
             Vector3 localNormal = Quaternion.Inverse(BuildGeometry.Rotation(target.WorldYawStep)) * normal;
-            if(BuildStairPlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,out var stairPreview))return stairPreview;
+            if(BuildStairPlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,out var stairPreview,lockedWorldYaw))return stairPreview;
             preview.StairAimTarget=target.Id;
-            if(BuildGablePlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,out var gablePreview))return gablePreview;
-            if(BuildSocketPlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,preferTopAttachment,out var socketPreview))return socketPreview;
+            if(BuildGablePlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,out var gablePreview,lockedWorldYaw))return gablePreview;
+            if(BuildSocketPlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,preferTopAttachment,out var socketPreview,lockedWorldYaw))return socketPreview;
             Vector3 origin;
             int edge = ClosestEdge(bounds, point);
             bool upper = IsUpperHit(bounds, point, localNormal);
             if (definition.kind == BuildPartKind.Roof || target.Definition.kind == BuildPartKind.Roof)
             {
-                origin = BuildRoof.Snap(definition,target,point,localNormal,contextTurn,viewerPosition,out int roofYaw,out string roofHint);
+                origin = BuildRoof.Snap(definition,target,point,localNormal,contextTurn,viewerPosition,out int roofYaw,out string roofHint,lockedWorldYaw);
                 preview.YawStep = roofYaw; preview.Hint = roofHint;
             }
             else if (definition.kind == BuildPartKind.Stair)
             {
-                preview.YawStep = BuildGeometry.Turn(contextTurn);
+                preview.YawStep = lockedWorldYaw.HasValue?BuildGeometry.Turn(lockedWorldYaw.Value-target.WorldYawStep):
+                    BuildGeometry.Turn((viewerPosition.HasValue?FacingYaw(hit-viewerPosition.Value,2)-target.WorldYawStep:0)+contextTurn);
                 Bounds footprint = BuildGeometry.WorldBounds(definition.LocalBounds, Vector3.zero, preview.YawStep);
                 if (localNormal.y < -.6f)
                 {
@@ -91,7 +98,7 @@ public static class BuildPlacement
                 else if ((target.Definition.kind is BuildPartKind.Floor or BuildPartKind.Foundation) && Mathf.Abs(localNormal.y) < .6f)
                 {
                     int side = FacingSide(localNormal,edge);
-                    preview.YawStep = BuildGeometry.Turn(side + contextTurn);
+                    preview.YawStep = Yaw(side + contextTurn);
                     Vector3 contact = side switch {
                         0 => new Vector3(point.x,bounds.max.y,bounds.min.z),
                         2 => new Vector3(bounds.min.x,bounds.max.y,point.z),
@@ -110,7 +117,7 @@ public static class BuildPlacement
             }
             else if (definition.kind == BuildPartKind.Floor && target.Definition.kind == BuildPartKind.Stair && localNormal.y >= -.6f)
             {
-                preview.YawStep = BuildGeometry.Turn(contextTurn);
+                preview.YawStep = Yaw(contextTurn);
                 Bounds footprint = BuildGeometry.WorldBounds(definition.LocalBounds, Vector3.zero, preview.YawStep);
                 origin = new Vector3(bounds.min.x-footprint.min.x,bounds.max.y-footprint.max.y,bounds.max.z-footprint.min.z);
                 preview.Hint = "Landing beyond stair";
@@ -118,7 +125,7 @@ public static class BuildPlacement
             else if (localNormal.y < -.6f && !(definition.kind == BuildPartKind.Foundation && target.Definition.kind != BuildPartKind.Foundation))
             {
                 // The aimed face decides elevation before any upper-half/perimeter heuristics.
-                preview.YawStep = BuildGeometry.Turn((definition.IsWallInfill ? ViewerFacingYaw(bounds, point, targetFrame, viewerPosition) : 0) + contextTurn);
+                preview.YawStep = Yaw((definition.IsWallInfill ? ViewerFacingYaw(bounds, point, targetFrame, viewerPosition) : 0) + contextTurn);
                 Bounds footprint = BuildGeometry.WorldBounds(definition.LocalBounds, Vector3.zero, preview.YawStep);
                 if (definition.kind == BuildPartKind.Wall && target.Definition.kind is BuildPartKind.Floor or BuildPartKind.Foundation)
                 {
@@ -127,7 +134,7 @@ public static class BuildPlacement
                     else
                     {
                         origin = WallEdgeOrigin(definition, bounds, point, edge);
-                        preview.YawStep = BuildGeometry.Turn(edge + contextTurn);
+                        preview.YawStep = Yaw(edge + contextTurn);
                         footprint = BuildGeometry.WorldBounds(definition.LocalBounds, Vector3.zero, preview.YawStep);
                     }
                 }
@@ -152,7 +159,7 @@ public static class BuildPlacement
                 // Aiming at an existing wall/floor can replace its missing footing, preserving its frame.
                 origin = new Vector3(bounds.min.x - (target.Definition.kind == BuildPartKind.Wall ? target.Definition.WallEndInset : 0),
                     bounds.min.y - definition.LocalBounds.max.y, bounds.min.z);
-                preview.YawStep = BuildGeometry.Turn(contextTurn);
+                preview.YawStep = Yaw(contextTurn);
             }
             else if (definition.kind == BuildPartKind.Corner)
             {
@@ -200,13 +207,13 @@ public static class BuildPlacement
                         SurfaceAnchor(point.z, bounds.min.z, bounds.max.z, definition.LocalBounds.min.z, definition.LocalBounds.max.z));
                     preview.Hint = "Pillar on surface";
                 }
-                preview.YawStep = BuildGeometry.Turn(contextTurn);
+                preview.YawStep = Yaw(contextTurn);
             }
             else if ((definition.IsWallInfill && target.Definition.kind != BuildPartKind.Wall) ||
                 (definition.IsSurfaceWall && target.Definition.kind is BuildPartKind.Floor or BuildPartKind.Foundation))
             {
                 // Fillers use the surface grid rather than the full panel's perimeter/corner sockets.
-                preview.YawStep = BuildGeometry.Turn((definition.IsWallInfill ? ViewerFacingYaw(bounds, point, targetFrame, viewerPosition) : 0) + contextTurn);
+                preview.YawStep = Yaw((definition.IsWallInfill ? ViewerFacingYaw(bounds, point, targetFrame, viewerPosition) : 0) + contextTurn);
                 Bounds footprint = BuildGeometry.WorldBounds(definition.LocalBounds, Vector3.zero, preview.YawStep);
                 if (target.Definition.kind == BuildPartKind.Corner)
                 {
@@ -238,13 +245,13 @@ public static class BuildPlacement
                     4 => new Vector3(bounds.max.x, bounds.min.y, bounds.max.z),
                     _ => new Vector3(bounds.max.x, bounds.min.y, bounds.min.z)
                 };
-                preview.YawStep = BuildGeometry.Turn((upper ? 0 : side + 2) + contextTurn);
+                preview.YawStep = Yaw((upper ? 0 : side + 2) + contextTurn);
                 preview.Hint = upper ? "Stack above" : "Extend from pillar";
             }
             else if (definition.kind == BuildPartKind.Wall && target.Definition.kind != BuildPartKind.Wall)
             {
                 origin = WallEdgeOrigin(definition, bounds, point, edge);
-                preview.YawStep = BuildGeometry.Turn(edge + contextTurn);
+                preview.YawStep = Yaw(edge + contextTurn);
                 preview.Hint = "Wall along edge";
             }
             else if (definition.kind == BuildPartKind.Wall)
@@ -253,7 +260,7 @@ public static class BuildPlacement
                 origin = stack ? new Vector3(bounds.min.x, bounds.min.y + target.Definition.StackRise - definition.LocalBounds.min.y, bounds.min.z)
                     : new Vector3(point.x < bounds.center.x ? bounds.min.x - definition.LocalBounds.max.x :
                         bounds.max.x - definition.LocalBounds.min.x, bounds.min.y, bounds.min.z);
-                preview.YawStep = BuildGeometry.Turn(contextTurn);
+                preview.YawStep = Yaw(contextTurn);
                 preview.Hint = stack ? "Stack above" : definition.IsWallInfill ? "Fill wall end" : "Extend wall";
             }
             else if (definition.kind == BuildPartKind.Floor && target.Definition.kind == BuildPartKind.Foundation && localNormal.y > .6f)
@@ -261,11 +268,11 @@ public static class BuildPlacement
                 // Authored masonry foundations keep their full solid mesh. Seat the
                 // floor underside on top; prototype foundations still resolve a finish cap.
                 origin = new Vector3(bounds.min.x, bounds.max.y - (target.Definition.preserveAuthoredMesh ? definition.LocalBounds.min.y : definition.LocalBounds.max.y), bounds.min.z);
-                preview.YawStep = BuildGeometry.Turn(contextTurn);
+                preview.YawStep = Yaw(contextTurn);
             }
             else if (target.Definition.kind == BuildPartKind.Wall || target.Definition.kind == BuildPartKind.Corner)
             {
-                preview.YawStep = BuildGeometry.Turn(contextTurn);
+                preview.YawStep = Yaw(contextTurn);
                 Bounds footprint = BuildGeometry.WorldBounds(definition.LocalBounds, Vector3.zero, preview.YawStep);
                 if (target.Definition.kind == BuildPartKind.Wall)
                 {
@@ -275,7 +282,7 @@ public static class BuildPlacement
                     preview.TopAttachment = seated;
                     // The wall's centre selects the bay; the aimed face selects the side of that bay.
                     // At its top, the slab covers the full wall thickness before extending toward the viewer.
-                    origin = new Vector3(bounds.center.x - footprint.center.x,
+                    origin = new Vector3(BuildGeometry.Tick(point.x-footprint.center.x)*BuildGeometry.Unit,
                         seated ? bounds.min.y + target.Definition.StackRise - footprint.max.y : BuildGeometry.Tick(point.y) * BuildGeometry.Unit - footprint.max.y,
                         towardsPositiveZ
                             ? (seated ? bounds.min.z : bounds.max.z) - footprint.min.z
@@ -297,15 +304,21 @@ public static class BuildPlacement
             }
             else
             {
-                // Floors and foundations extend horizontally, preserving the target walking elevation.
-                Vector3 size = definition.LocalBounds.size;
-                origin = edge switch {
-                    0 => new Vector3(bounds.min.x, bounds.max.y, bounds.min.z - size.z),
-                    2 => new Vector3(bounds.min.x - size.x, bounds.max.y, bounds.min.z),
-                    4 => new Vector3(bounds.min.x, bounds.max.y, bounds.max.z),
-                    _ => new Vector3(bounds.max.x, bounds.max.y, bounds.min.z)
-                };
-                preview.YawStep = BuildGeometry.Turn(contextTurn);
+                preview.YawStep = Yaw(contextTurn);
+                // Align rotated faces, including centred/offset and unequal footprints.
+                Bounds shape=BuildGeometry.WorldBounds(definition.LocalBounds,Vector3.zero,preview.YawStep);
+                edge=FacingSide(localNormal,edge);
+                origin=new Vector3(SurfaceAnchor(point.x,bounds.min.x,bounds.max.x,shape.min.x,shape.max.x),
+                    bounds.max.y-shape.max.y,SurfaceAnchor(point.z,bounds.min.z,bounds.max.z,shape.min.z,shape.max.z));
+                if(edge==0)origin.z=bounds.min.z-shape.max.z;
+                else if(edge==4)origin.z=bounds.max.z-shape.min.z;
+                else if(edge==2)origin.x=bounds.min.x-shape.max.x;
+                else origin.x=bounds.max.x-shape.min.x;
+                preview.Hint="Extend along aimed face";
+                preview.WorldYaw=BuildGeometry.Turn(target.WorldYawStep+preview.YawStep);
+                preview.Origin=target.Origin+BuildGeometry.Rotation(target.WorldYawStep)*(origin+(Vector3)nudge*BuildGeometry.Unit);
+                preview.Frame=new BuildGridFrame{Origin=preview.Origin,YawStep=(byte)preview.WorldYaw};
+                preview.Anchor=default;preview.YawStep=0;return preview;
             }
             preview.Anchor = BuildGeometry.Ticks(origin) + nudge;
         }
@@ -313,7 +326,8 @@ public static class BuildPlacement
         preview.WorldYaw = BuildGeometry.Turn(preview.Frame.YawStep + preview.YawStep);
         return preview;
     }
-    private static bool IsUpperHit(Bounds bounds, Vector3 point, Vector3 normal) => normal.y > .6f || point.y >= bounds.center.y;
+    public static bool IsUpperHit(Bounds bounds, Vector3 point, Vector3 normal) =>
+        normal.y>.6f || Mathf.Abs(normal.y)<.6f && Mathf.Abs(normal.x)<.6f && point.y>=bounds.max.y-.15f;
     private static Vector3 SurfaceWallOrigin(Bounds surface, Vector3 point, Bounds footprint)
     {
         // Long-axis overhang permits seam/interior construction; the thin axis stays on the supporting face.

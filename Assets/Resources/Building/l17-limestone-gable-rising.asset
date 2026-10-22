@@ -1,0 +1,82 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: l17-limestone-gable-rising
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.stone.l17-limestone-gable-rising
+  displayName: "L17 limestone half-gable \xB7 rising"
+  kind: 0
+  wallPlacementMode: 0
+  sizeUnits: {x: 8, y: 8, z: 1}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: 0, y: 0, z: -0.125}
+  jointSockets:
+  - localPosition: {x: 0, y: 0, z: 0}
+    outward: {x: -1, y: 0, z: 0}
+    interior: 0
+  - localPosition: {x: 2, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 0
+  stackRiseUnits: 8
+  wallEndInsetUnits: 0
+  mesh: {fileID: 4300000, guid: 5e19cc0fef6d63c44bad8bcac4de6ef2, type: 2}
+  preserveAuthoredMesh: 1
+  requiresFullBearing: 0
+  canGroundOnTerrain: 0
+  topCourseDepth: 0
+  wallBaseAttachment: 0
+  furnitureWallMounted: 0
+  relaxedWallMount: 0
+  furnitureSupportPoints: []
+  solidBoxes: []
+  wallOpenings: []
+  gableSlope: 1
+  flipVariant: {fileID: 11400000, guid: bb8cb9de861324e44b5d490910dc82ad, type: 2}
+  gableRoofSeamMesh: {fileID: 0}
+  uvVariants: []
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes:
+  - mesh: {fileID: 4300000, guid: 6b39aad60c389a64883d8f51746feff1, type: 2}
+    vertices:
+    - {x: 0, y: 0, z: -0.125}
+    - {x: 2, y: 0, z: -0.125}
+    - {x: 2, y: 2, z: -0.125}
+    - {x: 0, y: 0, z: 0.125}
+    - {x: 2, y: 0, z: 0.125}
+    - {x: 2, y: 2, z: 0.125}
+    faceAxes:
+    - {x: 0, y: -0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    - {x: -0.70710677, y: 0.70710677, z: 0}
+    edgeAxes:
+    - {x: 0, y: -1, z: 0}
+    - {x: -1, y: 0, z: 0}
+    - {x: 0.70710677, y: 0.70710677, z: 0}
+    - {x: 0.99227786, y: 0, z: 0.12403473}
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: 0.99227786, z: 0.12403473}
+    - {x: -0.7043607, y: -0.7043607, z: 0.08804509}
+    bounds:
+      m_Center: {x: 1, y: 1, z: 0}
+      m_Extent: {x: 1, y: 1, z: 0.125}
+  roofAttachment: 1
+  material: {fileID: 2100000, guid: ad36acbf8b50a36438f9ee2bfa3b2535, type: 2}
+  authoringPrefab: {fileID: 4957721775157637603, guid: b39821dc71544984b8fef71dd5b17c2f, type: 3}
+  flamePrefab: {fileID: 0}
+  maxHealth: 100

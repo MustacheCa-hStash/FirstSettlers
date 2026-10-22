@@ -15,8 +15,16 @@ public static class BuildStairAttachment
         var low=Low(stair);var high=High(stair);
         if(other.Definition.kind==BuildPartKind.Stair)
             return BuildGeometry.Turn(stair.WorldYawStep-other.WorldYawStep)==0 &&
-                (Near(low,High(other)) || Near(high,Low(other)));
+                (Near(low,High(other)) || Near(high,Low(other)) || SideConnects(stair,other));
         return EndpointContact(low,other,state) || EndpointContact(high,other,state);
+    }
+    private static bool SideConnects(BuildPieceRecord a,BuildPieceRecord b)
+    {
+        var ab=a.Definition.LocalBounds;var bb=BuildResolution.Relative(b.Definition.LocalBounds,b,a);
+        bool edge=Mathf.Abs(ab.min.x-bb.max.x)<.015f || Mathf.Abs(ab.max.x-bb.min.x)<.015f;
+        float slope=ab.size.y/ab.size.z,otherSlope=bb.size.y/bb.size.z;
+        float overlap=Mathf.Min(ab.max.z,bb.max.z)-Mathf.Max(ab.min.z,bb.min.z);
+        return edge && overlap>.015f && Mathf.Abs(slope-otherSlope)<.001f && Mathf.Abs(ab.min.y-slope*ab.min.z-(bb.min.y-otherSlope*bb.min.z))<.015f;
     }
     public static bool EndpointContact(Vector3 endpoint,BuildPieceRecord other,BuildResolvedState state)
     {

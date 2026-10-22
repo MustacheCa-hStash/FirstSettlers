@@ -16,9 +16,9 @@ MonoBehaviour:
   displayName: L09 square limestone doorway
   kind: 0
   wallPlacementMode: 0
-  sizeUnits: {x: 16, y: 12, z: 2}
+  sizeUnits: {x: 16, y: 12, z: 1}
   minimumUnits: {x: 0, y: 0, z: 0}
-  boundsOffset: {x: 0, y: 0, z: -0.25}
+  boundsOffset: {x: 0, y: 0, z: -0.125}
   jointSockets:
   - localPosition: {x: 0, y: 0, z: 0}
     outward: {x: -1, y: 0, z: 0}
@@ -58,29 +58,32 @@ MonoBehaviour:
     interior: 0
   stackRiseUnits: 12
   wallEndInsetUnits: 0
-  mesh: {fileID: -6072137349065753577, guid: e14b35b9aa5403b44852d4eaa9d102b1, type: 3}
+  mesh: {fileID: 4300000, guid: c27a7d3c0c63ab44b9a372ecbcfea208, type: 2}
   preserveAuthoredMesh: 1
   requiresFullBearing: 0
   canGroundOnTerrain: 0
+  topCourseDepth: 0
+  wallBaseAttachment: 0
   furnitureWallMounted: 0
+  relaxedWallMount: 0
   furnitureSupportPoints: []
   solidBoxes:
   - m_Center: {x: 0.6875, y: 1.125, z: 0}
-    m_Extent: {x: 0.6875, y: 1.125, z: 0.25}
+    m_Extent: {x: 0.6875, y: 1.125, z: 0.125}
   - m_Center: {x: 3.3125, y: 1.125, z: 0}
-    m_Extent: {x: 0.6875, y: 1.125, z: 0.25}
+    m_Extent: {x: 0.6875, y: 1.125, z: 0.125}
   - m_Center: {x: 2, y: 2.625, z: 0}
-    m_Extent: {x: 2, y: 0.375, z: 0.25}
+    m_Extent: {x: 2, y: 0.375, z: 0.125}
   wallOpenings:
   - m_Center: {x: 2, y: 1.125, z: 0}
-    m_Extent: {x: 0.625, y: 1.125, z: 0.25}
+    m_Extent: {x: 0.625, y: 1.125, z: 0.125}
   gableSlope: 0
   flipVariant: {fileID: 0}
   gableRoofSeamMesh: {fileID: 0}
   uvVariants:
-  - {fileID: -6072137349065753577, guid: e14b35b9aa5403b44852d4eaa9d102b1, type: 3}
-  - {fileID: 1160939043331890716, guid: 043347c1af1e29d408049c305cd0476a, type: 3}
-  - {fileID: -8039993698376415447, guid: ef30b6553df3d7e42ab319fb4367c255, type: 3}
+  - {fileID: 4300000, guid: c27a7d3c0c63ab44b9a372ecbcfea208, type: 2}
+  - {fileID: 4300000, guid: 5b575538b87fd744599f894539030ca8, type: 2}
+  - {fileID: 4300000, guid: 7cf7060f42a357644a7770d0bbe151f6, type: 2}
   floorOpeningUvVariants: []
   jointCoverVariants: []
   jointCoverMaterial: {fileID: 0}

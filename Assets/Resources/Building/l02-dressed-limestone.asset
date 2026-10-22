@@ -16,9 +16,9 @@ MonoBehaviour:
   displayName: L02 dressed limestone wall
   kind: 0
   wallPlacementMode: 0
-  sizeUnits: {x: 16, y: 12, z: 2}
+  sizeUnits: {x: 16, y: 12, z: 1}
   minimumUnits: {x: 0, y: 0, z: 0}
-  boundsOffset: {x: 0, y: 0, z: -0.25}
+  boundsOffset: {x: 0, y: 0, z: -0.125}
   jointSockets:
   - localPosition: {x: 0, y: 0, z: 0}
     outward: {x: -1, y: 0, z: 0}
@@ -73,11 +73,14 @@ MonoBehaviour:
     interior: 0
   stackRiseUnits: 12
   wallEndInsetUnits: 0
-  mesh: {fileID: -4317901644341018739, guid: 4ee3773ff2faba04b935e60904a23924, type: 3}
+  mesh: {fileID: 4300000, guid: 7cbe723b33a928f4a87c86442fc5156a, type: 2}
   preserveAuthoredMesh: 1
   requiresFullBearing: 0
   canGroundOnTerrain: 0
+  topCourseDepth: 0
+  wallBaseAttachment: 0
   furnitureWallMounted: 0
+  relaxedWallMount: 0
   furnitureSupportPoints: []
   solidBoxes: []
   wallOpenings: []
@@ -85,9 +88,9 @@ MonoBehaviour:
   flipVariant: {fileID: 0}
   gableRoofSeamMesh: {fileID: 0}
   uvVariants:
-  - {fileID: -4317901644341018739, guid: 4ee3773ff2faba04b935e60904a23924, type: 3}
-  - {fileID: -4317901644341018739, guid: 6754603ed7c7f444a839941359ab5e06, type: 3}
-  - {fileID: -4317901644341018739, guid: 260c9d327dba3b34991738c482bacb22, type: 3}
+  - {fileID: 4300000, guid: 7cbe723b33a928f4a87c86442fc5156a, type: 2}
+  - {fileID: 4300000, guid: 9f6589b08db1c9047a4883ffe70add2a, type: 2}
+  - {fileID: 4300000, guid: 15737bca1162c144d8c0ff4831a3c208, type: 2}
   floorOpeningUvVariants: []
   jointCoverVariants: []
   jointCoverMaterial: {fileID: 0}

@@ -247,7 +247,7 @@ public static class TimberInfillKitValidation
             s.Add(c.Find("build.prototype.foundation"),frame,default,0,true);var door=s.Add(c.Find(TimberInfillKitSetup.Ids[1]),frame,default,0,false);
             var d=c.Find(TimberInfillKitSetup.Ids[5]);var point=origin+q*new Vector3(2,2.5f,.125f);
             var preview=BuildPlacement.Solve(d,point,q*Vector3.forward,door,s.Frame(door.OwnFrameId),yaw,0,default);world.Validate(ref preview);
-            Check(!preview.Valid,"Canopy accepted missing upper ledger support");
+            Check(preview.Valid,"Canopy still requires every upper ledger mount");
             var upper=s.Add(c.Find(TimberInfillKitSetup.Ids[0]),frame,new Vector3Int(0,12,0),0,false);
             preview=BuildPlacement.Solve(d,point,q*Vector3.forward,door,s.Frame(door.OwnFrameId),yaw,0,default);world.Validate(ref preview);
             Check(preview.Valid,"Canopy rejected complete supported wall face: "+preview.Message);Near(preview.Origin,point,"Canopy moved away from actual wall face");
@@ -256,12 +256,12 @@ public static class TimberInfillKitValidation
             var colliders=new List<Collider>();proxy.GetEnabledColliders(colliders);Check(colliders.Count==6,"Canopy has no real roof/bracket hulls");
             foreach(var col in colliders)Check(!col.Raycast(new Ray(canopy.Origin+q*new Vector3(0,-.4f,-1),q*Vector3.forward),out _,3),"Canopy blocks clear headway between brackets");
             var invalid=BuildPlacement.Solve(d,origin,Vector3.up,null,null,yaw,0,default);Check(invalid.InvalidAttachment,"Canopy can start unsupported on terrain");
-            s.Remove(upper.Id);Check(!canopy.Supported,"Canopy remains supported after losing ledger mounts");
+            s.Remove(upper.Id);Check(canopy.Supported,"Canopy lost supported lower bracket contact");
             var gable=c.Find(TimberInfillKitSetup.Ids[3]);var left=s.Add(gable,frame,new Vector3Int(0,12,0),0,false);var right=s.Add(gable.flipVariant,frame,new Vector3Int(8,12,0),0,false);
             Check(canopy.Supported,"Canopy cannot mount across a supported wall and triangular gables");
-            var tooHigh=BuildPlacement.Solve(d,point+Vector3.up,q*Vector3.forward,door,s.Frame(door.OwnFrameId),yaw,0,default);world.Validate(ref tooHigh);
+            var tooHigh=BuildPlacement.Solve(d,point+Vector3.up*6,q*Vector3.forward,door,s.Frame(door.OwnFrameId),yaw,0,default);world.Validate(ref tooHigh);
             Check(!tooHigh.Valid,"Empty upper half of gable falsely supports canopy mounts");
-            s.Remove(right.Id);Check(!canopy.Supported,"Canopy keeps support with a missing gable mount");s.Remove(left.Id);
+            s.Remove(right.Id);Check(canopy.Supported,"Canopy requires every gable mount");s.Remove(left.Id);s.Remove(door.Id);Check(!canopy.Supported,"Canopy survives loss of all structural hosts");
         }finally{Object.DestroyImmediate(host);Physics.SyncTransforms();}
     }
 

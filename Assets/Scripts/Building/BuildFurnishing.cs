@@ -5,7 +5,7 @@ using UnityEngine;
 public static class BuildFurnishing
 {
     public static BuildPreview Solve(BuildDefinition d,Vector3 hit,Vector3 normal,BuildPieceRecord target,
-        BuildGridFrame frame,int heading,int turn,Vector3Int nudge)
+        BuildGridFrame frame,int heading,int turn,Vector3Int nudge,int? lockedWorldYaw=null)
     {
         var p=new BuildPreview{Definition=d,Hint="Furniture on ground"};
         if(target==null)
@@ -25,7 +25,7 @@ public static class BuildFurnishing
             {
                 p.Hint=d.flamePrefab!=null?"Torch on wall face":d.contentId=="build.wood.l35-braced-door-canopy"?"Canopy on wall face":"Shelf on wall face";
                 p.InvalidAttachment=target.Definition.kind is not (BuildPartKind.Wall or BuildPartKind.Corner) || Mathf.Abs(localNormal.y)>.25f;
-                p.YawStep=BuildGeometry.Turn(BuildPlacement.FacingYaw(localNormal,2)+turn);
+                p.YawStep=lockedWorldYaw.HasValue?BuildGeometry.Turn(lockedWorldYaw.Value-frame.YawStep):BuildGeometry.Turn(BuildPlacement.FacingYaw(localNormal,2)+turn);
                 // Preserve the actual wall face, including 0.125 m timber half-thickness.
                 // Only tangent/elevation use quarter-metre ticks. A dedicated persistent frame
                 // represents that face without moving or changing the structural wall frame.
@@ -68,6 +68,22 @@ public static class BuildFurnishing
         var points=p.Definition.furnitureSupportPoints;
         if(points==null || points.Length==0)return false;
         var rotation=BuildGeometry.Rotation(p.WorldYawStep);
+        if(p.Definition.furnitureWallMounted && p.Definition.relaxedWallMount)
+        {
+            foreach(var other in pieces)
+            {
+                if(!supported.Contains(other.Id) || other.Definition.kind is not (BuildPartKind.Wall or BuildPartKind.Corner))continue;
+                var inverse=Quaternion.Inverse(BuildGeometry.Rotation(other.WorldYawStep));
+                foreach(var point in points)
+                {
+                    Vector3 local=inverse*(p.Origin+rotation*point-other.Origin);
+                    foreach(var box in states[other.Id].boxes)if(box.SqrDistance(local)<=.026f)return true;
+                    foreach(var volume in states[other.Id].volumes)
+                        if(volume.bounds.SqrDistance(local)<=.026f && BuildOccupancy.SolidOverlap(null,new Bounds(p.Origin+rotation*point,Vector3.one*.32f),Vector3.zero,Quaternion.identity,volume,default,other.Origin,BuildGeometry.Rotation(other.WorldYawStep),0))return true;
+                }
+            }
+            return false;
+        }
         foreach(var point in points)
         {
             Vector3 world=p.Origin+rotation*point;bool found=false;

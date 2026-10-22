@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 1176815149465686905}
   - component: {fileID: 8026164689020438903}
   - component: {fileID: 3072110441731093149}
-  - component: {fileID: 3342444665582550364}
+  - component: {fileID: 4506013918107544593}
   m_Layer: 8
   m_Name: l01-coursed-limestone
   m_TagString: Untagged
@@ -41,7 +41,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6390668458945400431}
-  m_Mesh: {fileID: -3424606997446825330, guid: 930ab4571572ee843812cf6492e80165, type: 3}
+  m_Mesh: {fileID: 4300000, guid: af97c1610b164134683fc0cec1a0f3c8, type: 2}
 --- !u!23 &3072110441731093149
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -91,7 +91,7 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &3342444665582550364
+--- !u!65 &4506013918107544593
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -110,5 +110,5 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 4, y: 3, z: 0.5}
+  m_Size: {x: 4, y: 3, z: 0.25}
   m_Center: {x: 2, y: 1.5, z: 0}

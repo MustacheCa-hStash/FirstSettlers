@@ -68,6 +68,8 @@ public static class BuildingPrototypeSetup
         if(StoneKitSetup.Available)presets.AddRange(StoneKitSetup.Create());
         if(LimestoneKitSetup.Available)presets.AddRange(LimestoneKitSetup.Create());
         if(LimestoneKitExtensionSetup.Available)presets.AddRange(LimestoneKitExtensionSetup.Create());
+        if(LimestoneCourtyardSetup.Available)presets.AddRange(LimestoneCourtyardSetup.Create());
+        if(LimestoneAccessSetup.Available)presets.AddRange(LimestoneAccessSetup.Create());
         if(TimberInfillKitSetup.Available)presets.AddRange(TimberInfillKitSetup.Create());
         if(FurnitureKitSetup.Available)presets.AddRange(FurnitureKitSetup.Create());
         var torch=AssetDatabase.LoadAssetAtPath<BuildDefinition>(Folder+"/wall-torch.asset");

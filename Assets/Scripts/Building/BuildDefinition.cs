@@ -36,8 +36,14 @@ public sealed class BuildDefinition : ScriptableObject
     public bool requiresFullBearing;
     [Tooltip("This piece may ground directly on terrain. Each authored solid section needs foot contact; apertures never count as bearing.")]
     public bool canGroundOnTerrain;
+    [Min(0),Tooltip("Replaces this depth of a matching full-height wall's top course; the storey datum stays unchanged.")]
+    public float topCourseDepth;
+    [Tooltip("Seats the rear plane against an aimed wall face at that wall's base; structural bearing is checked separately.")]
+    public bool wallBaseAttachment;
     [Tooltip("Furniture attaches by its rear face instead of standing on its feet. Furniture never carries structural loads.")]
     public bool furnitureWallMounted;
+    [Tooltip("A supported host/contact is sufficient; individual rear mounting samples do not all have to meet a wall face.")]
+    public bool relaxedWallMount;
     [Tooltip("Local foot-bottom or rear mounting points. Every point needs real supported contact.")]
     public Vector3[] furnitureSupportPoints;
     [Tooltip("Authored solid sections around wall openings. Empty uses the full logical box unless convex volumes are supplied.")]

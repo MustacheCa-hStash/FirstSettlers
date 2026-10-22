@@ -26,7 +26,10 @@ MonoBehaviour:
   preserveAuthoredMesh: 1
   requiresFullBearing: 0
   canGroundOnTerrain: 0
+  topCourseDepth: 0
+  wallBaseAttachment: 0
   furnitureWallMounted: 1
+  relaxedWallMount: 1
   furnitureSupportPoints:
   - {x: -0.85, y: -0.65, z: 0}
   - {x: 0.85, y: -0.65, z: 0}

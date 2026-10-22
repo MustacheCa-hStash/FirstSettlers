@@ -11,9 +11,9 @@ GameObject:
   - component: {fileID: 329685293633671056}
   - component: {fileID: 2890913142411892067}
   - component: {fileID: 3444645842139419970}
-  - component: {fileID: 2702430268507773622}
-  - component: {fileID: 8654066599236630915}
-  - component: {fileID: 2594284101409980281}
+  - component: {fileID: 6914536013694683373}
+  - component: {fileID: 5565909916443794112}
+  - component: {fileID: 2925764283738586947}
   m_Layer: 8
   m_Name: l09-limestone-doorway
   m_TagString: Untagged
@@ -43,7 +43,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5615846278433233190}
-  m_Mesh: {fileID: -6072137349065753577, guid: e14b35b9aa5403b44852d4eaa9d102b1, type: 3}
+  m_Mesh: {fileID: 4300000, guid: c27a7d3c0c63ab44b9a372ecbcfea208, type: 2}
 --- !u!23 &3444645842139419970
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -93,7 +93,7 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &2702430268507773622
+--- !u!65 &6914536013694683373
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -112,9 +112,9 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.375, y: 2.25, z: 0.5}
+  m_Size: {x: 1.375, y: 2.25, z: 0.25}
   m_Center: {x: 0.6875, y: 1.125, z: 0}
---- !u!65 &8654066599236630915
+--- !u!65 &5565909916443794112
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -133,9 +133,9 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.375, y: 2.25, z: 0.5}
+  m_Size: {x: 1.375, y: 2.25, z: 0.25}
   m_Center: {x: 3.3125, y: 1.125, z: 0}
---- !u!65 &2594284101409980281
+--- !u!65 &2925764283738586947
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -154,5 +154,5 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 4, y: 0.75, z: 0.5}
+  m_Size: {x: 4, y: 0.75, z: 0.25}
   m_Center: {x: 2, y: 2.625, z: 0}

@@ -16,9 +16,9 @@ MonoBehaviour:
   displayName: L08 limestone plinth course
   kind: 0
   wallPlacementMode: 0
-  sizeUnits: {x: 16, y: 2, z: 2}
+  sizeUnits: {x: 16, y: 2, z: 1}
   minimumUnits: {x: 0, y: 0, z: 0}
-  boundsOffset: {x: 0, y: 0, z: -0.25}
+  boundsOffset: {x: 0, y: 0, z: -0.125}
   jointSockets:
   - localPosition: {x: 0, y: 0, z: 0}
     outward: {x: -1, y: 0, z: 0}
@@ -73,11 +73,14 @@ MonoBehaviour:
     interior: 0
   stackRiseUnits: 2
   wallEndInsetUnits: 0
-  mesh: {fileID: -1157362296994283136, guid: 91bae548dfa13e34d8c84c7207de11a5, type: 3}
+  mesh: {fileID: 4300000, guid: a6db7ab1bab72424a86ea2d5220033dc, type: 2}
   preserveAuthoredMesh: 1
   requiresFullBearing: 0
   canGroundOnTerrain: 0
+  topCourseDepth: 0
+  wallBaseAttachment: 0
   furnitureWallMounted: 0
+  relaxedWallMount: 0
   furnitureSupportPoints: []
   solidBoxes: []
   wallOpenings: []
@@ -85,9 +88,9 @@ MonoBehaviour:
   flipVariant: {fileID: 0}
   gableRoofSeamMesh: {fileID: 0}
   uvVariants:
-  - {fileID: -1157362296994283136, guid: 91bae548dfa13e34d8c84c7207de11a5, type: 3}
-  - {fileID: 8808502875145686322, guid: 60cbb4e1fdb16734ca0db732b39541f1, type: 3}
-  - {fileID: -6960600230902613150, guid: 3e415054f233a9848bff1251362ac9ca, type: 3}
+  - {fileID: 4300000, guid: a6db7ab1bab72424a86ea2d5220033dc, type: 2}
+  - {fileID: 4300000, guid: 101147a2e14162d43b98df557ac6f834, type: 2}
+  - {fileID: 4300000, guid: 31c5a917365562b4884f527233d863c0, type: 2}
   floorOpeningUvVariants: []
   jointCoverVariants: []
   jointCoverMaterial: {fileID: 0}

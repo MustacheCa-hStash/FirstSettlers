@@ -1,5 +1,13 @@
 # FirstSettlers Work Notes
 
+## October 21: limestone L18�L24
+
+Added the fitted eaves cornice, threshold steps, half- and full-storey masonry stairs, bedded landing, battered retaining wall and stepped buttress. The cornice replaces the upper 0.25 m of compatible walls without moving the 3 m storey datum; its mesh and collision restore when removed. Landing and buttress support requires complete solid bedding, with terrain grounding available for the buttress and retaining wall. Seven meshes total 292 triangles with shared colour/AO and normal maps. Validation includes 160 character stair traversals and all installed building regressions. See the [guide, source and Unity component sheet](Documentation/LIMESTONE_L18_L24.md). Restart Play mode after import.
+
+## October 21: limestone L10–L17
+
+Added the arched doorway, narrow and arched windows, two courtyard wall lengths, chamfered coping, capped courtyard pier and limestone half-gable. Openings stay clear in mesh and collision. L13 plus L15 matches L16's 1.50 m height, and L17 flips between triangular slopes with R. Nine FBXs share baked colour/AO and normal maps; the eight selectable parts total 528 triangles. Validation covers eight headings, sixteen character crossings, twenty-four terrain placements and both roof types, followed by the installed building regressions. See the [L10–L17 guide and Unity preview](Documentation/LIMESTONE_L10_L17.md). Restart Play mode after import.
+
 ## October 21: layered tree stands
 
 Tree distribution now uses world-space stands, dominant species palettes and

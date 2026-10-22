@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 1914894768047121316}
   - component: {fileID: 2846412380709996179}
   - component: {fileID: 3925569337084352299}
-  - component: {fileID: 4610785431734956924}
+  - component: {fileID: 8805836493505357221}
   m_Layer: 8
   m_Name: l07-limewashed-wall
   m_TagString: Untagged
@@ -41,7 +41,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8894723025047585738}
-  m_Mesh: {fileID: -8749273975378316855, guid: 789bd6547de060c43b8a0e22b3040507, type: 3}
+  m_Mesh: {fileID: 4300000, guid: d78910db35d8c1148b2f1c37de0409bd, type: 2}
 --- !u!23 &3925569337084352299
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -91,7 +91,7 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!65 &4610785431734956924
+--- !u!65 &8805836493505357221
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -110,5 +110,5 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 4, y: 3, z: 0.5}
+  m_Size: {x: 4, y: 3, z: 0.25}
   m_Center: {x: 2, y: 1.5, z: 0}
