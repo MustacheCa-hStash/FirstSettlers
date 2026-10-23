@@ -121,7 +121,7 @@ try {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
     }
     Copy-Item -LiteralPath 'Assets/Editor/BuildStoneUiAuthoring.cs','Assets/Editor/BuildStoneUiAuthoring.cs.meta' -Destination "$buildingProject/Assets/Editor" -Force
-    foreach ($buildingName in 'BuildKitDimensions','BuildInteractionValidation') {
+    foreach ($buildingName in 'BuildKitDimensions','BuildInteractionValidation','BuildGablePlacementValidation') {
         if (Test-Path -LiteralPath "Assets/Editor/$buildingName.cs") {
             if (-not (Test-Path -LiteralPath "Assets/Editor/$buildingName.cs.meta")) { "fileFormatVersion: 2`nguid: $([guid]::NewGuid().ToString('N'))" | Set-Content -LiteralPath "Assets/Editor/$buildingName.cs.meta" }
             Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
@@ -129,6 +129,17 @@ try {
     }
     foreach ($buildingName in 'LimestoneKitSetup','LimestoneKitValidation','LimestoneKitExtensionSetup','LimestoneKitExtensionValidation','TimberInfillKitSetup','TimberInfillKitValidation','LimestoneCourtyardSetup','LimestoneCourtyardValidation','LimestoneAccessSetup','LimestoneAccessValidation') {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
+    }
+    foreach ($buildingName in 'WoodExtensionKitSetup','WoodExtensionKitValidation','StoneCompletionKitSetup','StoneCompletionKitValidation') {
+        Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
+    }
+    if (Test-Path -LiteralPath 'ArtReferences/StoneBuildKit/Completion/stone-completion-models.json') {
+        New-Item -ItemType Directory -Path "$buildingProject/ArtReferences/StoneBuildKit/Completion" -Force | Out-Null
+        Copy-Item -LiteralPath 'ArtReferences/StoneBuildKit/Completion/stone-completion-models.json' -Destination "$buildingProject/ArtReferences/StoneBuildKit/Completion" -Force
+    }
+    if (Test-Path -LiteralPath 'ArtReferences/IronAgeWood/Extension/wood-extension-models.json') {
+        New-Item -ItemType Directory -Path "$buildingProject/ArtReferences/IronAgeWood/Extension" -Force | Out-Null
+        Copy-Item -LiteralPath 'ArtReferences/IronAgeWood/Extension/wood-extension-models.json' -Destination "$buildingProject/ArtReferences/IronAgeWood/Extension" -Force
     }
     if (Test-Path -LiteralPath 'ArtReferences/IronAgeFurniture/Models/furniture-models.json') {
         New-Item -ItemType Directory -Path "$buildingProject/ArtReferences/IronAgeFurniture/Models" -Force | Out-Null

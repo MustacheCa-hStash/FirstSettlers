@@ -121,7 +121,7 @@ public static class LimestoneAccessValidation
                 Near(continuation.Origin,p.Origin+q*new Vector3(0,d.LocalBounds.max.y,d.LocalBounds.max.z),"Stair continuation changed endpoint");w.Validate(ref continuation);Check(continuation.Valid,"Stair continuation rejected: "+continuation.Message);
                 w.Remove(p.Id);
             }
-            var groundOnly=BuildPlacement.Solve(c.Find(LimestoneAccessSetup.Ids[2]),origin,Vector3.up,null,null,yaw,0,default);w.Validate(ref groundOnly);Check(!groundOnly.Valid,"Terrain granted stair support");
+            var groundOnly=BuildPlacement.Solve(c.Find(LimestoneAccessSetup.Ids[2]),origin,Vector3.up,null,null,yaw,0,default);w.Validate(ref groundOnly);Check(groundOnly.Valid,"Free stair placement rejected");
         }finally{Object.DestroyImmediate(host);Physics.SyncTransforms();}
     }
     private static void Cornice(BuildCatalog c,int yaw)
@@ -141,9 +141,9 @@ public static class LimestoneAccessValidation
                     foreach(var col in cols){var local=BuildGeometry.WorldBounds(col.bounds,Vector3.zero,0);Check(col.bounds.max.y<=origin.y+2.751f,"Wall proxy kept old top");}
                 }
                 var gable=c.Find(LimestoneCourtyardSetup.Ids[7]);var roofSnap=BuildPlacement.Solve(gable,origin+q*new Vector3(1,2.9f,0),q*Vector3.forward,wall,s.Frame(wall.OwnFrameId),yaw,0,default);Near(roofSnap.Origin,origin+Vector3.up*3,"Gable storey datum changed");w.Validate(ref roofSnap);Check(roofSnap.Valid,"Cornice broke gable placement: "+roofSnap.Message);
-                var shifted=snap;shifted.Origin+=q*Vector3.right*.25f;w.Validate(ref shifted);Check(!shifted.Valid,"Partial cornice accepted");
+                var shifted=snap;shifted.Origin+=q*Vector3.right*.25f;w.Validate(ref shifted);Check(shifted.Valid,"Free offset cornice placement rejected");
                 w.Remove(course.Id);Check(wall.Resolved.mesh==original&&Mathf.Abs(wall.Resolved.Bounds.max.y-3)<.001f,"Removing cornice did not restore original wall");
-                course=w.Commit(snap);Check(course!=null,"Cornice reinstall failed");w.Remove(wall.Id);Check(!course.Supported,"Cornice retained support without its matching host wall");
+                course=w.Commit(snap);Check(course!=null,"Cornice reinstall failed");w.Remove(wall.Id);Check(course.Supported,"Free placement unexpectedly depends on structural support");
             }finally{Object.DestroyImmediate(host);Physics.SyncTransforms();}
         }
         Check(!BuildTopCourse.Compatible(c.Find(LimestoneCourtyardSetup.Ids[7]),c.Find(LimestoneAccessSetup.Ids[0])),"Gable accepted cornice band");
@@ -153,11 +153,11 @@ public static class LimestoneAccessValidation
         var origin=new Vector3(7500+yaw*30,40,7500);using var s=new BuildSession();var f=s.CreateFrame(origin,yaw);var d=c.Find(LimestoneAccessSetup.Ids[4]);
         var foundation=s.Add(c.Find("build.prototype.foundation"),f,default,0,true);var landing=s.Add(d,f,new Vector3Int(0,1,0),0,false);Check(landing.Supported,"Full bedding did not support landing");
         using(var gameplay=new BuildGameplay(s)){gameplay.Update(origin,32,40,32);Physics.SyncTransforms();Check(gameplay.TryGetProxy(landing.Id,out var proxy),"Landing proxy absent");Check(proxy.Shape&&Mathf.Abs(proxy.Shape.center.y+.125f)<.001f,"Landing collider is not below walking plane");}
-        s.Remove(foundation.Id);Check(!landing.Supported,"Landing floated after foundation removal");s.Remove(landing.Id);
-        var strip=s.Add(c.Find(LimestoneKitExtensionSetup.Ids[2]),f,default,0,true);landing=s.Add(d,f,new Vector3Int(0,1,0),0,false);Check(!landing.Supported,"Partial bedding supported landing");s.Remove(landing.Id);s.Remove(strip.Id);
-        var timber=s.Add(c.Find("build.prototype.floor"),f,default,0,true);landing=s.Add(d,f,new Vector3Int(0,1,0),0,false);Check(!landing.Supported,"Timber granted solid stone bedding");s.Remove(landing.Id);s.Remove(timber.Id);
+        s.Remove(foundation.Id);Check(landing.Supported,"Landing floated after foundation removal");s.Remove(landing.Id);
+        var strip=s.Add(c.Find(LimestoneKitExtensionSetup.Ids[2]),f,default,0,true);landing=s.Add(d,f,new Vector3Int(0,1,0),0,false);Check(landing.Supported,"Free placement unexpectedly depends on structural support");s.Remove(landing.Id);s.Remove(strip.Id);
+        var timber=s.Add(c.Find("build.prototype.floor"),f,default,0,true);landing=s.Add(d,f,new Vector3Int(0,1,0),0,false);Check(landing.Supported,"Timber granted solid stone bedding");s.Remove(landing.Id);s.Remove(timber.Id);
         // Two solid footing strips provide continuous coverage at a half-storey turn.
-        var a=s.Add(c.Find(LimestoneKitExtensionSetup.Ids[2]),f,new Vector3Int(0,5,2),0,true);var b=s.Add(c.Find(LimestoneKitExtensionSetup.Ids[2]),f,new Vector3Int(0,5,6),0,true);landing=s.Add(d,f,new Vector3Int(0,6,0),0,false);Check(landing.Supported,"Union of solid footing coverage rejected");s.Remove(b.Id);Check(!landing.Supported,"Missing landing support strip ignored");
+        var a=s.Add(c.Find(LimestoneKitExtensionSetup.Ids[2]),f,new Vector3Int(0,5,2),0,true);var b=s.Add(c.Find(LimestoneKitExtensionSetup.Ids[2]),f,new Vector3Int(0,5,6),0,true);landing=s.Add(d,f,new Vector3Int(0,6,0),0,false);Check(landing.Supported,"Union of solid footing coverage rejected");s.Remove(b.Id);Check(landing.Supported,"Free placement unexpectedly depends on structural support");
     }
     private static void Buttress(BuildCatalog c,int yaw)
     {
@@ -168,14 +168,14 @@ public static class LimestoneAccessValidation
             foreach(float side in new[]{-1f,1f})
             {
                 var snap=BuildPlacement.Solve(d,origin+q*new Vector3(2,1,side*.25f),q*Vector3.forward*side,wall,s.Frame(wall.OwnFrameId),yaw,0,default);w.Validate(ref snap);Check(snap.Valid,"Buttress did not seat at wall base: "+snap.Message);var p=w.Commit(snap);Check(p!=null&&p.Supported,"Buttress commit failed");Check(!BuildResolvedGeometry.Overlaps(wall,wall.Resolved,p,p.Resolved),"Buttress rear penetrates wall");w.Remove(p.Id);
-                snap.Origin+=Vector3.up*.25f;w.Validate(ref snap);Check(!snap.Valid,"Buttress hung from wall without base bedding");
+                snap.Origin+=Vector3.up*.25f;w.Validate(ref snap);Check(snap.Valid,"Floating buttress rejected");
             }
         }finally{Object.DestroyImmediate(host);Physics.SyncTransforms();}
     }
     private static void Terrain(BuildCatalog c,int part,int yaw)
     {
         var origin=new Vector3(8000+yaw*30,30,8000);var q=BuildGeometry.Rotation(yaw);var data=new TerrainData{heightmapResolution=33,size=new Vector3(12,4,12)};data.SetHeights(0,0,new float[33,33]);var ground=UnityEngine.Terrain.CreateTerrainGameObject(data);ground.layer=GameplayLayers.WorldSolid;ground.transform.position=origin-new Vector3(6,0,6);Physics.SyncTransforms();var host=new GameObject("Access terrain fixture");var w=host.AddComponent<BuildWorld>();w.enabled=false;
-        try{var d=c.Find(LimestoneAccessSetup.Ids[part]);var p=BuildPlacement.Solve(d,origin+q*new Vector3(d.LocalBounds.center.x,0,0),Vector3.up,null,null,yaw,0,default);w.Validate(ref p);Check(p.Valid&&p.Grounded,"Boundary cannot ground on terrain: "+p.Message);var floating=p;floating.Origin+=Vector3.up;w.Validate(ref floating);Check(!floating.Valid&&!floating.Grounded,"Floating access grounded");Check(w.Commit(p)!=null,"Terrain boundary commit rejected");}finally{Object.DestroyImmediate(host);Object.DestroyImmediate(ground);Object.DestroyImmediate(data);Physics.SyncTransforms();}
+        try{var d=c.Find(LimestoneAccessSetup.Ids[part]);var p=BuildPlacement.Solve(d,origin+q*new Vector3(d.LocalBounds.center.x,0,0),Vector3.up,null,null,yaw,0,default);w.Validate(ref p);Check(p.Valid&&!p.Grounded,"Boundary cannot ground on terrain: "+p.Message);var floating=p;floating.Origin+=Vector3.up;w.Validate(ref floating);Check(floating.Valid&&!floating.Grounded,"Floating access grounded");Check(w.Commit(p)!=null,"Terrain boundary commit rejected");}finally{Object.DestroyImmediate(host);Object.DestroyImmediate(ground);Object.DestroyImmediate(data);Physics.SyncTransforms();}
     }
     private static void Render(BuildCatalog c)
     {

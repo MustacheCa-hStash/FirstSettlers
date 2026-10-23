@@ -1,0 +1,82 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: w08-narrow-wall
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.wood.w08-narrow-wall
+  displayName: W08 narrow wall
+  kind: 0
+  wallPlacementMode: 0
+  sizeUnits: {x: 8, y: 12, z: 1}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: 0, y: 0, z: -0.125}
+  jointSockets:
+  - localPosition: {x: 0, y: 0, z: 0}
+    outward: {x: -1, y: 0, z: 0}
+    interior: 0
+  - localPosition: {x: 0.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 0.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 0.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 0
+  stackRiseUnits: 12
+  wallEndInsetUnits: 0
+  mesh: {fileID: 4986058387807194428, guid: a264e0113d5453c4f91628f42682ab3b, type: 3}
+  preserveAuthoredMesh: 1
+  requiresFullBearing: 0
+  canGroundOnTerrain: 0
+  topCourseDepth: 0
+  wallBaseAttachment: 0
+  furnitureWallMounted: 0
+  relaxedWallMount: 0
+  furnitureSupportPoints: []
+  solidBoxes: []
+  wallOpenings: []
+  gableSlope: 0
+  flipVariant: {fileID: 0}
+  gableRoofSeamMesh: {fileID: 0}
+  uvVariants: []
+  floorOpeningUvVariants: []
+  jointCoverVariants:
+  - {fileID: 4300000, guid: 5d0a7eadf5badb4449c0a5d5dbefdf33, type: 2}
+  - {fileID: 4300000, guid: d2e70049445e60544aa31a2033d034c3, type: 2}
+  - {fileID: 4300000, guid: 566b6722b5674574793bcc991f9631a2, type: 2}
+  jointCoverMaterial: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes: []
+  roofAttachment: 0
+  material: {fileID: 2100000, guid: 895bf9a05d5e85f44b19b8a4fa417546, type: 2}
+  authoringPrefab: {fileID: 6011806622888108051, guid: d9abf48068115b0459ebb911fee16568, type: 3}
+  flamePrefab: {fileID: 0}
+  maxHealth: 100

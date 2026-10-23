@@ -64,15 +64,26 @@ Floor fitting uses the actual solid wall sections rather than cutting the entire
 rectangular envelope across a clear aperture. A gable's floor intersection uses
 its occupied slope at the floor's underside elevation.
 
-W15 starts on the selected 2 m half of a wall's top. Place the rising half on the
-left and falling half on the right to form a 4 m-wide gable. A wall ending at 3 m
+Half-gables (W15, L17, L31 and S15) automatically choose the slope for the aimed
+2 m half of a wall's top: rising on the left, falling on the right. Reversing the
+piece's heading preserves that physical triangle and bay. A wall ending at 3 m
 therefore produces a structural ridge at 5 m; the same datums work on later
 storeys. Continuing from a gable uses its base level instead of treating its empty
 bounding-box top as another flat wall storey. Gables do not generate 3 m corner
 posts; their base, peak and slope framing are authored in the models.
 
-A roof-end snap follows the aimed roof's actual origin/heading, selecting either
-the eave-to-ridge half or the opposite half from its ridge. Conversely, snapping a
+A roof-end snap fills the slope of the roof actually under the cursor, at its
+nearest end. Aim at the other roof slope to fill that half. Beside an existing
+half-gable, the automatic variant matches the adjoining high or low edge.
+Empty triangular bays above walls and immediately beside half-gables can be
+aimed at directly, without first touching a collider to seed a guide. These
+targets stay within one bay, respect nearer solid hits and building reach, and
+are derived from the current session so removing a piece removes its aim target.
+**R** flips the displayed triangle in the same bay and keeps that manual slope;
+selecting the default gable in the menu restores automatic choice. An explicit
+flipped menu selection also retains its manual slope. Nudges and manual heading
+remain available, and the HUD names the variant that will actually be placed.
+Conversely, snapping a
 roof to a gable uses the gable's low eave datum and selects the roof direction from
 the slope/viewer side. Face contact between convex pieces transmits support, and
 removing the supporting wall disconnects unsupported gable/roof assemblies.

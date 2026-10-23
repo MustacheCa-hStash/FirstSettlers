@@ -21,7 +21,7 @@ public static class BuildRoof
         Bounds b=BuildGeometry.WorldBounds(other.LocalBounds,delta,relative);
         // The eave bearing seats on either a wall or a post; no face of the
         // empty nominal attic box can transmit support.
-        if(other.kind is BuildPartKind.Wall or BuildPartKind.Corner)
+        if(other.kind is BuildPartKind.Wall or BuildPartKind.Corner or BuildPartKind.Beam)
         {
             if(Mathf.Abs(b.max.y)<.012f && b.max.x>.015f && b.min.x<Width-.015f && b.max.z>.015f && b.min.z<.25f-.015f) return true;
             // Gable infill and interior beam attachment require real contact
@@ -65,11 +65,11 @@ public static class BuildRoof
             yaw=lockedWorldYaw.HasValue?BuildGeometry.Turn(lockedWorldYaw.Value-target.WorldYawStep):BuildGeometry.Turn((reverse?4:0)+turn);
             reverse=yaw==4;
             float viewerX=viewer.HasValue?BuildGeometry.LocalPoint(new BuildGridFrame{Origin=target.Origin,YawStep=target.WorldYawStep},viewer.Value).x:b.max.x;
-            bool centred=target.Definition.jointSockets?.Length>0 || target.Definition.kind==BuildPartKind.Corner && b.min.x<0 && b.min.z<0;
+            bool centred=target.Definition.kind==BuildPartKind.Beam || target.Definition.jointSockets?.Length>0 || target.Definition.kind==BuildPartKind.Corner && b.min.x<0 && b.min.z<0;
             float start=target.Definition.kind==BuildPartKind.Wall? b.min.x-target.Definition.WallEndInset:
                 centred?(viewerX>=b.center.x?0:-Width):
                 (viewerX>=b.center.x ? b.min.x : b.max.x-Width);
-            hint="Roof eave on wall/post top";
+            hint="Roof eave on support top";
             float seat=target.Definition.kind is BuildPartKind.Wall or BuildPartKind.Corner ? b.min.y+target.Definition.StackRise : b.max.y;
             return reverse?new Vector3(start+Width,seat,centred?0:b.max.z):new Vector3(start,seat,centred?0:b.min.z);
         }

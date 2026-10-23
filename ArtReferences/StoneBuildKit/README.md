@@ -1,5 +1,10 @@
 # Ordinary stone: S01–S24 build catalog
 
+The remaining ordinary-stone designs now have an [implementation guide](../../Documentation/STONE_COMPLETION_KIT.md)
+and [independent editable source](Completion/StoneCompletionKit.blend). This includes static door/gate leaves;
+doorway and window openings are fixed, with no open/close interactions. S13/S14/S22 reuse the installed roof,
+floor and handrail. The original concept dimensions and historical implementation notes below are retained.
+
 Concept catalog for First Settlers, matching the W## wooden component sheets. The catalog originated as illustrated design sheets and a dimension specification. **S02, S03, S04, S06, S07 and S12 now have Blender models, complete varied UVs, FBX exports and Unity building integration**; see the [initial implementation guide](../../Documentation/STONE_BUILD_KIT.md) and [S07/S12 boundary wall guide](../../Documentation/STONE_BOUNDARY_WALLS.md). S12's wooden gate is deferred; its opening is empty. Other S## entries remain proposals. The saved world scene has not been changed by this work.
 
 - [01: Core masonry](01-core-masonry.png) — S01–S06

@@ -1,5 +1,14 @@
 # FirstSettlers Work Notes
 
+## October 22: building foliage and free placement
+
+Building-owned exclusions now clear grass and small vegetation through bounded
+CPU worker packets and incremental uploads, retaining candidates for demolition
+restoration. Overlaps, streaming arrivals, stale results and terrain excavation
+compose correctly. Structural support/footing requirements and timed collapse
+are removed: pieces may float, while physical colliders, snapping and joint
+fitting remain. See [implementation, budgets and native validation](Documentation/BUILDING_FOLIAGE.md).
+
 ## October 21: limestone L18–L24
 
 Added the fitted eaves cornice, threshold steps, half- and full-storey masonry stairs, bedded landing, battered retaining wall and stepped buttress. The cornice replaces the upper 0.25 m of compatible walls without moving the 3 m storey datum; its mesh and collision restore when removed. Landing and buttress support requires complete solid bedding, with terrain grounding available for the buttress and retaining wall. Seven meshes total 292 triangles with shared colour/AO and normal maps. Validation includes 160 character stair traversals and all installed building regressions. See the [guide, source and Unity component sheet](Documentation/LIMESTONE_L18_L24.md). Restart Play mode after import.

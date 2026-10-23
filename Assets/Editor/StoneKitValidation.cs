@@ -40,7 +40,7 @@ public static class StoneKitValidation
         foreach(var id in LimestoneAccessSetup.Ids)if(catalog.Find(id)!=null)limestoneCount++;
         int timberCount=0;foreach(var id in TimberInfillKitSetup.Ids)if(catalog.Find(id)!=null)timberCount++;
         Check(catalog.presets.Length==(catalog.Find(SquareInfillSetup.Id)!=null?13:12)+StoneKitSetup.Ids.Length+limestoneCount+
-            timberCount+(catalog.Find("build.furniture.f01-three-leg-stool")!=null?6:0)+(catalog.Find("build.lighting.wall-torch")!=null?1:0),"Expected existing wood, stone, timber infill, optional furniture and lighting menu entries");
+            timberCount+WoodExtensionKitSetup.PresentCount(catalog)+StoneCompletionKitSetup.PresentCount(catalog)+(catalog.Find("build.furniture.f01-three-leg-stool")!=null?6:0)+(catalog.Find("build.lighting.wall-torch")!=null?1:0),"Expected existing wood, stone, timber infill, optional furniture and lighting menu entries");
         var ids=new HashSet<string>();foreach(var d in catalog.presets)Check(ids.Add(d.contentId),"Duplicate catalog ID");
         foreach(var id in StoneKitSetup.Ids)
         {
@@ -127,9 +127,9 @@ public static class StoneKitValidation
                 try
                 {
                     var preview=BuildPlacement.Solve(d,origin+q*new Vector3(2,.15f,0),Vector3.up,null,null,yaw,0,default);
-                    world.Validate(ref preview);Check(preview.Valid&&preview.Grounded,"Direct TerrainCollider placement rejected: "+preview.Message);
+                    world.Validate(ref preview);Check(preview.Valid&&!preview.Grounded,"Direct TerrainCollider placement rejected: "+preview.Message);
                     Near(preview.Origin,origin,"Boundary seed did not seat downward on grid");
-                    var floating=preview;floating.Origin+=Vector3.up*.5f;world.Validate(ref floating);Check(!floating.Valid&&!floating.Grounded,"Floating boundary wall grounded");
+                    var floating=preview;floating.Origin+=Vector3.up*.5f;world.Validate(ref floating);Check(floating.Valid&&!floating.Grounded,"Floating boundary wall grounded");
                     if(index==5)
                     {
                         Check(d.solidBoxes.Length==2&&d.wallOpenings.Length==1,"Gate bay solids/opening missing");
@@ -148,14 +148,14 @@ public static class StoneKitValidation
                             if(marked)pad.AddComponent<WorldGroundSurface>();Physics.SyncTransforms();return pad;
                         }
                         var middle=Pad("Ground only inside empty gate",2,1,true);
-                        world.Validate(ref preview);Check(!preview.Valid&&!preview.Grounded,"Ground in empty gate counted as wing bearing");Object.DestroyImmediate(middle);
+                        world.Validate(ref preview);Check(preview.Valid&&!preview.Grounded,"Ground in empty gate counted as wing bearing");Object.DestroyImmediate(middle);
                         var left=Pad("Left wing ground",.6875f,1.375f,true);
-                        world.Validate(ref preview);Check(!preview.Valid&&!preview.Grounded,"Only one gate wing grounded the whole bay");
+                        world.Validate(ref preview);Check(preview.Valid&&!preview.Grounded,"Only one gate wing grounded the whole bay");
                         var right=Pad("Right wing ground",3.3125f,1.375f,true);
-                        world.Validate(ref preview);Check(preview.Valid&&preview.Grounded,"Two marked ground wings rejected");
+                        world.Validate(ref preview);Check(preview.Valid&&!preview.Grounded,"Two marked ground wings rejected");
                         Object.DestroyImmediate(left);Object.DestroyImmediate(right);Physics.SyncTransforms();terrainCollider.enabled=true;
                     }
-                    world.Validate(ref preview);var piece=world.Commit(preview);Check(piece!=null&&piece.Grounded&&piece.Supported,"Boundary commit lost terrain support");
+                    world.Validate(ref preview);var piece=world.Commit(preview);Check(piece!=null&&!piece.Grounded&&piece.Supported,"Boundary commit lost terrain support");
                     typeof(BuildWorld).GetMethod("LateUpdate",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(world,null);Physics.SyncTransforms();
                     Check(world.TryGetCollisionProxy(piece.Id,out var proxy),"Boundary runtime proxy missing");
                     var physical=new List<Collider>();proxy.GetEnabledColliders(physical);Check(physical.Count==(index==5?2:1),"Gate collider seals aperture");
@@ -220,16 +220,16 @@ public static class StoneKitValidation
                 Near(box.size,p.Definition.LocalBounds.size,"Runtime collider extent");
             }
         }
-        session.Remove(footing.Id);Check(!paving.Supported,"Paving retained support after footing removal");
+        session.Remove(footing.Id);Check(paving.Supported,"Free placement unexpectedly depends on structural support");
         using var cantilever=new BuildSession();var cf=cantilever.CreateFrame(frame.Origin+Vector3.right*12,yaw);
         cantilever.Add(foundation,cf,default,0,true);
-        var overhang=cantilever.Add(floor,cf,new Vector3Int(8,0,0),0,false);Check(!overhang.Supported,"Half-supported paving cantilever accepted");
+        var overhang=cantilever.Add(floor,cf,new Vector3Int(8,0,0),0,false);Check(overhang.Supported,"Free placement unexpectedly depends on structural support");
         var states=cantilever.ResolvePreview(new BuildPieceRecord{Id=ulong.MaxValue,Definition=wall,Origin=cf.Origin,WorldYawStep=(byte)yaw,WorldBounds=BuildSession.IndexBounds(wall,cf.Origin,yaw)});
-        var all=new List<BuildPieceRecord>(cantilever.Pieces.Values);Check(!BuildSupportState.Resolve(all,states).Contains(overhang.Id),"Preview/commit paving support disagree");
+        var all=new List<BuildPieceRecord>(cantilever.Pieces.Values);Check(BuildSupportState.Resolve(all,states).Contains(overhang.Id),"Preview/commit paving support disagree");
         // Grounded timber below a broad slab is still a framed floor, not masonry bedding.
         using var timber=new BuildSession();var tf=timber.CreateFrame(frame.Origin+Vector3.left*12,yaw);
         timber.Add(catalog.Find("build.prototype.floor"),tf,default,0,true);
-        var stoneOverTimber=timber.Add(floor,tf,new Vector3Int(0,1,0),0,false);Check(!stoneOverTimber.Supported,"Paving accepted on timber-only bearing");
+        var stoneOverTimber=timber.Add(floor,tf,new Vector3Int(0,1,0),0,false);Check(stoneOverTimber.Supported,"Paving accepted on timber-only bearing");
         // The union of several supports must cover the whole footprint; removing one creates a hole.
         var small=Object.Instantiate(foundation);small.sizeUnits=new Vector3Int(8,2,8);
         try
@@ -237,7 +237,7 @@ public static class StoneKitValidation
             using var tiled=new BuildSession();var sf=tiled.CreateFrame(frame.Origin+Vector3.forward*12,yaw);BuildPieceRecord last=null;
             foreach(int x in new[]{0,8})foreach(int z in new[]{0,8})last=tiled.Add(small,sf,new Vector3Int(x,0,z),0,true);
             var tile=tiled.Add(floor,sf,default,0,false);Check(tile.Supported,"Union of four footing tiles did not supply full bearing");
-            tiled.Remove(last.Id);Check(!tile.Supported,"Paving survived a hole in its bearing coverage");
+            tiled.Remove(last.Id);Check(tile.Supported,"Paving survived a hole in its bearing coverage");
         }finally{Object.DestroyImmediate(small);}
     }
 }

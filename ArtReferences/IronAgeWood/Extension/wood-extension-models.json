@@ -1,0 +1,234 @@
+{
+  "parts": [
+    {
+      "tag": "W05",
+      "slug": "w05-sleeper-footing",
+      "name": "W05 sleeper footing",
+      "size": [
+        4,
+        0.5,
+        4
+      ],
+      "minimum": [
+        0,
+        -0.5,
+        0
+      ],
+      "solids": [
+        {
+          "minimum": [
+            0,
+            -0.5,
+            0
+          ],
+          "maximum": [
+            4,
+            -0.25,
+            0.25
+          ]
+        },
+        {
+          "minimum": [
+            0,
+            -0.5,
+            0.9375
+          ],
+          "maximum": [
+            4,
+            -0.25,
+            1.1875
+          ]
+        },
+        {
+          "minimum": [
+            0,
+            -0.5,
+            1.875
+          ],
+          "maximum": [
+            4,
+            -0.25,
+            2.125
+          ]
+        },
+        {
+          "minimum": [
+            0,
+            -0.5,
+            2.8125
+          ],
+          "maximum": [
+            4,
+            -0.25,
+            3.0625
+          ]
+        },
+        {
+          "minimum": [
+            0,
+            -0.5,
+            3.75
+          ],
+          "maximum": [
+            4,
+            -0.25,
+            4.0
+          ]
+        },
+        {
+          "minimum": [
+            0,
+            -0.25,
+            0
+          ],
+          "maximum": [
+            0.25,
+            0,
+            4
+          ]
+        },
+        {
+          "minimum": [
+            0.9375,
+            -0.25,
+            0
+          ],
+          "maximum": [
+            1.1875,
+            0,
+            4
+          ]
+        },
+        {
+          "minimum": [
+            1.875,
+            -0.25,
+            0
+          ],
+          "maximum": [
+            2.125,
+            0,
+            4
+          ]
+        },
+        {
+          "minimum": [
+            2.8125,
+            -0.25,
+            0
+          ],
+          "maximum": [
+            3.0625,
+            0,
+            4
+          ]
+        },
+        {
+          "minimum": [
+            3.75,
+            -0.25,
+            0
+          ],
+          "maximum": [
+            4.0,
+            0,
+            4
+          ]
+        }
+      ],
+      "file": "W05.fbx",
+      "triangles": 440
+    },
+    {
+      "tag": "W06",
+      "slug": "w06-horizontal-beam",
+      "name": "W06 horizontal beam",
+      "size": [
+        4,
+        0.25,
+        0.25
+      ],
+      "minimum": [
+        0,
+        -0.25,
+        -0.125
+      ],
+      "solids": [],
+      "file": "W06.fbx",
+      "triangles": 44
+    },
+    {
+      "tag": "W07",
+      "slug": "w07-low-plank-wall",
+      "name": "W07 low plank wall",
+      "size": [
+        4,
+        1.25,
+        0.25
+      ],
+      "minimum": [
+        0,
+        0,
+        -0.125
+      ],
+      "solids": [],
+      "file": "W07.fbx",
+      "triangles": 880
+    },
+    {
+      "tag": "W08",
+      "slug": "w08-narrow-wall",
+      "name": "W08 narrow wall",
+      "size": [
+        2,
+        3,
+        0.25
+      ],
+      "minimum": [
+        0,
+        0,
+        -0.125
+      ],
+      "solids": [],
+      "file": "W08.fbx",
+      "triangles": 616
+    },
+    {
+      "tag": "W12",
+      "slug": "w12-wattle-fence",
+      "name": "W12 wattle fence",
+      "size": [
+        4,
+        1.25,
+        0.25
+      ],
+      "minimum": [
+        0,
+        0,
+        -0.125
+      ],
+      "solids": [],
+      "file": "W12.fbx",
+      "triangles": 312
+    },
+    {
+      "tag": "Cover",
+      "slug": "low-junction-cover",
+      "name": "Low junction cover",
+      "size": [
+        0.26,
+        1.253,
+        0.26
+      ],
+      "minimum": [
+        -0.13,
+        0,
+        -0.13
+      ],
+      "solids": [],
+      "file": "Cover.fbx",
+      "triangles": 44
+    }
+  ],
+  "blend_sha256": "00b1ce4adc2a7a41845491ae399a3d29db534637de24ce538783f38ec34a9044"
+}

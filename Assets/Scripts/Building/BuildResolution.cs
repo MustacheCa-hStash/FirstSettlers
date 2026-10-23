@@ -93,8 +93,9 @@ public sealed class BuildResolution : IDisposable
     }
     private BuildResolvedState Foundation(BuildPieceRecord p,IReadOnlyList<BuildPieceRecord> pieces,Dictionary<ulong,BuildResolvedState> states)
     {
+        if(p.Definition.preserveAuthoredMesh && p.Definition.floorParts?.Length>0)return TimberFooting(p,pieces,states);
         if(p.Definition.preserveAuthoredMesh)
-            return new BuildResolvedState{mesh=BuildTrimUV.Core(p),boxes=new[]{p.Definition.LocalBounds},key="authored-foundation:"+BuildTrimUV.Variation(p.Origin,p.WorldYawStep,p.Definition.uvVariants?.Length??0)};
+            return new BuildResolvedState{mesh=BuildTrimUV.Core(p),boxes=p.Definition.solidBoxes?.Length>0?p.Definition.solidBoxes:new[]{p.Definition.LocalBounds},key="authored-foundation:"+BuildTrimUV.Variation(p.Origin,p.WorldYawStep,p.Definition.uvVariants?.Length??0)};
         var cuts=new List<Bounds>();Bounds b=p.Definition.LocalBounds;
         foreach(var floor in pieces)
             if(floor.Definition.kind==BuildPartKind.Floor && Aligned(p,floor) && Mathf.Abs(floor.Origin.y-p.Origin.y)<.012f)
@@ -106,6 +107,37 @@ public sealed class BuildResolution : IDisposable
         if(!meshes.TryGetValue(key,out var mesh))
         {var parts=new List<BuildTimberPart>();foreach(var box in boxes)parts.Add(new BuildTimberPart{bounds=box,grainAxis=0});mesh=BuildTimberMesh.Create("Foundation with reversible finish cap",parts,plain:true);meshes.Add(key,mesh);}
         return new BuildResolvedState{mesh=mesh,boxes=boxes.ToArray(),key=key};
+    }
+    private BuildResolvedState TimberFooting(BuildPieceRecord p,IReadOnlyList<BuildPieceRecord> pieces,Dictionary<ulong,BuildResolvedState> states)
+    {
+        var cuts=new List<Bounds>();
+        foreach(var floor in pieces)
+            if(floor.Definition.kind==BuildPartKind.Floor && Aligned(p,floor) && Mathf.Abs(floor.Origin.y-p.Origin.y)<.012f)
+                foreach(var box in states[floor.Id].boxes)cuts.Add(Relative(box,floor,p));
+        if(cuts.Count==0)return new BuildResolvedState{mesh=p.Definition.mesh,boxes=p.Definition.solidBoxes,key="sleeper-full"};
+        Sort(cuts);string key=Key(p.Definition,"sleeper-fitted",cuts);
+        var parts=new List<BuildTimberPart>();
+        foreach(var timber in p.Definition.floorParts)
+        {
+            var remaining=new List<Bounds>{timber.bounds};
+            foreach(var cut in cuts)
+            {
+                var next=new List<Bounds>();
+                foreach(var box in remaining)
+                {
+                    float bottom=Mathf.Max(box.min.y,cut.min.y),top=Mathf.Min(box.max.y,cut.max.y);
+                    if(top-bottom<=.005f || !PlanOverlap(box,cut)){next.Add(box);continue;}
+                    if(bottom>box.min.y+.005f)next.Add(Box(box.min,new Vector3(box.max.x,bottom,box.max.z)));
+                    if(top<box.max.y-.005f)next.Add(Box(new Vector3(box.min.x,top,box.min.z),box.max));
+                    next.AddRange(Subtract(new[]{Box(new Vector3(box.min.x,bottom,box.min.z),new Vector3(box.max.x,top,box.max.z))},new[]{cut}));
+                }
+                remaining=next;
+            }
+            foreach(var box in remaining){var part=timber;part.bounds=box;part.hasUvBounds=true;part.uvBounds=timber.bounds;parts.Add(part);}
+        }
+        if(!meshes.TryGetValue(key,out var mesh)){mesh=BuildTimberMesh.Create("Sleeper footing fitted beneath floor",parts);meshes.Add(key,mesh);}
+        var boxes=new Bounds[parts.Count];for(int i=0;i<parts.Count;i++)boxes[i]=parts[i].bounds;
+        return new BuildResolvedState{mesh=mesh,boxes=boxes,key=key};
     }
     private BuildResolvedState Ordinary(BuildPieceRecord p,IReadOnlyList<BuildPieceRecord> pieces,Dictionary<ulong,BuildResolvedState> floors)
     {

@@ -39,6 +39,7 @@ public sealed class LeafClusterSystem : IDisposable
     private Matrix4x4 farLocal = Matrix4x4.identity;
     private Matrix4x4 meshLocal = Matrix4x4.identity;
     private float meshRadius = 0.4f;
+    private float buildingHeight,buildingRadius;
     private ForestScatterGpuRenderer gpu;
     private ComputeShader defaultCompute, activeCompute;
     private readonly Dictionary<ChunkCoord, CpuTile> cpuTiles = new Dictionary<ChunkCoord, CpuTile>();
@@ -83,7 +84,7 @@ public sealed class LeafClusterSystem : IDisposable
     public void Update(ChunkManager manager, List<ChunkCoord> coords, Vector3 viewer, Camera camera)
     {
         VisibleInstances = DrawCalls = 0;
-        if (!settings.enabled || !SystemInfo.supportsInstancing) { resident.Clear(); cpuTiles.Clear(); gpu?.Dispose(); gpu = null; return; }
+        if (!settings.enabled || !SystemInfo.supportsInstancing) { ClearBuildingFilters(); resident.Clear(); cpuTiles.Clear(); gpu?.Dispose(); gpu = null; return; }
         ResolveAssets();
         if (mesh == null || material == null) return;
         ConfigureGpu();
@@ -113,7 +114,7 @@ public sealed class LeafClusterSystem : IDisposable
             if (!resident.TryGetValue(coord, out var generation) || !generation.Matches(record, settings))
             {
                 // Start at most one new chunk per frame, including blocker-index construction.
-                resident.Remove(coord);
+                if(resident.TryGetValue(coord,out var retiring))retiring.DisposeBuildingExclusion(); resident.Remove(coord);
                 gpu?.Remove(coord); cpuTiles.Remove(coord);
                 generation = null;
             }
@@ -124,7 +125,7 @@ public sealed class LeafClusterSystem : IDisposable
         }
         eviction.Clear();
         foreach (var pair in resident) if (!wanted.Contains(pair.Key)) eviction.Add(pair.Key);
-        foreach (ChunkCoord coord in eviction) { resident.Remove(coord); gpu?.Remove(coord); cpuTiles.Remove(coord); }
+        foreach (ChunkCoord coord in eviction) { if(resident.TryGetValue(coord,out var retiring))retiring.DisposeBuildingExclusion(); resident.Remove(coord); gpu?.Remove(coord); cpuTiles.Remove(coord); }
         if (best < float.MaxValue)
         {
             using (GenerationMarker.Auto())
@@ -144,7 +145,10 @@ public sealed class LeafClusterSystem : IDisposable
                 }
             }
         }
-        foreach(var generation in resident.Values)generation.ApplySuppression(manager.Sculpting?.Suppression);
+        foreach(var generation in resident.Values)
+        {
+            generation.ApplySuppression(manager.Sculpting?.Suppression);generation.UpdateBuildingExclusion(buildingHeight,buildingRadius);
+        }
         if (camera != null) GeometryUtility.CalculateFrustumPlanes(camera, frustum);
         using (DrawMarker.Auto())
         {
@@ -177,8 +181,11 @@ public sealed class LeafClusterSystem : IDisposable
                 {
                     var runtime = manager.GetChunkRecord(pair.Key)?.ActiveRuntime;
                     if (runtime == null || !runtime.IsVisible || !runtime.IsFoliageRenderVisible) continue;
-                    foreach (CachedInstance cached in cpuTiles[pair.Key].Instances)
+                    var cachedInstances=cpuTiles[pair.Key].Instances;
+                    for(int i=0;i<cachedInstances.Count;i++)
                     {
+                        if(pair.Value.IsBuildingHidden(i))continue;
+                        CachedInstance cached=cachedInstances[i];
                         LeafClusterInstance instance = cached.Instance;
                         float radius = meshRadius * instance.scale;
                         float distance = Vector2.Distance(new Vector2(instance.position.x,instance.position.z),new Vector2(viewer.x,viewer.z));
@@ -206,7 +213,7 @@ public sealed class LeafClusterSystem : IDisposable
         GameObject coarse=settings is FernSettings fern?fern.coarsePrefab!=null?fern.coarsePrefab:
             defaultCoarsePrefab!=null?defaultCoarsePrefab:defaultCoarsePrefab=Resources.Load<GameObject>("Foliage/ForestFern_LOD2"):null;
         if (prefab == resolvedPrefab && distant == resolvedFarPrefab && coarse==resolvedCoarsePrefab && mesh != null && material != null) return;
-        resident.Clear(); cpuTiles.Clear(); gpu?.Dispose(); gpu = null;
+        ClearBuildingFilters(); resident.Clear(); cpuTiles.Clear(); gpu?.Dispose(); gpu = null;
         resolvedPrefab = prefab; resolvedFarPrefab = distant; resolvedCoarsePrefab=coarse;
         mesh = farMesh = coarseMesh = null; material = farMaterial = coarseMaterial = null;
         if (prefab == null) return;
@@ -232,6 +239,18 @@ public sealed class LeafClusterSystem : IDisposable
             if(coarseMesh!=null)meshRadius=Mathf.Max(meshRadius,coarseMesh.bounds.extents.magnitude *
                 Mathf.Max(coarseLocal.lossyScale.x,coarseLocal.lossyScale.y,coarseLocal.lossyScale.z)+coarseLocal.MultiplyPoint3x4(coarseMesh.bounds.center).magnitude);
         }
+        buildingHeight=buildingRadius=0;
+        void IncludePlant(Mesh plant,Matrix4x4 local)
+        {
+            if(plant==null)return;
+            var bounds=GrassRenderUtility.TransformBounds(plant.bounds,local);
+            buildingHeight=Mathf.Max(buildingHeight,bounds.max.y);
+            float x=Mathf.Max(Mathf.Abs(bounds.min.x),Mathf.Abs(bounds.max.x));
+            float z=Mathf.Max(Mathf.Abs(bounds.min.z),Mathf.Abs(bounds.max.z));
+            buildingRadius=Mathf.Max(buildingRadius,Mathf.Sqrt(x*x+z*z));
+        }
+        IncludePlant(mesh,meshLocal);IncludePlant(farMesh,farLocal);IncludePlant(coarseMesh,coarseLocal);
+        if(!settings.IsFern)buildingRadius=buildingRadius*1.5f+.1f;
         // Bound per-leaf spread, heading/size variation and local offsets in the shader.
         if(!settings.IsFern) meshRadius=meshRadius*1.5f+.1f;
     }
@@ -272,6 +291,7 @@ public sealed class LeafClusterSystem : IDisposable
         return true;
     }
     internal void ForgetChunk(ChunkCoord coord)
-    { resident.Remove(coord); cpuTiles.Remove(coord); wanted.Remove(coord); gpu?.Remove(coord); }
-    public void Dispose() { gpu?.Dispose(); gpu = null; cpuTiles.Clear(); resident.Clear(); wanted.Clear(); eviction.Clear(); }
+    { if(resident.TryGetValue(coord,out var retiring))retiring.DisposeBuildingExclusion(); resident.Remove(coord); cpuTiles.Remove(coord); wanted.Remove(coord); gpu?.Remove(coord); }
+    private void ClearBuildingFilters() { foreach(var generation in resident.Values)generation.DisposeBuildingExclusion(); }
+    public void Dispose() { gpu?.Dispose(); gpu = null; cpuTiles.Clear(); ClearBuildingFilters(); resident.Clear(); wanted.Clear(); eviction.Clear(); }
 }

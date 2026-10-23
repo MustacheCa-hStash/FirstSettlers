@@ -53,6 +53,7 @@ public sealed class ForestScatterGpuRenderer : IDisposable
     public void Remove(ChunkCoord coord)
     {
         if (!tiles.TryGetValue(coord, out var tile)) return;
+        tile.Generation.BuildingChanged=null;
         tiles.Remove(coord); ResidentInstances -= tile.Count;
         metadata[tile.Slot] = Vector4.zero; metadataDirty = true;
         freeSlots.Push(tile.Slot); Free(tile.Start, tile.Capacity);
@@ -79,6 +80,14 @@ public sealed class ForestScatterGpuRenderer : IDisposable
             if (metadata.Length < slotCount) Array.Resize(ref metadata, Mathf.NextPowerOfTwo(Mathf.Max(16, slotCount)));
             tile = new Tile { Slot = slot, Generation = generation,Revision=generation.RepresentationRevision, Capacity = Mathf.NextPowerOfTwo(Mathf.Max(64, count)) };
             tile.Start = Allocate(tile.Capacity); tiles.Add(coord, tile);
+            var captured=tile;
+            generation.BuildingChanged=(start,length)=>
+            {
+                int count=Mathf.Min(length,captured.Count-start);if(count<=0)return;
+                for(int i=start;i<start+count;i++)
+                    records[captured.Start+i].Selection.z=generation.IsBuildingHidden(i)?2:LeafClusterGeneration.Unit(generation.Instances[i].rank,277);
+                if(sources!=null)sources.SetData(records,captured.Start+start,captured.Start+start,count);
+            };
         }
         int from = tile.Count;
         if (count > tile.Capacity)
@@ -96,7 +105,7 @@ public sealed class ForestScatterGpuRenderer : IDisposable
                 Tint = instance.tint, Scatter = fern ? Vector4.zero : LeafClusterSystem.ScatterParams(instance.rank),
                 Sphere = new Vector4(instance.position.x, instance.position.y, instance.position.z, radius * instance.scale),
                 Selection = new Vector4(LeafClusterGeneration.Unit(instance.rank, 193), tile.Slot,
-                    LeafClusterGeneration.Unit(instance.rank,277),LeafClusterGeneration.Unit(instance.rank,307)) };
+                    generation.IsBuildingHidden(i)?2:LeafClusterGeneration.Unit(instance.rank,277),LeafClusterGeneration.Unit(instance.rank,307)) };
             var b = new Bounds(instance.position, Vector3.one * (2 * radius * instance.scale));
             if (i == 0) tile.Bounds = b; else tile.Bounds.Encapsulate(b);
         }
@@ -188,6 +197,7 @@ public sealed class ForestScatterGpuRenderer : IDisposable
 #endif
     public void Dispose()
     {
+        foreach(var tile in tiles.Values)tile.Generation.BuildingChanged=null;
         sources?.Release(); chunks?.Release(); unusedCoarse?.Release();
         for (int i = 0; i < visible.Length; i++) { visible[i]?.Release(); arguments[i]?.Release(); }
         tiles.Clear(); freeBlocks.Clear(); freeSlots.Clear();

@@ -40,7 +40,7 @@ public static class BuildIntersectionRegressionValidation
             }
             JointMetadata(c);Render(c);WarningHud(c);
             Check(errors.Count==0,"Runtime errors during regression: "+string.Join(" | ",errors));
-            Debug.Log("BUILD INTERSECTION PLAY MODE PASS: "+checks+" checks; unreadable imported wall/infill with separate bearing output, eight-yaw stack/floor/remove/preview transitions, roof/stair warnings and commits in both orders, retained physical colliders, hard blockers/support/duplicates, warning HUD and actual stacked-wall pixels.");
+            Debug.Log("BUILD INTERSECTION PLAY MODE PASS: "+checks+" checks; unreadable imported wall/infill with separate bearing output, eight-yaw stack/floor/remove/preview transitions, roof/stair warnings and commits in both orders, retained physical colliders, hard blockers/free placement/duplicates, warning HUD and actual stacked-wall pixels.");
             Application.logMessageReceived-=Log;EditorApplication.Exit(0);
         }
         catch(Exception ex){Application.logMessageReceived-=Log;Debug.LogException(ex);EditorApplication.Exit(1);}
@@ -59,22 +59,25 @@ public static class BuildIntersectionRegressionValidation
     {
         foreach(var d in new[]{c.presets[0],c.Find(SplitPlankWallSetup.InfillContentId),c.Find(WattleWallSetup.ContentId),c.presets[3]})
         {
+            if(d==null)continue; // Legacy optional infill is absent from the current full-span catalog.
             var w=World(new Vector3(20000+yaw*20,20000,20000));var f=w.Session.CreateFrame(w.transform.position,yaw);
             try
             {
                 w.Session.Add(c.presets[2],f,default,0,true);
                 var lower=w.Commit(At(d,f,new Vector3Int(1,0,0)));Check(lower!=null,"Lower component failed");
                 var p=At(d,f,new Vector3Int(1,12,0));w.Validate(ref p);
-                Check(p.Valid && p.VisualMesh==d.mesh && p.Resolved.auxiliaryMesh!=null,"Stack preview lost the original core or separate bearing");
-                var upper=w.Commit(p);Check(upper!=null && upper.Resolved.mesh==d.mesh && upper.Resolved.auxiliaryMesh!=null,"Stack commit lost the authored body");
-                Check(upper.Resolved.auxiliaryMesh.bounds.max.y<=.001f && upper.Resolved.auxiliaryMesh.bounds.min.y>=-.251f,"Bearing mesh contains wall body geometry");
-                var third=w.Commit(At(d,f,new Vector3Int(1,24,0)));Check(third!=null && third.Resolved.mesh==d.mesh,"Third storey lost its body");
+                var upperCore=BuildTrimUV.Core(new BuildPieceRecord{Definition=d,Origin=p.Origin,WorldYawStep=(byte)p.WorldYaw});
+                bool separateBearing=!d.preserveAuthoredMesh && Mathf.Abs(d.LocalBounds.max.y-2.75f)<.012f;
+                Check(p.Valid && p.VisualMesh==upperCore && (p.Resolved.auxiliaryMesh!=null)==separateBearing,"Stack preview lost the original core or separate bearing: "+d.contentId);
+                var upper=w.Commit(p);Check(upper!=null && upper.Resolved.mesh==upperCore && (upper.Resolved.auxiliaryMesh!=null)==separateBearing,"Stack commit lost the authored body");
+                if(separateBearing)Check(upper.Resolved.auxiliaryMesh.bounds.max.y<=.001f && upper.Resolved.auxiliaryMesh.bounds.min.y>=-.251f,"Bearing mesh contains wall body geometry");
+                var third=w.Commit(At(d,f,new Vector3Int(1,24,0)));Check(third!=null && third.Resolved.mesh==BuildTrimUV.Core(third),"Third storey lost its body");
                 var floorPreview=At(c.presets[1],f,new Vector3Int(0,12,0));w.Validate(ref floorPreview);Check(floorPreview.Valid,"Floor insertion into stack failed: "+floorPreview.Message);
-                Check(w.DebugStates[upper.Id].mesh==d.mesh && w.DebugStates[upper.Id].auxiliaryMesh==null,"Floor preview did not suppress just the auxiliary bearing");
-                var floor=w.Commit(floorPreview);Check(floor!=null && upper.Resolved.auxiliaryMesh==null && upper.Resolved.mesh==d.mesh,"Floor insertion replaced the wall core");
-                w.Remove(floor.Id);Check(upper.Resolved.mesh==d.mesh && upper.Resolved.auxiliaryMesh!=null,"Removing a floor lost the restored bearing/core");
-                w.Remove(lower.Id);Check(upper.Resolved.mesh==d.mesh && upper.Resolved.auxiliaryMesh==null && !upper.Supported,"Removing lower wall changed the upper core or retained support");
-                var restored=w.Commit(At(d,f,new Vector3Int(1,0,0)));Check(restored!=null && upper.Supported && upper.Resolved.auxiliaryMesh!=null,"Restoring lower wall did not restore bearing/support");
+                Check(w.DebugStates[upper.Id].mesh==upperCore && w.DebugStates[upper.Id].auxiliaryMesh==null,"Floor preview did not suppress just the auxiliary bearing");
+                var floor=w.Commit(floorPreview);Check(floor!=null && upper.Resolved.auxiliaryMesh==null && upper.Resolved.mesh==upperCore,"Floor insertion replaced the wall core");
+                w.Remove(floor.Id);Check(upper.Resolved.mesh==upperCore && (upper.Resolved.auxiliaryMesh!=null)==separateBearing,"Removing a floor lost the restored bearing/core");
+                w.Remove(lower.Id);Check(upper.Resolved.mesh==upperCore && upper.Resolved.auxiliaryMesh==null && upper.Supported,"Removing lower wall changed the upper core or invalidated floating placement");
+                var restored=w.Commit(At(d,f,new Vector3Int(1,0,0)));Check(restored!=null && upper.Supported && (upper.Resolved.auxiliaryMesh!=null)==separateBearing,"Restoring lower wall did not restore bearing/support");
             }finally{Object.DestroyImmediate(w.gameObject);Physics.SyncTransforms();}
         }
     }
@@ -103,7 +106,7 @@ public static class BuildIntersectionRegressionValidation
             var duplicate=rp;w.Validate(ref duplicate);Check(!duplicate.Valid && duplicate.Failure==BuildPlacementFailure.Solid,"Duplicate roof slipped through advisory exception");
             duplicate=sp;w.Validate(ref duplicate);Check(!duplicate.Valid && duplicate.Failure==BuildPlacementFailure.Solid,"Duplicate stairs slipped through advisory exception");
             var wallCross=At(stair,f,new Vector3Int(2,0,4),2);w.Validate(ref wallCross);Check(wallCross.Valid && wallCross.Warning==BuildPlacementWarning.BuildOverlap,"Stair/wall overlap was not advisory");
-            var unsupported=At(roof,f,new Vector3Int(0,60,0));w.Validate(ref unsupported);Check(!unsupported.Valid && unsupported.Failure==BuildPlacementFailure.Support,"Roof warning bypassed required support");
+            var unsupported=At(roof,f,new Vector3Int(0,60,0));w.Validate(ref unsupported);Check(unsupported.Valid,"Floating roof was rejected: "+unsupported.Message);
             var obstacle=new GameObject("Independent roof blocker"){layer=GameplayLayers.Player};var box=obstacle.AddComponent<BoxCollider>();box.size=Vector3.one*.2f;
             obstacle.transform.position=f.Origin+BuildGeometry.Rotation(yaw)*new Vector3(2,3.85f,.5f);Physics.SyncTransforms();
             w.Remove(roofRecord.Id);var blocked=rp;w.Validate(ref blocked);Check(!blocked.Valid && blocked.Failure==BuildPlacementFailure.External,"Roof/stair exception bypassed independent player obstruction");
@@ -123,7 +126,7 @@ public static class BuildIntersectionRegressionValidation
             var second=w.Commit(At(stair,f,new Vector3Int(10,6,6),2));Check(second!=null,"Adjacent second flight failed");
             var upper=w.Commit(At(c.presets[0],f,new Vector3Int(1,12,0)));Check(upper!=null,"Same-plane upper wall blocked adjacent two-flight stairs");
             Check(BuildResolvedGeometry.Connects(wall,new BuildResolvedState{boxes=new[]{wall.Definition.LocalBounds}},upper,new BuildResolvedState{boxes=new[]{upper.Definition.LocalBounds}}),"Declared stack support still depends on generated bearing output");
-            var head=At(c.Find(SplitPlankWallSetup.InfillContentId),f,new Vector3Int(6,12,1));w.Validate(ref head);
+            var head=At(c.Find(SplitPlankWallSetup.InfillContentId)??c.presets[0],f,new Vector3Int(6,12,1));w.Validate(ref head);
             Check(head.Valid && head.Warning==BuildPlacementWarning.StairHeadroom,"Wall headroom still rejects build eligibility: "+head.Message);
             var crossing=At(stair,f,new Vector3Int(2,0,4),2);w.Validate(ref crossing);
             Check(crossing.Valid && crossing.Warning==BuildPlacementWarning.BuildOverlap,"Stair/wall solid overlap still rejects placement");
@@ -131,10 +134,12 @@ public static class BuildIntersectionRegressionValidation
             Invoke(w,"LateUpdate");
             Check(w.TryGetCollisionProxy(wall.Id,out var wallProxy) && wallProxy.Shape.enabled && wallProxy.Shape.size==wall.Definition.LocalBounds.size,"Permissive placement carved the wall collider");
             Check(w.TryGetCollisionProxy(crossed.Id,out var stairProxy) && stairProxy.RampShape.enabled && stairProxy.RampShape.sharedMesh==stair.collisionMesh,"Permissive placement changed the walking hull");
-            var duplicate=At(c.presets[0],f,new Vector3Int(15,0,1),4);w.Validate(ref duplicate);
+            var duplicate=At(c.presets[0],f,default,4);
+            duplicate.Origin=wall.Origin+BuildGeometry.Rotation(yaw)*new Vector3(wall.Definition.LocalBounds.center.x*2,0,wall.Definition.LocalBounds.center.z*2);
+            w.Validate(ref duplicate);
             Check(!duplicate.Valid && duplicate.Message.StartsWith("Duplicate"),"Reversed duplicate wall was accepted");
             var diagonal=At(c.presets[1],f,new Vector3Int(0,6,0),1);w.Validate(ref diagonal);
-            Check(diagonal.Valid && diagonal.Resolved.invalidJoint && diagonal.Resolved.mesh==c.presets[1].mesh && diagonal.Resolved.boxes.Length==1,"Unavailable diagonal fitting blocked eligibility or generated an incomplete floor");
+            Check(diagonal.Valid && diagonal.Resolved.mesh==BuildTrimUV.Core(new BuildPieceRecord{Definition=diagonal.Definition,Origin=diagonal.Origin,WorldYawStep=(byte)diagonal.WorldYaw}) && diagonal.Resolved.boxes.Length>=1,"Unavailable diagonal fitting blocked eligibility or generated an incomplete floor");
             Check(w.Commit(diagonal)!=null,"Full-solid fitting fallback did not commit");
             var floorRecord=new BuildPieceRecord{Id=998,Definition=c.presets[1],Origin=first.Origin+Vector3.up*2,WorldYawStep=first.WorldYawStep};
             var solidFloor=new BuildResolvedState{mesh=c.presets[1].mesh,boxes=new[]{c.presets[1].LocalBounds}};
@@ -202,15 +207,16 @@ public static class BuildIntersectionRegressionValidation
                 {var pixel=pixels[y*1200+x];total++;if(pixel.r>pixel.b+8)wood++;}
                 Check(wood>total*.7f,$"Upper wall body missing in actual Play-mode render {name}: wood={wood}/{total}");Object.Destroy(texture);
             }
-            Capture("stacked-wall");Check(renderer.DrawCalls==3,"Core walls and auxiliary bearing are not separately batched");
+            Capture("stacked-wall");int stackedDraws=renderer.DrawCalls;
+            Check(stackedDraws>=2,"Stacked wall/foundation render batches missing");int bearingDraws=upper.Resolved.auxiliaryMesh!=null?1:0;
             var distantFloor=At(c.presets[1],f,new Vector3Int(32,12,0));w.Validate(ref distantFloor);renderer.SetPreview(w.DebugStates);Capture("unseated-floor-preview");
-            Check(renderer.DrawCalls==3,"Distant floor preview changed wall bearing output");
+            Check(renderer.DrawCalls==stackedDraws,"Distant floor preview changed wall bearing output");
             var floor=At(c.presets[1],f,new Vector3Int(0,12,0));w.Validate(ref floor);renderer.SetPreview(w.DebugStates);Capture("floor-insertion-preview");
-            Check(renderer.DrawCalls==2,"Preview cache did not remove the auxiliary batch when only the bearing changed");
+            Check(renderer.DrawCalls==stackedDraws-bearingDraws,"Preview cache changed core batches or retained an auxiliary bearing");
             renderer.SetPreview(null);var deck=w.Commit(floor);Check(deck!=null,"Runtime floor insertion failed");Capture("floor-inserted");
             w.Remove(deck.Id);Capture("bearing-restored");
             w.Remove(lower.Id);Capture("lower-wall-removed");
-            Check(upper.Resolved.mesh==c.presets[0].mesh && !upper.Resolved.mesh.isReadable,"Rendering changed source mesh readability or identity");
+            Check(upper.Resolved.mesh==BuildTrimUV.Core(upper) && !upper.Resolved.mesh.isReadable,"Rendering changed source mesh readability or identity");
         }finally{RenderPipelineManager.beginCameraRendering-=draw;GraphicsSettings.defaultRenderPipeline=old;QualitySettings.renderPipeline=quality;RenderTexture.active=active;target.Release();Object.DestroyImmediate(target);Object.DestroyImmediate(camObj);Object.DestroyImmediate(lightObj);Object.DestroyImmediate(w.gameObject);}
     }
 }

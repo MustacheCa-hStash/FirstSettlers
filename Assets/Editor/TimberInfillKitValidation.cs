@@ -184,7 +184,7 @@ public static class TimberInfillKitValidation
                 }
                 else Check(Ray(new Vector3(2,.5f,-1),Vector3.forward)&&Ray(new Vector3(2,2.5f,-1),Vector3.forward),"Window sill/head collision missing");
             }
-            s.Remove(foundation.Id);Check(!wall.Supported&&!upper.Supported,"Wall stack retained support after foundation removal");
+            s.Remove(foundation.Id);Check(wall.Supported&&upper.Supported,"Free placement unexpectedly depends on structural support");
         }
     }
     private static void Walk(Vector3 origin,Quaternion q,bool reverse)
@@ -217,7 +217,7 @@ public static class TimberInfillKitValidation
             }
             var roof=c.Find(TimberInfillKitSetup.Ids[4]);var snap=BuildPlacement.Solve(roof,first.Origin+q*new Vector3(1,1,0),q*Vector3.forward,first,s.Frame(first.OwnFrameId),yaw,0,default,first.Origin+q*new Vector3(1,1,2));
             world.Validate(ref snap);Check(snap.Valid,"L33 cannot attach to L31: "+snap.Message);Check(world.Commit(snap)!=null,"L31 roof commit failed");
-            s.Remove(foundation.Id);foreach(var a in s.Pieces.Values)Check(!a.Supported,"Gable roof retained support after removal");
+            s.Remove(foundation.Id);foreach(var a in s.Pieces.Values)Check(a.Supported,"Free placement unexpectedly depends on structural support");
         }finally{Object.DestroyImmediate(host);Physics.SyncTransforms();}
     }
     private static void Roofs(BuildCatalog c,int yaw)
@@ -236,7 +236,7 @@ public static class TimberInfillKitValidation
         var colliders=new List<Collider>();proxy.GetEnabledColliders(colliders);Check(colliders.Count==2,"Roof missing thin slab and bearing");
         var attic=new Ray(a.Origin+q*new Vector3(-1,.5f,1.5f),q*Vector3.right);var slope=new Ray(a.Origin+q*new Vector3(2,4,1.5f),Vector3.down);bool hit=false;
         foreach(var col in colliders){Check(!col.Raycast(attic,out _,6),"Roof fills attic");hit|=col.Raycast(slope,out _,4);}Check(hit,"Roof slope is not physical");
-        s.Remove(foundation.Id);Check(!a.Supported,"Roof kept support after eave bearing removal");
+        s.Remove(foundation.Id);Check(a.Supported,"Free placement unexpectedly depends on structural support");
     }
     private static void Canopy(BuildCatalog c,int yaw)
     {
@@ -260,8 +260,8 @@ public static class TimberInfillKitValidation
             var gable=c.Find(TimberInfillKitSetup.Ids[3]);var left=s.Add(gable,frame,new Vector3Int(0,12,0),0,false);var right=s.Add(gable.flipVariant,frame,new Vector3Int(8,12,0),0,false);
             Check(canopy.Supported,"Canopy cannot mount across a supported wall and triangular gables");
             var tooHigh=BuildPlacement.Solve(d,point+Vector3.up*6,q*Vector3.forward,door,s.Frame(door.OwnFrameId),yaw,0,default);world.Validate(ref tooHigh);
-            Check(!tooHigh.Valid,"Empty upper half of gable falsely supports canopy mounts");
-            s.Remove(right.Id);Check(canopy.Supported,"Canopy requires every gable mount");s.Remove(left.Id);s.Remove(door.Id);Check(!canopy.Supported,"Canopy survives loss of all structural hosts");
+            Check(tooHigh.Valid,"Floating canopy rejected");
+            s.Remove(right.Id);Check(canopy.Supported,"Canopy requires every gable mount");s.Remove(left.Id);s.Remove(door.Id);Check(canopy.Supported,"Canopy survives loss of all structural hosts");
         }finally{Object.DestroyImmediate(host);Physics.SyncTransforms();}
     }
 

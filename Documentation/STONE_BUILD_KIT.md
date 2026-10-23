@@ -1,5 +1,8 @@
 # S02, S03, S04 and S06: Blender source and building integration
 
+The remaining ordinary-stone catalog is covered by [stone completion](STONE_COMPLETION_KIT.md):
+walls/openings, static leaves, gables, plate, stairs/guard, footing, landing and landscape pieces.
+
 **Runtime geometry update:** all six installed stone components now use minimal solids with baked colour/AO and normal maps. See the [S02 wall guide](BAKED_STONE_WALL.md) and [remaining baked stone kit guide](BAKED_STONE_KIT.md). Original detailed stone sources are retained for baking.
 
 This page describes the initial four stone components. [S07 and S12](STONE_BOUNDARY_WALLS.md) extend the installed stone kit to six options, with directly terrain-bearing boundary walls and an empty gate opening. The saved world scene is not changed. The dedicated importer preserves existing wooden models/materials and appends or updates the stone definitions.

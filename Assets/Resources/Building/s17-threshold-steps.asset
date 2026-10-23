@@ -1,0 +1,100 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: s17-threshold-steps
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.stone.s17-threshold-steps
+  displayName: S17 threshold steps
+  kind: 4
+  wallPlacementMode: 0
+  sizeUnits: {x: 5, y: 2, z: 4}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: 0, y: 0, z: 0}
+  jointSockets: []
+  stackRiseUnits: 2
+  wallEndInsetUnits: 0
+  mesh: {fileID: 4300000, guid: 64d93865d51c1444b94df8e7592834af, type: 2}
+  preserveAuthoredMesh: 1
+  requiresFullBearing: 0
+  canGroundOnTerrain: 0
+  topCourseDepth: 0
+  wallBaseAttachment: 0
+  furnitureWallMounted: 0
+  relaxedWallMount: 0
+  furnitureSupportPoints: []
+  solidBoxes: []
+  wallOpenings: []
+  gableSlope: 0
+  flipVariant: {fileID: 0}
+  gableRoofSeamMesh: {fileID: 0}
+  uvVariants: []
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 4300000, guid: 219f05a8a7c18d942950094fcc8444b3, type: 2}
+  occupiedVolumes:
+  - mesh: {fileID: 4300000, guid: 0c30f0d3c9d986649b60b7f124726235, type: 2}
+    vertices:
+    - {x: 0, y: 0, z: 0}
+    - {x: 1.25, y: 0, z: 0}
+    - {x: 0, y: 0.25, z: 0}
+    - {x: 1.25, y: 0.25, z: 0}
+    - {x: 0, y: 0, z: 0.5}
+    - {x: 1.25, y: 0, z: 0.5}
+    - {x: 0, y: 0.25, z: 0.5}
+    - {x: 1.25, y: 0.25, z: 0.5}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: -1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0.9805807, y: 0.19611613, z: 0}
+    - {x: 0, y: -1, z: 0}
+    - {x: -1, y: 0, z: 0}
+    - {x: 0.9284767, y: 0, z: 0.37139067}
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: 0.4472136, z: 0.8944272}
+    bounds:
+      m_Center: {x: 0.625, y: 0.125, z: 0.25}
+      m_Extent: {x: 0.625, y: 0.125, z: 0.25}
+  - mesh: {fileID: 4300000, guid: 6f1c9aa3c998b2546b73886883d7f975, type: 2}
+    vertices:
+    - {x: 0, y: 0, z: 0.5}
+    - {x: 1.25, y: 0, z: 0.5}
+    - {x: 0, y: 0.5, z: 0.5}
+    - {x: 1.25, y: 0.5, z: 0.5}
+    - {x: 0, y: 0, z: 1}
+    - {x: 1.25, y: 0, z: 1}
+    - {x: 0, y: 0.5, z: 1}
+    - {x: 1.25, y: 0.5, z: 1}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: -1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0.9284767, y: 0.37139067, z: 0}
+    - {x: 0, y: -1, z: 0}
+    - {x: -1, y: 0, z: 0}
+    - {x: 0.9284767, y: 0, z: 0.37139067}
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: 0.70710677, z: 0.70710677}
+    bounds:
+      m_Center: {x: 0.625, y: 0.25, z: 0.75}
+      m_Extent: {x: 0.625, y: 0.25, z: 0.25}
+  roofAttachment: 0
+  material: {fileID: 2100000, guid: 55cf1888715f74d48827940b87993283, type: 2}
+  authoringPrefab: {fileID: 3470604273941624765, guid: bc6657c7392b6a14d86450dff1961ffe, type: 3}
+  flamePrefab: {fileID: 0}
+  maxHealth: 100

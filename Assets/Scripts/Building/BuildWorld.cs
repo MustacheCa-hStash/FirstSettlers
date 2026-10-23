@@ -12,22 +12,15 @@ public sealed class BuildWorld : MonoBehaviour
     [SerializeField, Min(12)] private float colliderRange = 32;
     [SerializeField, Min(16)] private float colliderReleaseRange = 40;
     [SerializeField, Min(1)] private int activationsPerFrame = 8;
-    [SerializeField, Min(0)] private float unsupportedGraceSeconds = 3;
     private readonly Collider[] overlaps = new Collider[128];
-    private readonly Dictionary<ulong, float> collapseAt = new();
-    private readonly List<ulong> expired = new();
     private BuildGameplay gameplay;
     private BuildRenderer buildingRenderer;
     private LocalFlameBuildBridge flameBridge;
     private MeshCollider placementProbe;
-    private int supportRevision = -1;
     private int previewRevision=-1,previewYaw;
     private Vector3 previewOrigin;
     private BuildDefinition previewDefinition;
-    private bool previewGrounded;
     private Dictionary<ulong,BuildResolvedState> previewStates;
-    private HashSet<ulong> previewSupported;
-    private bool previewSupportLoss;
     public bool PreviewUsedFullSupport { get; private set; }
     public BuildSession Session { get; private set; }
     public BuildCatalog Catalog => catalog;
@@ -49,6 +42,7 @@ public sealed class BuildWorld : MonoBehaviour
     {
         catalog ??= Resources.Load<BuildCatalog>("Building/PrototypeCatalog");
         Session = new BuildSession(); buildingRenderer = new BuildRenderer(Session); gameplay = new BuildGameplay(Session);
+        Session.Foliage.Activate();
         flameBridge=new LocalFlameBuildBridge(this);
         ColliderDebug=GetComponent<BuildColliderDebug>() ?? gameObject.AddComponent<BuildColliderDebug>();
     }
@@ -56,7 +50,7 @@ public sealed class BuildWorld : MonoBehaviour
     {
         if (Session == null) return;
         if (Focus != null) gameplay.Update(Focus.position, colliderRange, Mathf.Max(colliderRange + 1, colliderReleaseRange), activationsPerFrame);
-        UpdateCollapse(); buildingRenderer.Draw(Camera, renderRange, shadowRange);
+        Session.Foliage.Tick(); buildingRenderer.Draw(Camera, renderRange, shadowRange);
         flameBridge.Update();
     }
     private void OnDestroy() { flameBridge?.Dispose();gameplay?.Dispose();Session?.Dispose(); if (placementProbe != null) BuildLifetime.Destroy(placementProbe.gameObject);if(boxProbe!=null)BuildLifetime.Destroy(boxProbe.gameObject); }
@@ -97,31 +91,16 @@ public sealed class BuildWorld : MonoBehaviour
         buildingRenderer?.SetPreview(null);
         DebugPreview=preview;
         preview.Grounded=false;
-        if(preview.InvalidAttachment)
-        {Reject(ref preview,BuildPlacementFailure.Support,preview.Definition.topCourseDepth>0?"Aim at a full 4 m wall with a solid top course":preview.Definition.furnitureWallMounted?"Aim at a supported wall face":"Aim at ground or the top of a floor; furniture cannot carry building pieces");return;}
         Bounds terrainBounds=BuildGeometry.WorldBounds(preview.Definition.LocalBounds,preview.Origin,preview.WorldYaw);
         if(TerrainGuard!=null&&!TerrainGuard.CanMove((Unity.Mathematics.float3)terrainBounds.min,(Unity.Mathematics.float3)terrainBounds.max,0,0))
         {Reject(ref preview,BuildPlacementFailure.Terrain,"Waiting for current terrain collision");return;}
-        // Footing queries run on every validation/commit against the current published
-        // collider. Their result is latched only when the new record is committed.
-        preview.Grounded=(preview.Definition.kind==BuildPartKind.Foundation || preview.Definition.canGroundOnTerrain) && Grounded(preview);
         var candidate=new BuildPieceRecord{Id=ulong.MaxValue,Definition=preview.Definition,Origin=preview.Origin,
             WorldYawStep=(byte)preview.WorldYaw,Grounded=preview.Grounded};
         candidate.WorldBounds=BuildSession.IndexBounds(preview.Definition,candidate.Origin,candidate.WorldYawStep);
         var nearby=Session.NeighboursFor(candidate);
-        if(preview.Definition.topCourseDepth>0)
-        {
-            bool fitted=false;foreach(var wall in nearby)fitted|=BuildTopCourse.Fits(wall,candidate);
-            if(!fitted){Reject(ref preview,BuildPlacementFailure.Support,"Cornice must replace the complete top course of a matching wall");return;}
-        }
-        bool cached=previewRevision==Session.Revision && previewDefinition==preview.Definition && previewOrigin==preview.Origin && previewYaw==preview.WorldYaw && previewGrounded==preview.Grounded;
+        bool cached=previewRevision==Session.Revision && previewDefinition==preview.Definition && previewOrigin==preview.Origin && previewYaw==preview.WorldYaw;
         var states=cached?previewStates:Session.ResolvePreview(candidate);var state=states[candidate.Id];preview.Resolved=state;
         DebugStates=states;
-        if(preview.Definition.kind==BuildPartKind.Stair && preview.StairAimTarget==0 && preview.Hint=="Ground grid")
-        {Reject(ref preview,BuildPlacementFailure.Support,"Aim at a supported building attachment; stairs cannot start from terrain");return;}
-        if(preview.Definition.kind==BuildPartKind.Stair && preview.StairAimTarget!=0 && Session.TryGet(preview.StairAimTarget,out var aimedStair) && aimedStair.Definition.kind==BuildPartKind.Stair &&
-            !BuildStairAttachment.Connects(candidate,aimedStair,aimedStair.Resolved))
-        {Reject(ref preview,BuildPlacementFailure.Support,"Stair endpoint does not meet the adjoining flight",aimedStair);return;}
         if(state.boxes.Length+state.volumes.Length==0)
         {Reject(ref preview,BuildPlacementFailure.Joint,"No compatible floor joint at this orientation");return;}
         if(state.invalidJoint)Warn(ref preview,BuildPlacementWarning.UnresolvedJoint);
@@ -136,30 +115,9 @@ public sealed class BuildWorld : MonoBehaviour
             var warning=BuildPlacementPolicy.Assess(candidate,state,piece,other);
             if(warning!=BuildPlacementWarning.None)Warn(ref preview,warning,piece);
         }
-        HashSet<ulong> supported;
-        if(cached)supported=previewSupported;
-        else
-        {
-            // Added contact cannot revoke existing support unless fitting changed
-            // an existing physical solid. Most cursor poses need only local checks.
-            bool changed=false;foreach(var p in nearby)changed|=!states[p.Id].SameSolids(p.Resolved);
-            PreviewUsedFullSupport=changed;previewSupportLoss=false;
-            if(changed)
-            {
-                supported=Session.PreviewSupport(candidate,states);
-                foreach(var p in Session.Pieces.Values)if(p.Supported&&!supported.Contains(p.Id)){previewSupportLoss=true;break;}
-            }
-            else
-            {
-                supported=new HashSet<ulong>();
-                if(BuildSupportState.CandidateSupported(candidate,nearby,states))supported.Add(candidate.Id);
-            }
-        }
-        previewStates=states;previewSupported=supported;previewRevision=Session.Revision;previewDefinition=preview.Definition;previewOrigin=preview.Origin;previewYaw=preview.WorldYaw;previewGrounded=preview.Grounded;
-        if(!supported.Contains(candidate.Id)){Reject(ref preview,BuildPlacementFailure.Support,preview.Definition.kind==BuildPartKind.Furniture?
-            (preview.Definition.furnitureWallMounted?(preview.Definition.relaxedWallMount?"Needs contact with supported construction":"Every mounting point needs a supported wall face"):"Every furniture foot needs ground or supported flooring"):
-            preview.Definition.requiresFullBearing?"Needs foundation coverage beneath the complete paving tile":"Needs a grounded foundation or supported piece");return;}
-        if(previewSupportLoss){Reject(ref preview,BuildPlacementFailure.Support,"Would remove support from an existing piece");return;}
+        // Free building: fitting resolves geometry without a load/support solver.
+        PreviewUsedFullSupport=false;
+        previewStates=states;previewRevision=Session.Revision;previewDefinition=preview.Definition;previewOrigin=preview.Origin;previewYaw=preview.WorldYaw;
         Bounds local=state.Bounds;
         int count=Physics.OverlapBoxNonAlloc(preview.Origin+BuildGeometry.Rotation(preview.WorldYaw)*local.center,
             Vector3.Max(local.extents-Vector3.one*.003f,Vector3.one*.001f),overlaps,BuildGeometry.Rotation(preview.WorldYaw),
@@ -168,6 +126,8 @@ public sealed class BuildWorld : MonoBehaviour
         for(int i=0;i<count;i++)
         {
             var collider=overlaps[i];if(collider.GetComponentInParent<BuildGameplayProxy>()!=null)continue;
+            // Building exclusion disables/restores these plants after commit.
+            if(collider.GetComponentInParent<BerryBushRuntime>()!=null)continue;
             // Eligibility is independent of how much authored geometry is concealed by
             // terrain. Keep the entire mesh/collider; placing a piece never excavates it.
             if(IsGround(collider))continue;
@@ -213,53 +173,4 @@ public sealed class BuildWorld : MonoBehaviour
             (piece==null?"":" · "+piece.Definition.displayName+" #"+piece.Id);
     }
     public static bool IsGround(Collider collider) => collider != null && (collider is TerrainCollider || collider.GetComponent<WorldGroundSurface>() != null);
-    private static bool Grounded(BuildPreview preview)
-    {
-        if(preview.Definition.kind==BuildPartKind.Furniture)return BuildFurnishing.Grounded(preview);
-        if(preview.Definition.canGroundOnTerrain)
-        {
-            var sections=preview.Definition.solidBoxes;
-            if(sections==null || sections.Length==0)return GroundSection(preview,preview.Definition.LocalBounds);
-            foreach(var section in sections)if(!GroundSection(preview,section))return false;
-            return true;
-        }
-        Bounds b = preview.Definition.LocalBounds;
-        for (int i = 0; i < 5; i++)
-        {
-            Vector3 p = i == 0 ? b.center : new Vector3(i % 2 == 0 ? b.max.x - .05f : b.min.x + .05f, 0,
-                i < 3 ? b.min.z + .05f : b.max.z - .05f);
-            p.y = b.min.y;
-            Vector3 bottom = preview.Origin + BuildGeometry.Rotation(preview.WorldYaw) * p;
-            if (Physics.Raycast(bottom + Vector3.up * .3f, Vector3.down, out var hit, .65f, GameplayLayers.SolidSurfaceMask, QueryTriggerInteraction.Ignore)
-                && IsGround(hit.collider) && hit.point.y - bottom.y >= -.04f && hit.point.y - bottom.y <= .251f && hit.normal.y >= .5f) return true;
-        }
-        return false;
-    }
-    private static bool GroundSection(BuildPreview preview,Bounds section)
-    {
-        // Sample actual feet, never the middle of a gate opening. Keep the foundation's shallow-seat tolerance.
-        var q=BuildGeometry.Rotation(preview.WorldYaw);
-        for(int i=0;i<5;i++)
-        {
-            Vector3 p=i==0?section.center:new Vector3(i%2==0?section.max.x-.05f:section.min.x+.05f,0,i<3?section.min.z+.05f:section.max.z-.05f);
-            p.y=section.min.y;Vector3 bottom=preview.Origin+q*p;
-            if(Physics.Raycast(bottom+Vector3.up*.3f,Vector3.down,out var hit,.65f,GameplayLayers.SolidSurfaceMask,QueryTriggerInteraction.Ignore)
-                && IsGround(hit.collider) && hit.point.y-bottom.y>=-.04f && hit.point.y-bottom.y<=.251f && hit.normal.y>=.5f)return true;
-        }
-        return false;
-    }
-    private void UpdateCollapse()
-    {
-        if (supportRevision != Session.Revision)
-        {
-            expired.Clear();
-            foreach (var pair in collapseAt) if (!Session.TryGet(pair.Key, out var piece) || piece.Supported) expired.Add(pair.Key);
-            foreach (ulong id in expired) collapseAt.Remove(id);
-            foreach (var piece in Session.Pieces.Values) if (!piece.Supported && !collapseAt.ContainsKey(piece.Id)) collapseAt.Add(piece.Id, Time.time + unsupportedGraceSeconds);
-            supportRevision = Session.Revision;
-        }
-        expired.Clear();
-        foreach (var pair in collapseAt) if (Time.time >= pair.Value) expired.Add(pair.Key);
-        foreach (ulong id in expired) { Remove(id); collapseAt.Remove(id); }
-    }
 }

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>Surface placement and one-way furnishing support; never enters the structural contact graph.</summary>
+/// <summary>Surface snapping for freely placed furnishings.</summary>
 public static class BuildFurnishing
 {
     public static BuildPreview Solve(BuildDefinition d,Vector3 hit,Vector3 normal,BuildPieceRecord target,
@@ -48,75 +48,4 @@ public static class BuildFurnishing
         return p;
     }
 
-    public static bool Grounded(BuildPreview p)
-    {
-        var points=p.Definition.furnitureSupportPoints;
-        if(p.Definition.furnitureWallMounted || points==null || points.Length==0)return false;
-        var q=BuildGeometry.Rotation(p.WorldYaw);
-        foreach(var foot in points)
-        {
-            Vector3 bottom=p.Origin+q*foot;
-            if(!Physics.Raycast(bottom+Vector3.up*.3f,Vector3.down,out var hit,.65f,GameplayLayers.SolidSurfaceMask,QueryTriggerInteraction.Ignore) ||
-                !BuildWorld.IsGround(hit.collider) || hit.point.y-bottom.y<-.04f || hit.point.y-bottom.y>.251f || hit.normal.y<.5f)return false;
-        }
-        return true;
-    }
-
-    public static bool Supported(BuildPieceRecord p,IReadOnlyList<BuildPieceRecord> pieces,
-        Dictionary<ulong,BuildResolvedState> states,HashSet<ulong> supported)
-    {
-        var points=p.Definition.furnitureSupportPoints;
-        if(points==null || points.Length==0)return false;
-        var rotation=BuildGeometry.Rotation(p.WorldYawStep);
-        if(p.Definition.furnitureWallMounted && p.Definition.relaxedWallMount)
-        {
-            foreach(var other in pieces)
-            {
-                if(!supported.Contains(other.Id) || other.Definition.kind is not (BuildPartKind.Wall or BuildPartKind.Corner))continue;
-                var inverse=Quaternion.Inverse(BuildGeometry.Rotation(other.WorldYawStep));
-                foreach(var point in points)
-                {
-                    Vector3 local=inverse*(p.Origin+rotation*point-other.Origin);
-                    foreach(var box in states[other.Id].boxes)if(box.SqrDistance(local)<=.026f)return true;
-                    foreach(var volume in states[other.Id].volumes)
-                        if(volume.bounds.SqrDistance(local)<=.026f && BuildOccupancy.SolidOverlap(null,new Bounds(p.Origin+rotation*point,Vector3.one*.32f),Vector3.zero,Quaternion.identity,volume,default,other.Origin,BuildGeometry.Rotation(other.WorldYawStep),0))return true;
-                }
-            }
-            return false;
-        }
-        foreach(var point in points)
-        {
-            Vector3 world=p.Origin+rotation*point;bool found=false;
-            foreach(var other in pieces)
-            {
-                if(other.Id==p.Id || !supported.Contains(other.Id))continue;
-                var kind=other.Definition.kind;
-                if(p.Definition.furnitureWallMounted ? kind is not (BuildPartKind.Wall or BuildPartKind.Corner) :
-                    kind is not (BuildPartKind.Floor or BuildPartKind.Foundation))continue;
-                var inverse=Quaternion.Inverse(BuildGeometry.Rotation(other.WorldYawStep));
-                Vector3 local=inverse*(world-other.Origin);
-                foreach(var box in states[other.Id].boxes)
-                {
-                    if(p.Definition.furnitureWallMounted)
-                    {
-                        Vector3 inward=inverse*(rotation*Vector3.back);
-                        // Contact must be at a real rear surface, not buried through masonry.
-                        Vector3 inside=local+inward*.008f,outside=local-inward*.008f;
-                        if(box.Contains(inside) && !box.Contains(outside)){found=true;break;}
-                    }
-                    else if(Mathf.Abs(local.y-box.max.y)<.012f && local.x>=box.min.x-.002f && local.x<=box.max.x+.002f &&
-                        local.z>=box.min.z-.002f && local.z<=box.max.z+.002f){found=true;break;}
-                }
-                if(!found && p.Definition.furnitureWallMounted)
-                {
-                    Vector3 inward=inverse*(rotation*Vector3.back);
-                    foreach(var volume in states[other.Id].volumes)
-                        if(BuildOccupancy.Contains(volume,local+inward*.008f) && !BuildOccupancy.Contains(volume,local-inward*.008f)){found=true;break;}
-                }
-                if(found)break;
-            }
-            if(!found)return false;
-        }
-        return true;
-    }
 }

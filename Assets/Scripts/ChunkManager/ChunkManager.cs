@@ -1291,7 +1291,6 @@ public class ChunkManager : IChunkLookup
     private bool IsChunkInFrustum(ChunkCoord coord, float paddingWorldUnits)
     {
         Bounds bounds = GetChunkWorldBounds(coord);
-        if(loadedChunks.TryGetValue(coord,out var runtime)&&runtime.TryGetSculptBounds(out var sculptBounds))bounds.Encapsulate(sculptBounds);
         if (paddingWorldUnits > 0f)
             bounds.Expand(new Vector3(paddingWorldUnits * 2f, 0f, paddingWorldUnits * 2f));
 
@@ -1325,7 +1324,12 @@ public class ChunkManager : IChunkLookup
             chunkWorldSize
         );
 
-        return new Bounds(center, size);
+        // Retain the conservative chunk/foliage envelope, but never let its legacy
+        // height estimate exclude real geometry above mountains or below sea level.
+        var bounds = new Bounds(center, size);
+        if (loadedChunks.TryGetValue(coord, out var runtime) && runtime.TryGetRenderBounds(out var renderBounds))
+            bounds.Encapsulate(renderBounds);
+        return bounds;
     }
 
     private Bounds GetFarTerrainTileWorldBounds(FarTerrainPatchKey farPatch)

@@ -102,6 +102,22 @@ public static class InventoryUiValidation
             var hud=root.Q("inventory-hud");
             foreach(var node in hud.Query<VisualElement>().ToList())Require(node.pickingMode==PickingMode.Ignore,"HUD intercepts a world pointer");
             Require(hud.worldBound.xMin>=0 && hud.worldBound.xMax<=width && hud.worldBound.yMax<=height,"Hotbar overflow");
+            Require(root.Q("hud-hotbar").childCount==9,"Gameplay hotbar must contain nine tiles");
+            var previousTarget=RenderTexture.active;RenderTexture.active=target;
+            var samples=new Texture2D(width,height,TextureFormat.RGBA32,false);
+            try
+            {
+                samples.ReadPixels(new Rect(0,0,width,height),0,0);samples.Apply();
+                float AlphaAt(Vector2 point)=>samples.GetPixel(Mathf.FloorToInt(point.x),height-1-Mathf.FloorToInt(point.y)).a;
+                var unselected=root.Q("hud-hotbar-7").worldBound;
+                var active=root.Q("hud-hotbar-8").worldBound;
+                float wash=AlphaAt(unselected.center),blue=AlphaAt(active.center);
+                Require(wash>.1f && wash<.6f && blue>.1f && blue<.65f,"Hotbar tile centers must render real transparency");
+                Require(AlphaAt(new Vector2((unselected.xMax+active.xMin)*.5f,active.center.y))<.02f,"Opaque backplate fills the gap between tiles");
+                Require(AlphaAt(root.Q("hud-offhand-slot").worldBound.center)>.1f && AlphaAt(root.Q("hud-offhand-slot").worldBound.center)<.6f,"Offhand did not receive the translucent tile treatment");
+                Require(hud.Query<VisualElement>(className:"inventory-stone").ToList().Count==0,"HUD retained opaque stone artwork");
+            }
+            finally{RenderTexture.active=previousTarget;Object.DestroyImmediate(samples);}
             Save(target,$"hotbar-{width}x{height}.png");
             float defaultHudWidth = hud.worldBound.width;
             view.SetGuiScale(.75f, 1.5f); view.SetState(true,true); Draw();

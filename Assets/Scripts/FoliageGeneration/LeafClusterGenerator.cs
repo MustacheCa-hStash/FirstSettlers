@@ -18,6 +18,27 @@ public sealed class LeafClusterGeneration
     public bool Complete { get; private set; }
     public int VisitedCells { get; private set; }
     public int RepresentationRevision { get; private set; }
+    private BuildFoliageExclusion.Filter buildingFilter;
+    private BuildFoliageExclusion buildingWorld;
+    private bool[] buildingHidden=System.Array.Empty<bool>();
+    internal System.Action<int,int> BuildingChanged;
+    internal bool IsBuildingHidden(int index)=>index<buildingHidden.Length && buildingHidden[index];
+    internal void UpdateBuildingExclusion(float height=-1,float radius=0)
+    {
+        if(!ReferenceEquals(buildingWorld,BuildFoliageExclusion.Active))ClearBuildingExclusion();
+        if(!Complete || buildingFilter!=null || BuildFoliageExclusion.Active==null)return;
+        buildingWorld=BuildFoliageExclusion.Active;buildingHidden=new bool[Instances.Count];
+        buildingFilter=buildingWorld.Register(Instances.Count,i=>
+        {
+            var p=Instances[i];return new BuildFoliageExclusion.Probe(p.position,(height>=0?height:settings.IsFern?.8f:.15f)*p.scale,radius*p.scale);
+        },(start,hidden,count)=>
+        {
+            System.Array.Copy(hidden,0,buildingHidden,start,count);BuildingChanged?.Invoke(start,count);
+        });
+    }
+    internal void ClearBuildingExclusion()
+    { buildingFilter?.Dispose();buildingFilter=null;buildingWorld=null;buildingHidden=System.Array.Empty<bool>(); }
+    internal void DisposeBuildingExclusion() { ClearBuildingExclusion();BuildingChanged=null; }
     private TerrainSculptSuppression suppression;
     private int filteredCount;
     internal void ApplySuppression(TerrainSculptSuppression mask)
@@ -31,7 +52,7 @@ public sealed class LeafClusterGeneration
         {
             var instance=Instances[i];if(!mask.Contains(instance.position.x,instance.position.z))Instances[retained++]=instance;
         }
-        if(retained<Instances.Count){Instances.RemoveRange(retained,Instances.Count-retained);RepresentationRevision++;}
+        if(retained<Instances.Count){ClearBuildingExclusion();Instances.RemoveRange(retained,Instances.Count-retained);RepresentationRevision++;}
         filteredCount=Instances.Count;
     }
     private readonly ChunkRecord record;

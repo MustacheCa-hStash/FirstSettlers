@@ -153,11 +153,14 @@ public static class OpeningWallValidation
             var end=BuildPlacement.Solve(rise,r.Origin+rq*new Vector3(0,1,1),rq*Vector3.left,r,frame,0,0,default);
             Near(end.Origin,r.Origin,"Roof-end gable translated by thickness");C(end.WorldYaw==BuildGeometry.Turn(r.WorldYawStep+6),"Roof-end gable heading");
             var endPiece=w.Commit(end);C(endPiece!=null,"Roof-first end gable rejected");
-            var mate=BuildPlacement.Solve(fall,r.Origin+rq*new Vector3(0,1,1),rq*Vector3.left,r,frame,0,0,default);Near(mate.Origin,r.Origin+rq*new Vector3(0,0,2),"Opposite half ridge datum");C(w.Commit(mate)!=null,"Roof-first opposite half rejected");
+            // Aim at the other roof slope: the selected variant no longer redirects into an unaimed half.
+            var rrq=BuildGeometry.Rotation(rr.WorldYawStep);
+            var mate=BuildPlacement.Solve(fall,rr.Origin+rrq*new Vector3(4,1,1),rrq*Vector3.right,rr,s.Frame(rr.OwnFrameId),0,0,default);
+            Near(mate.Origin,rr.Origin+rrq*new Vector3(4,0,0),"Opposite half eave datum");C(w.Commit(mate)!=null,"Roof-first opposite half rejected");
             // A mirrored piece at the same box origin is a different solid, not a false duplicate.
             C(!BuildPlacementPolicy.IsDuplicate(a,new BuildPieceRecord{Definition=fall,Origin=a.Origin,WorldYawStep=a.WorldYawStep}),"Mirrored triangle falsely treated as duplicate");
             w.Remove(r.Id);C(a.Resolved.attachments.Length==0,"Roof removal left orphaned seam trim");
-            s.Remove(wall.Id);C(!a.Supported && !rr.Supported,"Unsupported gable/roof retained false support");
+            s.Remove(wall.Id);C(a.Supported && rr.Supported,"Unsupported gable/roof retained false support");
         }
         finally{Object.DestroyImmediate(host);Physics.SyncTransforms();}
     }

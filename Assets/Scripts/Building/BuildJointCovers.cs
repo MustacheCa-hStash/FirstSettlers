@@ -26,7 +26,8 @@ public static class BuildJointCovers
                     found=new Group{position=joint.Position,owner=p,local=joint.LocalPosition};groups.Add(found);
                     if(!bins.TryGetValue(cell,out var list))bins[cell]=list=new List<Group>();list.Add(found);
                 }
-                else if(HasCover(p) && (!HasCover(found.owner) || BuildJointPlanning.ComparePose(p,found.owner)<0)){found.owner=p;found.local=joint.LocalPosition;}
+                else if(HasCover(p) && (!HasCover(found.owner) || p.Definition.LocalBounds.size.y>found.owner.Definition.LocalBounds.size.y+.012f ||
+                    Mathf.Abs(p.Definition.LocalBounds.size.y-found.owner.Definition.LocalBounds.size.y)<.012f && BuildJointPlanning.ComparePose(p,found.owner)<0)){found.owner=p;found.local=joint.LocalPosition;}
                 found.suppressed|=!BuildWallShape.AllowsCover(p.Definition,joint.LocalPosition);
             }
         }

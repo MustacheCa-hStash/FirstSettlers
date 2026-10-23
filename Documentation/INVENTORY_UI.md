@@ -7,10 +7,14 @@ The approved A/slender-pillars design is implemented with Unity UI Toolkit. The 
 - Tab opens inventory from gameplay or building, and Tab again closes it. Escape also closes it.
 - WASD, sprint, crouch and jump remain active with inventory open. Mouse motion moves the free cursor, without rotating the player or camera. Clicks, wheel and building controls do not issue world interaction commands.
 - B replaces inventory with the building catalog. Opening another menu through LocalPlayerMenus.Open likewise replaces inventory. Closing that menu returns to gameplay; no menu history is retained.
-- Keys 1–9 select the hotbar cell. Selection is synchronized between the gameplay HUD and inventory row. A selected cell has a slate-blue fill and ivory outline; unselected cells retain warm stone. Clicking a hotbar cell in inventory also selects it. No hotkey numerals or guidance plaques are shown.
+- Keys 1–9 select the hotbar cell. Selection is synchronized between the gameplay HUD and inventory row. In the stone inventory, selected cells have a slate-blue fill and unselected cells retain warm stone. The gameplay HUD uses translucent tiles with a blue active tint and ivory outline. Clicking a hotbar cell in inventory also selects it. No hotkey numerals or guidance plaques are shown.
 - Returning to gameplay recaptures the cursor and suppresses two mouse-look frames to avoid a camera jump. Placement is exited when inventory or another menu opens.
 
 The gameplay hotbar includes a blank offhand square and ignores pointer picking. It is hidden while any menu is open. The building placement readout sits above it to avoid overlap.
+
+October 22 hotbar update: the approved B/translucent-tiles direction replaces the opaque gameplay rail. Each cell has a 30% charcoal wash, fine ivory border and small rounded stone-colored corner marks. The active cell uses a 42% slate-blue wash and brighter ivory rim. There is no shared backplate; the gaps and the wider offhand separation show the world directly. The inventory window retains its existing stone treatment. All slots are still empty. Borders/corners are UI Toolkit geometry, and the cell fills use real alpha over the live scene, without background blur or baked screenshot artwork.
+
+Runtime/editor compilation and four-resolution render/scale checks passed for the translucent HUD. Pixel samples from the Unity RenderTexture verify partially transparent tile centers and fully clear inter-tile gaps. [Actual Unity HUD close-up](../ArtReferences/UIRedesign/ImplementedInventory/hotbar-translucent-closeup.png), [full meadow preview](../ArtReferences/UIRedesign/ImplementedInventory/hotbar-translucent-on-original-meadow.png) and [forest preview](../ArtReferences/UIRedesign/ImplementedInventory/hotbar-translucent-on-original-forest.png) use the original world screenshots. Pixel verification records zero changes outside the HUD in both full-frame composites.
 
 ## GUI scale
 

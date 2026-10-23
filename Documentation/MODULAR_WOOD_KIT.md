@@ -1,5 +1,9 @@
 # Full-span wood kit: Blender source and Unity integration
 
+W05 sleeper footing, W06 horizontal beam, W07 low plank wall, W08 narrow wall and
+W12 wattle fence are now installed. See [wood extensions](WOOD_EXTENSION_KIT.md)
+for dimensions, placement, independent Blender source and validation.
+
 Implemented standard: 4 m wall spans, 3 m storeys and centred 0.25 m wall/post
 colliders. The base kit has seven options; the two-plank infill is archived
 outside the menu. Existing component IDs/GUIDs and the ordinary wood atlas remain.

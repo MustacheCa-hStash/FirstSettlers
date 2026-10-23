@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public enum BuildPartKind { Wall, Floor, Foundation, Corner, Stair, Roof, Handrail, Furniture }
+public enum BuildPartKind { Wall, Floor, Foundation, Corner, Stair, Roof, Handrail, Furniture, Beam }
 public enum WallPlacementMode { Panel, Infill, Surface }
 public enum RoofAttachmentMode { None, Gable, Beam }
 public enum GableSlope { None, Rising, Falling }
@@ -32,9 +32,9 @@ public sealed class BuildDefinition : ScriptableObject
     public Mesh mesh;
     [Tooltip("Keep the imported mesh and its UVs intact instead of generating timber fitting or bearing geometry.")]
     public bool preserveAuthoredMesh;
-    [Tooltip("Requires foundation or solid paving coverage beneath the complete footprint; side contact cannot support this piece.")]
+    [HideInInspector, Tooltip("Legacy asset metadata; free building does not require bearing coverage.")]
     public bool requiresFullBearing;
-    [Tooltip("This piece may ground directly on terrain. Each authored solid section needs foot contact; apertures never count as bearing.")]
+    [Tooltip("Seeds the starting grid downward onto terrain. Free placement does not require foot contact.")]
     public bool canGroundOnTerrain;
     [Min(0),Tooltip("Replaces this depth of a matching full-height wall's top course; the storey datum stays unchanged.")]
     public float topCourseDepth;
@@ -42,9 +42,9 @@ public sealed class BuildDefinition : ScriptableObject
     public bool wallBaseAttachment;
     [Tooltip("Furniture attaches by its rear face instead of standing on its feet. Furniture never carries structural loads.")]
     public bool furnitureWallMounted;
-    [Tooltip("A supported host/contact is sufficient; individual rear mounting samples do not all have to meet a wall face.")]
+    [Tooltip("Legacy asset metadata; mounting support is not required for free placement.")]
     public bool relaxedWallMount;
-    [Tooltip("Local foot-bottom or rear mounting points. Every point needs real supported contact.")]
+    [Tooltip("Legacy authored foot or rear mounting samples. Free placement does not require supported contact.")]
     public Vector3[] furnitureSupportPoints;
     [Tooltip("Authored solid sections around wall openings. Empty uses the full logical box unless convex volumes are supplied.")]
     public Bounds[] solidBoxes;

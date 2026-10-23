@@ -8,7 +8,7 @@ $terrainEditorExecutable = "C:/Program Files/Unity/Hub/Editor/$terrainEditorVers
 if (-not (Test-Path -LiteralPath $terrainEditorExecutable)) { throw 'Install the project Unity version before validation.' }
 New-Item -ItemType Directory -Path $terrainValidationPlugins,(Join-Path $terrainValidationProject 'Assets/Editor'),(Join-Path $terrainValidationProject 'Packages'),(Join-Path $terrainValidationProject 'ProjectSettings'),(Join-Path $terrainRoot 'Logs') -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $terrainRoot 'Assets/Scripts') -Destination (Join-Path $terrainValidationProject 'Assets') -Recurse -Force
-foreach ($terrainFile in 'PerformanceDebugValidation.cs','DistantTreeGroundingValidation.cs','TerrainErrorMeasurement.cs','TerrainErrorMeasurementValidation.cs','WorldManagerInspectorValidation.cs','WorldManagerInspectorRules.cs','WorldManagerEditor.cs','GrassStreamingValidation.cs','BillboardGrassStreamingValidation.cs') {
+foreach ($terrainFile in 'PerformanceDebugValidation.cs','TerrainVisibilityValidation.cs','DistantTreeGroundingValidation.cs','TerrainErrorMeasurement.cs','TerrainErrorMeasurementValidation.cs','WorldManagerInspectorValidation.cs','WorldManagerInspectorRules.cs','WorldManagerEditor.cs','GrassStreamingValidation.cs','BillboardGrassStreamingValidation.cs') {
     Copy-Item -LiteralPath (Join-Path $terrainRoot "Assets/Editor/$terrainFile") -Destination (Join-Path $terrainValidationProject 'Assets/Editor')
 }
 Copy-Item -LiteralPath (Join-Path $terrainRoot 'ProjectSettings/ProjectVersion.txt') -Destination (Join-Path $terrainValidationProject 'ProjectSettings')

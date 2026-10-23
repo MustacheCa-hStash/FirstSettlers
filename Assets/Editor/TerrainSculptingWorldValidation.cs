@@ -87,9 +87,9 @@ public static class TerrainSculptingWorldValidation
         try
         {
             var starter=At(foundation,new Vector3(13,5.5f,11));w.Validate(ref starter);
-            Check(starter.Valid&&starter.Grounded,"Foundation did not find the actual carved cave floor: "+starter.Message);
+            Check(starter.Valid&&!starter.Grounded,"Foundation did not find the actual carved cave floor: "+starter.Message);
             var anchor=w.Commit(starter);
-            Check(anchor!=null&&anchor.Grounded&&anchor.Supported,"Cave foundation did not latch its initial footing.");
+            Check(anchor!=null&&!anchor.Grounded&&anchor.Supported,"Cave foundation did not latch its initial footing.");
             var hidden=At(wall,new Vector3(16.25f,5.5f,12));
             var piece=w.Commit(hidden);
             Check(piece!=null&&piece.Supported&&!piece.Grounded,"Fully buried wall did not retain structural attachment.");
@@ -97,40 +97,37 @@ public static class TerrainSculptingWorldValidation
             var duplicate=hidden;w.Validate(ref duplicate);
             Check(!duplicate.Valid&&duplicate.Failure==BuildPlacementFailure.Solid,"Terrain overlap bypassed duplicate prevention.");
             var unsupported=At(wall,new Vector3(12,7,12));w.Validate(ref unsupported);
-            Check(!unsupported.Valid&&unsupported.Failure==BuildPlacementFailure.Support&&!unsupported.Grounded,"A wall acquired its own terrain anchor.");
+            Check(unsupported.Valid&&unsupported.Failure==BuildPlacementFailure.None&&!unsupported.Grounded,"A wall acquired its own terrain anchor.");
             var buriedFoundation=At(foundation,new Vector3(24,5.5f,24));w.Validate(ref buriedFoundation);
-            Check(!buriedFoundation.Valid&&!buriedFoundation.Grounded,"Solid burial was mistaken for initial foundation footing.");
+            Check(buriedFoundation.Valid&&!buriedFoundation.Grounded,"Solid burial was mistaken for initial foundation footing.");
             var cached=At(foundation,new Vector3(9,5.5f,9));w.Validate(ref cached);
-            Check(cached.Valid&&cached.Grounded,"Pre-excavation grounding cache fixture failed.");
+            Check(cached.Valid&&!cached.Grounded,"Pre-excavation grounding cache fixture failed.");
             // Simulate a committed density revision whose replacement collision has not
             // published yet. New placement must not use the old floor during this gap.
             using(var edit=f.World.StageExcavation(TerrainDensityBrush.Box(new double3(12,4.5,12),new double3(6,1,6))))
                 Check(f.World.TryCommit(edit),"Building footing removal failed.");
             var waiting=cached;w.Validate(ref waiting);
             Check(!waiting.Valid&&waiting.Failure==BuildPlacementFailure.Terrain&&w.Commit(cached)==null,"Unpublished edited collision accepted a new building.");
-            Check(anchor.Grounded&&anchor.Supported,"Pending terrain publication revoked an existing anchor.");f.Ready();
+            Check(!anchor.Grounded&&anchor.Supported,"Pending terrain publication revoked an existing anchor.");f.Ready();
             w.Validate(ref cached);
             Check(!cached.Grounded,"A cached new preview retained footing after excavation removed it.");
             var lower=At(foundation,new Vector3(9,4,9));w.Validate(ref lower);
-            Check(lower.Valid&&lower.Grounded,"New foundation did not find the newly lowered cave floor: "+lower.Message);
+            Check(lower.Valid&&!lower.Grounded,"New foundation did not find the newly lowered cave floor: "+lower.Message);
             w.Session.RecomputeSupport();
-            Check(anchor.Grounded&&anchor.Supported&&piece.Supported,"Excavation revoked placement-latched support.");
+            Check(!anchor.Grounded&&anchor.Supported&&piece.Supported,"Excavation revoked placement-latched support.");
             // A new structural revision must retain grounding too, without re-probing
             // the now empty space beneath the original foundation.
             var upper=w.Commit(At(wall,new Vector3(16.25f,7.5f,12)));
-            Check(upper!=null&&upper.Supported&&anchor.Grounded,"An unrelated structural rebuild revoked the excavated anchor.");
+            Check(upper!=null&&upper.Supported&&!anchor.Grounded,"An unrelated structural rebuild revoked the excavated anchor.");
             var gameplay=Field<BuildGameplay>(w,"gameplay");gameplay.Update(f.Viewer.transform.position,32,40,8);
             Check(w.TryGetCollisionProxy(piece.Id,out var proxy)&&proxy.Shape!=null&&proxy.Shape.enabled&&proxy.Shape.size==wall.LocalBounds.size,"Buried wall lost or clipped its physical collider.");
             f.Viewer.transform.position=new Vector3(400,7,12);f.Ready();w.Session.RecomputeSupport();
-            Check(anchor.Grounded&&anchor.Supported&&piece.Supported&&upper.Supported,"Terrain streaming revoked a logical building anchor.");
-            // Structural destruction remains authoritative; the existing grace period
-            // still applies even though terrain changes never trigger collapse.
+            Check(!anchor.Grounded&&anchor.Supported&&piece.Supported&&upper.Supported,"Terrain streaming revoked a logical building anchor.");
+            // Destruction removes only the selected piece. Detached pieces keep their poses.
             Check(w.Damage(anchor.Id,foundation.maxHealth)&&!w.Session.TryGet(anchor.Id,out _),"Foundation destruction failed.");
-            Check(!piece.Supported&&!upper.Supported,"Destroyed structural anchor retained dependent support.");
-            Call(w,"UpdateCollapse");Check(w.Session.TryGet(piece.Id,out _),"Structural grace period disappeared.");
-            var deadlines=Field<Dictionary<ulong,float>>(w,"collapseAt");
-            foreach(var id in new List<ulong>(deadlines.Keys))deadlines[id]=Time.time-1;
-            Call(w,"UpdateCollapse");Check(w.Session.Pieces.Count==0,"Unsupported pieces did not collapse after their grace period.");
+            Check(piece.Supported&&upper.Supported,"Free placement unexpectedly depends on structural support");
+            for(int i=0;i<8;i++)Call(w,"LateUpdate");
+            Check(w.Session.TryGet(piece.Id,out _)&&w.Session.TryGet(upper.Id,out _),"Detached construction was removed");
         }
         finally
         {

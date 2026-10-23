@@ -80,6 +80,22 @@ public class ChunkFoliageRuntime
     private List<GrassRenderBatch> dandelionRenderBatches = new();
     private readonly MaterialPropertyBlock flowerPropertyBlock = new(), cloverPropertyBlock = new(), dandelionPropertyBlock = new();
     private GameObject bushGameObjectRoot;
+    private readonly Dictionary<Matrix4x4[],BuildingFoliageBatch> buildingBatches=new();
+    private readonly List<BuildFoliageExclusion.Filter> buildingBushes=new();
+    private BuildingFoliageBatch BuildingBatch(Matrix4x4[] matrices,Vector4[] values,Mesh mesh)
+    {
+        if(!buildingBatches.TryGetValue(matrices,out var batch))
+        {
+            batch=new BuildingFoliageBatch(matrices,values,mesh!=null?Mathf.Max(0,mesh.bounds.max.y):.2f);
+            buildingBatches.Add(matrices,batch);
+        }
+        return batch;
+    }
+    private void RetireBuildingBatch(Matrix4x4[] matrices)
+    {
+        if(matrices!=null && buildingBatches.TryGetValue(matrices,out var batch)) { batch.Dispose();buildingBatches.Remove(matrices); }
+    }
+    private void ClearBuildingBatches() { foreach(var batch in buildingBatches.Values)batch.Dispose();buildingBatches.Clear(); }
     private TerrainSculptSuppression suppression;
     private bool suppressionDirty;
     public void ApplySuppression(TerrainSculptSuppression mask,float chunkWidth)
@@ -105,6 +121,7 @@ public class ChunkFoliageRuntime
         if(matrices==null)return;
         int count=0;foreach(var matrix in matrices)if(!suppression.Contains(matrix.m03,matrix.m23))count++;
         if(count==matrices.Length)return;
+        RetireBuildingBatch(matrices);
         var filtered=new Matrix4x4[count];var attributes=data!=null?new Vector4[count]:null;int next=0;
         for(int i=0;i<matrices.Length;i++)
         {
@@ -155,19 +172,20 @@ public class ChunkFoliageRuntime
     public void ClearCachedBatches()
     {
         PublicationVersion++;
+        ClearBuildingBatches();
         flowerRenderBatches = new(); lilyPadRenderBatches = new(); cattailRenderBatches = new();
         cloverRenderBatches = new(); dandelionRenderBatches = new();
         hasBuiltFlowerRenderData = hasBuiltLilyPadRenderData = hasBuiltCattailRenderData = false;
         hasBuiltCloverRenderData = hasBuiltDandelionRenderData = false;
         ClearBushGameObjects(); ClearRockGameObjects(); TreePlacementReady = false;
     }
-    internal void PublishFlowers(List<FlowerRenderBatch> batches) { flowerRenderBatches = batches; hasBuiltFlowerRenderData = true;SmallBatchesChanged(); }
-    internal void PublishClover(List<CloverRenderBatch> batches) { cloverRenderBatches = batches; hasBuiltCloverRenderData = true;SmallBatchesChanged(); }
-    internal void PublishDandelions(List<GrassRenderBatch> batches) { dandelionRenderBatches = batches; hasBuiltDandelionRenderData = true;SmallBatchesChanged(); }
+    internal void PublishFlowers(List<FlowerRenderBatch> batches) { foreach(var old in flowerRenderBatches)RetireBuildingBatch(old.matrices);flowerRenderBatches = batches; hasBuiltFlowerRenderData = true;SmallBatchesChanged(); }
+    internal void PublishClover(List<CloverRenderBatch> batches) { foreach(var old in cloverRenderBatches)RetireBuildingBatch(old.matrices);cloverRenderBatches = batches; hasBuiltCloverRenderData = true;SmallBatchesChanged(); }
+    internal void PublishDandelions(List<GrassRenderBatch> batches) { foreach(var old in dandelionRenderBatches)RetireBuildingBatch(old.matrices);dandelionRenderBatches = batches; hasBuiltDandelionRenderData = true;SmallBatchesChanged(); }
     internal void PublishWaterPlants(bool cattails, List<Matrix4x4[]> batches)
     {
-        if (cattails) { cattailRenderBatches = batches; hasBuiltCattailRenderData = true; }
-        else { lilyPadRenderBatches = batches; hasBuiltLilyPadRenderData = true; }
+        if (cattails) { foreach(var old in cattailRenderBatches)RetireBuildingBatch(old);cattailRenderBatches = batches; hasBuiltCattailRenderData = true; }
+        else { foreach(var old in lilyPadRenderBatches)RetireBuildingBatch(old);lilyPadRenderBatches = batches; hasBuiltLilyPadRenderData = true; }
         SmallBatchesChanged();
     }
     internal IEnumerator<bool> BuildBushesIncrementally(List<BerryBushInstanceData> instances)
@@ -181,6 +199,7 @@ public class ChunkFoliageRuntime
             objects = new();
         }
         bool published = false;
+        var stagedFilters=new List<BuildFoliageExclusion.Filter>();
         try
         {
             yield return true;
@@ -202,18 +221,23 @@ public class ChunkFoliageRuntime
                         var bush = body.GetComponent<BerryBushRuntime>() ?? body.AddComponent<BerryBushRuntime>();
                         bush.Initialize(instance, BerryBushManager.Instance);
                         ConfigureSpawnedRendererCulling(body);
+                        var position=body.transform.position;var plantHeight=2*Mathf.Abs(body.transform.lossyScale.y);
+                        var exclusion=BuildFoliageExclusion.Active?.Register(1,_=>new BuildFoliageExclusion.Probe(position,plantHeight,.15f),
+                            (_,hidden,__)=>{if(body!=null)body.SetActive(!hidden[0]);});
+                        if(exclusion!=null)stagedFilters.Add(exclusion);
                     }
                 }
                 yield return true;
             }
             SuppressBushes(objects);
             using (BushClearMarker.Auto()) ClearBushGameObjects();
-            bushGameObjectRoot = staging; bushGameObjects = objects;
+            bushGameObjectRoot = staging; bushGameObjects = objects;buildingBushes.AddRange(stagedFilters);
             using (BushActivateMarker.Auto()) { staging.name = "BerryBush_GameObjects"; staging.SetActive(true); }
             hasCurrentBushRepresentation = true; published = true;
         }
         finally
         {
+            if(!published)foreach(var filter in stagedFilters)filter.Dispose();
             if (!published && staging != null)
                 using (BushDiscardMarker.Auto()) DestroyObjectRoot(staging);
         }
@@ -386,6 +410,7 @@ public class ChunkFoliageRuntime
         List<Vector4> instanceData,
         List<GrassRenderBatch> targetBatches)
     {
+        foreach(var old in targetBatches)RetireBuildingBatch(old.matrices);
         targetBatches.Clear();
 
         if (worldMatrices == null || instanceData == null)
@@ -425,6 +450,7 @@ public class ChunkFoliageRuntime
         Vector4[] instanceData,
         List<GrassRenderBatch> targetBatches)
     {
+        foreach(var old in targetBatches)RetireBuildingBatch(old.matrices);
         targetBatches.Clear();
 
         if (worldMatrices == null || instanceData == null)
@@ -460,7 +486,8 @@ public class ChunkFoliageRuntime
     {
         suppressionDirty=true;
         if (!isTallFlower && !isDaisyWeed && !isPoppy && !isCornflower)
-            flowerRenderBatches.Clear();
+            foreach(var old in flowerRenderBatches)RetireBuildingBatch(old.matrices);
+        flowerRenderBatches.Clear();
 
         if (worldMatrices == null || petalColors == null)
         {
@@ -502,7 +529,8 @@ public class ChunkFoliageRuntime
     {
         suppressionDirty=true;
         if (!isTallFlower && !isDaisyWeed && !isPoppy && !isCornflower)
-            flowerRenderBatches.Clear();
+            foreach(var old in flowerRenderBatches)RetireBuildingBatch(old.matrices);
+        flowerRenderBatches.Clear();
 
         if (worldMatrices == null || petalColors == null)
         {
@@ -540,6 +568,7 @@ public class ChunkFoliageRuntime
     public void CacheCloverBatches(List<Matrix4x4>[] worldMatricesByPrefab, List<Vector4>[] instanceDataByPrefab)
     {
         suppressionDirty=true;
+        foreach(var old in cloverRenderBatches)RetireBuildingBatch(old.matrices);
         cloverRenderBatches.Clear();
 
         if (worldMatricesByPrefab == null || instanceDataByPrefab == null)
@@ -691,6 +720,7 @@ public class ChunkFoliageRuntime
 
     public void ClearBushGameObjects()
     {
+        foreach(var filter in buildingBushes)filter.Dispose();buildingBushes.Clear();
         if (bushGameObjectRoot != null) DestroyObjectRoot(bushGameObjectRoot);
         bushGameObjectRoot = null; bushGameObjects = new(); hasCurrentBushRepresentation = false;
     }
@@ -704,6 +734,7 @@ public class ChunkFoliageRuntime
 
     public void ClearFlowerBatches()
     {
+        foreach(var old in flowerRenderBatches)RetireBuildingBatch(old.matrices);
         flowerRenderBatches.Clear();
         hasBuiltFlowerRenderData = false;
     }
@@ -711,6 +742,7 @@ public class ChunkFoliageRuntime
     public void CacheLilyPadBatches(List<Matrix4x4> matrices)
     {
         suppressionDirty=true;
+        foreach(var old in lilyPadRenderBatches)RetireBuildingBatch(old);
         lilyPadRenderBatches.Clear();
         const int maxBatchSize = 1023;
         for (int start = 0; start < matrices.Count; start += maxBatchSize)
@@ -725,6 +757,7 @@ public class ChunkFoliageRuntime
 
     public void ClearLilyPadBatches()
     {
+        foreach(var old in lilyPadRenderBatches)RetireBuildingBatch(old);
         lilyPadRenderBatches.Clear();
         hasBuiltLilyPadRenderData = false;
     }
@@ -732,6 +765,7 @@ public class ChunkFoliageRuntime
     public void CacheCattailBatches(List<Matrix4x4> matrices)
     {
         suppressionDirty=true;
+        foreach(var old in cattailRenderBatches)RetireBuildingBatch(old);
         cattailRenderBatches.Clear();
         const int maxBatchSize = 1023;
         for (int start = 0; start < matrices.Count; start += maxBatchSize)
@@ -746,6 +780,7 @@ public class ChunkFoliageRuntime
 
     public void ClearCattailBatches()
     {
+        foreach(var old in cattailRenderBatches)RetireBuildingBatch(old);
         cattailRenderBatches.Clear();
         hasBuiltCattailRenderData = false;
     }
@@ -776,12 +811,14 @@ public class ChunkFoliageRuntime
 
     public void ClearCloverBatches()
     {
+        foreach(var old in cloverRenderBatches)RetireBuildingBatch(old.matrices);
         cloverRenderBatches.Clear();
         hasBuiltCloverRenderData = false;
     }
 
     public void ClearDandelionBatches()
     {
+        foreach(var old in dandelionRenderBatches)RetireBuildingBatch(old.matrices);
         dandelionRenderBatches.Clear();
         hasBuiltDandelionRenderData = false;
     }
@@ -801,20 +838,21 @@ public class ChunkFoliageRuntime
             if (batch.matrices == null || batch.petalColors == null)
                 continue;
 
-            flowerPropertyBlock.Clear();
-            flowerPropertyBlock.SetVectorArray(flowerPetalColorPropertyId, batch.petalColors);
 
             Mesh mesh = batch.isCornflower ? cornflowerMesh : batch.isPoppy ? poppyMesh : batch.isDaisyWeed ? daisyWeedMesh : batch.isTallFlower ? tallFlowerMesh : flowerMesh;
             Material material = batch.isCornflower ? cornflowerMaterial : batch.isPoppy ? poppyMaterial : batch.isDaisyWeed ? daisyWeedMaterial : batch.isTallFlower ? tallFlowerMaterial : flowerMaterial;
             if (mesh == null || material == null)
                 continue;
+            var clearing=BuildingBatch(batch.matrices,batch.petalColors,mesh);
+            if(clearing.Count==0)continue;
+            flowerPropertyBlock.Clear();flowerPropertyBlock.SetVectorArray(flowerPetalColorPropertyId,clearing.Values);
 
             Graphics.DrawMeshInstanced(
                 mesh,
                 0,
                 material,
-                batch.matrices,
-                batch.matrices.Length,
+                clearing.Matrices,
+                clearing.Count,
                 flowerPropertyBlock,
                 batch.isCornflower || batch.isPoppy || batch.isTallFlower || batch.isDaisyWeed ? ShadowCastingMode.On : ShadowCastingMode.Off,
                 true
@@ -835,7 +873,9 @@ public class ChunkFoliageRuntime
         for (int i = 0; i < lilyPadRenderBatches.Count; i++)
         {
             Matrix4x4[] batch = lilyPadRenderBatches[i];
-            Graphics.DrawMeshInstanced(lilyPadMesh, 0, lilyPadMaterial, batch, batch.Length,
+            var clearing=BuildingBatch(batch,null,lilyPadMesh);
+            if(clearing.Count==0)continue;
+            Graphics.DrawMeshInstanced(lilyPadMesh, 0, lilyPadMaterial, clearing.Matrices, clearing.Count,
                 null, ShadowCastingMode.Off, false);
         }
     }
@@ -849,7 +889,9 @@ public class ChunkFoliageRuntime
         for (int i = 0; i < cattailRenderBatches.Count; i++)
         {
             Matrix4x4[] batch = cattailRenderBatches[i];
-            Graphics.DrawMeshInstanced(cattailMesh, 0, cattailMaterial, batch, batch.Length,
+            var clearing=BuildingBatch(batch,null,cattailMesh);
+            if(clearing.Count==0)continue;
+            Graphics.DrawMeshInstanced(cattailMesh, 0, cattailMaterial, clearing.Matrices, clearing.Count,
                 null, ShadowCastingMode.Off, false);
         }
     }
@@ -875,8 +917,10 @@ public class ChunkFoliageRuntime
             if (renderData.mesh == null || renderData.material == null)
                 continue;
 
+            var clearing=BuildingBatch(batch.matrices,batch.instanceData,renderData.mesh);
+            if(clearing.Count==0)continue;
             cloverPropertyBlock.Clear();
-            cloverPropertyBlock.SetVectorArray(cloverInstanceDataPropertyId, batch.instanceData);
+            cloverPropertyBlock.SetVectorArray(cloverInstanceDataPropertyId, clearing.Values);
             if(viewer.HasValue && renderDistance>0)
             {
                 var player=viewer.Value;
@@ -889,8 +933,8 @@ public class ChunkFoliageRuntime
                 renderData.mesh,
                 0,
                 renderData.material,
-                batch.matrices,
-                batch.matrices.Length,
+                clearing.Matrices,
+                clearing.Count,
                 cloverPropertyBlock,
                 ShadowCastingMode.Off,
                 receiveCloverShadows
@@ -916,15 +960,17 @@ public class ChunkFoliageRuntime
             if (batch.matrices == null || batch.instanceData == null)
                 continue;
 
+            var clearing=BuildingBatch(batch.matrices,batch.instanceData,dandelionMesh);
+            if(clearing.Count==0)continue;
             dandelionPropertyBlock.Clear();
-            dandelionPropertyBlock.SetVectorArray(dandelionInstanceDataPropertyId, batch.instanceData);
+            dandelionPropertyBlock.SetVectorArray(dandelionInstanceDataPropertyId, clearing.Values);
 
             Graphics.DrawMeshInstanced(
                 dandelionMesh,
                 0,
                 dandelionMaterial,
-                batch.matrices,
-                batch.matrices.Length,
+                clearing.Matrices,
+                clearing.Count,
                 dandelionPropertyBlock,
                 ShadowCastingMode.Off,
                 receiveDandelionShadows

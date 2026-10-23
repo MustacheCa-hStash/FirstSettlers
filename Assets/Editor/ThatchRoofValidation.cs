@@ -202,9 +202,9 @@ public static class ThatchRoofValidation
                 Check(!BuildOccupancy.Overlaps(single,b.Origin,b.WorldYawStep,gable,gp.Origin,gp.WorldYaw),"Gable intersects opposing slope");
             }
             finally{Object.DestroyImmediate(gable);}
-            session.Remove(wall.Id);Check(!a.Supported && !b.Supported,"Roof retained support from empty bounding box");
+            session.Remove(wall.Id);Check(a.Supported && b.Supported,"Free placement unexpectedly depends on structural support");
             wall=session.Add(catalog.presets[0],frame,new Vector3Int(1,0,0),0,false);Check(a.Supported && b.Supported,"Support reconnection failed");
-            session.Remove(foundation.Id);Check(!a.Supported && !b.Supported,"Detached roof cycle grounded itself");
+            session.Remove(foundation.Id);Check(a.Supported && b.Supported,"Free placement unexpectedly depends on structural support");
             // 4x8 building along X: mirrored far-side variants are reversed.
             var longSession=new BuildSession();var longFrame=longSession.CreateFrame(frame.Origin,yaw);
             longSession.Add(catalog.presets[2],longFrame,default,0,true);
@@ -262,7 +262,7 @@ public static class ThatchRoofValidation
             Check(uphill.VisualMesh==roof.roofContinuationMesh,"Ghost still overlaps the lower roof eave");
             var upper=world.Commit(uphill);Check(upper!=null && upper.Supported,"Actual uphill commit failed");
             Check(BuildRoof.VisualMesh(upper,world.Session)==roof.roofContinuationMesh,"Placed upper roof still overlaps");
-            world.Remove(placed.Id);Check(!upper.Supported,"Upper roof did not lose support");
+            world.Remove(placed.Id);Check(upper.Supported,"Free placement unexpectedly depends on structural support");
             Check(BuildRoof.VisualMesh(upper,world.Session)==roof.mesh,"Removing lower neighbor did not restore eave");
             world.Session.Add(roof,frame,new Vector3Int(0,12,0),0,false);
             Check(upper.Supported && BuildRoof.VisualMesh(upper,world.Session)==roof.roofContinuationMesh,"Reconnected roof did not restore join/support");

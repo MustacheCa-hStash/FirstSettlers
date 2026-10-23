@@ -16,8 +16,8 @@
         <ui:VisualElement name="inventory-hotbar" class="inventory-hotbar" />
     </ui:VisualElement>
     <ui:VisualElement name="inventory-hud" class="inventory-hud" picking-mode="Ignore">
-        <ui:VisualElement name="hud-offhand" class="hud-offhand inventory-stone" picking-mode="Ignore" />
-        <ui:VisualElement class="hud-rail inventory-stone" picking-mode="Ignore">
+        <ui:VisualElement name="hud-offhand" class="hud-offhand" picking-mode="Ignore" />
+        <ui:VisualElement class="hud-rail" picking-mode="Ignore">
             <ui:VisualElement name="hud-hotbar" class="hud-hotbar" picking-mode="Ignore" />
         </ui:VisualElement>
     </ui:VisualElement>

@@ -38,9 +38,9 @@ public static class BuildResolvedGeometry
         foreach(var av in sa.volumes)foreach(var bv in sb.volumes)
             if(BuildGeometry.Connects(av.bounds,a.Origin,a.WorldYawStep,bv.bounds,b.Origin,b.WorldYawStep) &&
                 BuildOccupancy.SolidOverlap(av,default,a.Origin,BuildGeometry.Rotation(a.WorldYawStep),bv,default,b.Origin,BuildGeometry.Rotation(b.WorldYawStep),-.008f))return true;
-        if(a.Definition.kind==BuildPartKind.Roof && b.Definition.kind is BuildPartKind.Wall or BuildPartKind.Corner)
+        if(a.Definition.kind==BuildPartKind.Roof && b.Definition.kind is BuildPartKind.Wall or BuildPartKind.Corner or BuildPartKind.Beam)
             return BuildRoof.Connects(a.Definition,a.Origin,a.WorldYawStep,b.Definition,b.Origin,b.WorldYawStep);
-        if(b.Definition.kind==BuildPartKind.Roof && a.Definition.kind is BuildPartKind.Wall or BuildPartKind.Corner)
+        if(b.Definition.kind==BuildPartKind.Roof && a.Definition.kind is BuildPartKind.Wall or BuildPartKind.Corner or BuildPartKind.Beam)
             return BuildRoof.Connects(b.Definition,b.Origin,b.WorldYawStep,a.Definition,a.Origin,a.WorldYawStep);
         return false;
     }

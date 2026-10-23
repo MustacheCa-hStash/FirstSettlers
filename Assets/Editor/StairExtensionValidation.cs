@@ -23,7 +23,7 @@ public static class StairExtensionValidation
         for(int yaw=0;yaw<8;yaw++)foreach(var stair in new[]{c.Find(W21StairSetup.ContentId),c.Find(StairExtensionSetup.W22Id)})Fixture(c,stair,yaw);
         for(int yaw=0;yaw<8;yaw++)foreach(var fixedDefinition in new[]{c.Find(W21StairSetup.ContentId),c.Find(StairExtensionSetup.W22Id)})
             foreach(var selectedDefinition in new[]{c.Find(W21StairSetup.ContentId),c.Find(StairExtensionSetup.W22Id)})ControllerUnderside(c,fixedDefinition,selectedDefinition,yaw);
-        Debug.Log("STAIR EXTENSION PASS: all headings; floor/roof underside and downward mixed-flight snaps; left/right segment handrails; real TerrainCollider and marked terrain embedding; buried toe/fully buried placement, ground-start rejection, cave ceiling and external obstacle retention.");
+        Debug.Log("STAIR EXTENSION PASS: all headings; floor/roof underside and downward mixed-flight snaps; left/right segment handrails; real TerrainCollider and marked terrain embedding; buried toe/fully buried placement, free ground starts, cave ceiling and external obstacle retention.");
     }
     private static BuildPreview At(BuildDefinition d,BuildGridFrame f,Vector3 local)
     {
@@ -99,7 +99,7 @@ public static class StairExtensionValidation
             var buriedLower=w.Commit(below);C(buriedLower!=null && buriedLower.Supported && !buriedLower.Grounded,"A buried toe lost its structural attachment or terrain granted a stair grounding");w.Remove(buriedLower.Id);
             var upper=BuildPlacement.Solve(other,fixedStair.Origin+q*new Vector3(.625f,d.LocalBounds.size.y,d.LocalBounds.size.z),Vector3.up,fixedStair,s.Frame(fixedStair.OwnFrameId),0,0,default);
             var extension=w.Commit(upper);C(extension!=null,"Exposed high end of partly buried stair rejected");w.Remove(extension.Id);
-            var terrainStart=BuildPlacement.Solve(d,f.Origin+q*new Vector3(2,2,0),Vector3.up,null,null,yaw,0,default);w.Validate(ref terrainStart);C(!terrainStart.Valid && terrainStart.Failure==BuildPlacementFailure.Support,"Direct terrain start accepted");
+            var terrainStart=BuildPlacement.Solve(d,f.Origin+q*new Vector3(2,2,0),Vector3.up,null,null,yaw,0,default);w.Validate(ref terrainStart);C(terrainStart.Valid && terrainStart.Failure==BuildPlacementFailure.None,"Direct terrain start accepted");
             var cube=GameObject.CreatePrimitive(PrimitiveType.Cube);cube.layer=GameplayLayers.WorldSolid;cube.transform.localScale=Vector3.one*.3f;
             try
             {

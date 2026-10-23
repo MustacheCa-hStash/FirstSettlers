@@ -960,7 +960,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 1456
+  worldSeed: 46
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -2271,7 +2271,6 @@ MonoBehaviour:
   colliderRange: 32
   colliderReleaseRange: 40
   activationsPerFrame: 8
-  unsupportedGraceSeconds: 3
 --- !u!114 &2002000002
 MonoBehaviour:
   m_ObjectHideFlags: 0

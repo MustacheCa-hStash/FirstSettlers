@@ -1,5 +1,11 @@
 # Ordinary wood: Iron Age inspired building concepts
 
+**W05, W06, W07, W08 and W12 are now modeled and installed**, in addition to the
+existing full-span wood components. See the [extension implementation guide](../../Documentation/WOOD_EXTENSION_KIT.md),
+[editable source](Extension/WoodExtensionKit.blend) and [Unity overview](Extension/wood-extension-unity-overview.png).
+The implementation uses the current 4 m/2 m spans and 3 m full-height storey;
+the original dimensions below preserve the concept history.
+
 Five drawn concept sheets for First Settlers. No meshes, prefabs, scripts, colliders or scene assets were created or changed by the concept work.
 
 - [01: Core building parts](01-core-building-parts.png)

@@ -25,8 +25,25 @@ public class ChunkRuntime
     private TerrainSculptChunkSurface sculptSurface;
     private readonly LocalFlameGeometry.Part[] flamePart=new LocalFlameGeometry.Part[1];
     public bool HasSculptSurface => sculptSurface != null;
-    public bool TryGetSculptBounds(out Bounds bounds)
-    {bounds=sculptSurface!=null?sculptSurface.WorldBounds:default;return sculptSurface!=null;}
+    // Bounds must remain available while culled, otherwise a hidden chunk cannot become visible again.
+    // Renderer bounds already include baked world scale, LOD skirts and the current root transform.
+    public bool TryGetRenderBounds(out Bounds bounds)
+    {
+        bounds=default;bool hasBounds=false;
+        if(terrainMeshFilter!=null&&terrainMeshFilter.sharedMesh!=null)
+        {bounds=terrainMeshRenderer.bounds;hasBounds=true;}
+        if(sculptSurface?.HasRender==true)
+        {
+            if(hasBounds)bounds.Encapsulate(sculptSurface.WorldBounds);else bounds=sculptSurface.WorldBounds;
+            hasBounds=true;
+        }
+        if(waterMeshFilter!=null&&waterMeshFilter.sharedMesh!=null)
+        {
+            if(hasBounds)bounds.Encapsulate(waterMeshRenderer.bounds);else bounds=waterMeshRenderer.bounds;
+            hasBounds=true;
+        }
+        return hasBounds;
+    }
 
     private ChunkFoliageRuntime foliageRuntime;
 

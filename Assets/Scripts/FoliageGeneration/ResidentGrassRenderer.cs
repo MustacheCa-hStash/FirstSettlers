@@ -78,6 +78,37 @@ public sealed class ResidentGrassRenderer : IDisposable
     private Bounds bounds;
     private bool hasBounds;
     private TerrainSculptSuppression suppression;
+    private readonly BuildingSlot[] buildingSlots;
+    private Mesh buildingNear,buildingFar,buildingForestNear,buildingForestFar;
+    private sealed class BuildingSlot : IDisposable
+    {
+        private readonly GrassRenderUtility.Instance[] data;
+        private readonly float[] ranks;
+        private readonly BuildFoliageExclusion.Filter filter;
+        public BuildingSlot(ResidentGrassRenderer renderer,int slot,GrassRenderUtility.Instance[] data,Mesh near,Mesh far,Mesh forestNear=null,Mesh forestFar=null)
+        {
+            this.data=data; ranks=new float[data.Length];
+            float height=Mathf.Max(near!=null?near.bounds.max.y:0,far!=null?far.bounds.max.y:0);
+            float forestHeight=Mathf.Max(forestNear!=null?forestNear.bounds.max.y:height,forestFar!=null?forestFar.bounds.max.y:height);
+            filter=BuildFoliageExclusion.Active?.Register(data.Length,i=>
+            {
+                var instance=data[i]; ranks[i]=instance.Data.z;
+                var root=instance.ObjectToWorld.MultiplyPoint3x4(Vector3.zero);
+                float worldHeight=instance.ObjectToWorld.MultiplyVector(Vector3.up*(instance.Data.x>=.5f?forestHeight:height)).magnitude;
+                return new BuildFoliageExclusion.Probe(root,worldHeight);
+            },(start,hidden,count)=>
+            {
+                for(int i=0;i<count;i++)data[start+i].Data.z=hidden[i]?2:ranks[start+i];
+                if(renderer.sources!=null)
+                {
+                    renderer.sources.SetData(data,start,slot*renderer.slotSize+start,count);
+                    GrassDrawDiagnostics.CountUpload();
+                }
+            });
+        }
+        public float OriginalRank(int i)=>data[i].Data.z>1?ranks[i]:data[i].Data.z;
+        public void Dispose()=>filter?.Dispose();
+    }
     private static readonly ProfilerMarker SuppressionMarker=new("FS.Streaming.Sculpt.GrassSuppress");
     public void ApplySuppression(TerrainSculptSuppression mask)
     {
@@ -89,15 +120,17 @@ public sealed class ResidentGrassRenderer : IDisposable
         {
             var data=cpuSlots[slot];if(data==null)continue;
             int count=0,forest=0;
-            foreach(var instance in data)
+            var building=buildingSlots[slot]; building?.Dispose();buildingSlots[slot]=null;
+            for(int i=0;i<data.Length;i++)
             {
+                var instance=data[i];instance.Data.z=building?.OriginalRank(i)??instance.Data.z;
                 if(mask.Contains(instance.ObjectToWorld.m03,instance.ObjectToWorld.m23))continue;
                 data[count++]=instance;if(instance.Data.x>=.5f)forest++;
             }
-            if(count==data.Length)continue;
             forestCount+=forest-forestCounts[slot];meadowCount+=(count-forest)-(data.Length-forestCounts[slot]);forestCounts[slot]=forest;
             Array.Resize(ref data,count);cpuSlots[slot]=data;metadata[slot].x=count;metadataDirty=true;
             if(sources!=null&&count>0){sources.SetData(data,0,slot*slotSize,count);GrassDrawDiagnostics.CountUpload();}
+            buildingSlots[slot]=new BuildingSlot(this,slot,data,buildingNear,buildingFar,buildingForestNear,buildingForestFar);
         }
     }
     public ResidentGrassRenderer(int subCount, int cellsPerAxis, int subAxis)
@@ -105,6 +138,7 @@ public sealed class ResidentGrassRenderer : IDisposable
         slotSize = (Mathf.CeilToInt((float)cellsPerAxis / subAxis) + 3);
         slotSize *= slotSize;
         cpuSlots = new GrassRenderUtility.Instance[subCount][];
+        buildingSlots = new BuildingSlot[subCount];
         metadata = new Vector4[subCount];
         forestCounts = new int[subCount];
     }
@@ -114,6 +148,8 @@ public sealed class ResidentGrassRenderer : IDisposable
     {
         using (UploadMarker.Auto())
         {
+        buildingSlots[index]?.Dispose();buildingSlots[index]=null;
+        buildingNear=near;buildingFar=far;buildingForestNear=forestNear;buildingForestFar=forestFar;
         if (candidates.Count > slotSize) { using (ResizeMarker.Auto()) ReleaseBuffers(); slotSize = Mathf.NextPowerOfTwo(candidates.Count); }
         GrassRenderUtility.Instance[] upload;
         using (PrepareMarker.Auto())
@@ -142,6 +178,7 @@ public sealed class ResidentGrassRenderer : IDisposable
         if(retained!=upload.Length)Array.Resize(ref upload,retained);
         cpuSlots[index] = upload;
         metadata[index].x = upload.Length;
+        buildingSlots[index]=new BuildingSlot(this,index,upload,near,far,forestNear,forestFar);
         forestCount += forestCounts[index];
         meadowCount += upload.Length - forestCounts[index];
         metadataDirty = true;
@@ -391,7 +428,7 @@ public sealed class ResidentGrassRenderer : IDisposable
         if (buffer == null) return;
         buffer.Release(); GrassDrawDiagnostics.CountBufferReleased();
     }
-    public void Dispose() => ReleaseBuffers();
+    public void Dispose() { foreach(var slot in buildingSlots)slot?.Dispose(); ReleaseBuffers(); }
 #if UNITY_EDITOR
     // Dispatch/readback only: validates selection without rendering a scene or creating a camera.
     public uint[] CullForValidation(int biome, int lod, GrassSettings settings, Mesh mesh, Material material,

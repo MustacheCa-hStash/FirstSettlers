@@ -9,7 +9,7 @@ public static class BuildTopCourse
     {
         var b=wall.LocalBounds;var c=course.LocalBounds;
         if(course.topCourseDepth<=0 || wall.kind!=BuildPartKind.Wall || wall.IsHalfGable || !wall.preserveAuthoredMesh || wall.topCourseDepth>0 ||
-            Mathf.Abs(b.size.x-c.size.x)>.001f || Mathf.Abs(b.size.y-3)>.001f || Mathf.Abs(b.size.z-(c.size.z-.25f))>.001f)return false;
+            Mathf.Abs(b.size.x-c.size.x)>.001f || Mathf.Abs(b.size.y-3)>.001f || Mathf.Abs(b.size.z-(course.kind==BuildPartKind.Beam?c.size.z:c.size.z-.25f))>.001f)return false;
         float level=b.max.y-course.topCourseDepth;
         foreach(var opening in wall.wallOpenings??Array.Empty<Bounds>())if(opening.max.y>level+.001f)return false;
         // The upper course must be solid across the complete bay, not a gable or open frame.
@@ -34,6 +34,7 @@ public static class BuildTopCourse
     {
         preview=default;if(d.topCourseDepth<=0)return false;
         bool valid=target!=null&&Compatible(target.Definition,d);
+        if(!valid)return false; // Free placement uses the ordinary aimed world grid.
         int yaw=lockedWorldYaw??target?.WorldYawStep??0;var b=target?.Definition.LocalBounds??default;var c=d.LocalBounds;
         var origin=(target?.Origin??Vector3.zero)+BuildGeometry.Rotation(yaw)*(new Vector3(b.min.x-c.min.x,b.max.y-d.topCourseDepth-c.min.y,b.center.z-c.center.z)+(Vector3)nudge*BuildGeometry.Unit);
         preview=new BuildPreview{Definition=d,Origin=origin,WorldYaw=yaw,Frame=new BuildGridFrame{Origin=origin,YawStep=(byte)yaw},InvalidAttachment=!valid,Hint="Replace wall top course"};return true;

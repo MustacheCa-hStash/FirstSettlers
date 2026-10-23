@@ -71,7 +71,7 @@ public static class BuildFramingValidation
             Check(finish.Supported && basePiece.Resolved.boxes.Length==1,"Foundation cap finish/support");
             Near(basePiece.Resolved.boxes[0].max,new Vector3(4,-.25f,4),"Foundation cap not deferred");
             s.Remove(finish.Id);Near(basePiece.Resolved.boxes[0].max,new Vector3(4,0,4),"Foundation cap not restored");
-            s.Remove(basePiece.Id);Check(!wall.Supported && !upper.Supported && !roof.Supported,"Detached structure grounded itself");
+            s.Remove(basePiece.Id);Check(wall.Supported && upper.Supported && roof.Supported,"Free placement unexpectedly depends on structural support");
         }
     }
     private static void Openings(BuildCatalog c)

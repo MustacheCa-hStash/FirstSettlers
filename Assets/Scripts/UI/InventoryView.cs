@@ -47,7 +47,7 @@ public sealed class InventoryView : IDisposable
         Populate(root.Q<VisualElement>("inventory-crafting"), "crafting", 4);
         root.Q<VisualElement>("inventory-offhand").Add(Slot("offhand"));
         root.Q<VisualElement>("inventory-output").Add(Slot("crafting-output"));
-        root.Q<VisualElement>("hud-offhand").Add(Slot("hud-offhand-slot"));
+        root.Q<VisualElement>("hud-offhand").Add(Slot("hud-offhand-slot", true));
         for (int i = 0; i < HotbarSlots; i++)
         {
             int index = i;
@@ -58,7 +58,7 @@ public sealed class InventoryView : IDisposable
                 e.StopPropagation();
             });
             root.Q<VisualElement>("inventory-hotbar").Add(inventoryHotbar[i]);
-            gameplayHotbar[i] = Slot("hud-hotbar-" + i);
+            gameplayHotbar[i] = Slot("hud-hotbar-" + i, true);
             root.Q<VisualElement>("hud-hotbar").Add(gameplayHotbar[i]);
         }
         root.Q<Button>("inventory-book").Add(new InventoryGlyph(true));
@@ -76,13 +76,31 @@ public sealed class InventoryView : IDisposable
         for (int i = 0; i < count; i++) container.Add(Slot(prefix + "-" + i));
     }
 
-    private static VisualElement Slot(string name)
+    private static VisualElement Slot(string name, bool translucentHud = false)
     {
         var slot = new VisualElement { name = name, focusable = false };
         slot.AddToClassList("inventory-slot");
         var surface = new VisualElement { pickingMode = PickingMode.Ignore };
         surface.AddToClassList("inventory-slot-surface"); slot.Add(surface);
+        if (translucentHud) surface.generateVisualContent += DrawHotbarCorners;
         return slot;
+    }
+
+    private static void DrawHotbarCorners(MeshGenerationContext context)
+    {
+        var rect = context.visualElement.contentRect;
+        var p = context.painter2D;
+        p.strokeColor = new Color(.89f, .84f, .71f, .95f);
+        p.lineWidth = 2.5f; p.lineCap = LineCap.Round; p.lineJoin = LineJoin.Round;
+        void Corner(float x, float y, float dx, float dy)
+        {
+            p.BeginPath(); p.MoveTo(new Vector2(x, y + dy * 5));
+            p.LineTo(new Vector2(x, y)); p.LineTo(new Vector2(x + dx * 5, y)); p.Stroke();
+        }
+        Corner(1.5f, 1.5f, 1, 1);
+        Corner(rect.width - 1.5f, 1.5f, -1, 1);
+        Corner(1.5f, rect.height - 1.5f, 1, -1);
+        Corner(rect.width - 1.5f, rect.height - 1.5f, -1, -1);
     }
 
     private static void IgnorePicking(VisualElement element)

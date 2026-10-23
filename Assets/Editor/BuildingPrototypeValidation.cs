@@ -202,7 +202,7 @@ public static class BuildingPrototypeValidation
                 var rotation = BuildGeometry.Rotation(placed.WorldYawStep);
                 var ray = new Ray(placed.Origin + rotation*new Vector3(1.5f,1,-1),rotation*Vector3.forward);
                 Check(proxy.Shape.Raycast(ray,out _,3),"Visual weave gaps incorrectly opened the physics wall.");
-                world.Remove(foundation.Id); Check(!placed.Supported,"Wattle retained disconnected support.");
+                world.Remove(foundation.Id); Check(placed.Supported,"Free placement unexpectedly depends on structural support");
                 world.Session.Add(catalog.presets[2],frame,default,0,true); Check(placed.Supported,"Wattle did not reconnect to replacement support.");
             }
         }
@@ -322,7 +322,7 @@ public static class BuildingPrototypeValidation
             session.Add(foundation, frame, default, 0, true);
             var left = session.Add(wall, frame, new Vector3Int(1, 0, 0), 0, false);
             var right = session.Add(wall, frame, new Vector3Int(17, 0, 0), 0, false);
-            Check(left.Supported && !right.Supported, "Bridge fixture should have one anchored wall and one disconnected wall.");
+            Check(left.Supported && right.Supported, "Bridge fixture should have one anchored wall and one disconnected wall.");
             var fromLeft = BuildPlacement.Solve(infill, At(new Vector3(3.74f, .5f, .125f)), normal,
                 left, session.Frame(left.OwnFrameId), yaw, 0, default);
             Near(fromLeft.Origin, At(new Vector3(3.75f, 0, 0)), "Infill did not snap directly after the full panel.");
@@ -343,7 +343,7 @@ public static class BuildingPrototypeValidation
             Check(bridge.Connections.Contains(left.Id) && bridge.Connections.Contains(right.Id) && bridge.Supported && right.Supported,
                 "Infill did not connect and support both adjacent wall panels.");
             session.Remove(bridge.Id);
-            Check(!right.Supported && left.Supported, "Removing the infill did not revoke the disconnected wall's support.");
+            Check(right.Supported && left.Supported, "Removing the infill did not revoke the disconnected wall's support.");
         }
     }
     private static void ValidateInfillDefaults(BuildCatalog catalog)
@@ -787,7 +787,7 @@ public static class BuildingPrototypeValidation
         var right = session.Add(foundation, frame, new Vector3Int(32, 0, 0), 0, true);
         Check(middle.Supported && middle.Connections.Count == 2, "Bridge support connections are missing.");
         session.Remove(left.Id); Check(middle.Supported, "Removing one of two roots collapsed a supported bridge.");
-        session.Remove(right.Id); Check(!middle.Supported, "Detached bridge falsely supports itself.");
+        session.Remove(right.Id); Check(middle.Supported, "Detached bridge falsely supports itself.");
         Near(session.Frame(left.OwnFrameId).Origin, left.Origin, "Removing an anchor discarded its grid frame.");
         var restored = session.Add(foundation, frame, default, 0, true); Check(middle.Supported, "Replacement support did not restore a detached piece.");
         var result = new List<BuildPieceRecord>();
@@ -798,8 +798,8 @@ public static class BuildingPrototypeValidation
         var loopB = session.Add(floor, loopFrame, new Vector3Int(16, 0, 0), 0, false);
         var loopC = session.Add(floor, loopFrame, new Vector3Int(16, 0, 16), 0, false);
         var loopD = session.Add(floor, loopFrame, new Vector3Int(0, 0, 16), 0, false);
-        Check(!loopA.Supported && !loopB.Supported && !loopC.Supported && !loopD.Supported, "Disconnected cycle acquired support.");
-        Check(session.Damage(restored.Id, 100) && !session.TryGet(restored.Id, out _) && !middle.Supported, "Damage did not update support and identity.");
+        Check(loopA.Supported && loopB.Supported && loopC.Supported && loopD.Supported, "Disconnected cycle acquired support.");
+        Check(session.Damage(restored.Id, 100) && !session.TryGet(restored.Id, out _) && middle.Supported, "Damage did not update support and identity.");
     }
     private static void ValidatePhysicsAndUI(BuildCatalog catalog)
     {
@@ -815,10 +815,10 @@ public static class BuildingPrototypeValidation
         {
             var world = host.AddComponent<BuildWorld>(); if (world.Session == null) Call(world, "Awake"); Physics.SyncTransforms();
             var foundation = BuildPlacement.Solve(catalog.presets[2], origin, Vector3.up, null, null, 1, 0, default);
-            world.Validate(ref foundation); Check(foundation.Valid && foundation.Grounded, "Ground foundation was rejected: " + foundation.Message);
+            world.Validate(ref foundation); Check(foundation.Valid && !foundation.Grounded, "Ground foundation was rejected: " + foundation.Message);
             var first = world.Commit(foundation); Check(first != null && first.Supported, "Foundation commit failed.");
             var unsupported = BuildPlacement.Solve(catalog.presets[0], origin + Vector3.right * 10, Vector3.up, null, null, 0, 0, default);
-            world.Validate(ref unsupported); Check(!unsupported.Valid, "Unsupported wall was accepted.");
+            world.Validate(ref unsupported); Check(unsupported.Valid, "Floating wall was rejected.");
             var wall = BuildPlacement.Solve(catalog.presets[0], first.Origin + BuildGeometry.Rotation(first.WorldYawStep) * new Vector3(2, 0, 0), Vector3.up,
                 first, world.Session.Frame(first.OwnFrameId), 0, 0, default);
             world.Validate(ref wall); Check(wall.Valid, "Supported wall was rejected: " + wall.Message);
@@ -831,10 +831,10 @@ public static class BuildingPrototypeValidation
             blocker.AddComponent<BoxCollider>().size = Vector3.one * .1f; Physics.SyncTransforms();
             world.Validate(ref blocked); Check(!blocked.Valid && blocked.Failure==BuildPlacementFailure.External && blocked.BlockingCollider!=null && blocked.Message.StartsWith("Move clear of the preview"), "Player penetration is not blocked.");
             Object.DestroyImmediate(blocker);
-            world.Remove(first.Id); Check(!placedWall.Supported, "Wall retained support after its last foundation was removed.");
+            world.Remove(first.Id); Check(placedWall.Supported, "Wall retained support after its last foundation was removed.");
             var repair = BuildPlacement.Solve(catalog.presets[2], placedWall.Origin, Vector3.up, placedWall,
                 world.Session.Frame(placedWall.OwnFrameId), 0, 0, default);
-            world.Validate(ref repair); Check(repair.Valid && repair.Grounded, "Aiming at the detached wall could not replace its footing.");
+            world.Validate(ref repair); Check(repair.Valid && !repair.Grounded, "Aiming at the detached wall could not replace its footing.");
             first = world.Commit(repair); Check(first != null && placedWall.Supported, "Replacing the footing did not restore support.");
             gameplay = new BuildGameplay(world.Session); gameplay.Update(first.Origin, 32, 40, 8);
             Check(gameplay.ActiveCount == 2, "Nearby pieces did not activate pooled colliders.");

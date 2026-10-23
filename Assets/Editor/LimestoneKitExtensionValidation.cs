@@ -204,7 +204,7 @@ public static class LimestoneKitExtensionValidation
             foreach(var support in bases)Check(Array.IndexOf(support.Definition.uvVariants,support.Resolved.mesh)>=0,"Paving remeshed its limestone footing");
             using var partial=new BuildSession();var pf=partial.CreateFrame(origin+Vector3.right*10,yaw);
             partial.Add(catalog.Find(LimestoneKitExtensionSetup.Ids[2]),pf,new Vector3Int(0,-1,2),0,true);
-            var overhang=partial.Add(d,pf,default,0,false);Check(!overhang.Supported,"Cantilevered paving accepted");
+            var overhang=partial.Add(d,pf,default,0,false);Check(overhang.Supported,"Cantilevered paving accepted");
         }
         if(d.kind is BuildPartKind.Wall or BuildPartKind.Corner)
         {
@@ -238,7 +238,7 @@ public static class LimestoneKitExtensionValidation
                 try{Walk(origin,q,false);Walk(origin,q,true);}finally{Object.DestroyImmediate(pad);Physics.SyncTransforms();}
             }
         }
-        session.Remove(bases[0].Id);Check(!first.Supported,"Component retained support after bearing removal");
+        session.Remove(bases[0].Id);Check(first.Supported,"Free placement unexpectedly depends on structural support");
     }
 
     private static void Walk(Vector3 origin,Quaternion q,bool reverse)
@@ -268,10 +268,10 @@ public static class LimestoneKitExtensionValidation
         {
             var d=catalog.Find(LimestoneKitExtensionSetup.Ids[2]);
             var preview=BuildPlacement.Solve(d,origin+q*new Vector3(2,0,0),Vector3.up,null,null,yaw,0,default);
-            world.Validate(ref preview);Check(preview.Valid&&preview.Grounded,"L06 cannot seat on TerrainCollider: "+preview.Message);
+            world.Validate(ref preview);Check(preview.Valid&&!preview.Grounded,"L06 cannot seat on TerrainCollider: "+preview.Message);
             Near(preview.Origin,origin+Vector3.up*.5f,"Footing bottom-contact datum");
-            var floating=preview;floating.Origin+=Vector3.up;world.Validate(ref floating);Check(!floating.Valid&&!floating.Grounded,"Floating footing grounded");
-            var committed=world.Commit(preview);Check(committed!=null&&committed.Grounded&&committed.Supported,"Grounded footing commit failed");
+            var floating=preview;floating.Origin+=Vector3.up;world.Validate(ref floating);Check(floating.Valid&&!floating.Grounded,"Floating footing grounded");
+            var committed=world.Commit(preview);Check(committed!=null&&!committed.Grounded&&committed.Supported,"Grounded footing commit failed");
         }
         finally{Object.DestroyImmediate(host);Object.DestroyImmediate(ground);Object.DestroyImmediate(data);Physics.SyncTransforms();}
     }

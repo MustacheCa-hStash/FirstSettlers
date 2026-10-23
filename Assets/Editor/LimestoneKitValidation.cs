@@ -181,7 +181,7 @@ public static class LimestoneKitValidation
             Check(Mathf.Abs(hit.distance - 1.875f) < .001f, "Wall thickness changed in collision");
         }
         session.Remove(footing.Id);
-        Check(!first.Supported && !upper.Supported, "Walls retained support after footing removal");
+        Check(first.Supported && upper.Supported, "Walls retained support after footing removal");
     }
 
     private static void Render(BuildCatalog catalog)

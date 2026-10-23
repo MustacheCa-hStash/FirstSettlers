@@ -22,6 +22,7 @@ public sealed class BuildingController : MonoBehaviour
     private readonly RaycastHit[] jointGuideHits = new RaycastHit[16];
     private int worldHeading, contextTurn, suppressPlaceUntil;
     private int? manualHeading;
+    private bool manualGableSlope;
     private Vector3Int nudge;
     private BuildInputCommand pending;
     private LocalPlayerInput input;
@@ -85,6 +86,7 @@ public sealed class BuildingController : MonoBehaviour
         if (!Active || definition == null) return;
         bool changed=selected!=definition && selected?.flipVariant!=definition;
         selected = definition; MenuOpen = false; nudge = default; contextTurn = 0; target = null; pending = default;
+        manualGableSlope=definition.IsHalfGable&&definition.gableSlope==GableSlope.Falling;
         if(changed)manualHeading=null;
         menus?.Close(this, false);
         skyGuide = default; Preview = default;
@@ -136,7 +138,11 @@ public sealed class BuildingController : MonoBehaviour
         RestoreCursorCapture();
         var command = pending; pending = default;
         if (!Active || MenuOpen || (menus != null && menus.BlocksWorldInteraction) || selected == null || viewCamera == null) return;
-        if(command.Flip && selected.flipVariant!=null){selected=selected.flipVariant;world.ClearPreview();}
+        if(command.Flip && selected.flipVariant!=null)
+        {
+            var shown=SameFamily(Preview.Definition,selected)?Preview.Definition:selected;
+            selected=shown.flipVariant;manualGableSlope=true;world.ClearPreview();
+        }
         var ray = viewCamera.ViewportPointToRay(new Vector3(.5f, .5f, 0));
         if (!TryResolveAim(ray, out var aimPoint, out var aimNormal, out var direct, out var nextTarget, out bool guided))
         {
@@ -149,32 +155,33 @@ public sealed class BuildingController : MonoBehaviour
         // Manual orientation belongs to the selected tool, not to the aimed record.
         if(command.Turn!=0)
         {
-            int current=manualHeading??(Preview.Definition==selected?Preview.WorldYaw:worldHeading);
+            int current=manualHeading??(SameFamily(Preview.Definition,selected)?Preview.WorldYaw:worldHeading);
             manualHeading=BuildGeometry.Turn(current+command.Turn);
         }
         if(manualHeading.HasValue && target==null)worldHeading=manualHeading.Value;
         int gridYaw = target != null ? world.Session.Frame(target.OwnFrameId).YawStep : worldHeading;
         nudge += BuildGeometry.ViewRelativeNudge(command.Nudge, viewCamera.transform.rotation, gridYaw);
         var preview = BuildPlacement.Solve(selected, aimPoint, aimNormal, target,
-            target != null ? world.Session.Frame(target.OwnFrameId) : null, worldHeading, contextTurn, nudge, ray.origin, preferTop,manualHeading);
-        if (guided) preview.Hint = (selected.kind==BuildPartKind.Stair && target?.Definition.kind==BuildPartKind.Stair?"Underside guide · ":"Sky guide · ") + preview.Hint;
+            target != null ? world.Session.Frame(target.OwnFrameId) : null, worldHeading, contextTurn, nudge, ray.origin, preferTop,manualHeading,!manualGableSlope);
+        if (guided) preview.Hint = (selected.IsHalfGable?"Gable guide · ":selected.kind==BuildPartKind.Stair && target?.Definition.kind==BuildPartKind.Stair?"Underside guide · ":"Sky guide · ") + preview.Hint;
         world.Validate(ref preview);
         // Nudges cannot extend an interaction into arbitrary distant construction.
-        if (BuildGeometry.Distance(selected.LocalBounds, preview.Origin, preview.WorldYaw, ray.origin) > reach)
+        if (BuildGeometry.Distance(preview.Definition.LocalBounds, preview.Origin, preview.WorldYaw, ray.origin) > reach)
         { preview.Valid = false; preview.Failure=BuildPlacementFailure.Reach;preview.Message = "Preview is beyond building reach"; }
         world.UpdateDebugPreview(preview);
         if (command.Remove && direct != null)
         {
             world.Remove(direct.Id); target = null; nudge = default; Preview = default;
             skyGuide = default;
-            view.Show(BuildUiContent.Name(selected), "Piece removed · detached pieces have 3 seconds to regain support", true); return;
+            view.Show(BuildUiContent.Name(selected), "Piece removed", true); return;
         }
         if (command.Place && Time.frameCount > suppressPlaceUntil && preview.Valid)
         {
             world.Commit(preview); suppressPlaceUntil = Time.frameCount;
         }
         Preview = preview;
-        view.Show(BuildUiContent.Name(selected) + " · " + (preview.WorldYaw * 45) + "°"+(selected.flipVariant!=null?" · R: flip slope":""),
+        view.Show(BuildUiContent.Name(preview.Definition) + " · " + (preview.WorldYaw * 45) + "°"+
+            (selected.IsHalfGable?(manualGableSlope?" · manual slope":" · auto slope"):"")+(selected.flipVariant!=null?" · R: flip slope":""),
             preview.Valid ? preview.Message+" · "+(preview.Warning!=BuildPlacementWarning.None?preview.WarningMessage:preview.Hint) : preview.Message,
             preview.Valid,preview.Valid && preview.Warning!=BuildPlacementWarning.None);
         DrawPreviewMesh(preview.VisualMesh,preview);
@@ -189,6 +196,7 @@ public sealed class BuildingController : MonoBehaviour
         {camera=viewCamera,worldBounds=BuildRenderer.TransformBounds(mesh.bounds,matrix),shadowCastingMode=ShadowCastingMode.Off,receiveShadows=false};
         Graphics.RenderMesh(parameters,mesh,0,matrix);
     }
+    private static bool SameFamily(BuildDefinition a,BuildDefinition b)=>a!=null&&b!=null&&(a==b||a.flipVariant==b);
     private Material GetPreviewMaterial(bool valid)
     {
         var shared = valid ? world.Catalog.validPreview : world.Catalog.invalidPreview;
@@ -212,6 +220,8 @@ public sealed class BuildingController : MonoBehaviour
         bool stairSide=hitPiece?.Definition.kind==BuildPartKind.Stair && Mathf.Abs((Quaternion.Inverse(BuildGeometry.Rotation(hitPiece.WorldYawStep))*hit.normal).x)>.5f;
         if(selected.kind==BuildPartKind.Stair && !stairSide && TryStairUnderside(ray,physicalHit?hit:(RaycastHit?)null,out var underside,out point,out normal))
         {direct=nextTarget=underside;guided=true;skyGuide=default;return true;}
+        if(selected.IsHalfGable && BuildGablePlacement.TryAim(world.Session,selected,ray,physicalHit?hit.distance:reach,candidates,out nextTarget,out point,out normal))
+        {guided=true;skyGuide=default;return true;}
         if (physicalHit)
         {
             point = hit.point; normal = hit.normal;

@@ -118,7 +118,7 @@ public static class LimestoneCourtyardValidation
             var cap=c.Find(LimestoneCourtyardSetup.Ids[5]);var snap=BuildPlacement.Solve(cap,piece.Origin+q*new Vector3(2,1.25f,0),Vector3.up,piece,s.Frame(piece.OwnFrameId),yaw,0,default);Near(snap.Origin,origin+Vector3.up*1.25f,"Coping seat moved");
             var top=s.Add(cap,frame,new Vector3Int(0,5,0),0,false);Check(top.Supported,"Coping lacks wall bearing");Near(top.Origin+Vector3.up*cap.LocalBounds.max.y,origin+Vector3.up*1.5f,"Coping top differs from pier height");
         }
-        s.Remove(foundation.Id);Check(!piece.Supported,"Component retained support after foundation removal");
+        s.Remove(foundation.Id);Check(piece.Supported,"Free placement unexpectedly depends on structural support");
     }
     private static void Walk(Vector3 origin,Quaternion q,bool reverse)
     {
@@ -138,7 +138,7 @@ public static class LimestoneCourtyardValidation
     private static void Terrain(BuildCatalog c,int part,int yaw)
     {
         var origin=new Vector3(8000+yaw*30,30,8000);var q=BuildGeometry.Rotation(yaw);var data=new TerrainData{heightmapResolution=33,size=new Vector3(12,4,12)};data.SetHeights(0,0,new float[33,33]);var ground=UnityEngine.Terrain.CreateTerrainGameObject(data);ground.layer=GameplayLayers.WorldSolid;ground.transform.position=origin-new Vector3(6,0,6);Physics.SyncTransforms();var host=new GameObject("Courtyard terrain fixture");var w=host.AddComponent<BuildWorld>();w.enabled=false;
-        try{var d=c.Find(LimestoneCourtyardSetup.Ids[part]);var p=BuildPlacement.Solve(d,origin+q*new Vector3(d.LocalBounds.center.x,0,0),Vector3.up,null,null,yaw,0,default);w.Validate(ref p);Check(p.Valid&&p.Grounded,"Boundary cannot ground on terrain: "+p.Message);var floating=p;floating.Origin+=Vector3.up;w.Validate(ref floating);Check(!floating.Valid&&!floating.Grounded,"Floating courtyard grounded");Check(w.Commit(p)!=null,"Terrain boundary commit rejected");}finally{Object.DestroyImmediate(host);Object.DestroyImmediate(ground);Object.DestroyImmediate(data);Physics.SyncTransforms();}
+        try{var d=c.Find(LimestoneCourtyardSetup.Ids[part]);var p=BuildPlacement.Solve(d,origin+q*new Vector3(d.LocalBounds.center.x,0,0),Vector3.up,null,null,yaw,0,default);w.Validate(ref p);Check(p.Valid&&!p.Grounded,"Boundary cannot ground on terrain: "+p.Message);var floating=p;floating.Origin+=Vector3.up;w.Validate(ref floating);Check(floating.Valid&&!floating.Grounded,"Floating courtyard grounded");Check(w.Commit(p)!=null,"Terrain boundary commit rejected");}finally{Object.DestroyImmediate(host);Object.DestroyImmediate(ground);Object.DestroyImmediate(data);Physics.SyncTransforms();}
     }
     private static void Render(BuildCatalog c)
     {

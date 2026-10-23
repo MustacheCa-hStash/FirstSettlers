@@ -31,7 +31,7 @@ public static class BuildPlacement
 {
     public static BuildPreview Solve(BuildDefinition definition, Vector3 hit, Vector3 normal, BuildPieceRecord target,
         BuildGridFrame targetFrame, int worldHeading, int contextTurn, Vector3Int nudge, Vector3? viewerPosition = null,
-        bool preferTopAttachment = false, int? lockedWorldYaw = null)
+        bool preferTopAttachment = false, int? lockedWorldYaw = null, bool automaticGableSlope = true)
     {
         if(target==null && lockedWorldYaw.HasValue)worldHeading=lockedWorldYaw.Value;
         int baseYaw=target?.WorldYawStep??worldHeading;
@@ -39,6 +39,8 @@ public static class BuildPlacement
         if(lockedWorldYaw.HasValue)contextTurn=BuildGeometry.Turn(lockedWorldYaw.Value-baseYaw);
         if(BuildTopCourse.Solve(definition,target,nudge,contextTurn,out var coursePreview,lockedWorldYaw))return coursePreview;
         if(BuildWallBasePlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,out var basePreview,lockedWorldYaw))return basePreview;
+        if(BuildStaticLeafPlacement.Solve(definition,target,nudge,contextTurn,out var leafPreview,lockedWorldYaw))return leafPreview;
+        if(BuildBeamPlacement.Solve(definition,hit,normal,target,contextTurn,nudge,out var beamPreview,lockedWorldYaw))return beamPreview;
         if(definition.kind==BuildPartKind.Furniture || target?.Definition.kind==BuildPartKind.Furniture)
             return BuildFurnishing.Solve(definition,hit,normal,target,targetFrame,worldHeading,contextTurn,nudge,lockedWorldYaw);
         var preview = new BuildPreview { Definition = definition, Hint = "Ground grid" };
@@ -62,7 +64,7 @@ public static class BuildPlacement
             Vector3 localNormal = Quaternion.Inverse(BuildGeometry.Rotation(target.WorldYawStep)) * normal;
             if(BuildStairPlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,out var stairPreview,lockedWorldYaw))return stairPreview;
             preview.StairAimTarget=target.Id;
-            if(BuildGablePlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,out var gablePreview,lockedWorldYaw))return gablePreview;
+            if(BuildGablePlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,out var gablePreview,lockedWorldYaw,automaticGableSlope))return gablePreview;
             if(BuildSocketPlacement.Solve(definition,hit,normal,target,contextTurn,nudge,viewerPosition,preferTopAttachment,out var socketPreview,lockedWorldYaw))return socketPreview;
             Vector3 origin;
             int edge = ClosestEdge(bounds, point);

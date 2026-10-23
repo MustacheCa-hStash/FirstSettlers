@@ -1,0 +1,294 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: s11-open-window-wall
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.stone.s11-open-window-wall
+  displayName: S11 open window wall
+  kind: 0
+  wallPlacementMode: 0
+  sizeUnits: {x: 16, y: 12, z: 2}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: 0, y: 0, z: -0.25}
+  jointSockets:
+  - localPosition: {x: 0, y: 0, z: 0}
+    outward: {x: -1, y: 0, z: 0}
+    interior: 0
+  - localPosition: {x: 0.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 0.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 0.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 4, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 0
+  stackRiseUnits: 12
+  wallEndInsetUnits: 0
+  mesh: {fileID: 4300000, guid: 289218f616d12ad48bf93068a82808bf, type: 2}
+  preserveAuthoredMesh: 1
+  requiresFullBearing: 0
+  canGroundOnTerrain: 0
+  topCourseDepth: 0
+  wallBaseAttachment: 0
+  furnitureWallMounted: 0
+  relaxedWallMount: 0
+  furnitureSupportPoints: []
+  solidBoxes: []
+  wallOpenings:
+  - m_Center: {x: 2, y: 1.625, z: 0}
+    m_Extent: {x: 0.5, y: 0.375, z: 0.25}
+  gableSlope: 0
+  flipVariant: {fileID: 0}
+  gableRoofSeamMesh: {fileID: 0}
+  uvVariants: []
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes:
+  - mesh: {fileID: 4300000, guid: df9debfd019c8b24c87e75b6e8b87715, type: 2}
+    vertices:
+    - {x: 0, y: 0, z: -0.25}
+    - {x: 4, y: 0, z: -0.25}
+    - {x: 4, y: 1.25, z: -0.25}
+    - {x: 0, y: 1.25, z: -0.25}
+    - {x: 0, y: 0, z: 0.25}
+    - {x: 4, y: 0, z: 0.25}
+    - {x: 4, y: 1.25, z: 0.25}
+    - {x: 0, y: 1.25, z: 0.25}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0, y: 1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    - {x: -0.95448, y: -0.298275, z: 0}
+    - {x: -0.95448, y: 0.298275, z: 0}
+    - {x: 0, y: 0, z: -1}
+    - {x: -0.99227786, y: 0, z: 0.12403473}
+    - {x: 0, y: -0.9284767, z: 0.37139067}
+    - {x: 0.99227786, y: 0, z: 0.12403473}
+    - {x: 0, y: 0.9284767, z: 0.37139067}
+    bounds:
+      m_Center: {x: 2, y: 0.625, z: 0}
+      m_Extent: {x: 2, y: 0.625, z: 0.25}
+  - mesh: {fileID: 4300000, guid: 0188ae3754b3182439491cde926037ee, type: 2}
+    vertices:
+    - {x: 0, y: 1.25, z: -0.25}
+    - {x: 1.5, y: 1.25, z: -0.25}
+    - {x: 1.5, y: 2, z: -0.25}
+    - {x: 0, y: 2, z: -0.25}
+    - {x: 0, y: 1.25, z: 0.25}
+    - {x: 1.5, y: 1.25, z: 0.25}
+    - {x: 1.5, y: 2, z: 0.25}
+    - {x: 0, y: 2, z: 0.25}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0, y: 1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    - {x: -0.8944272, y: -0.4472136, z: 0}
+    - {x: -0.8944272, y: 0.4472136, z: 0}
+    - {x: 0, y: 0, z: -1}
+    - {x: -0.94868326, y: 0, z: 0.31622776}
+    - {x: 0, y: -0.8320503, z: 0.5547002}
+    - {x: 0.94868326, y: 0, z: 0.31622776}
+    - {x: 0, y: 0.8320503, z: 0.5547002}
+    bounds:
+      m_Center: {x: 0.75, y: 1.625, z: 0}
+      m_Extent: {x: 0.75, y: 0.375, z: 0.25}
+  - mesh: {fileID: 4300000, guid: aab6b71318e17f646a86fc6ee9dfca53, type: 2}
+    vertices:
+    - {x: 2.5, y: 1.25, z: -0.25}
+    - {x: 4, y: 1.25, z: -0.25}
+    - {x: 4, y: 2, z: -0.25}
+    - {x: 2.5, y: 2, z: -0.25}
+    - {x: 2.5, y: 1.25, z: 0.25}
+    - {x: 4, y: 1.25, z: 0.25}
+    - {x: 4, y: 2, z: 0.25}
+    - {x: 2.5, y: 2, z: 0.25}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0, y: 1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    - {x: -0.8944272, y: -0.4472136, z: 0}
+    - {x: -0.8944272, y: 0.4472136, z: 0}
+    - {x: 0, y: 0, z: -1}
+    - {x: -0.94868326, y: 0, z: 0.31622776}
+    - {x: 0, y: -0.8320503, z: 0.5547002}
+    - {x: 0.94868326, y: 0, z: 0.31622776}
+    - {x: 0, y: 0.8320503, z: 0.5547002}
+    bounds:
+      m_Center: {x: 3.25, y: 1.625, z: 0}
+      m_Extent: {x: 0.75, y: 0.375, z: 0.25}
+  - mesh: {fileID: 4300000, guid: f78672c109e57dd4e92be122a50d0bc1, type: 2}
+    vertices:
+    - {x: 0, y: 2, z: -0.25}
+    - {x: 1.25, y: 2, z: -0.25}
+    - {x: 1.25, y: 2.25, z: -0.25}
+    - {x: 0, y: 2.25, z: -0.25}
+    - {x: 0, y: 2, z: 0.25}
+    - {x: 1.25, y: 2, z: 0.25}
+    - {x: 1.25, y: 2.25, z: 0.25}
+    - {x: 0, y: 2.25, z: 0.25}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0, y: 1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    - {x: -0.9805807, y: -0.19611613, z: 0}
+    - {x: -0.9805807, y: 0.19611613, z: 0}
+    - {x: 0, y: 0, z: -1}
+    - {x: -0.9284767, y: 0, z: 0.37139067}
+    - {x: 0, y: -0.4472136, z: 0.8944272}
+    - {x: 0.9284767, y: 0, z: 0.37139067}
+    - {x: 0, y: 0.4472136, z: 0.8944272}
+    bounds:
+      m_Center: {x: 0.625, y: 2.125, z: 0}
+      m_Extent: {x: 0.625, y: 0.125, z: 0.25}
+  - mesh: {fileID: 4300000, guid: 2c8b0e4e7bd71714583f0037ae10b25c, type: 2}
+    vertices:
+    - {x: 2.75, y: 2, z: -0.25}
+    - {x: 4, y: 2, z: -0.25}
+    - {x: 4, y: 2.25, z: -0.25}
+    - {x: 2.75, y: 2.25, z: -0.25}
+    - {x: 2.75, y: 2, z: 0.25}
+    - {x: 4, y: 2, z: 0.25}
+    - {x: 4, y: 2.25, z: 0.25}
+    - {x: 2.75, y: 2.25, z: 0.25}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0, y: 1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    - {x: -0.9805807, y: -0.19611613, z: 0}
+    - {x: -0.9805807, y: 0.19611613, z: 0}
+    - {x: 0, y: 0, z: -1}
+    - {x: -0.9284767, y: 0, z: 0.37139067}
+    - {x: 0, y: -0.4472136, z: 0.8944272}
+    - {x: 0.9284767, y: 0, z: 0.37139067}
+    - {x: 0, y: 0.4472136, z: 0.8944272}
+    bounds:
+      m_Center: {x: 3.375, y: 2.125, z: 0}
+      m_Extent: {x: 0.625, y: 0.125, z: 0.25}
+  - mesh: {fileID: 4300000, guid: 3dd66eb93e435024995a199a730b0487, type: 2}
+    vertices:
+    - {x: 0, y: 2.25, z: -0.25}
+    - {x: 4, y: 2.25, z: -0.25}
+    - {x: 4, y: 3, z: -0.25}
+    - {x: 0, y: 3, z: -0.25}
+    - {x: 0, y: 2.25, z: 0.25}
+    - {x: 4, y: 2.25, z: 0.25}
+    - {x: 4, y: 3, z: 0.25}
+    - {x: 0, y: 3, z: 0.25}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0, y: 1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    - {x: -0.98287225, y: -0.18428855, z: 0}
+    - {x: -0.98287225, y: 0.18428855, z: 0}
+    - {x: 0, y: 0, z: -1}
+    - {x: -0.99227786, y: 0, z: 0.12403473}
+    - {x: 0, y: -0.8320503, z: 0.5547002}
+    - {x: 0.99227786, y: 0, z: 0.12403473}
+    - {x: 0, y: 0.8320503, z: 0.5547002}
+    bounds:
+      m_Center: {x: 2, y: 2.625, z: 0}
+      m_Extent: {x: 2, y: 0.375, z: 0.25}
+  - mesh: {fileID: 4300000, guid: fed49434ee84fb449b9e3984d31f65c0, type: 2}
+    vertices:
+    - {x: 1.25, y: 2, z: -0.25}
+    - {x: 2.75, y: 2, z: -0.25}
+    - {x: 2.75, y: 2.25, z: -0.25}
+    - {x: 1.25, y: 2.25, z: -0.25}
+    - {x: 1.25, y: 2, z: 0.25}
+    - {x: 2.75, y: 2, z: 0.25}
+    - {x: 2.75, y: 2.25, z: 0.25}
+    - {x: 1.25, y: 2.25, z: 0.25}
+    faceAxes:
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    edgeAxes:
+    - {x: 0, y: 1, z: 0}
+    - {x: 1, y: 0, z: 0}
+    - {x: -0.98639387, y: -0.16439898, z: 0}
+    - {x: -0.98639387, y: 0.16439898, z: 0}
+    - {x: 0, y: 0, z: -1}
+    - {x: -0.94868326, y: 0, z: 0.31622776}
+    - {x: 0, y: -0.4472136, z: 0.8944272}
+    - {x: 0.94868326, y: 0, z: 0.31622776}
+    - {x: 0, y: 0.4472136, z: 0.8944272}
+    bounds:
+      m_Center: {x: 2, y: 2.125, z: 0}
+      m_Extent: {x: 0.75, y: 0.125, z: 0.25}
+  roofAttachment: 0
+  material: {fileID: 2100000, guid: 55cf1888715f74d48827940b87993283, type: 2}
+  authoringPrefab: {fileID: 5177339674827867091, guid: d625bda0d1a42f043b6148262272d98a, type: 3}
+  flamePrefab: {fileID: 0}
+  maxHealth: 100

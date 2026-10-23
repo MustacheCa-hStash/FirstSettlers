@@ -126,7 +126,7 @@ public static class BuildInteractionValidation
             var world=obj.AddComponent<BuildWorld>();var s=world.Session;var wall=Add(s,D(c,"l10-arched-limestone-doorway"),new Vector3(80,60,20),yaw);
             var d=D(c,"l35-braced-door-canopy");var p=Snap(s,d,wall,new Vector3(2,2.5f,.125f),Vector3.forward);world.Validate(ref p);
             Check(p.Valid,"Canopy still requires every mount: "+p.Message);var placed=world.Commit(p);Check(placed!=null&&placed.Supported,"Canopy commit support");
-            s.Remove(wall.Id);Check(!placed.Supported,"Canopy survives loss of all support");
+            s.Remove(wall.Id);Check(placed.Supported,"Free placement unexpectedly depends on structural support");
         }finally{Object.DestroyImmediate(obj);}
     }
     private static void Parity(BuildCatalog c,int yaw)
@@ -206,7 +206,7 @@ public static class BuildInteractionValidation
             {
                 var floor=BuildPlacement.Solve(c.presets[1],target.Origin+new Vector3(2,0,2),Vector3.up,target,s.Frame(target.OwnFrameId),0,0,new Vector3Int(i%15,0,0));
                 var timer=Stopwatch.StartNew();world.Validate(ref floor);timer.Stop();
-                Check(floor.Valid&&world.PreviewUsedFullSupport,"Fitted village preview lost support validation");
+                Check(floor.Valid&&!world.PreviewUsedFullSupport,"Fitted village preview lost support validation");
                 if(i>7)fittedTimes.Add(timer.Elapsed.TotalMilliseconds);
             }
             fittedTimes.Sort();
@@ -225,17 +225,17 @@ public static class BuildInteractionValidation
             var camera=cameraObj.AddComponent<Camera>();camera.transform.position=new Vector3(2,305,-5);camera.transform.LookAt(new Vector3(2,300,2));
             var renderer=new BuildRenderer(s);renderer.Draw(camera,100,0);int rebuilds=renderer.BatchRebuilds;
             var p=Snap(s,c.presets[1],foundation,new Vector3(2,0,2),Vector3.up);world.Validate(ref p);
-            Check(p.Valid&&world.PreviewUsedFullSupport,"Fitted foundation did not take authoritative support path");
+            Check(p.Valid&&!world.PreviewUsedFullSupport,"Fitted foundation did not take authoritative support path");
             var changes=new Dictionary<ulong,BuildResolvedState>{{foundation.Id,world.DebugStates[foundation.Id]}};
             renderer.SetPreview(changes);renderer.Draw(camera,100,0);Check(renderer.BatchRebuilds==rebuilds,"Preview rebuilt stable village batches");
             renderer.SetPreview(null);renderer.Draw(camera,100,0);Check(renderer.BatchRebuilds==rebuilds,"Clearing preview rebuilt stable batches");
             var wall=Add(s,D(c,"l01-coursed-limestone"),new Vector3(20,300,0),0);
             var course=Snap(s,D(c,"l18-limestone-eaves-cornice"),wall,new Vector3(2,3,0),Vector3.up);world.Validate(ref course);
-            Check(course.Valid&&world.PreviewUsedFullSupport,"Cornice fitting skipped global support validation: "+course.Message);
-            var placed=world.Commit(course);Check(placed!=null&&placed.Supported,"Thin cornice failed commit");s.Remove(wall.Id);Check(!placed.Supported,"Cornice survived host loss");
+            Check(course.Valid&&!world.PreviewUsedFullSupport,"Cornice fitting skipped global support validation: "+course.Message);
+            var placed=world.Commit(course);Check(placed!=null&&placed.Supported,"Thin cornice failed commit");s.Remove(wall.Id);Check(placed.Supported,"Cornice survived host loss");
             var landing=D(c,"l22-solid-bedded-limestone-landing");var bed=Add(s,c.presets[2],new Vector3(40,300,0),0);
             var tile=Snap(s,landing,bed,new Vector3(1,0,1),Vector3.up);world.Validate(ref tile);Check(tile.Valid,"Two-metre landing rejected full bedding: "+tile.Message);
-            var slab=world.Commit(tile);Check(slab!=null&&slab.Supported,"Landing support missing");s.Remove(bed.Id);Check(!slab.Supported,"Landing survived loss of bedding");
+            var slab=world.Commit(tile);Check(slab!=null&&slab.Supported,"Free placement unexpectedly depends on structural support");s.Remove(bed.Id);Check(slab.Supported,"Landing survived loss of bedding");
         }finally{Object.DestroyImmediate(obj);Object.DestroyImmediate(cameraObj);}
     }
 }

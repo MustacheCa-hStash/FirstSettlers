@@ -54,6 +54,20 @@
 .inventory-divider { position: absolute; left: 32px; right: 32px; top: 542px; height: 3px; background-color: rgb(174,157,129); border-bottom-width: 1px; border-bottom-color: rgb(246,237,215); }
 .inventory-hotbar { position: absolute; left: 38px; top: 554px; height: 70px; flex-direction: row; }
 .inventory-hud { position: absolute; width: 756px; height: 88px; }
-.hud-offhand { position: absolute; left: 0; top: 0; width: 80px; height: 88px; padding: 10px 6px; -unity-slice-scale: 0.15px; }
-.hud-rail { position: absolute; left: 92px; top: 0; width: 664px; height: 88px; -unity-slice-scale: 0.15px; }
-.hud-hotbar { position: absolute; left: 18px; top: 10px; flex-direction: row; }
+.hud-offhand { position: absolute; left: 0; top: 10px; width: 68px; height: 68px; }
+.hud-rail { position: absolute; left: 112px; top: 0; width: 644px; height: 88px; }
+.hud-hotbar { position: absolute; left: 0; top: 10px; flex-direction: row; }
+.inventory-hud .inventory-slot {
+    margin-right: 4px; margin-bottom: 0; padding: 0;
+    background-color: rgba(0,0,0,0);
+    border-width: 1px; border-radius: 4px; border-color: rgba(213,201,170,0.65);
+}
+.inventory-hud .inventory-slot-surface {
+    background-image: none; background-color: rgba(30,36,38,0.30); border-radius: 3px;
+}
+.inventory-hud .inventory-slot.selected {
+    padding: 0; border-width: 1px; background-color: rgba(0,0,0,0); border-color: rgb(245,238,215);
+}
+.inventory-hud .inventory-slot.selected .inventory-slot-surface {
+    background-image: none; background-color: rgba(65,103,128,0.42);
+}

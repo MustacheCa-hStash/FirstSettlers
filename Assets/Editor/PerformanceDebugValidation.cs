@@ -16,7 +16,7 @@ public static class PerformanceDebugValidation
     }
     public static void RunBatch()
     {
-        try { Run(); DistantTreeGroundingValidation.Run(); TerrainErrorMeasurementValidation.Run(); WorldManagerInspectorValidation.Run(); EditorApplication.Exit(0); }
+        try { Run(); TerrainVisibilityValidation.Run(); DistantTreeGroundingValidation.Run(); TerrainErrorMeasurementValidation.Run(); WorldManagerInspectorValidation.Run(); EditorApplication.Exit(0); }
         catch (Exception error) { Debug.LogException(error); EditorApplication.Exit(1); }
     }
     private static void ValidateStatistics()

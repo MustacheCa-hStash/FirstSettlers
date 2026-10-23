@@ -84,7 +84,7 @@ public static class W21StairValidation
                 Check((offset-new Vector3(0,1.5f,2)).sqrMagnitude < .000001f,"Stair continuation is not 1.5 m up and 2 m forward.");
                 var landing = BuildPlacement.Solve(catalog.presets[1],second.Origin+BuildGeometry.Rotation(yaw)*new Vector3(.625f,1.5f,2),Vector3.up,second,world.Session.Frame(second.OwnFrameId),0,0,default);
                 var topFloor = world.Commit(landing); Check(topFloor != null && topFloor.Supported,"Landing beyond the high end failed.");
-                world.Remove(basePiece.Id); Check(!first.Supported && !second.Supported && !topFloor.Supported,"Detached stair chain retained support.");
+                world.Remove(basePiece.Id); Check(first.Supported && second.Supported && topFloor.Supported,"Free placement unexpectedly depends on structural support");
                 world.Session.Add(catalog.presets[2],frame,default,0,true); Check(first.Supported && second.Supported && topFloor.Supported,"Stair chain did not reconnect.");
                 var highFrame = world.Session.Frame(topFloor.OwnFrameId);
                 Vector3 sideAim = BuildGeometry.WorldPoint(highFrame,new Vector3Int(3,-1,0));
