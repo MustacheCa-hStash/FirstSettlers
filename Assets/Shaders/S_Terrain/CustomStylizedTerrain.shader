@@ -115,6 +115,9 @@ Shader "Custom/StylizedTerrainURP"
         _SnowTint("Snow Tint", Color) = (0.95, 0.97, 1.00, 1)
         [NoScaleOffset] _SnowNormal("Snow Normal", 2D) = "bump" {}
         _SnowNormalStrength("Snow Normal Strength", Range(0.0, 2.0)) = 0.35
+        _SnowRockSeparation("Snow / Rock Separation", Range(0, 1)) = 1
+        _SnowCoverageThreshold("Snow Coverage Threshold", Range(0.05, 0.95)) = 0.5
+        _SnowBoundaryWidth("Snow Boundary Width", Range(0.01, 1)) = 0.2
         _SnowTilingNear("Snow Tiling Near", Float) = 0.06
         _SnowTilingFar("Snow Tiling Far", Float) = 0.02
         _SnowTilingNearDistance("Snow Tiling Near Distance", Float) = 25.0
@@ -366,6 +369,9 @@ Shader "Custom/StylizedTerrainURP"
                 float _GrassGroundHeightFadeEnd;
 
                 float _SnowNormalStrength;
+                float _SnowRockSeparation;
+                float _SnowCoverageThreshold;
+                float _SnowBoundaryWidth;
                 float _SnowTilingNear;
                 float _SnowTilingFar;
                 float _SnowTilingNearDistance;
@@ -707,6 +713,24 @@ Shader "Custom/StylizedTerrainURP"
                 float totalWeight = dot(control0, float4(1, 1, 1, 1)) + dot(control1.rgb, float3(1, 1, 1));
                 control0 /= max(totalWeight, 0.00001);
                 control1 /= max(totalWeight, 0.00001);
+
+                // Resolve coverage after control-map filtering, before either albedo or normals.
+                // Only redistribute the snow/rock/cliff share: grass, litter support, sand,
+                // mud, riverbed and snow-on-grass dusting retain their existing weights.
+                float bareRock = control0.a + control1.g;
+                float snowRockTotal = bareRock + control1.r;
+                float snowShare = saturate(control1.r / max(snowRockTotal, 1e-6));
+                float threshold = clamp(_SnowCoverageThreshold, 0.05, 0.95);
+                // A derivative-sized minimum margin antialiases distant/subpixel edges.
+                // Clamp to the endpoints so pure rock and pure snow stay pure.
+                float halfWidth = min(max(max(_SnowBoundaryWidth, 0.01) * 0.5,
+                    fwidth(snowShare) * 0.5), min(threshold, 1.0 - threshold));
+                float resolvedShare = smoothstep(threshold - halfWidth, threshold + halfWidth, snowShare);
+                float resolvedSnow = snowRockTotal * lerp(snowShare, resolvedShare, saturate(_SnowRockSeparation));
+                float rockScale = (snowRockTotal - resolvedSnow) / max(bareRock, 1e-6);
+                control0.a *= rockScale;
+                control1.g *= rockScale;
+                control1.r = resolvedSnow;
 
                 half sandWeight = control0.r;
                 half mudWeight = control0.g;

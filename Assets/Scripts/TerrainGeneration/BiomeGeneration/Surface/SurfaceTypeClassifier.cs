@@ -21,7 +21,12 @@ public static class SurfaceTypeClassifier
         if (slope > TerrainSlopePolicy.GrassMaxDegrees)
             return SurfaceType.Rock;
 
-        if (slope > RockSlopeThreshold && (riverMask >= RiverBankThreshold ||
+        // Saturated exposed banks lose a continuous mud skin before dry sand does.
+        // Classify water first, so steep submerged banks remain riverbed.
+        if (riverMask >= RiverBankThreshold && slope > TerrainSlopePolicy.MudMaxDegrees)
+            return SurfaceType.Rock;
+
+        if (slope > RockSlopeThreshold && (
             height <= waterLevel + TerrainWaterSettings.ShoreBand || biome == BiomeType.Desert || biome == BiomeType.Beach))
             return SurfaceType.Rock;
 
@@ -33,9 +38,6 @@ public static class SurfaceTypeClassifier
 
         if (riverMask >= RiverBankThreshold)
         {
-            if (slope >= RockSlopeThreshold)
-                return SurfaceType.Rock;
-
             return SurfaceType.Mud;
         }
 

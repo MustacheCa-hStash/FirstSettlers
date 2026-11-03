@@ -978,7 +978,10 @@ public static class FarTerrainGenerator
                 case BiomeType.Forest:
                     return ClassifyForestGroundCover(moisture, slope, riverMask, x, z);
                 case BiomeType.Taiga:
-                    return Sample01(seed + 8310, x, z, 0.04f) > 0.48f
+                    float taigaPatch = Sample01(seed + 8310, x, z, 0.04f);
+                    if (taigaPatch < TerrainSlopePolicy.LooseLitterExposure(slope))
+                        return GroundCoverType.BareDirt;
+                    return taigaPatch > 0.48f
                         ? GroundCoverType.NeedleLitter
                         : GroundCoverType.DarkGrass;
                 case BiomeType.Tundra:

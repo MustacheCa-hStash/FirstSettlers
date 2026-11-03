@@ -58,7 +58,9 @@ public static class ForestFloorValidation
 
     private static void ValidateRockEdges()
     {
-        foreach (float slope in new[] { 44.9f, 45f, 47f, 49.9f, 50f })
+        foreach (float slope in new[] { TerrainSlopePolicy.ForestMaxDegrees - .1f,
+            TerrainSlopePolicy.ForestMaxDegrees, 42f, TerrainSlopePolicy.GrassMaxDegrees - .1f,
+            TerrainSlopePolicy.GrassMaxDegrees })
         {
             BiomeType biome = BiomeClassifier.Classify(1f, 0.8f, 0.5f, slope, 0, 0, 0.24f);
             Check(biome == BiomeType.Forest, "Wet rock-edge band became a full-density meadow.");
@@ -67,9 +69,9 @@ public static class ForestFloorValidation
             Check(ForestFloorPolicy.Evaluate(new float2(12, 37), 1937, 0.8f, slope, 0).x < 0.025f,
                 "Grass density did not taper at the rock edge.");
         }
-        Check(BiomeClassifier.Classify(1, 0.8f, 0.5f, 50.1f, 0, 0, 0.24f) == BiomeType.Rock,
+        Check(BiomeClassifier.Classify(1, 0.8f, 0.5f, TerrainSlopePolicy.GrassMaxDegrees + .1f, 0, 0, 0.24f) == BiomeType.Rock,
             "Rock boundary moved.");
-        Check(BiomeClassifier.Classify(1, 0.5f, 0.5f, 47f, 0, 0, 0.24f) == BiomeType.Grassland,
+        Check(BiomeClassifier.Classify(1, 0.5f, 0.5f, TerrainSlopePolicy.GrassMaxDegrees - 1f, 0, 0, 0.24f) == BiomeType.Grassland,
             "Genuine dry meadow slope changed.");
     }
 

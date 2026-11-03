@@ -130,12 +130,24 @@ try {
     foreach ($buildingName in 'LimestoneKitSetup','LimestoneKitValidation','LimestoneKitExtensionSetup','LimestoneKitExtensionValidation','TimberInfillKitSetup','TimberInfillKitValidation','LimestoneCourtyardSetup','LimestoneCourtyardValidation','LimestoneAccessSetup','LimestoneAccessValidation') {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
     }
-    foreach ($buildingName in 'WoodExtensionKitSetup','WoodExtensionKitValidation','StoneCompletionKitSetup','StoneCompletionKitValidation') {
+    foreach ($buildingName in 'WoodExtensionKitSetup','WoodExtensionKitValidation','StoneCompletionKitSetup','StoneCompletionKitValidation','MasonryExpansionKitSetup','MasonryExpansionKitValidation','SandstoneKitSetup','SandstoneKitValidation','SandstoneExtensionSetup','SandstoneExtensionValidation') {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
     }
     if (Test-Path -LiteralPath 'ArtReferences/StoneBuildKit/Completion/stone-completion-models.json') {
         New-Item -ItemType Directory -Path "$buildingProject/ArtReferences/StoneBuildKit/Completion" -Force | Out-Null
         Copy-Item -LiteralPath 'ArtReferences/StoneBuildKit/Completion/stone-completion-models.json' -Destination "$buildingProject/ArtReferences/StoneBuildKit/Completion" -Force
+    }
+    if (Test-Path -LiteralPath 'ArtReferences/MasonryExpansion/masonry-expansion-models.json') {
+        New-Item -ItemType Directory -Path "$buildingProject/ArtReferences/MasonryExpansion" -Force | Out-Null
+        Copy-Item -LiteralPath 'ArtReferences/MasonryExpansion/masonry-expansion-models.json' -Destination "$buildingProject/ArtReferences/MasonryExpansion" -Force
+    }
+    if (Test-Path -LiteralPath 'ArtReferences/SandstoneBuildKit/Models/sandstone-models.json') {
+        New-Item -ItemType Directory -Path "$buildingProject/ArtReferences/SandstoneBuildKit/Models" -Force | Out-Null
+        Copy-Item -LiteralPath 'ArtReferences/SandstoneBuildKit/Models/sandstone-models.json' -Destination "$buildingProject/ArtReferences/SandstoneBuildKit/Models" -Force
+    }
+    if (Test-Path -LiteralPath 'ArtReferences/SandstoneBuildKit/Extension/sandstone-extension-models.json') {
+        New-Item -ItemType Directory -Path "$buildingProject/ArtReferences/SandstoneBuildKit/Extension" -Force | Out-Null
+        Copy-Item -LiteralPath 'ArtReferences/SandstoneBuildKit/Extension/sandstone-extension-models.json' -Destination "$buildingProject/ArtReferences/SandstoneBuildKit/Extension" -Force
     }
     if (Test-Path -LiteralPath 'ArtReferences/IronAgeWood/Extension/wood-extension-models.json') {
         New-Item -ItemType Directory -Path "$buildingProject/ArtReferences/IronAgeWood/Extension" -Force | Out-Null

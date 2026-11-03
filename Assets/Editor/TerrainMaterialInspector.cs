@@ -18,7 +18,7 @@ public sealed class TerrainMaterialInspector : ShaderGUI
         new[] { "Moss", "_MossColor", "_MossAlbedo", "_MossNormal", "_MossAO", "_MossAOStrength", "_MossHeight", "_MossHeightStrength", "_MossTiling", "_MossNormalStrength", "_MossDetailContrast", "_MossSaturation", "_MossFillColor" },
         new[] { "Dense Moss", "_DenseMossColor", "_DenseMossAlbedo", "_DenseMossAO", "_DenseMossAOStrength", "_DenseMossHeight", "_DenseMossHeightStrength" },
         new[] { "Forest Floor Macro Variation", "_ForestFloorMacroScale", "_ForestFloorMacroStrength" },
-        new[] { "Snow", "_SnowColor", "_SnowTint", "_SnowAlbedo", "_SnowNormal", "_SnowNormalStrength", "_SnowTilingNear", "_SnowTilingFar", "_SnowTilingNearDistance", "_SnowTilingFarDistance", "_SnowTriplanarStart", "_SnowTriplanarEnd", "_SnowTriplanarSharpness" },
+        new[] { "Snow", "_SnowColor", "_SnowTint", "_SnowAlbedo", "_SnowNormal", "_SnowNormalStrength", "_SnowRockSeparation", "_SnowCoverageThreshold", "_SnowBoundaryWidth", "_SnowTilingNear", "_SnowTilingFar", "_SnowTilingNearDistance", "_SnowTilingFarDistance", "_SnowTriplanarStart", "_SnowTriplanarEnd", "_SnowTriplanarSharpness" },
         new[] { "Lighting and Distance Blending", "_AmbientStrength", "_DistanceBlendNoiseScale", "_DistanceBlendNoiseStrength" },
         new[] { "Preview and Runtime Inputs", "_ReceiveShadows", "_ControlMap0", "_ControlMap1", "_ControlMap2", "_TerrainHorizon0", "_TerrainHorizon1", "_TerrainHorizonUV", "_TerrainHorizonParams", "_TerrainHorizonTint", "_ExcavationAlbedo", "_ExcavationNormal", "_ExcavationTint", "_ExcavationTiling", "_ExcavationNormalStrength" }
     };
@@ -63,7 +63,7 @@ public sealed class TerrainMaterialInspector : ShaderGUI
             case "Dense Moss": return "Selected within dense generated moss patches. Shares Moss world tiling, broad fill, saturation and macro variation. Dense moss has no separate normal map.";
             case "Moss": return "Fine Detail Contrast blends from Broad Fill Color to sampled moss textures. Normal and height relief fade from 12 to 45 world units.";
             case "Forest Floor Macro Variation": return "Shared broad tone variation for ordinary/mixed litter and a weaker contribution on moss.";
-            case "Snow": return "Base Color and Texture Tint multiply. Near/far textures blend by camera distance; triplanar start/end use slope = 1 - abs(mesh normal Y), from 0 (flat) to 1 (vertical).";
+            case "Snow": return "Snow / Rock Separation resolves filtered coverage into distinct materials with a narrow antialiased margin; 0 restores continuous mixing. It leaves snow-on-grass dusting and other surface transitions intact. Base Color and Texture Tint multiply. Triplanar slope = 1 - abs(mesh normal Y).";
             case "Lighting and Distance Blending": return "Distance noise softens snow near/far tiling transitions and traditional-grass transitions. It does not control rock or matching blade-ground fades.";
             case "Preview and Runtime Inputs": return "World Manager overrides Receive Shadows on generated terrain. Control maps and horizon-shadow data are assigned per chunk; the base material's values are shown read-only for diagnostics.";
             default: return null;

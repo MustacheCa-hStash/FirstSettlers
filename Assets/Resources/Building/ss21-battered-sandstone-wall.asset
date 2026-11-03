@@ -1,0 +1,133 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a5f9de1364e04a4db4956fb441467, type: 3}
+  m_Name: ss21-battered-sandstone-wall
+  m_EditorClassIdentifier: Assembly-CSharp::BuildDefinition
+  contentId: build.stone.ss21-battered-sandstone-wall
+  displayName: SS21 battered sandstone terrace wall
+  kind: 0
+  wallPlacementMode: 0
+  sizeUnits: {x: 16, y: 6, z: 3}
+  minimumUnits: {x: 0, y: 0, z: 0}
+  boundsOffset: {x: 0, y: 0, z: -0.375}
+  jointSockets:
+  - localPosition: {x: 0, y: 0, z: 0}
+    outward: {x: -1, y: 0, z: 0}
+    interior: 0
+  - localPosition: {x: 0.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 0.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 0.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 1.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 2.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3.25, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3.5, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 3.75, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 1
+  - localPosition: {x: 4, y: 0, z: 0}
+    outward: {x: 1, y: 0, z: 0}
+    interior: 0
+  stackRiseUnits: 6
+  wallEndInsetUnits: 0
+  mesh: {fileID: 4300000, guid: 4813e47a2eb3c07469ba4b59382ea491, type: 2}
+  preserveAuthoredMesh: 1
+  requiresFullBearing: 0
+  canGroundOnTerrain: 1
+  topCourseDepth: 0
+  wallBaseAttachment: 0
+  furnitureWallMounted: 0
+  relaxedWallMount: 0
+  furnitureSupportPoints: []
+  solidBoxes: []
+  wallOpenings: []
+  gableSlope: 0
+  flipVariant: {fileID: 0}
+  gableRoofSeamMesh: {fileID: 0}
+  uvVariants:
+  - {fileID: 4300000, guid: 4813e47a2eb3c07469ba4b59382ea491, type: 2}
+  floorOpeningUvVariants: []
+  jointCoverVariants: []
+  jointCoverMaterial: {fileID: 0}
+  roofContinuationMesh: {fileID: 0}
+  floorOpeningMesh: {fileID: 0}
+  floorParts: []
+  collisionMesh: {fileID: 0}
+  occupiedVolumes:
+  - mesh: {fileID: 4300000, guid: 40e142be9dbc02142bb4f2b6e3198dbb, type: 2}
+    vertices:
+    - {x: 0, y: 0, z: -0.375}
+    - {x: 0, y: 0, z: 0.375}
+    - {x: 0, y: 1.5, z: 0.125}
+    - {x: 0, y: 1.5, z: -0.375}
+    - {x: 4, y: 0, z: -0.375}
+    - {x: 4, y: 0, z: 0.375}
+    - {x: 4, y: 1.5, z: 0.125}
+    - {x: 4, y: 1.5, z: -0.375}
+    faceAxes:
+    - {x: -1, y: 0, z: 0}
+    - {x: 0, y: -1, z: 0}
+    - {x: 0, y: 0.16439898, z: 0.98639387}
+    - {x: 0, y: 0, z: -1}
+    edgeAxes:
+    - {x: 0, y: -0.8944272, z: 0.4472136}
+    - {x: 0, y: 0.98639387, z: -0.16439898}
+    - {x: 0, y: 0, z: -1}
+    - {x: 0, y: -1, z: 0}
+    - {x: 0, y: 0.94868326, z: 0.31622776}
+    - {x: 0.98287225, y: 0, z: 0.18428855}
+    - {x: -1, y: 0, z: 0}
+    - {x: 0.93473, y: 0.35052374, z: -0.058420625}
+    - {x: 0.99227786, y: 0, z: -0.12403473}
+    - {x: 0.9363292, y: -0.35112345, z: 0}
+    bounds:
+      m_Center: {x: 2, y: 0.75, z: 0}
+      m_Extent: {x: 2, y: 0.75, z: 0.375}
+  roofAttachment: 0
+  material: {fileID: 2100000, guid: 2c167894c8792cc4a9ec88b22ad8a8e0, type: 2}
+  authoringPrefab: {fileID: 5861664889156251912, guid: c6d78ef884e4fe0409b55cd97bbe0354, type: 3}
+  flamePrefab: {fileID: 0}
+  maxHealth: 100

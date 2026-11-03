@@ -5,13 +5,21 @@ using Unity.Mathematics;
 public static class TerrainSlopePolicy
 {
     public const float ForestFadeStartDegrees = 25f;
-    public const float ForestMaxDegrees = 45f;
-    public const float GrassMaxDegrees = 50f;
-    public const float LooseSurfaceMaxDegrees = 40f;
-    public const float CliffDegrees = 70f;
-    public const float GroundCoverExposedDegrees = 35f;
+    // Rooted vegetation can hold soil beyond a loose granular surface's repose angle.
+    // Tree placement ends before the forest substrate, avoiding meadow rims at rock edges.
+    public const float ForestMaxDegrees = 40f;
+    public const float GrassMaxDegrees = 45f;
+    public const float LooseSurfaceMaxDegrees = 34f;
+    public const float MudMaxDegrees = 25f;
+    public const float CliffDegrees = 60f;
+    public const float GroundCoverExposedDegrees = 30f;
+    public const float LitterThinningStartDegrees = 28f;
+    public const float LitterThinningEndDegrees = 42f;
     public static float FromGradient(float gradient, float heightMultiplier)
         => math.degrees(math.atan(math.abs(gradient * heightMultiplier)));
+
+    public static float LooseLitterExposure(float slope) =>
+        math.smoothstep(LitterThinningStartDegrees, LitterThinningEndDegrees, slope);
 
     public static BiomeType ClassifyBiome(float height, float moisture, float temperature,
         float slope, float mountainMask, float riverMask, float waterLevel)
@@ -37,11 +45,11 @@ public static class TerrainSlopePolicy
                 math.saturate((mountainMask - 0.30f) / 0.15f)))
             return temperature < 0.30f ? BiomeType.Snow : BiomeType.Grassland;
         if (temperature < 0.30f && moisture > 0.65f)
-            return slope < ForestMaxDegrees ? BiomeType.Taiga : BiomeType.Grassland;
+            return BiomeType.Taiga;
         if (temperature > 0.65f && moisture < 0.35f)
             return slope <= LooseSurfaceMaxDegrees ? BiomeType.Desert : BiomeType.Rock;
         // Tree suitability ends at ForestMaxDegrees, but the forest floor continues to
-        // the rock boundary. Converting the 45-50 degree band to meadow creates grass rims.
+        // the rock boundary. Converting the 40-45 degree band to meadow creates grass rims.
         if (moisture > 0.65f) return BiomeType.Forest;
         return BiomeType.Grassland;
     }

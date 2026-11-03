@@ -34,20 +34,25 @@ public static class MountainSnow
 
         float3 normal = math.normalize(new float3(-gradient.x * heightMultiplier, 1f, -gradient.y * heightMultiplier));
         // A fixed climatic north (+Z) and prevailing wind toward +X; independent of time-of-day lighting.
-        float shade = normal.z * 0.35f;
-        float lee = normal.x * 0.18f;
+        float shade = normal.z * 0.55f;
+        float lee = normal.x * 0.28f;
         float shelter = math.clamp((neighborMean - height) * heightMultiplier / SampleRadius, -1f, 1f);
         float2 offset = new float2(seed % 10007, seed % 7919);
         float broadNoise = noise.cnoise(position / 180f + offset);
         float edgeNoise = noise.cnoise(position / 24f + offset + 31f);
-        float line = Snowline(temperature, moisture) - shade - lee - shelter * 0.55f + broadNoise * 0.4f;
-        float altitude = math.smoothstep(line - 0.55f, line + 1.9f, height);
-        // Edge breakup disappears in the upper snowfields.
-        altitude = math.saturate(altitude + edgeNoise * 0.22f * (4f * altitude * (1f - altitude)));
-        // Artistically generous retention on the vertically exaggerated mountains: taper from 55 to 85 degrees.
-        float retention = math.sqrt(math.smoothstep(0.0872f, 0.5736f, normal.y));
-        float exposed = 1f - math.saturate(-shelter) * 0.16f;
-        return new float2(math.saturate(altitude * retention * exposed), influence);
+        // Perturb the melt boundary in height units, rather than mottling the entire snowfield.
+        float line = Snowline(temperature, moisture) - shade - lee - shelter * 0.75f
+            + broadNoise * 0.4f + edgeNoise * 0.28f;
+        float altitude = math.smoothstep(line - 0.35f, line + 1.35f, height);
+        // Broad snowfields on benches, exposed rock on headwalls. Concave terrain can retain
+        // snow on steeper slopes; convex crests shed it. Reuse the four existing height samples.
+        // Nominal taper: 40 to 75 degrees (still generous for the exaggerated terrain).
+        float retention = math.smoothstep(0.2588f, 0.7660f, normal.y + shelter * 0.12f);
+        float exposed = 1f - math.saturate(-shelter) * 0.3f;
+        // Resolve the accumulation into snow / rock patches with a narrow soft margin,
+        // instead of a persistent gray mixture across the whole mountainside.
+        float coverage = math.smoothstep(0.12f, 0.82f, altitude * retention * exposed);
+        return new float2(coverage, influence);
     }
 
     public static float2[,] Generate(float[,] heights, float[,] masks, float[,] rivers,

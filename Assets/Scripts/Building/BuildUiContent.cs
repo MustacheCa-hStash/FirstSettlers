@@ -5,7 +5,7 @@ public static class BuildUiContent
 {
     public static readonly string[] Categories = { "All pieces", "Foundations", "Walls", "Floors", "Posts", "Stairs", "Roofs", "Furniture", "Lighting" };
     public static string ThumbnailKey(BuildDefinition d) => d.contentId.Replace('.', '_');
-    public static int Category(BuildDefinition d) => d.flamePrefab!=null ? 8 : d.IsHalfGable || d.contentId=="build.wood.l35-braced-door-canopy" ? 6 : d.kind switch
+    public static int Category(BuildDefinition d) => d.flamePrefab!=null ? 8 : d.IsHalfGable || d.contentId is "build.wood.l35-braced-door-canopy" or "build.stone.stone-slab-roof" or "build.stone.limestone-slab-roof" ? 6 : d.kind switch
     { BuildPartKind.Foundation=>1, BuildPartKind.Wall=>2, BuildPartKind.Floor=>3, BuildPartKind.Corner or BuildPartKind.Beam=>4, BuildPartKind.Stair or BuildPartKind.Handrail=>5, BuildPartKind.Roof=>6, BuildPartKind.Furniture=>7, _=>0 };
     public static string Name(BuildDefinition d) => d.contentId switch
     {
@@ -52,7 +52,25 @@ public static class BuildUiContent
         "build.wood.s12-static-yard-gate"=>67,"build.stone.s15-stone-gable-rising" or "build.stone.s15-stone-gable-falling"=>68,
         "build.wood.s16-timber-wall-plate"=>69,"build.stone.s17-threshold-steps"=>70,"build.stone.s18-half-storey-stair"=>71,
         "build.stone.s19-full-storey-stair"=>72,"build.stone.s20-stone-landing"=>73,"build.stone.s21-stepped-stone-guard"=>74,
-        "build.stone.s23-rubble-retaining-wall"=>75,"build.stone.s24-rubble-buttress"=>76, _=>25
+        "build.stone.s23-rubble-retaining-wall"=>75,"build.stone.s24-rubble-buttress"=>76,
+        "build.stone.stone-square-infill"=>77,"build.stone.limestone-square-infill"=>78,
+        "build.stone.stone-half-floor"=>79,"build.stone.limestone-half-floor"=>80,
+        "build.stone.stone-slab-roof"=>81,"build.stone.limestone-slab-roof"=>82,
+        "build.stone.stone-arched-doorway"=>83,"build.stone.stone-arched-window"=>84,
+        "build.stone.stone-open-arch"=>85,"build.stone.limestone-open-arch"=>86,"build.wood.braced-timber-frame"=>87,
+        "build.stone.ss01-bedded-sandstone"=>88,"build.stone.ss02-dressed-sandstone"=>89,
+        "build.stone.ss03-narrow-sandstone"=>90,"build.stone.ss04-sandstone-pier"=>91,
+        "build.stone.ss05-sandstone-paving"=>92,"build.stone.ss06-sandstone-footing"=>93,
+        "build.stone.ss07-sandstone-doorway"=>94,"build.stone.ss08-splayed-sandstone-window"=>95,
+        "build.stone.ss09-sandstone-niche"=>96,"build.stone.ss10-slab-partition"=>97,
+        "build.stone.ss11-sandstone-gable-rising" or "build.stone.ss11-sandstone-gable-falling"=>98,
+        "build.stone.ss13-low-sandstone-wall"=>99,"build.stone.ss13-short-sandstone-wall"=>100,
+        "build.stone.ss15-alternating-sandstone-coping"=>101,"build.stone.ss15-short-sandstone-coping"=>102,
+        "build.stone.ss15-sandstone-coping-turn"=>103,"build.stone.ss16-sandstone-gatepost"=>104,
+        "build.furniture.ss17-sandstone-slab-bench"=>105,"build.furniture.ss18-carved-sandstone-trough"=>106,
+        "build.stone.ss19-sandstone-threshold-steps"=>107,"build.stone.ss20-half-storey-sandstone-stair"=>108,
+        "build.stone.ss21-battered-sandstone-wall"=>109,"build.furniture.ss22-open-sandstone-drain"=>110,
+        "build.furniture.ss23-sandstone-corbel-shelf"=>111,"build.furniture.ss24-sandstone-hearth-curb"=>112, _=>25
     };
     public static string Dimensions(BuildDefinition d)
     { Vector3 s=d.LocalBounds.size; return $"{s.x:0.##} × {s.y:0.##} × {s.z:0.##} m"; }
@@ -135,6 +153,38 @@ public static class BuildUiContent
         "build.stone.s21-stepped-stone-guard"=>"A solid stepped side guard for a half flight. Aim at either stair edge; use two segments per side of a full flight.",
         "build.stone.s23-rubble-retaining-wall"=>"A 4 m rubble retaining wall, 1.5 m tall, with a battered face and flat rear. Does not excavate terrain.",
         "build.stone.s24-rubble-buttress"=>"A 3 m stepped rubble buttress with a flat rear and 1 m base projection. Aim at a wall face to align it.",
+        "build.stone.stone-square-infill" or "build.stone.limestone-square-infill"=>"A 2 m square masonry infill matching the half-gable rise. Fill wide gable ends, lofts and short upper bays.",
+        "build.stone.stone-half-floor" or "build.stone.limestone-half-floor"=>"A 4 by 2 m masonry floor panel, 0.25 m deep below its top. Pair for a full bay or leave space for stairs.",
+        "build.stone.stone-slab-roof" or "build.stone.limestone-slab-roof"=>"A walkable 4 by 4 m flat masonry roof deck, 0.25 m deep below its top. Places like a floor and tiles without a slope.",
+        "build.stone.stone-arched-doorway"=>"A full stone wall with a 1.5 m-wide arched passage and radial stone ring. Fixed empty opening; no door leaf.",
+        "build.stone.stone-arched-window"=>"A full stone wall with a 1.5 m-wide arched window, sill at 1 m. Fixed empty opening; no shutters or glass.",
+        "build.stone.stone-open-arch" or "build.stone.limestone-open-arch"=>"A standard 3 m high masonry wall with a 3.5 m wide arch opening, 2.25 m spring height and 2.75 m inner crown. Solid stone fills above the curve to the level wall top.",
+        "build.wood.braced-timber-frame"=>"A broad open timber frame with two diagonal knee braces connecting the posts and header. Clear central passage; no moving parts.",
+        "build.stone.ss01-bedded-sandstone"=>"Warm orange sandstone in rough bedded courses. A 4 m span, 3 m tall and 0.5 m thick.",
+        "build.stone.ss02-dressed-sandstone"=>"Dressed apricot sandstone blocks with restrained tooling. A 4 m span and 3 m storey.",
+        "build.stone.ss03-narrow-sandstone"=>"A 2 m sandstone wall with full-size dressed blocks. Matches the 3 m storey.",
+        "build.stone.ss04-sandstone-pier"=>"A plain square sandstone pier, 0.5 m wide and 3 m tall.",
+        "build.stone.ss05-sandstone-paving"=>"Broad cleft sandstone paving. A 4 m square panel, 0.25 m deep below its top.",
+        "build.stone.ss06-sandstone-footing"=>"A 4 by 1 m sandstone footing strip, 0.5 m deep below its top datum.",
+        "build.stone.ss07-sandstone-doorway"=>"Sandstone doorway with a single lintel and a clear 1.25 by 2.25 m opening. No door leaf.",
+        "build.stone.ss08-splayed-sandstone-window"=>"An unglazed window: 0.5 by 1 m outside, splayed to 1 m wide inside. Sill at 1.25 m.",
+        "build.stone.ss09-sandstone-niche"=>"An interior storage recess, 1 by 0.75 m and 0.25 m deep, with a solid 0.25 m backing.",
+        "build.stone.ss10-slab-partition"=>"Two broad upright sandstone slabs form a 2 m wide, 1.5 m high indoor divider.",
+        "build.stone.ss11-sandstone-gable-rising" or "build.stone.ss11-sandstone-gable-falling"=>"A triangular sandstone half-gable with 2 m run and rise. Flip with R for the other slope.",
+        "build.stone.ss13-low-sandstone-wall"=>"A 4 m sandstone court wall, 1.25 m tall. Add SS15 coping for a 1.5 m top.",
+        "build.stone.ss13-short-sandstone-wall"=>"A 2 m sandstone court wall for short returns. Matches the 1.25 m low wall.",
+        "build.stone.ss15-alternating-sandstone-coping"=>"A 4 m coping with alternating taller and flatter caps. Adds 0.25 m above a wall.",
+        "build.stone.ss15-short-sandstone-coping"=>"A 2 m alternating coping for short court walls. Adds 0.25 m above a wall.",
+        "build.stone.ss15-sandstone-coping-turn"=>"A plain 90-degree coping return with 0.5 m-wide arms. Join straight runs at its finished ends.",
+        "build.stone.ss16-sandstone-gatepost"=>"A broad 1.5 m sandstone gatepost with a plain chamfered cap. Gate leaf separate.",
+        "build.furniture.ss17-sandstone-slab-bench"=>"A broad stone seat on two low feet. Open space remains between the supports.",
+        "build.furniture.ss18-carved-sandstone-trough"=>"A hollow stone trough with a 1.75 by 0.5 m basin, 0.25 m deep.",
+        "build.stone.ss19-sandstone-threshold-steps"=>"Two solid sandstone steps: 1.5 m wide, 0.5 m rise and 1 m run.",
+        "build.stone.ss20-half-storey-sandstone-stair"=>"Eight solid sandstone steps: 1.5 m wide, 1.5 m rise and 2 m run. Continue from either end.",
+        "build.stone.ss21-battered-sandstone-wall"=>"A 4 m terrace wall with a battered face, 0.75 m base and 0.5 m top. Does not alter terrain.",
+        "build.furniture.ss22-open-sandstone-drain"=>"A 2 m open channel with a 0.25 m clear width and 0.125 m depth. Both ends stay open.",
+        "build.furniture.ss23-sandstone-corbel-shelf"=>"A built-in stone shelf projecting 0.5 m. Aim at a solid masonry face to seat its corbel tails.",
+        "build.furniture.ss24-sandstone-hearth-curb"=>"A square stone curb around a clear 1 m centre. Fill or furnish the centre separately.",
         _=>"Choose this component, then aim at a surface to place it."
     };
 }

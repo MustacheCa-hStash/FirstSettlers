@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
 
-/// <summary>Stone catalog and passive HUD. Hardware input remains in LocalPlayerInput.</summary>
+/// <summary>Building catalog. Placement keeps the screen clear; hardware input remains in LocalPlayerInput.</summary>
 public sealed class BuildMenuView : IDisposable
 {
     private sealed class Entry
@@ -140,7 +140,7 @@ public sealed class BuildMenuView : IDisposable
     public void SetState(bool active,bool choosing)
     {
         visible=active&&choosing; menu.style.display=visible?DisplayStyle.Flex:DisplayStyle.None;
-        hud.style.display=active&&!choosing?DisplayStyle.Flex:DisplayStyle.None;
+        hud.style.display=DisplayStyle.None;
     }
     public void Show(string title,string message,bool valid,bool warning=false)
     {

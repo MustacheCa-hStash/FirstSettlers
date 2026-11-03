@@ -245,6 +245,9 @@ Material:
     - _SandNormalStrength: 0.3
     - _SandTiling: 0.35
     - _SnowNormalStrength: 0.35
+    - _SnowRockSeparation: 1
+    - _SnowCoverageThreshold: 0.5
+    - _SnowBoundaryWidth: 0.2
     - _SnowTilingFar: 0.1
     - _SnowTilingFarDistance: 200
     - _SnowTilingNear: 0.4

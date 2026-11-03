@@ -41,6 +41,20 @@ public static class MountainSnowValidation
         Require(Coverage(12f, 0.9f) > 0.95f, "Hot climates cannot snow at high elevations.");
         Require(Coverage(9f, gradient: new float2(0.2f, 0f)) < 0.01f, "Vertical faces retain snow.");
         Require(Coverage(3f, shelter: 0.02f) > Coverage(3f, shelter: -0.02f), "Gullies should retain more snow than exposed ridges.");
+        float slope30 = math.tan(math.radians(30f)) / 200f;
+        float slope60 = math.tan(math.radians(60f)) / 200f;
+        float slope76 = math.tan(math.radians(76f)) / 200f;
+        Require(Coverage(3f, gradient: new float2(0f, -slope30)) > Coverage(3f, gradient: new float2(0f, slope30)),
+            "Climatic north-facing slopes should retain more snow than south-facing slopes.");
+        Require(Coverage(3f, gradient: new float2(-slope30, 0f)) > Coverage(3f, gradient: new float2(slope30, 0f)),
+            "Leeward slopes should retain more snow than windward slopes.");
+        Require(Coverage(9f, gradient: new float2(slope30, 0f)) > .95f &&
+            Coverage(9f, gradient: new float2(slope60, 0f)) < .7f &&
+            Coverage(9f, gradient: new float2(slope76, 0f)) == 0f,
+            "High snowfields should stay continuous on benches while steep headwalls expose rock.");
+        Require(Coverage(9f, gradient: new float2(slope60, 0f), shelter: .02f) >
+            Coverage(9f, gradient: new float2(slope60, 0f), shelter: -.02f) + .2f,
+            "Sheltered gullies should retain distinctly more snow than convex ridges on the same slope.");
         Require(Coverage(0.24f) == 0f && Coverage(6f, river: 1f) == 0f, "Snow covers protected water.");
         Require(MountainSnow.Evaluate(float2.zero, 42, 0.6f, 0.4f, 0f, 0.24f, 0.1f, 0.2f,
             float2.zero, 0.6f, 200f).y == 0f, "Mountain masks overlapping lowland tundra must preserve dusting.");
@@ -61,6 +75,9 @@ public static class MountainSnowValidation
         Color32 lowA = new Color32(0, 0, 191, 0), lowB = new Color32(64, 0, 0, 0);
         MountainSnow.Apply(ref lowA, ref lowB, float2.zero);
         Require(lowA.b == 191 && lowB.r == 64, "Lowland tundra dusting changed.");
+        foreach (float gamma in new[] { .35f, .633f, .72f, 1f, 1.25f })
+            Require(MountainSnow.RenderCoverage(0f, gamma) == 0f && MountainSnow.RenderCoverage(1f, gamma) == 1f,
+                "Render gamma should preserve bare rock and solid snow endpoints.");
     }
 
     private static void ValidateTerrain(int seed)

@@ -37,7 +37,9 @@ public static class ForestFloorPolicy
         density *= moistureSuitability * slopeSuitability * riverSuitability;
 
         float damp = math.saturate(moisture * 0.65f + canopyIntent * 0.35f);
-        float soil = math.smoothstep(24f, TerrainSlopePolicy.GroundCoverExposedDegrees + 10f, slope) * 0.32f +
+        // Thin the loose organic mat into mineral soil before the bedrock boundary.
+        // The litter substrate stays underneath; removing it would expose meadow-green rims.
+        float soil = TerrainSlopePolicy.LooseLitterExposure(slope) * 0.65f +
             (1f - math.smoothstep(0.2f, 0.4f, moisture)) * 0.16f +
             math.smoothstep(0.48f, 0.76f, riverMask) * 0.6f;
         // Independent, warped moss colonies have readable carpet cores instead of a green wash.

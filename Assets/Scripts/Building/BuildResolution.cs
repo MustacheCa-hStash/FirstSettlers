@@ -166,6 +166,7 @@ public sealed class BuildResolution : IDisposable
             else boxes.Add(d.LocalBounds);
             if(core!=BuildTrimUV.Core(p) && d.kind==BuildPartKind.Wall)for(int i=0;i<boxes.Count;i++)boxes[i]=Box(boxes[i].min,new Vector3(boxes[i].max.x,Mathf.Min(boxes[i].max.y,core.bounds.max.y),boxes[i].max.z));
         }
+        if(volumes.Length==0)core=BuildCorbelPocket.Apply(p,pieces,core,boxes,meshes);
         var headers=new List<Bounds>();
         if(!d.preserveAuthoredMesh && d.kind is BuildPartKind.Wall or BuildPartKind.Corner or BuildPartKind.Roof)
         {

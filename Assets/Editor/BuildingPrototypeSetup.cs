@@ -74,6 +74,9 @@ public static class BuildingPrototypeSetup
         if(FurnitureKitSetup.Available)presets.AddRange(FurnitureKitSetup.Create());
         if(WoodExtensionKitSetup.Available)presets.AddRange(WoodExtensionKitSetup.Create());
         if(StoneCompletionKitSetup.Available)presets.AddRange(StoneCompletionKitSetup.Create());
+        if(MasonryExpansionKitSetup.Available)presets.AddRange(MasonryExpansionKitSetup.Create());
+        if(SandstoneKitSetup.Available)presets.AddRange(SandstoneKitSetup.Create());
+        if(SandstoneExtensionSetup.Available)presets.AddRange(SandstoneExtensionSetup.Create());
         var torch=AssetDatabase.LoadAssetAtPath<BuildDefinition>(Folder+"/wall-torch.asset");
         if(torch!=null)presets.Add(torch);
         catalog.presets = presets.ToArray(); catalog.validPreview = valid; catalog.invalidPreview = invalid;

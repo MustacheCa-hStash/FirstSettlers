@@ -64,6 +64,9 @@ internal static class TerrainMaterialInspectorRules
             case "_NoiseStrength": text = "Grass Color Noise Contrast"; break;
             case "_BlendSharpness": text = "Grass Color Noise Bias"; tip = "Exponent applied to grass color noise; higher values favor darker palette colors. Independent of Surface Blend Sharpness."; break;
             case "_SurfaceBlendSharpness": tip = "Exponent applied to generated surface weights. Higher values sharpen sand/mud/grass/rock/snow/cliff/riverbed transitions."; break;
+            case "_SnowRockSeparation": tip = "0 restores continuous snow/rock mixing; 1 gives distinct snowfields. Only the combined snow/rock/cliff share is redistributed, for both color and normals."; break;
+            case "_SnowCoverageThreshold": tip = "Snow's share of snow + rock + cliff needed at the boundary center. Higher values expose more rock. Does not change generation maps."; break;
+            case "_SnowBoundaryWidth": tip = "Coverage range around the threshold that blends snow with rock/cliff. Smaller values give firmer edges. A screen-space minimum prevents subpixel aliasing."; break;
             case "_LeafLitterTiling": text = "Litter / Mixed Floor World Tiling"; break;
             case "_LeafLitterNormalStrength": text = "Litter / Mixed Floor Normal Strength"; break;
             case "_MossTiling": text = "Moss / Dense Moss World Tiling"; break;

@@ -1,5 +1,39 @@
 # FirstSettlers Work Notes
 
+## October 30: sandstone court, access and household pieces
+
+Added SS13 and SS15-SS24, with short wall/coping lengths and a coping turn:
+fourteen catalog choices, editable Blender source, matching orange baked maps,
+physical collision and icons. The eleven requested models total 400 triangles;
+all variants total 468. Trough, drain and hearth stay hollow; stairs use smooth
+walking collision. SS23 now fits its embedded tails into compatible masonry,
+with reversible host mesh/collision and correct overlapping-shelf removal.
+The isolated run passed 6,152 checks, 112 stair traversals, 32 pocket cases and
+all SS01-SS11/stone/wood/interaction regressions. See the
+[guide, source and native previews](Documentation/SANDSTONE_COURT_AND_ACCESS.md).
+Restart Play mode to load the catalog additions.
+
+## October 29: SS01-SS11 sandstone models
+
+Installed eleven sandstone choices with editable Blender source, twelve FBX
+representations, one shared orange colour/AO and normal pair, prefabs, collision
+and actual-mesh icons. The selectable set totals 180 triangles: solids use 12,
+the doorway 28, splayed window 32, blind niche 28 and half-gable 8. SS11 flips
+between two slopes with R. Compilation, 2,829 sandstone checks and existing
+stone/wood/interaction regressions passed, including sixteen doorway walks.
+See the [implementation and previews](Documentation/SANDSTONE_SS01_SS11.md).
+Restart Play mode to load the new entries.
+
+## October 29: sandstone concept catalog
+
+Added the [SS01-SS24 sandstone catalog](ArtReferences/SandstoneBuildKit/README.md):
+four component sheets and a homestead assembly study, with warm apricot-orange
+stone, core masonry, splayed windows, blind storage niches, slab partitions and
+boundaries, rough coping, a bench, trough, drain, corbel shelf and hearth curb.
+The guide records Iron Age material references, the colour palette, dimensions
+and future fitting requirements. These are design references; runtime sandstone
+assets and recipes are not implemented.
+
 ## October 22: building foliage and free placement
 
 Building-owned exclusions now clear grass and small vegetation through bounded

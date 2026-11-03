@@ -14,9 +14,9 @@ public static class TerrainSlopeValidation
         Check(Math.Abs(TerrainSlopePolicy.FromGradient(0.01f, 100f) - 45f) < 0.001f, "Height multiplier propagation");
         Check(TerrainSlopePolicy.FromGradient(0f, 200f) == 0f, "Flat terrain");
         Check(B(20f, 0f, 0.8f) == BiomeType.Forest, "Gentle wet forest");
-        Check(B(45f, 0f, 0.8f) == BiomeType.Forest, "Tree cutoff retains forest floor");
-        Check(B(49.9f, 0f, 0.8f) == BiomeType.Forest, "Rock edge retains forest floor");
-        Check(B(50.1f, 0f, 0.8f) == BiomeType.Rock, "Forest floor rock boundary");
+        Check(B(TerrainSlopePolicy.ForestMaxDegrees, 0f, 0.8f) == BiomeType.Forest, "Tree cutoff retains forest floor");
+        Check(B(TerrainSlopePolicy.GrassMaxDegrees - .1f, 0f, 0.8f) == BiomeType.Forest, "Rock edge retains forest floor");
+        Check(B(TerrainSlopePolicy.GrassMaxDegrees + .1f, 0f, 0.8f) == BiomeType.Rock, "Forest floor rock boundary");
         Check(B(TerrainSlopePolicy.GrassMaxDegrees, 0.8f) == BiomeType.Grassland, "Mountain meadow limit");
         Check(B(TerrainSlopePolicy.GrassMaxDegrees + 0.1f, 0.8f) == BiomeType.Rock, "Mountain meadow exclusion");
         Check(B(20f, 0.8f, 0.5f, 0.2f) == BiomeType.Snow, "Cold mountain protection");
