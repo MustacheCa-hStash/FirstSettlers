@@ -1,0 +1,31 @@
+67_ForestRidge, seed 67, world XZ (-211.09, 704.97): height 21.183m, base 28.255m, erosion delta 15.049m; max 0.3m edge rise 14.632m, second difference 22.328m, gentle <15deg 72.1%.
+  LOD step 1: 0 vertical/reversed triangles; projected area 1474.873m2.
+  LOD step 2: 126 vertical/reversed triangles; projected area 1474.643m2.
+  LOD step 4: 186 vertical/reversed triangles; projected area 1474.537m2.
+  LOD step 8: 210 vertical/reversed triangles; projected area 1474.559m2.
+  LOD step 16: 210 vertical/reversed triangles; projected area 1474.555m2.
+67_LakesideCollider, seed 67, world XZ (-110.05, 780.91): height 21.085m, base 28.993m, erosion delta 14.548m; max 0.3m edge rise 11.762m, second difference 13.630m, gentle <15deg 50.6%.
+  LOD step 1: 0 vertical/reversed triangles; projected area 1474.873m2.
+  LOD step 2: 126 vertical/reversed triangles; projected area 1474.643m2.
+  LOD step 4: 186 vertical/reversed triangles; projected area 1474.537m2.
+  LOD step 8: 210 vertical/reversed triangles; projected area 1474.559m2.
+  LOD step 16: 210 vertical/reversed triangles; projected area 1474.555m2.
+67_HighUpland, seed 67, world XZ (286.72, 1369.66): height 216.892m, base 229.502m, erosion delta 5.160m; max 0.3m edge rise 15.381m, second difference 19.143m, gentle <15deg 0.9%.
+  LOD step 1: 0 vertical/reversed triangles; projected area 1474.873m2.
+  LOD step 2: 126 vertical/reversed triangles; projected area 1474.643m2.
+  LOD step 4: 186 vertical/reversed triangles; projected area 1474.537m2.
+  LOD step 8: 210 vertical/reversed triangles; projected area 1474.559m2.
+  LOD step 16: 210 vertical/reversed triangles; projected area 1474.555m2.
+68_GrasslandSplit, seed 68, world XZ (-261.91, 504.08): height 19.064m, base 57.891m, erosion delta -17.470m; max 0.3m edge rise 8.734m, second difference 11.380m, gentle <15deg 53.7%.
+  LOD step 1: 0 vertical/reversed triangles; projected area 1474.873m2.
+  LOD step 2: 126 vertical/reversed triangles; projected area 1474.643m2.
+  LOD step 4: 186 vertical/reversed triangles; projected area 1474.537m2.
+  LOD step 8: 210 vertical/reversed triangles; projected area 1474.559m2.
+  LOD step 16: 210 vertical/reversed triangles; projected area 1474.555m2.
+66_Control, seed 66, world XZ (286.72, 1369.66): height 7.409m, base 6.193m, erosion delta -23.018m; max 0.3m edge rise 0.079m, second difference 0.015m, gentle <15deg 100.0%.
+  LOD step 1: 0 vertical/reversed triangles; projected area 1474.873m2.
+  LOD step 2: 126 vertical/reversed triangles; projected area 1474.643m2.
+  LOD step 4: 186 vertical/reversed triangles; projected area 1474.537m2.
+  LOD step 8: 210 vertical/reversed triangles; projected area 1474.559m2.
+  LOD step 16: 210 vertical/reversed triangles; projected area 1474.555m2.
+TERRAIN RIDGES BASELINE: 330295 checks.

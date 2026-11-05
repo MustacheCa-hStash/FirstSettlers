@@ -78,14 +78,15 @@ public static class DistantTreePlacement
                 float dz = (Height(x, z1).Height - Height(x, z0).Height) / Mathf.Max(1, z1 - z0);
                 slopes[x, z] = TerrainSlopePolicy.FromGradient(math.sqrt(dx * dx + dz * dz), heightMultiplier);
                 float wx = coord.x * chunkSize + x - 1, wz = coord.z * chunkSize + z - 1;
-                moisture[x, z] = ClimateGenerator.SampleClimate01(wx, wz, seed + 1000, sampleScale * 10f,
-                    persistence, lacunarity, climateMax, moistureOffsets);
-                temperature[x, z] = ClimateGenerator.SampleClimate01(wx, wz, seed + 2000, sampleScale * 12f,
-                    persistence, lacunarity, climateMax, temperatureOffsets);
+                moisture[x, z] = ClimateGenerator.SampleWorldClimate01(wx, wz, seed, sampleScale, false,
+                    persistence, lacunarity, climateMax, moistureOffsets, context.Erosion.landforms);
+                temperature[x, z] = ClimateGenerator.SampleWorldClimate01(wx, wz, seed, sampleScale, true,
+                    persistence, lacunarity, climateMax, temperatureOffsets, context.Erosion.landforms);
                 rivers[x, z] = center.RiverMask;
                 biomes[x, z] = BiomeClassifier.Classify(center.Height, moisture[x, z], temperature[x, z],
                     slopes[x, z], center.MountainMask, center.RiverMask, waterLevel);
-                surfaces[x, z] = SurfaceTypeClassifier.Classify(center.Height, slopes[x, z], center.RiverMask, biomes[x, z], waterLevel);
+                surfaces[x, z] = WorldLandforms.Surface(new float2(wx, wz), seed, sampleScale, center.Height,
+                    slopes[x, z], center.RiverMask, biomes[x, z], waterLevel, context.Erosion.landforms);
                 sampled[x, z] = true;
             }
             var plan = WorldFeaturePlanGenerator.GenerateTreePlacements(coord, chunkSize, seed,

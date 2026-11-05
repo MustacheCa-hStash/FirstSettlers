@@ -1,0 +1,37 @@
+Soft upland profile: monotone, continuous terrace repeats, lowland/water bypass and high-bedrock policy pass.
+67_ForestRidge, seed 67, world XZ (-211.09, 704.97): height 14.721m, base 28.255m, erosion delta -9.302m; max 0.3m edge rise 1.016m, second difference 0.191m, gentle <15deg 77.4%.
+  LOD step 1: 0 vertical/reversed triangles; projected area 1474.560m2.
+  PhysX collider: 16641 vertices, 0 missed rays, maximum surface error 0.000004m.
+  LOD step 2: 0 vertical/reversed triangles; projected area 1474.560m2.
+  LOD step 4: 0 vertical/reversed triangles; projected area 1474.560m2.
+  LOD step 8: 0 vertical/reversed triangles; projected area 1474.560m2.
+  LOD step 16: 0 vertical/reversed triangles; projected area 1474.560m2.
+67_LakesideCollider, seed 67, world XZ (-110.05, 780.91): height 18.262m, base 28.993m, erosion delta 7.539m; max 0.3m edge rise 1.012m, second difference 0.205m, gentle <15deg 55.9%.
+  LOD step 1: 0 vertical/reversed triangles; projected area 1474.560m2.
+  PhysX collider: 16641 vertices, 0 missed rays, maximum surface error 0.000008m.
+  LOD step 2: 0 vertical/reversed triangles; projected area 1474.560m2.
+  LOD step 4: 0 vertical/reversed triangles; projected area 1474.560m2.
+  LOD step 8: 0 vertical/reversed triangles; projected area 1474.560m2.
+  LOD step 16: 0 vertical/reversed triangles; projected area 1474.560m2.
+67_HighUpland, seed 67, world XZ (286.72, 1369.66): height 201.355m, base 203.803m, erosion delta -0.037m; max 0.3m edge rise 0.524m, second difference 0.006m, gentle <15deg 34.0%.
+  LOD step 1: 0 vertical/reversed triangles; projected area 1474.560m2.
+  PhysX collider: 16641 vertices, 0 missed rays, maximum surface error 0.000046m.
+  LOD step 2: 0 vertical/reversed triangles; projected area 1474.560m2.
+  LOD step 4: 0 vertical/reversed triangles; projected area 1474.560m2.
+  LOD step 8: 0 vertical/reversed triangles; projected area 1474.560m2.
+  LOD step 16: 0 vertical/reversed triangles; projected area 1474.560m2.
+68_GrasslandSplit, seed 68, world XZ (-261.91, 504.08): height 20.428m, base 57.891m, erosion delta -13.235m; max 0.3m edge rise 0.924m, second difference 0.336m, gentle <15deg 69.1%.
+  LOD step 1: 0 vertical/reversed triangles; projected area 1474.560m2.
+  PhysX collider: 16641 vertices, 0 missed rays, maximum surface error 0.000004m.
+  LOD step 2: 0 vertical/reversed triangles; projected area 1474.560m2.
+  LOD step 4: 0 vertical/reversed triangles; projected area 1474.560m2.
+  LOD step 8: 0 vertical/reversed triangles; projected area 1474.560m2.
+  LOD step 16: 0 vertical/reversed triangles; projected area 1474.560m2.
+66_Control, seed 66, world XZ (286.72, 1369.66): height 7.409m, base 6.193m, erosion delta -23.018m; max 0.3m edge rise 0.079m, second difference 0.015m, gentle <15deg 100.0%.
+  LOD step 1: 0 vertical/reversed triangles; projected area 1474.560m2.
+  PhysX collider: 16641 vertices, 0 missed rays, maximum surface error 0.000002m.
+  LOD step 2: 0 vertical/reversed triangles; projected area 1474.560m2.
+  LOD step 4: 0 vertical/reversed triangles; projected area 1474.560m2.
+  LOD step 8: 0 vertical/reversed triangles; projected area 1474.560m2.
+  LOD step 16: 0 vertical/reversed triangles; projected area 1474.560m2.
+TERRAIN RIDGES PASS: 1002309 checks.

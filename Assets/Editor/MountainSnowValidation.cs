@@ -165,8 +165,8 @@ public static class MountainSnowValidation
                 float wx = x * 512f, wz = z * 512f;
                 var center = HeightMapGenerator.SampleTerrainHeight(wx, wz, 600f, context);
                 if (center.MountainMask < 0.45f || center.Height < 2f) continue;
-                float t = ClimateGenerator.SampleClimate01(wx, wz, seed + 2000, 7200f, 0.05f, 10f, 1f, tempOffsets);
-                float m = ClimateGenerator.SampleClimate01(wx, wz, seed + 1000, 6000f, 0.05f, 10f, 1f, moistureOffsets);
+                float t = ClimateGenerator.SampleWorldClimate01(wx, wz, seed, 600f, true, 0.05f, 10f, 1f, tempOffsets);
+                float m = ClimateGenerator.SampleWorldClimate01(wx, wz, seed, 600f, false, 0.05f, 10f, 1f, moistureOffsets);
                 float left = Height(wx - 4f, wz), right = Height(wx + 4f, wz);
                 float down = Height(wx, wz - 4f), up = Height(wx, wz + 4f);
                 float2 gradient = new float2(right - left, up - down) / 8f;

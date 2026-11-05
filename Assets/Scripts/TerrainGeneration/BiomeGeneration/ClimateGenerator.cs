@@ -5,6 +5,18 @@ using Unity.Mathematics;
 
 public static class ClimateGenerator
 {
+    public static float SampleWorldClimate01(float worldX, float worldZ, int seed, float sampleScale,
+        bool temperature, float persistence, float lacunarity, float maxPossibleNoise,
+        NativeArray<float2> offsets, WorldLandformSettings landforms = default)
+    {
+        var s = landforms.Sanitized();
+        float value = SampleClimate01(worldX, worldZ, seed + (temperature ? 2000 : 1000),
+            sampleScale * (temperature ? 12f : 10f), persistence, lacunarity, maxPossibleNoise, offsets);
+        if (!s.enabled) return value;
+        float dry = WorldLandforms.Desert(new float2(worldX, worldZ), seed, sampleScale, s.desertRegionScale).x;
+        return math.lerp(value, temperature ? 0.82f : 0.16f, dry);
+    }
+
     public static int GetClimateOctaveCount(int octaves)
     {
         return System.Math.Max(1, octaves - 2);
@@ -77,31 +89,34 @@ public static class ClimateGenerator
     }
 
     public static float[,] GenerateTerrainMoistureMap(int chunkSize, int seed, float sampleScale, int octaves, float persistence,
-        float lacunarity, ChunkCoord chunkCoord)
+        float lacunarity, ChunkCoord chunkCoord, WorldLandformSettings landforms = default)
     {
         return GenerateTerrainClimateMap(chunkSize, seed + 1000, sampleScale * 10f, octaves, persistence, lacunarity, chunkCoord,
-            false, out _);
+            false, out _, false, landforms);
     }
 
     public static float[,] GenerateTerrainMoistureMapForRequest(int chunkSize, int seed, float sampleScale,
-        int octaves, float persistence, float lacunarity, ChunkCoord chunkCoord, out NativeArray<float> nativeMap) =>
+        int octaves, float persistence, float lacunarity, ChunkCoord chunkCoord, out NativeArray<float> nativeMap,
+        WorldLandformSettings landforms = default) =>
         GenerateTerrainClimateMap(chunkSize, seed + 1000, sampleScale * 10f, octaves, persistence, lacunarity,
-            chunkCoord, true, out nativeMap);
+            chunkCoord, true, out nativeMap, false, landforms);
 
     public static float[,] GenerateTerrainTemperatureMap(int chunkSize, int seed, float sampleScale, int octaves, float persistence,
-        float lacunarity, ChunkCoord chunkCoord)
+        float lacunarity, ChunkCoord chunkCoord, WorldLandformSettings landforms = default)
     {
         return GenerateTerrainClimateMap(chunkSize, seed + 2000, sampleScale * 12f, octaves, persistence, lacunarity, chunkCoord,
-            false, out _);
+            false, out _, true, landforms);
     }
 
     public static float[,] GenerateTerrainTemperatureMapForRequest(int chunkSize, int seed, float sampleScale,
-        int octaves, float persistence, float lacunarity, ChunkCoord chunkCoord, out NativeArray<float> nativeMap) =>
+        int octaves, float persistence, float lacunarity, ChunkCoord chunkCoord, out NativeArray<float> nativeMap,
+        WorldLandformSettings landforms = default) =>
         GenerateTerrainClimateMap(chunkSize, seed + 2000, sampleScale * 12f, octaves, persistence, lacunarity,
-            chunkCoord, true, out nativeMap);
+            chunkCoord, true, out nativeMap, true, landforms);
 
     private static float[,] GenerateTerrainClimateMap(int chunkSize, int seed, float sampleScale, int octaves, float persistence,
-        float lacunarity, ChunkCoord chunkCoord, bool retainNativeMap, out NativeArray<float> nativeMap)
+        float lacunarity, ChunkCoord chunkCoord, bool retainNativeMap, out NativeArray<float> nativeMap,
+        bool temperature, WorldLandformSettings landforms)
     {
         nativeMap = default;
         float noiseSampleScale = sampleScale;
@@ -138,6 +153,8 @@ public static class ClimateGenerator
                 chunkZ = chunkCoord.z,
                 seed = seed,
                 sampleScale = noiseSampleScale,
+                temperature = temperature,
+                landforms = landforms.Sanitized(),
                 persistence = noisePersistence,
                 lacunarity = noiseLacunarity,
                 maxPossibleNoise = maxPossibleNoise,
@@ -180,9 +197,11 @@ public static class ClimateGenerator
         }
     }
 
-    [BurstCompile]
+    [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
     private struct ClimateMapJob : IJobParallelFor
     {
+        public bool temperature;
+        public WorldLandformSettings landforms;
         public int size;
         public int chunkSize;
         public int chunkX;
@@ -207,15 +226,16 @@ public static class ClimateGenerator
             float worldX = chunkX * chunkSize + localSampleX;
             float worldZ = chunkZ * chunkSize + localSampleZ;
 
-            samples[index] = SampleClimate01(
+            samples[index] = SampleWorldClimate01(
                 worldX,
                 worldZ,
-                seed,
-                sampleScale,
+                seed - (temperature ? 2000 : 1000),
+                sampleScale / (temperature ? 12f : 10f),
+                temperature,
                 persistence,
                 lacunarity,
                 maxPossibleNoise,
-                octaveOffsets);
+                octaveOffsets, landforms);
         }
 
     }

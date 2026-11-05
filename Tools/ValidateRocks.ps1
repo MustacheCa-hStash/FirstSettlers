@@ -39,7 +39,7 @@ if($Investigate){
     Copy-Item -LiteralPath "$rockRoot/Assets/Scenes/SmearScene.unity","$rockRoot/Assets/Scenes/SmearScene.unity.meta" -Destination "$rockProject/Assets/Scenes" -Force
     Copy-Item -LiteralPath "$rockRoot/Assets/ScriptableObjects/WorldObjects" -Destination "$rockProject/Assets/ScriptableObjects" -Recurse -Force
 }
-foreach($rockName in 'WeatheredRock.shader','TreeNightLighting.hlsl') {Copy-Item -LiteralPath "$rockRoot/Assets/Shaders/$rockName","$rockRoot/Assets/Shaders/$rockName.meta" -Destination "$rockProject/Assets/Shaders" -Force}
+foreach($rockName in 'WeatheredRock.shader','TreeNightLighting.hlsl','WorldLandformFields.hlsl') {Copy-Item -LiteralPath "$rockRoot/Assets/Shaders/$rockName","$rockRoot/Assets/Shaders/$rockName.meta" -Destination "$rockProject/Assets/Shaders" -Force}
 if(Test-Path "$rockRoot/Assets/Resources/Rocks") {Copy-Item -LiteralPath "$rockRoot/Assets/Resources/Rocks" -Destination "$rockProject/Assets/Resources" -Recurse -Force;Copy-Item -LiteralPath "$rockRoot/Assets/Resources/Rocks.meta" -Destination "$rockProject/Assets/Resources" -Force}
 foreach($rockName in 'ProjectVersion.txt','TagManager.asset','ProjectSettings.asset','GraphicsSettings.asset','QualitySettings.asset') {Copy-Item -LiteralPath "$rockRoot/ProjectSettings/$rockName" -Destination "$rockProject/ProjectSettings" -Force}
 $rockManifest=Get-Content "$rockRoot/Packages/manifest.json" -Raw | ConvertFrom-Json

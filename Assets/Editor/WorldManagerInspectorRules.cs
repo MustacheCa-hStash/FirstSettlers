@@ -76,6 +76,8 @@ internal static class WorldManagerInspectorRules
         if (path == "grassSettings.grassCompactShader" && Off(so, "grassSettings.gpuIndirectRendering")) return "GPU grass is off; CPU instancing is used.";
         if (Within(path, "erosion"))
         {
+            if (Within(path, "erosion.landforms") && path != "erosion.landforms.enabled" && Off(so, "erosion.landforms.enabled"))
+                return "Regional landforms are off. Restart Play Mode after changing generation settings.";
             string name = path.Substring("erosion.".Length);
             if ((name == "riverValleyWidth" || name == "riverValleyFlattening") && Off(so, "erosion.carveRivers")) return "River carving is off.";
             if (Array.IndexOf(ErosionOnly, name) >= 0 && Off(so, "erosion.enabled")) return "World erosion is off; base landforms and mesh fidelity still apply.";

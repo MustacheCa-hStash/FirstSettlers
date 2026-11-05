@@ -8,6 +8,8 @@ public enum ErosionFadeTarget { LocalRelief, Altitude }
 public struct WorldErosionSettings
 {
     [SerializeField, HideInInspector] private int version;
+    [Header("Regional desert and rock landforms")]
+    public WorldLandformSettings landforms;
     [Header("Base landforms")]
     [Tooltip("Normalized height units. World Y = height * Mesh Height Multiplier * World Scale.")]
     public float baseElevation;
@@ -81,7 +83,8 @@ public struct WorldErosionSettings
     [Range(2, 32)] public int maxMeshSpacing;
 
     public static WorldErosionSettings Default => new WorldErosionSettings {
-        version = 4, baseElevation = 0.45f, lowlandRelief = 0.8f, mountainRelief = 14f,
+        version = 5, landforms = WorldLandformSettings.Default,
+        baseElevation = 0.45f, lowlandRelief = 0.8f, mountainRelief = 14f,
         lowlandHeightRatio = 0.5f, shoreHeightBand = 0.25f, shoreSlopeRatio = 0.2f,
         mountainSpatialScale = 2.4f, mountainSparsity = 0.12f, gentleMountainErosion = 0.45f,
         lowlandHillVariation = 0.8f, lowlandHillScale = 900f,
@@ -148,6 +151,8 @@ public struct WorldErosionSettings
         s.valleyAndPeakHeights.x = Safe(s.valleyAndPeakHeights.x, 0f, -100f, 100f);
         s.valleyAndPeakHeights.y = Safe(s.valleyAndPeakHeights.y, 8f, s.valleyAndPeakHeights.x + 0.01f, 200f);
         s.maxMeshSpacing = math.clamp(s.maxMeshSpacing, 2, 32);
+        if (s.version < 5) { s.landforms = WorldLandformSettings.Default; s.version = 5; }
+        s.landforms = s.landforms.Sanitized();
         return s;
     }
 }

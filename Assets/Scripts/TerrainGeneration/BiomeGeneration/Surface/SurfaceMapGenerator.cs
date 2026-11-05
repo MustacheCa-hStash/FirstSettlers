@@ -68,11 +68,15 @@ public static class SurfaceMapGenerator
         int height,
         float waterLevel,
         Allocator resultAllocator,
-        out NativeArray<SurfaceType> nativeSurfaces)
+        out NativeArray<SurfaceType> nativeSurfaces, ChunkCoord chunkCoord = default, int chunkSize = 0,
+        int seed = 0, float sampleScale = 600f, WorldLandformSettings landforms = default)
     {
         nativeSurfaces = new NativeArray<SurfaceType>(width * height, resultAllocator, NativeArrayOptions.UninitializedMemory);
         SurfaceMapJob job = new SurfaceMapJob
         {
+            regional = chunkSize > 0,
+            chunkSize = chunkSize, chunkCoord = chunkCoord, seed = seed,
+            sampleScale = sampleScale, landforms = landforms.Sanitized(),
             width = width,
             height = height,
             waterLevel = waterLevel,
@@ -139,9 +143,14 @@ public static class SurfaceMapGenerator
         }
     }
 
-    [BurstCompile]
+    [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
     private struct SurfaceMapJob : IJobParallelFor
     {
+        public bool regional;
+        public int chunkSize, seed;
+        public ChunkCoord chunkCoord;
+        public float sampleScale;
+        public WorldLandformSettings landforms;
         public int width;
         public int height;
         public float waterLevel;
@@ -155,6 +164,13 @@ public static class SurfaceMapGenerator
         public void Execute(int index)
         {
             SurfaceType surface = SurfaceTypeClassifier.Classify(heights[index], slopes[index], riverMasks[index], biomes[index], waterLevel);
+            if (regional)
+            {
+                var p = new Unity.Mathematics.float2(chunkCoord.x * chunkSize + index / height - 1,
+                    chunkCoord.z * chunkSize + index % height - 1);
+                surface = WorldLandforms.Surface(p, seed, sampleScale, heights[index], slopes[index],
+                    riverMasks[index], biomes[index], waterLevel, landforms);
+            }
             surfaces[index] = surface;
             if (surface != SurfaceType.Grass)
                 return;

@@ -6,5 +6,7 @@ public enum SurfaceType
     Rock,
     Snow,
     Cliff,
-    Riverbed
+    Riverbed,
+    DryWash,
+    CrackedClay
 }

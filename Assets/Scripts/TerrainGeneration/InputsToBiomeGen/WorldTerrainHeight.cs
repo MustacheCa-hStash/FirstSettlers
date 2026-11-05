@@ -3,10 +3,10 @@ using Unity.Mathematics;
 
 public readonly struct WorldBaseSample
 {
-    public readonly float Height, MountainMask, MountainWeight, MountainContribution;
+    public readonly float Height, MountainMask, MountainWeight, MountainContribution, LandformMask;
     public readonly float2 Gradient;
-    public WorldBaseSample(float h, float2 gradient, float mask, float weight, float contribution)
-    { Height = h; Gradient = gradient; MountainMask = mask; MountainWeight = weight; MountainContribution = contribution; }
+    public WorldBaseSample(float h, float2 gradient, float mask, float weight, float contribution, float landformMask = 0f)
+    { Height = h; Gradient = gradient; MountainMask = mask; MountainWeight = weight; MountainContribution = contribution; LandformMask = landformMask; }
 }
 
 /// <summary>One smooth base surface and one world-space erosion pass. No overlapping eroded mountain copies.</summary>
@@ -52,7 +52,15 @@ public static class WorldTerrainHeight
         }
         return sum / total;
     }
-    public static WorldBaseSample Base(float2 p, float sampleScale, int seed, float coverage, in WorldErosionSettings s)
+    public static WorldBaseSample Base(float2 p, float sampleScale, int seed, float coverage, in WorldErosionSettings s, float waterLevel = 0.24f)
+    {
+        return WorldLandforms.ShapeBase(p, BroadBase(p, sampleScale, seed, coverage, s),
+            sampleScale, seed, waterLevel, s.landforms);
+    }
+
+    // Directional erosion follows this broad surface, never the derivatives of added
+    // caprock/cliff thresholds. Those can rotate almost 180 degrees within one mesh cell.
+    private static WorldBaseSample BroadBase(float2 p, float sampleScale, int seed, float coverage, in WorldErosionSettings s)
     {
         float scale = math.max(sampleScale, 0.0001f);
         float3 land = Fbm(p, scale * 1.6f, seed + 20000, s.baseOctaves, s.baseRoughness);
@@ -75,7 +83,7 @@ public static class WorldTerrainHeight
     public static float ShapeForAccess(float2 position, WorldBaseSample input, float height, float waterLevel, int seed, in WorldErosionSettings s)
     {
         float aboveWater = height - waterLevel;
-        float mountain = math.smoothstep(0.015f, 0.12f, input.MountainContribution);
+        float mountain = math.max(math.smoothstep(0.015f, 0.12f, input.MountainContribution), input.LandformMask);
         float hillPatch = math.smoothstep(0.05f, 0.55f, Noise(position / s.lowlandHillScale, seed + 71003).x);
         float hillBoost = 1f + s.lowlandHillVariation * hillPatch * math.smoothstep(0f, s.shoreHeightBand, aboveWater);
         float shaped = aboveWater * math.lerp(s.lowlandHeightRatio * hillBoost, 1f, mountain);
@@ -83,40 +91,56 @@ public static class WorldTerrainHeight
         return waterLevel + shaped;
     }
 
-    public static float Erode(float2 position, WorldBaseSample input, float sampleScale, int seed, float coverage, in WorldErosionSettings s)
+    public static float Erode(float2 position, WorldBaseSample input, float sampleScale, int seed, float coverage, in WorldErosionSettings s, float waterLevel = 0.24f)
     {
         if (!s.enabled || s.amplitude <= 0f) return input.Height;
+        var guide = s.landforms.enabled ? BroadBase(position, sampleScale, seed, coverage, s) : input;
+        float upland = s.landforms.enabled ? WorldLandforms.Upland(input.Height, waterLevel) : 0f;
         int count = 0; float weight = 1f, total = 0f, wave = s.wavelength * math.min(s.stretch.x, s.stretch.y);
         for (int i = 0; i < s.octaves && wave >= s.minimumWavelength; i++)
         { count++; total += weight; weight *= s.persistence; wave /= s.lacunarity; }
         if (count == 0) return input.Height;
         float target;
         if (s.fadeTarget == ErosionFadeTarget.Altitude)
-            target = math.clamp((input.Height - s.valleyAndPeakHeights.x) / (s.valleyAndPeakHeights.y - s.valleyAndPeakHeights.x) * 2f - 1f, -1f, 1f);
+            target = math.clamp((guide.Height - s.valleyAndPeakHeights.x) / (s.valleyAndPeakHeights.y - s.valleyAndPeakHeights.x) * 2f - 1f, -1f, 1f);
         else
         {
             float2 x = new float2(s.reliefRadius, 0f), z = new float2(0f, s.reliefRadius);
-            float mean = (Base(position + x, sampleScale, seed, coverage, s).Height + Base(position - x, sampleScale, seed, coverage, s).Height +
-                Base(position + z, sampleScale, seed, coverage, s).Height + Base(position - z, sampleScale, seed, coverage, s).Height) * 0.25f;
-            float contrast = (input.Height - mean) / s.reliefContrast;
+            float mean = (BroadBase(position + x, sampleScale, seed, coverage, s).Height + BroadBase(position - x, sampleScale, seed, coverage, s).Height +
+                BroadBase(position + z, sampleScale, seed, coverage, s).Height + BroadBase(position - z, sampleScale, seed, coverage, s).Height) * 0.25f;
+            float contrast = (guide.Height - mean) / s.reliefContrast;
             target = contrast / math.sqrt(1f + contrast * contrast);
         }
         math.sincos(math.radians(s.rotation), out float sin, out float cos);
         float2 p = position - new float2(s.offset.x, s.offset.y);
         float2 domain = new float2(cos * p.x + sin * p.y, -sin * p.x + cos * p.y) / new float2(s.stretch.x, s.stretch.y) / s.wavelength;
         // Chain rule: height derivatives in domain coordinates, including stretch and rotation.
-        float2 gradient = new float2(cos * input.Gradient.x + sin * input.Gradient.y, -sin * input.Gradient.x + cos * input.Gradient.y) *
+        float2 gradient = new float2(cos * guide.Gradient.x + sin * guide.Gradient.y, -sin * guide.Gradient.x + cos * guide.Gradient.y) *
             new float2(s.stretch.x, s.stretch.y) * (s.wavelength / s.heightScale);
-        float4 erosion = AdvancedTerrainErosion.ErosionFilter(domain, new float3(input.Height / s.heightScale, gradient), target,
-            s.amplitude / (s.heightScale * total), s.gullyWeight, s.branching,
-            new float4(s.ridgeRounding, s.valleyRounding, 1f, s.lacunarity), new float4(s.slopeResponse, 1.25f, s.slopeResponse, 1.5f),
-            new float2(0.7f, 0f), 1f, count, s.lacunarity, s.persistence, s.cellSize, s.normalization,
-            seed + s.seedOffset, out _, s.directionSmoothing);
-        // Local slope, not elevation bands, selects gentler mountain ground. The low-frequency
-        // mountain profile and existing rolling land noise supply shoulders at varying heights.
+        float displacement = 0f;
+        if (upland < 1f || count <= 2)
+            displacement = AdvancedTerrainErosion.ErosionFilter(domain, new float3(guide.Height / s.heightScale, gradient), target,
+                s.amplitude / (s.heightScale * total), s.gullyWeight, s.branching,
+                new float4(s.ridgeRounding, s.valleyRounding, 1f, s.lacunarity), new float4(s.slopeResponse, 1.25f, s.slopeResponse, 1.5f),
+                new float2(0.7f, 0f), 1f, count, s.lacunarity, s.persistence, s.cellSize, s.normalization,
+                seed + s.seedOffset, out _, s.directionSmoothing).x;
+        if (upland > 0f && count > 2)
+        {
+            float broad = AdvancedTerrainErosion.ErosionFilter(domain, new float3(guide.Height / s.heightScale, gradient), target,
+                s.amplitude / (s.heightScale * (1f + s.persistence)), s.gullyWeight, s.branching,
+                new float4(s.ridgeRounding, s.valleyRounding, 1f, s.lacunarity), new float4(s.slopeResponse, 1.25f, s.slopeResponse, 1.5f),
+                new float2(0.7f, 0f), 1f, 2, s.lacunarity, s.persistence, s.cellSize, s.normalization,
+                seed + s.seedOffset, out _, s.directionSmoothing).x;
+            displacement = math.lerp(displacement, broad, upland);
+        }
+        // Local slope protects gentle mountain ground. The additional upland fade
+        // keeps fine displacement off higher benches and rounded mountain shoulders.
         float mountain = math.smoothstep(0.015f, 0.12f, input.MountainContribution);
-        float gentle = 1f - math.smoothstep(0.001f, 0.004f, math.length(input.Gradient));
+        float gentle = 1f - math.smoothstep(0.001f, 0.004f, math.length(guide.Gradient));
         float retention = math.lerp(1f, s.gentleMountainErosion, mountain * gentle);
-        return input.Height + erosion.x * s.heightScale * retention;
+        // Keep caprock silhouettes and broad plateau tops legible through the general erosion pass.
+        retention *= math.lerp(1f, 0.18f, input.LandformMask);
+        retention *= math.lerp(1f, 0.08f, upland);
+        return input.Height + displacement * s.heightScale * retention;
     }
 }

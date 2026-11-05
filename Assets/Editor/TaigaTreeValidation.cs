@@ -145,8 +145,8 @@ public static class TaigaTreeValidation
             float gx = (Sample(x+4,z).Height - Sample(x-4,z).Height)/8f;
             float gz = (Sample(x,z+4).Height - Sample(x,z-4).Height)/8f;
             float slope = TerrainSlopePolicy.FromGradient(math.sqrt(gx*gx + gz*gz), hm);
-            float m = ClimateGenerator.SampleClimate01(x,z,seed+1000,scale*10f,persistence,lacunarity,max,mo);
-            float t = ClimateGenerator.SampleClimate01(x,z,seed+2000,scale*12f,persistence,lacunarity,max,te);
+            float m = ClimateGenerator.SampleWorldClimate01(x,z,seed,scale,false,persistence,lacunarity,max,mo,context.Erosion.landforms);
+            float t = ClimateGenerator.SampleWorldClimate01(x,z,seed,scale,true,persistence,lacunarity,max,te,context.Erosion.landforms);
             var biome = BiomeClassifier.Classify(a.Height,m,t,slope,a.MountainMask,a.RiverMask,water);
             totals[(int)biome]++;
             csv.AppendLine(FormattableString.Invariant($"{coord.x},{coord.z},{biome},{t:F4},{m:F4},{a.Height:F4},{slope:F2}"));

@@ -592,7 +592,7 @@ public static class FarTerrainGenerator
         }
     }
 
-    [BurstCompile]
+    [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
     private struct FarHeightGridSampleJob : ITerrainHeightSamplingBatchJob
     {
         public int SampleOffset { get; set; }
@@ -642,7 +642,7 @@ public static class FarTerrainGenerator
         }
     }
 
-    [BurstCompile]
+    [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
     private struct FarSlopeGridJob : IJobParallelFor
     {
         public float heightMultiplier;
@@ -670,7 +670,7 @@ public static class FarTerrainGenerator
         }
     }
 
-    [BurstCompile]
+    [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
     private struct FarSurfaceMapJob : IJobParallelFor
     {
         public float waterLevel;
@@ -696,7 +696,7 @@ public static class FarTerrainGenerator
         }
     }
 
-    [BurstCompile]
+    [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
     private struct FarMeshVertexJob : IJobParallelFor
     {
         public int resolution;
@@ -756,6 +756,8 @@ public static class FarTerrainGenerator
                     return new float4(0.80f, 0.75f, 0.55f, 1f);
                 case SurfaceType.Mud:
                     return new float4(0.42f, 0.32f, 0.22f, 1f);
+                case SurfaceType.DryWash:
+                    return new float4(0.64f, 0.56f, 0.43f, 1f);
                 case SurfaceType.Grass:
                     return new float4(0.1255f, 0.5451f, 0.1569f, 1f);
                 case SurfaceType.Rock:
@@ -766,13 +768,15 @@ public static class FarTerrainGenerator
                     return new float4(0.30f, 0.30f, 0.30f, 1f);
                 case SurfaceType.Riverbed:
                     return new float4(0.35f, 0.30f, 0.24f, 1f);
+                case SurfaceType.CrackedClay:
+                    return new float4(0.74f, 0.67f, 0.55f, 1f);
                 default:
                     return new float4(1f, 0f, 1f, 1f);
             }
         }
     }
 
-    [BurstCompile]
+    [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
     private struct FarMeshTriangleJob : IJobParallelFor
     {
         public int resolution;
@@ -799,7 +803,7 @@ public static class FarTerrainGenerator
         }
     }
 
-    [BurstCompile]
+    [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
     private struct FarControlMapBuildJob : ITerrainHeightSamplingBatchJob
     {
         public int SampleOffset { get; set; }
@@ -849,24 +853,24 @@ public static class FarTerrainGenerator
 
             TerrainHeightSample center = SampleTerrain(worldX, worldZ);
             float slope = SampleSlope(worldX, worldZ, out float2 snowGradient, out float neighborMean);
-            float moisture = ClimateGenerator.SampleClimate01(
+            float moisture = ClimateGenerator.SampleWorldClimate01(
                 worldX,
                 worldZ,
-                seed + 1000,
-                sampleScale * 10f,
+                seed,
+                sampleScale, false,
                 climatePersistence,
                 climateLacunarity,
                 climateMaxPossibleNoise,
-                moistureOffsets);
-            float temperature = ClimateGenerator.SampleClimate01(
+                moistureOffsets, erosion.landforms);
+            float temperature = ClimateGenerator.SampleWorldClimate01(
                 worldX,
                 worldZ,
-                seed + 2000,
-                sampleScale * 12f,
+                seed,
+                sampleScale, true,
                 climatePersistence,
                 climateLacunarity,
                 climateMaxPossibleNoise,
-                temperatureOffsets);
+                temperatureOffsets, erosion.landforms);
 
             BiomeType biome = ClassifyBiome(
                 center.Height,
@@ -876,7 +880,8 @@ public static class FarTerrainGenerator
                 center.MountainMask,
                 center.RiverMask,
                 waterLevel);
-            SurfaceType surfaceType = SurfaceTypeClassifier.Classify(center.Height, slope, center.RiverMask, biome, waterLevel);
+            SurfaceType surfaceType = WorldLandforms.Surface(new float2(worldX, worldZ), seed, sampleScale,
+                center.Height, slope, center.RiverMask, biome, waterLevel, erosion.landforms);
             GroundCoverType groundCoverType = ClassifyGroundCover(biome, surfaceType, moisture, slope, center.RiverMask, x, z);
             Color32 surfaceColor = SurfaceTypeToControlColor(surfaceType);
             Color32 snowMap0 = default, snowMap1 = default;
@@ -1063,12 +1068,14 @@ public static class FarTerrainGenerator
             {
                 case SurfaceType.Sand:
                 case SurfaceType.Mud:
+                case SurfaceType.DryWash:
                 case SurfaceType.Grass:
                 case SurfaceType.Rock:
                     return true;
                 case SurfaceType.Snow:
                 case SurfaceType.Cliff:
                 case SurfaceType.Riverbed:
+                case SurfaceType.CrackedClay:
                     return false;
                 default:
                     return true;
@@ -1082,6 +1089,7 @@ public static class FarTerrainGenerator
                 case SurfaceType.Sand:
                     return new Color32(value, 0, 0, 0);
                 case SurfaceType.Mud:
+                case SurfaceType.DryWash:
                     return new Color32(0, value, 0, 0);
                 case SurfaceType.Grass:
                     return new Color32(0, 0, value, 0);
@@ -1092,6 +1100,7 @@ public static class FarTerrainGenerator
                 case SurfaceType.Cliff:
                     return new Color32(0, value, 0, 0);
                 case SurfaceType.Riverbed:
+                case SurfaceType.CrackedClay:
                     return new Color32(0, 0, value, 0);
                 default:
                     return new Color32(0, 0, 0, 0);

@@ -16,7 +16,7 @@ public static class MeshGenerator
     {
         int paddedWidth = nativeData.HeightMapWidth;
         int chunkSize = paddedWidth - 3;
-        int safeStepIncrement = Mathf.Max(1, stepIncrement);
+        int safeStepIncrement = SanitizeStep(chunkSize, stepIncrement);
         int estimatedVertexCapacity = EstimateTerrainVertexCapacity(chunkSize, safeStepIncrement);
         List<int2> vertexCoordinates = new List<int2>(estimatedVertexCapacity);
         List<int> triangles = new List<int>(estimatedVertexCapacity * 6);
@@ -72,7 +72,7 @@ public static class MeshGenerator
     {
         int paddedWidth = heightMap.GetLength(0);
         int chunkSize = paddedWidth - 3;
-        int safeStepIncrement = Mathf.Max(1, stepIncrement);
+        int safeStepIncrement = SanitizeStep(chunkSize, stepIncrement);
         int estimatedVertexCapacity = EstimateTerrainVertexCapacity(chunkSize, safeStepIncrement);
         List<int2> vertexCoordinates = new List<int2>(estimatedVertexCapacity);
         List<int> triangles = new List<int>(estimatedVertexCapacity * 6);
@@ -102,103 +102,7 @@ public static class MeshGenerator
             triangles.Add(c);
         }
 
-        int strip = safeStepIncrement;
-        int interiorMin = strip;
-        int interiorMax = chunkSize - strip;
-
-        for (int z = interiorMin; z < interiorMax; z += safeStepIncrement)
-        {
-            for (int x = interiorMin; x < interiorMax; x += safeStepIncrement)
-            {
-                int a = GetVertexIndex(x, z);
-                int b = GetVertexIndex(x, z + safeStepIncrement);
-                int c = GetVertexIndex(x + safeStepIncrement, z + safeStepIncrement);
-                int d = GetVertexIndex(x + safeStepIncrement, z);
-
-                AddTriangle(a, b, c);
-                AddTriangle(a, c, d);
-            }
-        }
-
-        for (int x0 = 0; x0 < chunkSize; x0 += safeStepIncrement)
-        {
-            int x1 = Mathf.Min(x0 + safeStepIncrement, chunkSize);
-
-            int anchor = GetVertexIndex(x0, 0);
-
-            int prev = GetVertexIndex(x0 + 1, 0);
-            for (int x = x0 + 2; x <= x1; x++)
-            {
-                int next = GetVertexIndex(x, 0);
-                AddTriangle(anchor, next, prev);
-                prev = next;
-            }
-
-            int innerRight = GetVertexIndex(x1, strip);
-            int innerLeft = GetVertexIndex(x0, strip);
-
-            AddTriangle(anchor, innerRight, prev);
-            AddTriangle(anchor, innerLeft, innerRight);
-        }
-
-        for (int x0 = 0; x0 < chunkSize; x0 += safeStepIncrement)
-        {
-            int x1 = Mathf.Min(x0 + safeStepIncrement, chunkSize);
-
-            int anchor = GetVertexIndex(x0, chunkSize - strip);
-
-            int prev = GetVertexIndex(x0, chunkSize);
-            for (int x = x0 + 1; x <= x1; x++)
-            {
-                int next = GetVertexIndex(x, chunkSize);
-                AddTriangle(anchor, prev, next);
-                prev = next;
-            }
-
-            int innerRight = GetVertexIndex(x1, chunkSize - strip);
-            AddTriangle(anchor, prev, innerRight);
-        }
-
-        for (int z0 = strip; z0 < chunkSize - strip; z0 += safeStepIncrement)
-        {
-            int z1 = Mathf.Min(z0 + safeStepIncrement, chunkSize - strip);
-
-            int anchor = GetVertexIndex(0, z0);
-
-            int prev = GetVertexIndex(0, z0 + 1);
-            for (int z = z0 + 2; z <= z1; z++)
-            {
-                int next = GetVertexIndex(0, z);
-                AddTriangle(anchor, prev, next);
-                prev = next;
-            }
-
-            int innerBottom = GetVertexIndex(strip, z1);
-            int innerTop = GetVertexIndex(strip, z0);
-
-            AddTriangle(anchor, prev, innerBottom);
-            AddTriangle(anchor, innerBottom, innerTop);
-        }
-
-        for (int z0 = strip; z0 < chunkSize - strip; z0 += safeStepIncrement)
-        {
-            int z1 = Mathf.Min(z0 + safeStepIncrement, chunkSize - strip);
-
-            int anchor = GetVertexIndex(chunkSize - strip, z0);
-
-            int prev = GetVertexIndex(chunkSize - strip, z1);
-
-            int first = GetVertexIndex(chunkSize, z1);
-            AddTriangle(anchor, prev, first);
-            prev = first;
-
-            for (int z = z1 - 1; z >= z0; z--)
-            {
-                int next = GetVertexIndex(chunkSize, z);
-                AddTriangle(anchor, prev, next);
-                prev = next;
-            }
-        }
+        BuildTerrainTopology(chunkSize, safeStepIncrement, GetVertexIndex, AddTriangle);
 
         return BuildTerrainMeshData(
             heightMap,
@@ -211,109 +115,58 @@ public static class MeshGenerator
             worldScale);
     }
 
+    // Border fans must be anchored inside the chunk: a boundary anchor makes vertical fins.
+    // At step 1 this is the regular AC grid also used by runtime collision.
     private static void BuildTerrainTopology(
-        int chunkSize,
-        int safeStepIncrement,
-        System.Func<int, int, int> getVertexIndex,
-        System.Action<int, int, int> addTriangle)
+        int chunkSize, int step, System.Func<int, int, int> vertex,
+        System.Action<int, int, int> triangle)
     {
-        int strip = safeStepIncrement;
-        int interiorMin = strip;
-        int interiorMax = chunkSize - strip;
-
-        for (int z = interiorMin; z < interiorMax; z += safeStepIncrement)
+        if (step == 1)
         {
-            for (int x = interiorMin; x < interiorMax; x += safeStepIncrement)
+            for (int z=0; z<chunkSize; z++)
+            for (int x=0; x<chunkSize; x++)
             {
-                int a = getVertexIndex(x, z);
-                int b = getVertexIndex(x, z + safeStepIncrement);
-                int c = getVertexIndex(x + safeStepIncrement, z + safeStepIncrement);
-                int d = getVertexIndex(x + safeStepIncrement, z);
-
-                addTriangle(a, b, c);
-                addTriangle(a, c, d);
+                int a=vertex(x,z), b=vertex(x,z+1), c=vertex(x+1,z+1), d=vertex(x+1,z);
+                triangle(a,b,c); triangle(a,c,d);
             }
+            return;
         }
-
-        for (int x0 = 0; x0 < chunkSize; x0 += safeStepIncrement)
+        for (int z=step; z<chunkSize-step; z+=step)
+        for (int x=step; x<chunkSize-step; x+=step)
         {
-            int x1 = Mathf.Min(x0 + safeStepIncrement, chunkSize);
-
-            int anchor = getVertexIndex(x0, 0);
-
-            int prev = getVertexIndex(x0 + 1, 0);
-            for (int x = x0 + 2; x <= x1; x++)
-            {
-                int next = getVertexIndex(x, 0);
-                addTriangle(anchor, next, prev);
-                prev = next;
-            }
-
-            int innerRight = getVertexIndex(x1, strip);
-            int innerLeft = getVertexIndex(x0, strip);
-
-            addTriangle(anchor, innerRight, prev);
-            addTriangle(anchor, innerLeft, innerRight);
+            int a=vertex(x,z), b=vertex(x,z+step), c=vertex(x+step,z+step), d=vertex(x+step,z);
+            triangle(a,b,c); triangle(a,c,d);
         }
-
-        for (int x0 = 0; x0 < chunkSize; x0 += safeStepIncrement)
+        // South/north strips include corners; west/east strips stop at the inner rings.
+        for (int x=0; x<chunkSize; x+=step)
         {
-            int x1 = Mathf.Min(x0 + safeStepIncrement, chunkSize);
-
-            int anchor = getVertexIndex(x0, chunkSize - strip);
-
-            int prev = getVertexIndex(x0, chunkSize);
-            for (int x = x0 + 1; x <= x1; x++)
+            int south=vertex(x,step), north=vertex(x,chunkSize-step);
+            for (int t=x; t<x+step; t++)
             {
-                int next = getVertexIndex(x, chunkSize);
-                addTriangle(anchor, prev, next);
-                prev = next;
+                triangle(south,vertex(t+1,0),vertex(t,0));
+                triangle(north,vertex(t,chunkSize),vertex(t+1,chunkSize));
             }
-
-            int innerRight = getVertexIndex(x1, chunkSize - strip);
-            addTriangle(anchor, prev, innerRight);
+            triangle(south,vertex(x+step,step),vertex(x+step,0));
+            triangle(north,vertex(x+step,chunkSize),vertex(x+step,chunkSize-step));
         }
-
-        for (int z0 = strip; z0 < chunkSize - strip; z0 += safeStepIncrement)
+        for (int z=step; z<chunkSize-step; z+=step)
         {
-            int z1 = Mathf.Min(z0 + safeStepIncrement, chunkSize - strip);
-
-            int anchor = getVertexIndex(0, z0);
-
-            int prev = getVertexIndex(0, z0 + 1);
-            for (int z = z0 + 2; z <= z1; z++)
+            int west=vertex(step,z), east=vertex(chunkSize-step,z);
+            for (int t=z; t<z+step; t++)
             {
-                int next = getVertexIndex(0, z);
-                addTriangle(anchor, prev, next);
-                prev = next;
+                triangle(west,vertex(0,t),vertex(0,t+1));
+                triangle(east,vertex(chunkSize,t+1),vertex(chunkSize,t));
             }
-
-            int innerBottom = getVertexIndex(strip, z1);
-            int innerTop = getVertexIndex(strip, z0);
-
-            addTriangle(anchor, prev, innerBottom);
-            addTriangle(anchor, innerBottom, innerTop);
+            triangle(west,vertex(0,z+step),vertex(step,z+step));
+            triangle(east,vertex(chunkSize-step,z+step),vertex(chunkSize,z+step));
         }
+    }
 
-        for (int z0 = strip; z0 < chunkSize - strip; z0 += safeStepIncrement)
-        {
-            int z1 = Mathf.Min(z0 + safeStepIncrement, chunkSize - strip);
-
-            int anchor = getVertexIndex(chunkSize - strip, z0);
-
-            int prev = getVertexIndex(chunkSize - strip, z1);
-
-            int first = getVertexIndex(chunkSize, z1);
-            addTriangle(anchor, prev, first);
-            prev = first;
-
-            for (int z = z1 - 1; z >= z0; z--)
-            {
-                int next = getVertexIndex(chunkSize, z);
-                addTriangle(anchor, prev, next);
-                prev = next;
-            }
-        }
+    internal static int SanitizeStep(int chunkSize, int requested)
+    {
+        int step=Mathf.Clamp(requested,1,Mathf.Max(1,chunkSize/2));
+        while (step>1 && chunkSize%step!=0) step--;
+        return step;
     }
 
 
@@ -625,6 +478,9 @@ public static class MeshGenerator
                 case SurfaceType.Mud:
                     baseColor = new float4(0.42f, 0.32f, 0.22f, 1f);
                     break;
+                case SurfaceType.DryWash:
+                    baseColor = new float4(0.64f, 0.56f, 0.43f, 1f);
+                    break;
                 case SurfaceType.Grass:
                     baseColor = new float4(0.1255f, 0.5451f, 0.1569f, 1f);
                     break;
@@ -639,6 +495,9 @@ public static class MeshGenerator
                     break;
                 case SurfaceType.Riverbed:
                     baseColor = new float4(0.35f, 0.30f, 0.24f, 1f);
+                    break;
+                case SurfaceType.CrackedClay:
+                    baseColor = new float4(0.74f, 0.67f, 0.55f, 1f);
                     break;
                 default:
                     baseColor = new float4(1f, 0f, 1f, 1f);
@@ -746,7 +605,11 @@ public class MeshData
         Mesh mesh = new Mesh();
         try
         {
-
+            // Dense landform meshes can cross the 16-bit limit. Select the format
+            // before uploading indices, otherwise the last rows wrap into the mesh interior.
+            int count = vertexList != null ? vertexList.Count : vertices.Length;
+            mesh.indexFormat = count > ushort.MaxValue
+                ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
             if (vertexList != null)
             {
                 mesh.SetVertices(vertexList);

@@ -41,7 +41,7 @@ foreach ($snowMeta in Get-ChildItem "$snowRoot/Assets/Textures" -Filter '*.meta'
 foreach ($snowFile in 'Assets/Materials/M_Terrain/M_TerrainBase.mat','Assets/Materials/M_Terrain/M_TerrainBase.mat.meta',
     'Assets/Shaders/S_Terrain/CustomStylizedTerrain.shader','Assets/Shaders/S_Terrain/CustomStylizedTerrain.shader.meta',
     'Assets/Shaders/S_Terrain/GrassGroundSurface.hlsl','Assets/Shaders/TreeNightLighting.hlsl',
-    'Assets/Shaders/TerrainSkyAccess.hlsl','Assets/Shaders/LocalFlameLighting.hlsl') {
+    'Assets/Shaders/TerrainSkyAccess.hlsl','Assets/Shaders/LocalFlameLighting.hlsl','Assets/Shaders/WorldLandformFields.hlsl') {
     $snowDestination = Join-Path $snowProject $snowFile
     New-Item -ItemType Directory -Path (Split-Path -Parent $snowDestination) -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $snowRoot $snowFile) -Destination $snowDestination -Force

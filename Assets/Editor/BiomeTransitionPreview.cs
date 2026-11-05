@@ -93,12 +93,13 @@ public sealed class BiomeTransitionPreview : EditorWindow
             float dx=(Height(x+4,z).Height-Height(x-4,z).Height)/8f;
             float dz=(Height(x,z+4).Height-Height(x,z-4).Height)/8f;
             float slope=TerrainSlopePolicy.FromGradient(math.sqrt(dx*dx+dz*dz),owner.heightMultiplier);
-            float moisture=ClimateGenerator.SampleClimate01(x,z,owner.seed+1000,owner.sampleScale*10f,
-                owner.persistence,owner.lacunarity,climateMax,moistureOffsets);
-            float temperature=ClimateGenerator.SampleClimate01(x,z,owner.seed+2000,owner.sampleScale*12f,
-                owner.persistence,owner.lacunarity,climateMax,temperatureOffsets);
+            float moisture=ClimateGenerator.SampleWorldClimate01(x,z,owner.seed,owner.sampleScale,false,
+                owner.persistence,owner.lacunarity,climateMax,moistureOffsets,owner.erosion.Sanitized().landforms);
+            float temperature=ClimateGenerator.SampleWorldClimate01(x,z,owner.seed,owner.sampleScale,true,
+                owner.persistence,owner.lacunarity,climateMax,temperatureOffsets,owner.erosion.Sanitized().landforms);
             biome=BiomeClassifier.Classify(h.Height,moisture,temperature,slope,h.MountainMask,h.RiverMask,owner.waterLevel);
-            var surface=SurfaceTypeClassifier.Classify(h.Height,slope,h.RiverMask,biome,owner.waterLevel);
+            var surface=WorldLandforms.Surface(new float2(x,z),owner.seed,owner.sampleScale,h.Height,slope,h.RiverMask,
+                biome,owner.waterLevel,owner.erosion.Sanitized().landforms);
             member=BiomeTransitionPolicy.Encode(BiomeTransitionPolicy.Evaluate(biome,surface,moisture,temperature,
                 h.Height,h.MountainMask,slope,h.RiverMask,owner.waterLevel));
         }

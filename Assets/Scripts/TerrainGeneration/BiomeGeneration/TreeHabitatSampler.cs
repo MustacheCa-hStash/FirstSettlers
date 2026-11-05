@@ -53,10 +53,10 @@ public sealed class TreeHabitatSampler : IDisposable
         float dx=(Height(x+4,z).Height-Height(x-4,z).Height)/8f;
         float dz=(Height(x,z+4).Height-Height(x,z-4).Height)/8f;
         float slope=TerrainSlopePolicy.FromGradient(Mathf.Sqrt(dx*dx+dz*dz),heightMultiplier);
-        float moisture=ClimateGenerator.SampleClimate01(x,z,seed+1000,scale*10f,persistence,lacunarity,climateMax,moistureOffsets);
-        float temperature=ClimateGenerator.SampleClimate01(x,z,seed+2000,scale*12f,persistence,lacunarity,climateMax,temperatureOffsets);
+        float moisture=ClimateGenerator.SampleWorldClimate01(x,z,seed,scale,false,persistence,lacunarity,climateMax,moistureOffsets,context.Erosion.landforms);
+        float temperature=ClimateGenerator.SampleWorldClimate01(x,z,seed,scale,true,persistence,lacunarity,climateMax,temperatureOffsets,context.Erosion.landforms);
         var biome=BiomeClassifier.Classify(center.Height,moisture,temperature,slope,center.MountainMask,center.RiverMask,water);
-        var surface=SurfaceTypeClassifier.Classify(center.Height,slope,center.RiverMask,biome,water);
+        var surface=WorldLandforms.Surface(new float2(x,z),seed,scale,center.Height,slope,center.RiverMask,biome,water,context.Erosion.landforms);
         if(surface==SurfaceType.Grass)
             for(int ox=-1;ox<=1;ox++)for(int oz=-1;oz<=1;oz++)
                 if(Height(x+ox,z+oz).Height<=water)surface=SurfaceType.Mud;

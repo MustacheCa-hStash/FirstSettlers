@@ -54,7 +54,9 @@ public static class WorldErosionValidation
             Check(h >= previous && (i == 0 || math.sign(h - water) == math.sign(d)), "Shore remap inverted terrain or crossed water.");
             previous = h;
         }
-        var original = s; original.mountainSpatialScale = 1f; original.mountainSparsity = 0f; original.lowlandRelief = 0f;
+        // This assertion isolates mountain scaling; regional geology has its own fixed world-space scale.
+        var original = s; original.landforms.enabled = false;
+        original.mountainSpatialScale = 1f; original.mountainSparsity = 0f; original.lowlandRelief = 0f;
         var wide = original; wide.mountainSpatialScale = s.mountainSpatialScale;
         int removed = 0, boosted = 0;
         foreach (int seed in new[] { 7, 42, 12345 })
@@ -73,15 +75,16 @@ public static class WorldErosionValidation
             Check(h >= water + 0.5f - 1e-6f && h <= water + 0.9f + 1e-6f, "Lowland hill variation out of bounds.");
             if (h > water + 0.65f) boosted++;
             var mountain = new WorldBaseSample(4f, float2.zero, 1f, 1f, 1f);
-            Check(math.abs(WorldTerrainHeight.ShapeForAccess(p, mountain, 4f, water, seed, s) - 4f) < 1e-6f, "Mountain height remapping/terracing remains.");
+            Check(math.abs(WorldTerrainHeight.ShapeForAccess(p, mountain, 4f, water, seed, s) - 4f) < 1e-6f, "Access shaping modified fully weighted mountain height.");
         }
         Check(removed > 100 && boosted > 100, "Missing sparse mountain regions or occasional larger hills.");
-        Debug.Log($"ACCESS SHAPING PASS: shoreline continuity, mountain XZ scaling preserves heights and reduces gradients, no mountain terracing; sparse mask removed {removed} samples; larger hill patches {boosted}.");
+        Debug.Log($"ACCESS SHAPING PASS: shoreline continuity, mountain XZ scaling preserves heights and reduces gradients, no access-stage height bands; sparse mask removed {removed} samples; larger hill patches {boosted}.");
     }
 
     private static void ValidateField()
     {
         var settings = WorldErosionSettings.Default; settings.carveRivers = false;
+        settings.landforms.enabled = false; // Regional analytic gradients are covered by WorldLandformValidation.
         int low = 0, high = 0, wet = 0;
         float gradientError = 0f;
         foreach (int seed in new[] { 7, 42, 12345 })
@@ -191,7 +194,9 @@ public static class WorldErosionValidation
         void CheckGrid(FarTerrainRequestResult tile, int tileSize)
         {
             int n = tile.HeightGrid.GetLength(0);
-            Check(tileSize / (float)(n - 1) <= settings.maxMeshSpacing + 0.001f, "Far geometry ignores maximum vertex spacing.");
+            // Macro patches intentionally relax spacing according to their quadtree level.
+            if (!tile.IsMacroTile)
+                Check(tileSize / (float)(n - 1) <= settings.maxMeshSpacing + 0.001f, "Boundary far geometry ignores maximum vertex spacing.");
             for (int x = 0; x < n; x++) for (int z = 0; z < n; z++)
             {
                 float wx = tile.ChunkCoord.x * tileSize + x * tileSize / (float)(n - 1);

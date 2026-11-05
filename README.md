@@ -1,5 +1,33 @@
 # FirstSettlers Work Notes
 
+## November 5: ridge artifacts, collision and broad uplands
+
+Fixed vertical fins in near-terrain LOD border stitching and stopped sharp
+regional cliff gradients from steering erosion into narrow spikes. High ground
+now has broad benches and soft shelves, with lower-amplitude erosion and lowland
+basin/wash behavior kept off elevated rock. Runtime colliders use the complete
+LOD0 height grid and matching triangle diagonals. Seed 67/68 reproductions and
+actual PhysX rays pass; the full 143,864-check terrain suite also passes.
+Generation remains seeded and order-independent, with a new baseline identity.
+See [paired previews, locations, validation and performance cost](Documentation/TERRAIN_RIDGES.md).
+Restart Play Mode or regenerate terrain to apply.
+
+## November 4: regional desert and rock landforms
+
+Added broad desert provinces, wind-aligned dunes, mesas/buttes, stepped
+escarpments, canyon cuts, dry washes, dry mountain ridges, badland shoulders,
+stony plains and clay basins. Shared early regional fields shape the canonical
+heightmap before final biome assignment. Desert cores now stay dry, with wet
+channels excluded and gentle relief above the water plane. New generated cracked
+clay and wash-gravel textures complement the existing sand and tinted stone;
+sparse boulders reuse current prefabs. Generation is seeded, order-independent
+and versioned for future client compatibility. Native checks passed 143,864
+assertions plus erosion, concurrency, slope and snow regressions, including empty
+near/far desert water meshes. See the
+[settings, limits and native previews](Documentation/WORLD_LANDFORMS.md) and
+[texture sources and exact prompts](ArtReferences/DesertSurfaces/README.md).
+Restart Play Mode or regenerate terrain to apply.
+
 ## October 30: sandstone court, access and household pieces
 
 Added SS13 and SS15-SS24, with short wall/coping lengths and a coping turn:

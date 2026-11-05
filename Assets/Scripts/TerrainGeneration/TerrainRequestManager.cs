@@ -174,12 +174,12 @@ public class TerrainRequestManager : System.IDisposable
 
                 stageStart = TerrainGenerationProfiler.GetTimestamp();
                 float[,] moistureMap = ClimateGenerator.GenerateTerrainMoistureMapForRequest(chunkSize, seed, sampleScale,
-                    octaves, persistence, lacunarity, chunkCoord, out generatedMoistures);
+                    octaves, persistence, lacunarity, chunkCoord, out generatedMoistures, erosion.landforms);
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainClimateMoisture, stageStart);
 
                 stageStart = TerrainGenerationProfiler.GetTimestamp();
                 float[,] temperatureMap = ClimateGenerator.GenerateTerrainTemperatureMapForRequest(chunkSize, seed,
-                    sampleScale, octaves, persistence, lacunarity, chunkCoord, out generatedTemperatures);
+                    sampleScale, octaves, persistence, lacunarity, chunkCoord, out generatedTemperatures, erosion.landforms);
                 TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainClimateTemperature, stageStart);
 
                 NativeArray<float> nativeHeights = default;
@@ -242,7 +242,7 @@ public class TerrainRequestManager : System.IDisposable
                         mapHeight,
                         waterSettings.WaterLevel,
                         Allocator.Persistent,
-                        out nativeSurfaces);
+                        out nativeSurfaces, chunkCoord, chunkSize, seed, sampleScale, erosion.landforms);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainSurfaceMap, stageStart);
 
                     stageStart = TerrainGenerationProfiler.GetTimestamp();
@@ -273,7 +273,8 @@ public class TerrainRequestManager : System.IDisposable
                         worldFeatureGenerationSettings,
                         finalHeightMap,
                         waterSettings.WaterLevel, mountainMaskMap,
-                        treeHabitatSampler: treeHabitats == null ? null : treeHabitats.Sample);
+                        treeHabitatSampler: treeHabitats == null ? null : treeHabitats.Sample,
+                        landforms: erosion.landforms, landformSampleScale: sampleScale);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainWorldFeaturePlan, stageStart);
 
                     nativeCanopyDensities = TerrainMapNativeUtility.CopyFloatMapToNative(worldFeaturePlan.CanopyDensityMap, Allocator.Persistent, out unusedMapWidth, out unusedMapHeight);
@@ -596,8 +597,9 @@ public class TerrainRequestManager : System.IDisposable
             try
             {
                 using var colliderWorkerScope = ColliderWorkerMarker.Auto();
-                // ⭐ fixed collider step, LOD of 3
-                const int colliderStep = 8;
+                // Collision must retain narrow crests and the same AC diagonals as LOD0.
+                // It remains bounded by ColliderDistance and the existing worker/upload budgets.
+                const int colliderStep = ColliderMeshGenerator.RuntimeStep;
 
                 long stageStart = TerrainGenerationProfiler.GetTimestamp();
                 MeshData colliderMeshData =

@@ -14,6 +14,22 @@ Shader "Custom/StylizedTerrainURP"
         _SandDetailStrength("Sand Albedo Strength", Range(0, 1)) = 0.35
         _SandNormalStrength("Sand Normal Strength", Range(0, 2)) = 0.30
         _MudColor("Mud Color", Color) = (0.42, 0.32, 0.22, 1)
+        _DrySurfaceStrength("Desert Sediment Strength", Range(0,1)) = 1
+        [NoScaleOffset] _ClayAlbedo("Cracked Clay Albedo", 2D) = "white" {}
+        [NoScaleOffset] _ClayNormal("Cracked Clay Normal", 2D) = "bump" {}
+        _ClayColor("Cracked Clay Tint", Color) = (1,1,1,1)
+        _ClayAverageColor("Cracked Clay Distance Color", Color) = (0.76,0.67,0.55,1)
+        _ClayTiling("Cracked Clay Tiling", Float) = 0.75
+        _ClayNormalStrength("Cracked Clay Normal Strength", Range(0,1)) = 0.28
+        [NoScaleOffset] _WashAlbedo("Dry Wash Gravel Albedo", 2D) = "white" {}
+        [NoScaleOffset] _WashNormal("Dry Wash Gravel Normal", 2D) = "bump" {}
+        _WashColor("Dry Wash Gravel Tint", Color) = (1,1,1,1)
+        _WashAverageColor("Dry Wash Distance Color", Color) = (0.65,0.55,0.43,1)
+        _WashTiling("Dry Wash Tiling", Float) = 0.80
+        _WashNormalStrength("Dry Wash Normal Strength", Range(0,1)) = 0.22
+        _DrySurfaceFadeStart("Dry Surface Detail Fade Start", Float) = 70
+        _DrySurfaceFadeEnd("Dry Surface Detail Fade End", Float) = 220
+        _DrySurfaceNormalEnd("Dry Surface Normal Fade End", Float) = 65
         _RockColor("Rock Color (Distance Fallback)", Color) = (0.45, 0.45, 0.45, 1)
         [Toggle(_ROCK_DETAIL)] _RockDetail("Enable Rock / Cliff Detail", Float) = 0
         [NoScaleOffset] _RockAlbedo("Rock / Cliff Albedo", 2D) = "white" {}
@@ -179,6 +195,7 @@ Shader "Custom/StylizedTerrainURP"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Assets/Shaders/TerrainSkyAccess.hlsl"
             #include "Assets/Shaders/LocalFlameLighting.hlsl"
+            #include "Assets/Shaders/WorldLandformFields.hlsl"
 
             TEXTURE2D(_ControlMap0);
             // Chunk control maps share clamp/filter settings. Repeat detail
@@ -234,6 +251,10 @@ Shader "Custom/StylizedTerrainURP"
             TEXTURE2D(_DenseMossHeight);
 
             TEXTURE2D(_SandAlbedo);
+            TEXTURE2D(_ClayAlbedo);
+            TEXTURE2D(_ClayNormal);
+            TEXTURE2D(_WashAlbedo);
+            TEXTURE2D(_WashNormal);
             SAMPLER(sampler_SandAlbedo);
             TEXTURE2D(_SandNormal);
 
@@ -282,6 +303,10 @@ Shader "Custom/StylizedTerrainURP"
                 float _SandDetailStrength;
                 float _SandNormalStrength;
                 half4 _MudColor;
+                half4 _ClayColor, _WashColor, _ClayAverageColor, _WashAverageColor;
+                float _DrySurfaceStrength, _ClayTiling, _WashTiling;
+                float _ClayNormalStrength, _WashNormalStrength;
+                float _DrySurfaceFadeStart, _DrySurfaceFadeEnd, _DrySurfaceNormalEnd;
                 half4 _RockColor;
                 float _RockDetail;
                 float _RockTiling;
@@ -608,6 +633,55 @@ Shader "Custom/StylizedTerrainURP"
                 detailNormalWS = ApplyDetailNormal(baseNormalWS, tangentNormal, _SandNormalStrength);
             }
 
+            void ReadDesertSediment(float2 uv, float2 dx, float2 dy, bool clay, float normalStrength,
+                out half3 albedo, out float3 normalTS)
+            {
+                normalTS = float3(0,0,1);
+                // Share the existing repeat sampler; no extra sampler registers.
+                [branch] if (clay)
+                {
+                    albedo = SAMPLE_TEXTURE2D_GRAD(_ClayAlbedo,sampler_SandAlbedo,uv,dx,dy).rgb;
+                    [branch] if(normalStrength>0.001) normalTS=UnpackNormal(SAMPLE_TEXTURE2D_GRAD(_ClayNormal,sampler_SandAlbedo,uv,dx,dy));
+                }
+                else
+                {
+                    albedo = SAMPLE_TEXTURE2D_GRAD(_WashAlbedo,sampler_SandAlbedo,uv,dx,dy).rgb;
+                    [branch] if(normalStrength>0.001) normalTS=UnpackNormal(SAMPLE_TEXTURE2D_GRAD(_WashNormal,sampler_SandAlbedo,uv,dx,dy));
+                }
+            }
+
+            void SampleDesertSediment(float3 positionWS,float3 baseNormalWS,float3 positionDx,float3 positionDy,
+                float distanceToCamera,bool clay,out half3 albedo,out float3 detailNormalWS)
+            {
+                half3 tint=clay?_ClayColor.rgb:_WashColor.rgb;
+                half3 average=clay?_ClayAverageColor.rgb:_WashAverageColor.rgb;
+                float fade=1.0-GetDistanceBlend(distanceToCamera,_DrySurfaceFadeStart,_DrySurfaceFadeEnd);
+                float macro=FSLandformNoise(positionWS.xz,max(_WorldLandformParams.y*0.45,1.0),_WorldLandformSeed+89113);
+                tint*=1.0+macro*0.045;
+                albedo=average*tint;detailNormalWS=baseNormalWS;
+                [branch] if(fade<=0.001) return;
+                float tiling=max(clay?_ClayTiling:_WashTiling,0.001);
+                float normalStrength=(clay?_ClayNormalStrength:_WashNormalStrength)*
+                    (1.0-smoothstep(_DrySurfaceNormalEnd*0.35,max(_DrySurfaceNormalEnd,0.01),distanceToCamera));
+                float2 f=frac(positionWS.xz*tiling),blend=f*f*(3.0-2.0*f);
+                float2 dx=positionDx.xz*tiling*0.5,dy=positionDy.xz*tiling*0.5;
+                half3 color=0;float3 normal=0;
+                // Overlapping texture windows fade out before reaching an image edge.
+                // This is a continuous periodic material even when an authored source's edge pixels differ.
+                [unroll] for(int i=0;i<4;i++)
+                {
+                    float2 corner=float2(i&1,(i>>1)&1);
+                    float2 uv=(f-corner)*0.5+0.5;
+                    float2 pair=lerp(1.0-blend,blend,corner);
+                    float weight=pair.x*pair.y;
+                    half3 sampleColor;float3 sampleNormal;
+                    ReadDesertSediment(uv,dx,dy,clay,normalStrength,sampleColor,sampleNormal);
+                    color+=sampleColor*weight;normal+=sampleNormal*weight;
+                }
+                albedo=lerp(average,color,fade)*tint;
+                detailNormalWS=ApplyDetailNormal(baseNormalWS,normalize(normal),normalStrength*fade);
+            }
+
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
@@ -635,6 +709,7 @@ Shader "Custom/StylizedTerrainURP"
 
             void SampleExcavation(float3 p,float3 n,float3 positionDx,float3 positionDy,out half3 albedo,out float3 normalWS)
             {
+                float3 geologyTint = FSRegionalRockTint(p);
                 float3 weights=max(pow(abs(n),4.0)-0.01,0.0);
                 weights/=max(dot(weights,1.0),1e-5);
                 float3 signs=step(0.0,n)*2.0-1.0;
@@ -659,7 +734,7 @@ Shader "Custom/StylizedTerrainURP"
                     if(_ExcavationNormalStrength>0){float3 t=UnpackNormal(SAMPLE_TEXTURE2D_GRAD(_ExcavationNormal,sampler_ExcavationAlbedo,uv,dx.xy*s,dy.xy*s));perturbation+=float3(t.x*signs.z,t.y,0)*weights.z;}
                 }
                 perturbation-=n*dot(perturbation,n);
-                normalWS=normalize(n+perturbation*_ExcavationNormalStrength);albedo*=_ExcavationTint.rgb;
+                normalWS=normalize(n+perturbation*_ExcavationNormalStrength);albedo*=_ExcavationTint.rgb * geologyTint;
             }
 
             half4 ShadeTerrainSurface(half3 albedo,float3 normalWS,Varyings IN,half terrainVisibility)
@@ -748,6 +823,7 @@ Shader "Custom/StylizedTerrainURP"
                 half forestVariantWeight = forestCoverVariant;
 
                 float distanceToCamera = distance(_WorldSpaceCameraPos.xyz, IN.positionWS);
+                float3 sedimentDx=ddx(IN.positionWS),sedimentDy=ddy(IN.positionWS);
                 #if defined(_ROCK_DETAIL)
                 float3 rockPositionDx = ddx(IN.positionWS);
                 float3 rockPositionDy = ddy(IN.positionWS);
@@ -776,25 +852,48 @@ Shader "Custom/StylizedTerrainURP"
                 half3 baseColor = 0;
                 float3 weightedNormal = baseNormalWS * (sandWeight + mudWeight + rockWeight + cliffWeight + riverbedWeight);
 
-                baseColor += _SandColor.rgb * sandWeight;
+                half3 regionalSandTint = 1.0h;
+                [branch] if (sandWeight > 0.001h) regionalSandTint = FSRegionalSandTint(IN.positionWS);
+                baseColor += _SandColor.rgb * regionalSandTint * sandWeight;
                 baseColor += _MudColor.rgb * mudWeight;
-                baseColor += _RockColor.rgb * rockWeight;
-                baseColor += _CliffColor.rgb * cliffWeight;
+                half3 regionalRockTint = 1.0h;
+                [branch] if (rockWeight + cliffWeight > 0.001h) regionalRockTint = FSRegionalRockTint(IN.positionWS);
+                baseColor += _RockColor.rgb * regionalRockTint * rockWeight;
+                baseColor += _CliffColor.rgb * regionalRockTint * cliffWeight;
                 baseColor += _RiverbedColor.rgb * riverbedWeight;
+
+                [branch] if(mudWeight+riverbedWeight>0.001 && _DrySurfaceStrength>0.001 && _WorldLandformParams.x>0.5)
+                {
+                    float dry=smoothstep(0.08,0.18,FSRegionalGeology(IN.positionWS.xz).x)*_DrySurfaceStrength;
+                    [branch] if(dry>0.001 && mudWeight>0.001)
+                    {
+                        half3 deposit;float3 depositNormal;
+                        SampleDesertSediment(IN.positionWS,baseNormalWS,sedimentDx,sedimentDy,distanceToCamera,false,deposit,depositNormal);
+                        baseColor+=(deposit-_MudColor.rgb)*mudWeight*dry;
+                        weightedNormal+=(depositNormal-baseNormalWS)*mudWeight*dry;
+                    }
+                    [branch] if(dry>0.001 && riverbedWeight>0.001)
+                    {
+                        half3 clay;float3 clayNormal;
+                        SampleDesertSediment(IN.positionWS,baseNormalWS,sedimentDx,sedimentDy,distanceToCamera,true,clay,clayNormal);
+                        baseColor+=(clay-_RiverbedColor.rgb)*riverbedWeight*dry;
+                        weightedNormal+=(clayNormal-baseNormalWS)*riverbedWeight*dry;
+                    }
+                }
 
                 if (sandWeight > 0.001h)
                 {
                     half3 sandAlbedo;
                     float3 sandNormalWS;
                     SampleSandDetail(IN.positionWS, baseNormalWS, sandAlbedo, sandNormalWS);
-                    baseColor += _SandColor.rgb * sandWeight * (sandAlbedo - 1.0h) * _SandDetailStrength;
+                    baseColor += _SandColor.rgb * regionalSandTint * sandWeight * (sandAlbedo - 1.0h) * _SandDetailStrength;
                     weightedNormal += (sandNormalWS - baseNormalWS) * sandWeight;
                 }
 
                 #if defined(_ROCK_DETAIL)
                 float rockSurfaceWeight = rockWeight + cliffWeight;
                 float rockFade = 1.0 - GetDistanceBlend(distanceToCamera, _RockDetailFadeStart, _RockDetailFadeEnd);
-                half3 rockTint = _RockColor.rgb * rockWeight + _CliffColor.rgb * cliffWeight;
+                half3 rockTint = (_RockColor.rgb * rockWeight + _CliffColor.rgb * cliffWeight) * regionalRockTint;
                 // Keep the existing distant color, independently of nearby texture
                 // strength. The sampled texture supplies its own untinted color.
                 half3 distantRockColor = rockTint * lerp(half3(1, 1, 1), _RockAverageAlbedo.rgb, _RockDetailStrength);
@@ -808,7 +907,7 @@ Shader "Custom/StylizedTerrainURP"
                     float3 rockNormalWS;
                     SampleRockDetail(IN.positionWS, baseNormalWS, rockPositionDx, rockPositionDy,
                         normalStrength * rockFade * normalFade, rockAlbedo, rockNormalWS);
-                    baseColor += (rockAlbedo * rockSurfaceWeight - distantRockColor) * _RockTextureStrength * rockFade;
+                    baseColor += (rockAlbedo * regionalRockTint * rockSurfaceWeight - distantRockColor) * _RockTextureStrength * rockFade;
                     weightedNormal += (rockNormalWS - baseNormalWS) * rockSurfaceWeight;
                 }
                 #endif

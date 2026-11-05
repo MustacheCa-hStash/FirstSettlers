@@ -141,6 +141,7 @@ public static class TerrainControlMapBuilder
         {
             case SurfaceType.Sand:
             case SurfaceType.Mud:
+            case SurfaceType.DryWash:
             case SurfaceType.Grass:
             case SurfaceType.Rock:
                 return true;
@@ -148,6 +149,7 @@ public static class TerrainControlMapBuilder
             case SurfaceType.Snow:
             case SurfaceType.Cliff:
             case SurfaceType.Riverbed:
+            case SurfaceType.CrackedClay:
                 return false;
 
             default:
@@ -160,13 +162,15 @@ public static class TerrainControlMapBuilder
         switch (surfaceType)
         {
             case SurfaceType.Sand: return new Color32(value, 0, 0, 0);
-            case SurfaceType.Mud: return new Color32(0, value, 0, 0);
+            case SurfaceType.Mud:
+            case SurfaceType.DryWash: return new Color32(0, value, 0, 0);
             case SurfaceType.Grass: return new Color32(0, 0, value, 0);
             case SurfaceType.Rock: return new Color32(0, 0, 0, value);
 
             case SurfaceType.Snow: return new Color32(value, 0, 0, 0);
             case SurfaceType.Cliff: return new Color32(0, value, 0, 0);
-            case SurfaceType.Riverbed: return new Color32(0, 0, value, 0);
+            case SurfaceType.Riverbed:
+            case SurfaceType.CrackedClay: return new Color32(0, 0, value, 0);
 
             default: return new Color32(0, 0, 0, 0);
         }

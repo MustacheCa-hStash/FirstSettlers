@@ -228,12 +228,14 @@ public class ChunkManager : IChunkLookup
             distantTrees = new DistantTreeManager(foliage.Trees, generation.Seed, generation.ChunkSize, generation.SampleScale, generation.Octaves, generation.Persistence,
                 generation.Lacunarity, generation.WorldScale, generation.MeshHeightMultiplier, generation.Water.WaterLevel, generation.MountainHorizontalScale,
                 worldFeatureGenerationSettings, generation.Erosion, Trees);
+        WorldLandformAppearance.Bind(this, generation);
     }
 
     public void Dispose()
     {
         if (disposed) return;
         disposed = true;
+        WorldLandformAppearance.Release(this);
         Sculpting?.Dispose(); // Cancel/join producers before retiring source runtimes or their native maps.
         sculptHeightMaps.Clear();
         terrainRequestManager?.Dispose(); // Close admission and all result queues before waiting for workers.

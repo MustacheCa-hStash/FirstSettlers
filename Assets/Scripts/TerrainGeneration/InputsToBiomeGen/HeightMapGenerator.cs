@@ -263,14 +263,16 @@ public static partial class HeightMapGenerator
         float waterLevel, float coverage, in WorldErosionSettings erosion)
     {
         int seed = riverSeed - 60000;
-        WorldBaseSample input = WorldTerrainHeight.Base(position, sampleScale, seed, coverage, erosion);
-        float height = WorldTerrainHeight.Erode(position, input, sampleScale, seed, coverage, erosion);
+        WorldBaseSample input = WorldTerrainHeight.Base(position, sampleScale, seed, coverage, erosion, waterLevel);
+        float height = WorldTerrainHeight.Erode(position, input, sampleScale, seed, coverage, erosion, waterLevel);
         height = WorldTerrainHeight.ShapeForAccess(position, input, height, waterLevel, seed, erosion);
+        float desertDryness = WorldLandforms.WaterExclusion(position, seed, sampleScale, erosion.landforms);
         float carvedRiverMask = 0f;
         if (erosion.carveRivers)
         {
             float eligibility = (1f - math.smoothstep(0.012f, 0.03f, input.MountainContribution)) *
-                (1f - math.smoothstep(0.20f, 0.55f, input.MountainWeight));
+                (1f - math.smoothstep(0.20f, 0.55f, input.MountainWeight)) * (1f - input.LandformMask) *
+                (1f - desertDryness);
             float riverMask = 0f;
             float basin = 0f;
             if (eligibility != 0f)
@@ -282,6 +284,10 @@ public static partial class HeightMapGenerator
             height = CarveRiverBasin(height, basin * eligibility, carvedRiverMask, waterLevel,
                 erosion.riverValleyWidth, erosion.riverValleyFlattening);
         }
+        height = WorldLandforms.FinishSurface(position, input, height, carvedRiverMask, sampleScale,
+            seed, waterLevel, erosion.landforms);
+        height = WorldLandforms.FinishUplands(position, height, input.Height, input.LandformMask, seed, sampleScale,
+            waterLevel, erosion.landforms);
         return new TerrainHeightSampleData(height, input.MountainMask, carvedRiverMask);
     }
     private static float CarveRiverBasin(float originalHeight, float basinInfluence, float riverMask, float waterLevel,
@@ -669,7 +675,7 @@ public static partial class HeightMapGenerator
         }
     }
 
-    [BurstCompile]
+    [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
     private struct HeightFieldSampleJob : ITerrainHeightSamplingBatchJob
     {
         public int SampleOffset { get; set; }
@@ -719,7 +725,7 @@ public static partial class HeightMapGenerator
         }
     }
 
-    [BurstCompile]
+    [BurstCompile(FloatMode = FloatMode.Strict, FloatPrecision = FloatPrecision.Standard)]
     private struct HeightSlopeJob : IJobParallelFor
     {
         public float heightMultiplier;

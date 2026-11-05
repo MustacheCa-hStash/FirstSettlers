@@ -26,6 +26,9 @@ public static class TerrainSlopePolicy
     {
         if (height <= waterLevel) return BiomeType.Water;
         if (slope >= CliffDegrees) return BiomeType.Rock;
+        // Hot dry mountain benches belong to their desert region as well as its lowlands.
+        if (temperature > 0.65f && moisture < 0.35f)
+            return slope <= LooseSurfaceMaxDegrees ? BiomeType.Desert : BiomeType.Rock;
         // Preserve cold/alpine snow; warm lower mountain benches can grow grass.
         if (mountainMask > 0.45f)
         {
@@ -46,8 +49,6 @@ public static class TerrainSlopePolicy
             return temperature < 0.30f ? BiomeType.Snow : BiomeType.Grassland;
         if (temperature < 0.30f && moisture > 0.65f)
             return BiomeType.Taiga;
-        if (temperature > 0.65f && moisture < 0.35f)
-            return slope <= LooseSurfaceMaxDegrees ? BiomeType.Desert : BiomeType.Rock;
         // Tree suitability ends at ForestMaxDegrees, but the forest floor continues to
         // the rock boundary. Converting the 40-45 degree band to meadow creates grass rims.
         if (moisture > 0.65f) return BiomeType.Forest;

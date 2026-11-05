@@ -55,6 +55,14 @@ Material:
         m_Texture: {fileID: 2800000, guid: 5afb1ec63ffe9174cb83167f4906b1eb, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _ClayAlbedo:
+        m_Texture: {fileID: 2800000, guid: f706297f6b91444ca419db7e8ebf2cde, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ClayNormal:
+        m_Texture: {fileID: 2800000, guid: 05e3062875a87124d8201783f9d04202, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _ControlMap0:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -77,6 +85,14 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _DenseMossHeight:
         m_Texture: {fileID: 2800000, guid: ef5cb4734a7ac3044847d96768b4fd99, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ExcavationAlbedo:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ExcavationNormal:
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _GrassAlbedo:
@@ -167,6 +183,14 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _WashAlbedo:
+        m_Texture: {fileID: 2800000, guid: a6243abd5bb348d991296794b2f4077b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _WashNormal:
+        m_Texture: {fileID: 2800000, guid: 1a4fca9557280d44f8d4a208ff648e77, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - unity_Lightmaps:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -187,11 +211,19 @@ Material:
     - _BareDirtNormalStrength: 0.35
     - _BareDirtTiling: 0.35
     - _BlendSharpness: 0.61
+    - _ClayNormalStrength: 0.28
+    - _ClayTiling: 0.75
     - _CliffNormalStrength: 0.65
     - _DenseMossAOStrength: 0.5
     - _DenseMossHeightStrength: 0.012
     - _DistanceBlendNoiseScale: 0.01
     - _DistanceBlendNoiseStrength: 0.15
+    - _DrySurfaceFadeEnd: 220
+    - _DrySurfaceFadeStart: 70
+    - _DrySurfaceNormalEnd: 65
+    - _DrySurfaceStrength: 1
+    - _ExcavationNormalStrength: 0
+    - _ExcavationTiling: 0.65
     - _ForestFloorMacroScale: 0.025
     - _ForestFloorMacroStrength: 0.12
     - _GrassBladeGround: 1
@@ -244,10 +276,10 @@ Material:
     - _SandDetailStrength: 0.35
     - _SandNormalStrength: 0.3
     - _SandTiling: 0.35
+    - _SnowBoundaryWidth: 0.2
+    - _SnowCoverageThreshold: 0.5
     - _SnowNormalStrength: 0.35
     - _SnowRockSeparation: 1
-    - _SnowCoverageThreshold: 0.5
-    - _SnowBoundaryWidth: 0.2
     - _SnowTilingFar: 0.1
     - _SnowTilingFarDistance: 200
     - _SnowTilingNear: 0.4
@@ -256,11 +288,16 @@ Material:
     - _SnowTriplanarSharpness: 4
     - _SnowTriplanarStart: 0.35
     - _SurfaceBlendSharpness: 1
+    - _WashNormalStrength: 0.22
+    - _WashTiling: 0.8
     m_Colors:
     - _BareDirtColor: {r: 0.2, g: 0.13, b: 0.08, a: 1}
+    - _ClayAverageColor: {r: 0.8209056, g: 0.68878615, b: 0.5737168, a: 1}
+    - _ClayColor: {r: 1, g: 1, b: 1, a: 1}
     - _CliffColor: {r: 0.65, g: 0.64, b: 0.62, a: 1}
     - _DarkGrassColor: {r: 0.118474066, g: 0.28930807, b: 0.106443495, a: 1}
     - _DenseMossColor: {r: 0.85, g: 0.9, b: 0.7, a: 1}
+    - _ExcavationTint: {r: 1, g: 1, b: 1, a: 1}
     - _GrassGroundTint: {r: 0.9, g: 0.9, b: 0.78, a: 1}
     - _GroundDarkGrassColor: {r: 0.09999997, g: 0.27999997, b: 0.089999996, a: 1}
     - _GroundLightGrassColor: {r: 0.24999997, g: 0.52, b: 0.18999997, a: 1}
@@ -281,5 +318,7 @@ Material:
     - _TerrainHorizonParams: {r: 0, g: 0, b: 0, a: 0}
     - _TerrainHorizonTint: {r: 1, g: 1, b: 1, a: 1}
     - _TerrainHorizonUV: {r: 0, g: 0, b: 0, a: 0}
+    - _WashAverageColor: {r: 0.75337344, g: 0.619445, b: 0.48503292, a: 1}
+    - _WashColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

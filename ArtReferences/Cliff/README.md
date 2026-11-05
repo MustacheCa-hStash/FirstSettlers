@@ -1,5 +1,11 @@
 # Fractured cliff texture
 
+The November 4 [regional landform system](../../Documentation/WORLD_LANDFORMS.md)
+adds world-space geology tints to nearby and distant rock in live worlds. The
+texture-only and untinted behavior below describes the standalone material
+baseline; live sandstone, limestone and hard bedrock multiply that baseline by
+their regional tint.
+
 Original natural grey/taupe stone with broad vertical slab fractures, inspired by the supplied cliff screenshots. The restrained mineral detail fits the photographic forest-floor layers and natural skybox. Built-in imagegen was used for generation and central-cross seam repair; no external image API was used.
 
 ## Files and setup

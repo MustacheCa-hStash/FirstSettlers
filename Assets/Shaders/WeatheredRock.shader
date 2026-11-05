@@ -36,6 +36,7 @@ Shader "Custom/WeatheredRock"
         // Reuse the existing sun-cycle ambient-floor dimming, without any tree deformation/fade.
         #include "Assets/Shaders/TreeNightLighting.hlsl"
         #include "Assets/Shaders/LocalFlameLighting.hlsl"
+        #include "Assets/Shaders/WorldLandformFields.hlsl"
 
         TEXTURE2D(_BaseMap);
         SAMPLER(sampler_BaseMap);
@@ -188,6 +189,7 @@ Shader "Custom/WeatheredRock"
                 albedo = lerp(luma.xxx, albedo, _Saturation);
                 albedo = saturate((albedo - 0.18h) * _Contrast + 0.18h);
                 albedo *= _BaseColor.rgb * _Brightness;
+                albedo *= FSRegionalRockTint(input.positionWS);
                 half grain = SAMPLE_TEXTURE2D(_CoatingMap, sampler_CoatingMap, input.positionWS.xz*1.7).a;
                 albedo = lerp(albedo, _CoatingColor.rgb * lerp(0.9h,1.08h,grain),coating);
 

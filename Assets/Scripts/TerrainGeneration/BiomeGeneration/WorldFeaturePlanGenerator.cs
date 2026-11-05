@@ -41,7 +41,8 @@ public static class WorldFeaturePlanGenerator
         WorldFeatureGenerationSettings settings,
         float[,] heightMap = null,
         float waterLevel = 0f, float[,] mountainMaskMap = null,
-        System.Func<float,float,TreeHabitatSample> treeHabitatSampler = null)
+        System.Func<float,float,TreeHabitatSample> treeHabitatSampler = null,
+        WorldLandformSettings landforms = default, float landformSampleScale = 600f)
     {
         int width = biomeMap.GetLength(0);
         int height = biomeMap.GetLength(1);
@@ -101,6 +102,8 @@ public static class WorldFeaturePlanGenerator
             riverMaskMap,
             settings);
 
+        AddDesertBoulders(plan, chunkCoord, chunkSize, seed, biomeMap, surfaceTypeMap, slopeMap,
+            riverMaskMap, settings, landforms.Sanitized(), landformSampleScale);
         BuildRockInfluenceMap(plan, chunkSize);
         AddSnowRocks(plan, chunkCoord, chunkSize, seed, biomeMap, surfaceTypeMap, slopeMap, riverMaskMap, settings);
 
@@ -389,6 +392,43 @@ public static class WorldFeaturePlanGenerator
                 fields.DampShadeMap[x, z] = dampShade;
                 fields.UnderstoryDensityMap[x, z] = understory;
             }
+        }
+    }
+
+    private static void AddDesertBoulders(WorldFeaturePlan plan, ChunkCoord coord, int chunkSize, int seed,
+        BiomeType[,] biomes, SurfaceType[,] surfaces, float[,] slopes, float[,] rivers,
+        WorldFeatureGenerationSettings settings, WorldLandformSettings landforms, float sampleScale)
+    {
+        if (!landforms.enabled || settings.grasslandRockPrefabCount <= 0 || settings.maxGrasslandRocksPerChunk <= 0 || chunkSize < 32) return;
+        int placed = 0, budget = Mathf.Min(3, settings.maxGrasslandRocksPerChunk);
+        const int cells = 4;
+        float cellSize = chunkSize / (float)cells;
+        for (int i = 0; i < cells * cells && placed < budget; i++)
+        {
+            int cx = i % cells, cz = i / cells;
+            uint hash = WorldLandforms.Hash(coord.x * cells + cx, coord.z * cells + cz, seed + 89331);
+            float Roll(int shift) => ((hash >> shift) & 255u) / 255f;
+            float x = Mathf.Clamp((cx + Roll(0)) * cellSize, 12f, chunkSize - 12f);
+            float z = Mathf.Clamp((cz + Roll(8)) * cellSize, 12f, chunkSize - 12f);
+            int px = Mathf.RoundToInt(x) + 1, pz = Mathf.RoundToInt(z) + 1;
+            if (biomes[px,pz] != BiomeType.Desert || slopes[px,pz] > 38f || rivers[px,pz] > 0.12f) continue;
+            var region = WorldLandforms.Region(new Unity.Mathematics.float2(coord.x * chunkSize + x,
+                coord.z * chunkSize + z), seed, sampleScale, landforms);
+            if (region.Basin.x > 0.4f || surfaces[px,pz] == SurfaceType.CrackedClay ||
+                (surfaces[px,pz] == SurfaceType.Sand && region.Sand.x > 0.4f)) continue;
+            float chance = Mathf.Lerp(0.12f, 0.6f, Mathf.Clamp01(region.Plateau.x + slopes[px,pz] / 65f));
+            if (Roll(16) > chance) continue;
+            bool large = settings.grasslandLargeRockPrefabCount > 0 && Roll(24) > 0.82f;
+            Vector2 range = large ? settings.grasslandLargeRockUniformScaleRange : settings.grasslandRockUniformScaleRange;
+            float size = Mathf.Max(0.1f, Mathf.Lerp(Mathf.Min(range.x,range.y), Mathf.Max(range.x,range.y), Roll(8)));
+            float radius = large ? 10f : 6f;
+            if (IntersectsExistingPlacement(plan, x, z, radius)) continue;
+            int count = large ? settings.grasslandLargeRockPrefabCount : settings.grasslandRockPrefabCount;
+            plan.Placements.Add(new WorldFeaturePlacement(WorldFeatureType.Boulder,
+                large ? WorldFeatureVariant.GrasslandLargeBoulder : WorldFeatureVariant.GrasslandBoulder,
+                x, z, Quaternion.Euler(Mathf.Lerp(-8f,8f,Roll(0)), Roll(16) * 360f, 0f),
+                Vector3.one * size, radius, radius + 8f, (int)(hash % (uint)count)));
+            placed++;
         }
     }
 

@@ -7,6 +7,7 @@ using UnityEngine;
 
 public static class ColliderMeshGenerator
 {
+    public const int RuntimeStep = 1;
     public static MeshData GenerateColliderMesh(
         float[,] heightMap,
         float heightMultiplier,
@@ -15,7 +16,7 @@ public static class ColliderMeshGenerator
     {
         int paddedWidth = heightMap.GetLength(0);
         int chunkSize = paddedWidth - 3;
-        int safeStepIncrement = Mathf.Max(1, stepIncrement);
+        int safeStepIncrement = MeshGenerator.SanitizeStep(chunkSize, stepIncrement);
 
         float topLeftX = chunkSize / -2f;
         float bottomLeftZ = chunkSize / -2f;

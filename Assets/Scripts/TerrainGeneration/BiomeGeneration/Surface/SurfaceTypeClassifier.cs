@@ -80,6 +80,9 @@ public static class SurfaceTypeClassifier
             case SurfaceType.Mud:
                 baseColor = new Color(0.42f, 0.32f, 0.22f);
                 break;
+            case SurfaceType.DryWash:
+                baseColor = new Color(0.64f, 0.56f, 0.43f);
+                break;
 
             case SurfaceType.Grass:
                 baseColor = new Color(0.1255f, 0.5451f, 0.1569f);
@@ -99,6 +102,9 @@ public static class SurfaceTypeClassifier
 
             case SurfaceType.Riverbed:
                 baseColor = new Color(0.35f, 0.30f, 0.24f);
+                break;
+            case SurfaceType.CrackedClay:
+                baseColor = new Color(0.74f, 0.67f, 0.55f);
                 break;
 
             default:

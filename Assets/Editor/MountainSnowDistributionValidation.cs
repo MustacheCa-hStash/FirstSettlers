@@ -224,8 +224,8 @@ public static class MountainSnowDistributionValidation
             samples[i] = new Sample { position = p, height = terrain.Height, mask = terrain.MountainMask,
                 river = terrain.RiverMask, gradient = new float2(right - left, up - down) / 8,
                 neighborMean = (left + right + down + up) / 4,
-                temperature = ClimateGenerator.SampleClimate01(p.x, p.y, 2046, 7200, .05f, 10, 1, temperatureOffsets),
-                moisture = ClimateGenerator.SampleClimate01(p.x, p.y, 1046, 6000, .05f, 10, 1, moistureOffsets) };
+                temperature = ClimateGenerator.SampleWorldClimate01(p.x, p.y, 46, 600, true, .05f, 10, 1, temperatureOffsets),
+                moisture = ClimateGenerator.SampleWorldClimate01(p.x, p.y, 46, 600, false, .05f, 10, 1, moistureOffsets) };
         }
     }
 

@@ -151,7 +151,7 @@ MonoBehaviour:
   startDistance: 600
   distanceFeather: 477.5
   maxDistance: 5000
-  density: 0.0029
+  density: 0.0001
   bottomHeight: -125
   topHeight: 220
   heightFeather: 20
@@ -960,7 +960,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 67
+  worldSeed: 43
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -1497,7 +1497,18 @@ MonoBehaviour:
   persistence: 0.05
   lacunarity: 10
   erosion:
-    version: 4
+    version: 5
+    landforms:
+      version: 2
+      enabled: 1
+      dryDeserts: 1
+      desertRegionScale: 18
+      plateauRelief: 1.8
+      plateauScale: 1.4
+      cliffWidth: 0.1
+      duneHeight: 0.12
+      duneWavelength: 200
+      dryWashDepth: 0.18
     baseElevation: 0.45
     lowlandRelief: 0.8
     mountainRelief: 20
@@ -1692,7 +1703,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 256
   walkSpeed: 5
-  sprintSpeed: 8
+  sprintSpeed: 10
   crouchSpeed: 2.25
   groundAcceleration: 65
   groundBraking: 90
