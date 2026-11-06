@@ -18,6 +18,10 @@ public sealed class DistantTreeManager : IDisposable
         public DistantTreeGrounding Grounding;
         public int[] ProtectionOrder;
         public int[] GpuSlots;
+        public readonly List<GpuRegion> GpuRegions = new();
+        public int[] MeshIndices, FallbackIndices;
+        public bool GpuPrepared;
+        public int GroundRevision;
         public Bounds Bounds;
         public float LoadFade;
         public int LastUsed;
@@ -25,6 +29,11 @@ public sealed class DistantTreeManager : IDisposable
         public readonly int[] CellTrees = new int[16];
         public float[] Crowding, EdgeExposure, Density;
         public bool CrowdingDirty = true;
+    }
+    private sealed class GpuRegion
+    {
+        public Batch Batch;
+        public int Id, Count;
     }
     private sealed class Batch
     {
@@ -72,6 +81,10 @@ public sealed class DistantTreeManager : IDisposable
     public RenderGeometryStats RenderStats { get; private set; }
     public RenderGeometryStats MeshRenderStats => standingTrees.RenderStats;
     public int MeshDrawCalls => standingTrees.DrawCalls;
+    public int CpuTreeSubmissions { get; private set; }
+    public int GpuSourceUploads { get; private set; }
+    public int GpuRegionUploads { get; private set; }
+    public int GpuCandidates { get; private set; }
 
     public DistantTreeManager(TreeSettings settings, int seed, int chunkSize, float sampleScale,
         int octaves, float persistence, float lacunarity, float worldScale, float heightMultiplier,
@@ -137,6 +150,7 @@ public sealed class DistantTreeManager : IDisposable
         if (disposed) return;
         using var updateSample = UpdateMarker.Auto();
         RenderStats = default;
+        CpuTreeSubmissions = GpuSourceUploads = GpuRegionUploads = GpuCandidates = 0;
         standingTrees.BeginFrame(camera);
         ConfigureGpu();
         foreach (var batch in uniqueBatches) batch.Gpu?.BeginFrame();
@@ -266,10 +280,33 @@ public sealed class DistantTreeManager : IDisposable
             // Near instances are submitted off-screen too, so Unity can render their shadows.
             float nearestX = Mathf.Max(0f, Mathf.Abs(bounds.center.x - viewer.x) - bounds.extents.x);
             float nearestZ = Mathf.Max(0f, Mathf.Abs(bounds.center.z - viewer.z) - bounds.extents.z);
-            if (!billboardVisible && nearestX * nearestX + nearestZ * nearestZ > meshEnd * meshEnd) continue;
-            if (settings.distantTreeDensityAware && manifest.CrowdingDirty) RefreshCrowding(coord, manifest);
-            for (int i = 0; i < manifest.Trees.Length; i++)
+            bool nearMeshes = nearestX * nearestX + nearestZ * nearestZ <= meshEnd * meshEnd;
+            if (!billboardVisible && !nearMeshes) continue;
+            bool ecologyChanged = settings.distantTreeDensityAware && manifest.CrowdingDirty;
+            if (ecologyChanged) RefreshCrowding(coord, manifest);
+            PrepareGpu(manifest);
+            if (ecologyChanged || manifest.GroundRevision != manifest.Grounding.Revision)
             {
+                for (int i = 0; i < manifest.Trees.Length; i++)
+                {
+                    if (manifest.GpuSlots[i] < 0) continue;
+                    var ecology = new Vector4(manifest.Priority[i], manifest.ProtectionOrder[i],
+                        manifest.Crowding[i], manifest.EdgeExposure[i]);
+                    batches[manifest.Trees[i].variant].Gpu.UpdateSource(manifest.GpuSlots[i], manifest.Height[i], ecology);
+                }
+                manifest.GroundRevision = manifest.Grounding.Revision;
+            }
+            foreach (var region in manifest.GpuRegions)
+                region.Batch.Gpu.SubmitRegion(region.Id, manifest.LoadFade, bounds, region.Count, billboardVisible);
+
+            // Compatible distant trees are resident: only nearby meshes and CPU fallback
+            // materials need individual submissions. Whole far regions skip this loop.
+            int cpuCount = manifest.FallbackIndices.Length + (nearMeshes ? manifest.MeshIndices.Length : 0);
+            for (int index = 0; index < cpuCount; index++)
+            {
+                CpuTreeSubmissions++;
+                int i = index < manifest.FallbackIndices.Length ? manifest.FallbackIndices[index] :
+                    manifest.MeshIndices[index - manifest.FallbackIndices.Length];
                 var tree = manifest.Trees[i];
                 var matrix = manifest.Matrices[i];
                 float dx = matrix.m03 - viewer.x, dz = matrix.m23 - viewer.z;
@@ -288,11 +325,6 @@ public sealed class DistantTreeManager : IDisposable
                 if (!hasBillboard || billboardTransition <= 0f || !billboardVisible) continue;
                 if (gpuEnabled && batch.Gpu != null)
                 {
-                    var ecology = new Vector4(manifest.Priority[i], manifest.ProtectionOrder[i],
-                        manifest.Crowding[i], manifest.EdgeExposure[i]);
-                    if (manifest.GpuSlots[i] < 0)
-                        manifest.GpuSlots[i] = batch.Gpu.Register(manifest.Matrices[i], (Color)tree.leafTint, ecology, manifest.Density[i]);
-                    batch.Gpu.Submit(manifest.GpuSlots[i], renderHeight, manifest.LoadFade, billboardTransition, ecology);
                     continue;
                 }
                 float outer = Mathf.Clamp01((maxDistance - distance) / outerWidth);
@@ -341,7 +373,10 @@ public sealed class DistantTreeManager : IDisposable
             if (orderByDepth) DrawOrdered(batch, camera);
             if (gpuEnabled && batch.Gpu != null)
             {
-                batch.Gpu.Draw(settings, camera, viewer, gpuPlanes, maxDistance, outerWidth, thinStart, fadeStep);
+                batch.Gpu.Draw(settings, camera, viewer, gpuPlanes, maxDistance, outerWidth, thinStart, fadeStep, meshStart, meshEnd);
+                GpuSourceUploads += batch.Gpu.UploadedSourceCount;
+                GpuRegionUploads += batch.Gpu.UploadedRegionCount;
+                GpuCandidates += batch.Gpu.CandidateCount;
                 var stats = RenderStats;
                 stats.AddMeshInstances(batch.Mesh, batch.Gpu.SubmittedCount);
                 RenderStats = stats;
@@ -569,9 +604,49 @@ public sealed class DistantTreeManager : IDisposable
             batch.Gpu?.Dispose();
             batch.Gpu = enabled && batch.SupportsIndirect ? new DistantTreeGpuBatch(compute, batch.Mesh, batch.Material) : null;
         }
-        foreach (var manifest in cache.Values) Array.Fill(manifest.GpuSlots, -1);
+        foreach (var manifest in cache.Values)
+        {
+            Array.Fill(manifest.GpuSlots, -1);
+            manifest.GpuRegions.Clear();
+            manifest.GpuPrepared = false;
+        }
         activeCompute = compute;
         gpuEnabled = enabled;
+    }
+
+    private void PrepareGpu(Manifest manifest)
+    {
+        if (manifest.GpuPrepared) return;
+        var meshIndices = new List<int>();
+        var fallbackIndices = new List<int>();
+        var regions = new Dictionary<Batch, GpuRegion>();
+        for (int i = 0; i < manifest.Trees.Length; i++)
+        {
+            var tree = manifest.Trees[i];
+            if (!gpuEnabled || !batches.TryGetValue(tree.variant, out var batch) || batch.Gpu == null)
+            {
+                fallbackIndices.Add(i);
+                continue;
+            }
+            bool hasMesh = standingTrees.Supports(tree.variant);
+            if (hasMesh) meshIndices.Add(i);
+            if (!regions.TryGetValue(batch, out var region))
+            {
+                region = new GpuRegion { Batch = batch, Id = batch.Gpu.CreateRegion() };
+                regions.Add(batch, region);
+                manifest.GpuRegions.Add(region);
+            }
+            region.Count++;
+            var ecology = new Vector4(manifest.Priority[i], manifest.ProtectionOrder[i], manifest.Crowding[i], manifest.EdgeExposure[i]);
+            int slot = batch.Gpu.Register(manifest.Matrices[i], (Color)tree.leafTint, ecology,
+                manifest.Density[i], region.Id, hasMesh ? 1f : 0f);
+            manifest.GpuSlots[i] = slot;
+            batch.Gpu.UpdateSource(slot, manifest.Height[i], ecology);
+        }
+        manifest.MeshIndices = meshIndices.ToArray();
+        manifest.FallbackIndices = fallbackIndices.ToArray();
+        manifest.GroundRevision = manifest.Grounding.Revision;
+        manifest.GpuPrepared = true;
     }
 
     private void ReleaseGpuSlots(Manifest manifest)
@@ -581,6 +656,9 @@ public sealed class DistantTreeManager : IDisposable
             if (batches.TryGetValue(manifest.Trees[i].variant, out var batch)) batch.Gpu?.Release(manifest.GpuSlots[i]);
             manifest.GpuSlots[i] = -1;
         }
+        foreach (var region in manifest.GpuRegions) region.Batch.Gpu.ReleaseRegion(region.Id);
+        manifest.GpuRegions.Clear();
+        manifest.GpuPrepared = false;
     }
 
     private void Evict()
@@ -610,8 +688,16 @@ public sealed class DistantTreeManager : IDisposable
         jobs.Clear(); cache.Clear();
         foreach (var batch in uniqueBatches)
         {
-            UnityEngine.Object.Destroy(batch.Material);
-            UnityEngine.Object.Destroy(batch.Mesh);
+            if (Application.isPlaying)
+            {
+                UnityEngine.Object.Destroy(batch.Material);
+                UnityEngine.Object.Destroy(batch.Mesh);
+            }
+            else
+            {
+                UnityEngine.Object.DestroyImmediate(batch.Material);
+                UnityEngine.Object.DestroyImmediate(batch.Mesh);
+            }
             batch.Gpu?.Dispose();
         }
         batches.Clear(); uniqueBatches.Clear();

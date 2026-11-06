@@ -16,6 +16,8 @@ A generated tree has three separate representations:
 
 The tree code is a custom instanced submission system using Unity rendering APIs, including `Graphics.DrawMeshInstanced` and an optional indirect GPU path for distant trees. You do not need to replace the project's render pipeline to add a falling-tree system.
 
+The distant GPU path now uses resident tree sources and per-chunk/species region submission: compute handles distance handoff, and settled frames do not submit or upload individual distant trees. Nearby meshes and CPU fallback materials retain individual submission. See [Resident distant-tree submission](ResidentTreeSubmission.md) for implementation, measurements and validation.
+
 The existing `Cut`, `Fallen`, and `Removed` states all exclude the entire tree from standing mesh **and** billboard rendering. They also cause its nearby gameplay proxy to be released. **They do not currently spawn a stump, falling tree, logs, or replacement colliders.**
 
 ## 2. File map: where to start

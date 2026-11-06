@@ -1,0 +1,9 @@
+TREE GROUNDING CACHE PASS: 13587 checks; legacy heights/blending/bounds, support/settings changes, near terrain, empty manifests and 0 allocated bytes in 10,000 settled updates.
+RESIDENT_REGION_PASS: CPU/GPU handoff and seating parity, no per-tree uploads while moving, sparse edits, frame stamps, hidden regions, zero steady allocations and dense dispatch after release.
+RESIDENT_MANAGER_PASS: far meshes skipped, mixed CPU/GPU materials, camera movement, coarse/detailed grounding uploads, cut-state rebuild, GPU toggle, support visibility and near approach.
+RESIDENT_TREE_PASS: 13597 checks; region submission, CPU/GPU handoff parity, sparse updates, residency, fallback and registry edits.
+SPATIAL_TREE_VALIDATION_PASS: shuffled chunks, negative/extreme coordinates, mixed per-instance attributes and fades, 1001 instances, frame reset and duplicate EndFrame.
+TREE REGISTRY PASS: deterministic IDs, dense/sparse and near/worker parity, registration, state retention, source authority, invalid snapshots and XZ lookup.
+TREE GROUNDING CACHE PASS: 13587 checks; legacy heights/blending/bounds, support/settings changes, near terrain, empty manifests and 0 allocated bytes in 10,000 settled updates.
+STANDING TREE PASS: registry state filtering, shared bark/foliage, instanced snow, wind, LOD mask partition, submeshes, bounded batches, unchanged prefab assets and scene shader variants.
+VEGETATION_REFRESH_PASS: retained far support, preferred replacement, negative coordinates, unpublished/hidden rejection, empty tree publication, canopy removal, prepopulated registry and stable ordering parity; existing GPU suite passed.

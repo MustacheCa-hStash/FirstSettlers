@@ -17,6 +17,7 @@ public sealed class DistantTreeGrounding
     private bool initialized, blending;
     public float[] Heights { get; }
     public float LargestShift { get; private set; }
+    public int Revision { get; private set; }
 
     public DistantTreeGrounding(TreeInstanceData[] trees, Matrix4x4[] matrices, float[] heights)
     {
@@ -50,15 +51,19 @@ public sealed class DistantTreeGrounding
         if (!blending) return;
         using (BlendMarker.Auto())
         {
+            bool changed = false;
             blending = false; LargestShift = 0f;
             maximumDelta = Mathf.Max(0f, maximumDelta);
             for (int i = 0; i < trees.Length; i++)
             {
                 float target = targets[i];
-                Heights[i] = snap ? target : Mathf.MoveTowards(Heights[i], target, maximumDelta);
+                float previous = Heights[i];
+                Heights[i] = snap ? target : Mathf.MoveTowards(previous, target, maximumDelta);
+                changed |= previous != Heights[i];
                 blending |= Heights[i] != target;
                 LargestShift = Mathf.Max(LargestShift, Mathf.Abs(Heights[i] - trees[i].localPosition.y));
             }
+            if (changed) Revision++;
         }
     }
 }

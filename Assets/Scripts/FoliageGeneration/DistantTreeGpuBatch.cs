@@ -5,7 +5,8 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 // Resident tree records are uploaded only when a manifest or its ecology changes.
-// Each frame uploads just height/load/handoff state; compute selects and orders trees.
+// Each frame submits chunk/species regions, not individual trees. Sources change
+// only on placement, ecology or grounding edits; compute owns distance/handoff.
 public sealed class DistantTreeGpuBatch : IDisposable
 {
     [StructLayout(LayoutKind.Sequential)]
@@ -13,6 +14,17 @@ public sealed class DistantTreeGpuBatch : IDisposable
     {
         public Matrix4x4 ObjectToWorld;
         public Vector4 Tint, Ecology, Bounds; // priority, protection rank, crowding, exposure
+        public Vector4 State; // grounded height, initial density, near-mesh support (-1 = explicit handoff), unused
+        public uint Region, Generation;
+        private Vector2 padding;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RegionInstance
+    {
+        public Vector4 State; // load fade, explicit handoff, billboard visibility, unused
+        public uint Frame;
+        private Vector3 padding;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -28,13 +40,25 @@ public sealed class DistantTreeGpuBatch : IDisposable
     private readonly Material material;
     private readonly MaterialPropertyBlock properties = new MaterialPropertyBlock();
     private readonly Stack<int> freeSlots = new Stack<int>();
+    private readonly Stack<int> freeRegions = new Stack<int>();
+    private readonly List<int> dirtySources = new List<int>();
+    private readonly List<int> dirtyRegions = new List<int>();
     private SourceInstance[] sources = Array.Empty<SourceInstance>();
-    private Vector4[] states = Array.Empty<Vector4>();
-    private ComputeBuffer sourceBuffer, stateBuffer, densityBuffer, evaluatedBuffer;
+    private bool[] sourceDirty = Array.Empty<bool>();
+    private int[] activeSlots = Array.Empty<int>(), activeIndices = Array.Empty<int>();
+    private RegionInstance[] regions = Array.Empty<RegionInstance>();
+    private bool[] regionDirty = Array.Empty<bool>();
+    private ComputeBuffer sourceBuffer, regionBuffer, indexBuffer, densityBuffer, evaluatedBuffer;
     private ComputeBuffer orderBuffer, groupBuffer, visibleBuffer, argsBuffer;
-    private int count, capacity, dirtyFirst = int.MaxValue, dirtyLast = -1;
+    private int count, activeCount, capacity, regionCount, regionCapacity;
+    private int dirtyIndexFirst = int.MaxValue, dirtyIndexLast = -1;
+    private uint frame, generation;
     private Bounds drawBounds;
+    // Conservative region candidates; compute rejects near-only, hidden and thinned trees.
     public int SubmittedCount { get; private set; }
+    public int CandidateCount => activeCount;
+    public int UploadedSourceCount { get; private set; }
+    public int UploadedRegionCount { get; private set; }
 
     public static bool IsSupported(ComputeShader compute)
     {
@@ -55,22 +79,53 @@ public sealed class DistantTreeGpuBatch : IDisposable
         copyKernel = shader.FindKernel("CopyDistantTreeDensity");
     }
 
+    // Explicit handoff adapter for isolated render fixtures. World rendering uses shared regions.
     public int Register(Matrix4x4 transform, Vector4 tint, Vector4 ecology, float initialDensity)
+        => Register(transform, tint, ecology, initialDensity, CreateRegion(), -1f);
+
+    public int CreateRegion()
+    {
+        int region = freeRegions.Count > 0 ? freeRegions.Pop() : regionCount++;
+        if (regions.Length < regionCount)
+        {
+            Array.Resize(ref regions, Mathf.NextPowerOfTwo(Mathf.Max(16, regionCount)));
+            Array.Resize(ref regionDirty, regions.Length);
+        }
+        regions[region] = default;
+        MarkRegionDirty(region);
+        return region;
+    }
+
+    // Release the region after releasing its trees. Region handles are local to this batch.
+    public void ReleaseRegion(int region)
+    {
+        regions[region] = default;
+        MarkRegionDirty(region);
+        freeRegions.Push(region);
+    }
+
+    public int Register(Matrix4x4 transform, Vector4 tint, Vector4 ecology, float initialDensity,
+        int region, float nearMeshSupport)
     {
         int slot = freeSlots.Count > 0 ? freeSlots.Pop() : count++;
         if (sources.Length < count)
         {
             int size = Mathf.NextPowerOfTwo(Mathf.Max(64, count));
             Array.Resize(ref sources, size);
-            Array.Resize(ref states, size);
+            Array.Resize(ref sourceDirty, size);
+            Array.Resize(ref activeSlots, size);
+            Array.Resize(ref activeIndices, size);
         }
         sources[slot] = new SourceInstance
         {
             ObjectToWorld = transform, Tint = tint, Ecology = ecology,
-            Bounds = CalculateBounds(mesh.bounds, transform, material)
+            Bounds = CalculateBounds(mesh.bounds, transform, material),
+            State = new Vector4(transform.m13, Mathf.Clamp01(initialDensity), nearMeshSupport, 0f),
+            Region = (uint)region, Generation = ++generation
         };
-        // Positive w resets GPU density on the first dispatch, including reused slots.
-        states[slot].w = 1f + Mathf.Clamp01(initialDensity);
+        activeIndices[slot] = activeCount;
+        activeSlots[activeCount] = slot;
+        MarkIndexDirty(activeCount++);
         MarkDirty(slot);
         return slot;
     }
@@ -78,30 +133,53 @@ public sealed class DistantTreeGpuBatch : IDisposable
     public void Release(int slot)
     {
         if (slot < 0) return;
-        states[slot] = Vector4.zero;
+        if (sources[slot].State.z < 0f) ReleaseRegion((int)sources[slot].Region);
+        int index = activeIndices[slot];
+        int last = activeSlots[--activeCount];
+        activeSlots[index] = last;
+        activeIndices[last] = index;
+        if (index < activeCount) MarkIndexDirty(index);
         freeSlots.Push(slot);
     }
 
     public void BeginFrame()
     {
         SubmittedCount = 0;
-        for (int i = 0; i < count; i++) states[i].z = 0f;
+        UploadedSourceCount = UploadedRegionCount = 0;
+        frame++;
     }
 
     public void Submit(int slot, float height, float loadFade, float handoffFade, Vector4 ecology)
     {
-        if (sources[slot].Ecology != ecology)
+        UpdateSource(slot, height, ecology);
+        var m = sources[slot].ObjectToWorld;
+        var b = sources[slot].Bounds;
+        var bounds = new Bounds(new Vector3(m.m03, height + (b.y + b.z) * .5f, m.m23),
+            new Vector3(b.x * 2f, b.z - b.y, b.x * 2f));
+        SubmitRegion((int)sources[slot].Region, loadFade, bounds, 1, true, handoffFade);
+    }
+
+    public void UpdateSource(int slot, float height, Vector4 ecology)
+    {
+        if (sources[slot].Ecology != ecology || sources[slot].State.x != height)
         {
             sources[slot].Ecology = ecology;
+            sources[slot].State.x = height;
             MarkDirty(slot);
         }
-        states[slot] = new Vector4(height, loadFade, handoffFade, states[slot].w);
-        Vector4 b = sources[slot].Bounds;
-        Matrix4x4 m = sources[slot].ObjectToWorld;
-        Vector3 low = new Vector3(m.m03 - b.x, height + b.y, m.m23 - b.x);
-        Vector3 high = new Vector3(m.m03 + b.x, height + b.z, m.m23 + b.x);
-        if (SubmittedCount++ == 0) drawBounds = new Bounds((low + high) * 0.5f, high - low);
-        else { drawBounds.Encapsulate(low); drawBounds.Encapsulate(high); }
+    }
+
+    public void SubmitRegion(int region, float loadFade, Bounds bounds, int treeCount,
+        bool visible, float explicitHandoff = 1f)
+    {
+        regions[region] = new RegionInstance
+        {
+            State = new Vector4(loadFade, explicitHandoff, visible ? 1f : 0f, 0f), Frame = frame
+        };
+        MarkRegionDirty(region);
+        if (SubmittedCount == 0) drawBounds = bounds;
+        else drawBounds.Encapsulate(bounds);
+        SubmittedCount += treeCount;
     }
 
     public static Bounds RenderingBounds(Bounds local, Material material)
@@ -156,23 +234,63 @@ public sealed class DistantTreeGpuBatch : IDisposable
 
     private void MarkDirty(int slot)
     {
-        dirtyFirst = Mathf.Min(dirtyFirst, slot);
-        dirtyLast = Mathf.Max(dirtyLast, slot);
+        if (sourceDirty[slot]) return;
+        sourceDirty[slot] = true;
+        dirtySources.Add(slot);
+    }
+
+    private void MarkRegionDirty(int region)
+    {
+        if (regionDirty[region]) return;
+        regionDirty[region] = true;
+        dirtyRegions.Add(region);
+    }
+
+    private void MarkIndexDirty(int index)
+    {
+        dirtyIndexFirst = Mathf.Min(dirtyIndexFirst, index);
+        dirtyIndexLast = Mathf.Max(dirtyIndexLast, index);
     }
 
     public void Draw(TreeSettings settings, Camera camera, Vector3 viewer, Vector4[] frustum,
-        float maxDistance, float outerWidth, float thinStart, float fadeStep)
+        float maxDistance, float outerWidth, float thinStart, float fadeStep,
+        float meshStart = 0f, float meshEnd = 1f)
     {
         if (SubmittedCount == 0) return;
         EnsureCapacity();
-        if (dirtyLast >= dirtyFirst)
+        dirtySources.Sort();
+        for (int i = 0; i < dirtySources.Count;)
         {
-            sourceBuffer.SetData(sources, dirtyFirst, dirtyFirst, dirtyLast - dirtyFirst + 1);
-            dirtyFirst = int.MaxValue; dirtyLast = -1;
+            int first = dirtySources[i], last = first;
+            sourceDirty[first] = false;
+            while (++i < dirtySources.Count && dirtySources[i] == last + 1)
+            { last = dirtySources[i]; sourceDirty[last] = false; }
+            sourceBuffer.SetData(sources, first, first, last - first + 1);
+            UploadedSourceCount += last - first + 1;
         }
-        stateBuffer.SetData(states, 0, 0, count);
-        int groups = (count + 63) / 64;
-        shader.SetInt("_DistantTreeCandidateCount", count);
+        dirtySources.Clear();
+        if (dirtyIndexLast >= dirtyIndexFirst)
+        {
+            int last = Mathf.Min(activeCount - 1, dirtyIndexLast);
+            if (last >= dirtyIndexFirst)
+                indexBuffer.SetData(activeSlots, dirtyIndexFirst, dirtyIndexFirst, last - dirtyIndexFirst + 1);
+            dirtyIndexFirst = int.MaxValue; dirtyIndexLast = -1;
+        }
+        dirtyRegions.Sort();
+        for (int i = 0; i < dirtyRegions.Count;)
+        {
+            int first = dirtyRegions[i], last = first;
+            regionDirty[first] = false;
+            while (++i < dirtyRegions.Count && dirtyRegions[i] == last + 1)
+            { last = dirtyRegions[i]; regionDirty[last] = false; }
+            regionBuffer.SetData(regions, first, first, last - first + 1);
+            UploadedRegionCount += last - first + 1;
+        }
+        dirtyRegions.Clear();
+        int groups = (activeCount + 63) / 64;
+        shader.SetInt("_DistantTreeFrame", unchecked((int)frame));
+        shader.SetVector("_DistantTreeHandoff", new Vector4(meshStart, meshEnd, 0f, 0f));
+        shader.SetInt("_DistantTreeCandidateCount", activeCount);
         shader.SetInt("_DistantTreeGroupCount", groups);
         shader.SetInt("_DistantTreeBandCount", camera != null && settings.distantTreeDepthOrdering
             ? Mathf.Clamp(settings.distantTreeDepthBands, 4, 64) : 1);
@@ -190,7 +308,8 @@ public sealed class DistantTreeGpuBatch : IDisposable
         shader.SetFloat("_DistantTreeDepthRange", Mathf.Max(1f, maxDistance +
             (camera != null ? Vector3.Distance(camera.transform.position, viewer) : 0f)));
         shader.SetBuffer(cullKernel, "_DistantTreeSources", sourceBuffer);
-        shader.SetBuffer(cullKernel, "_DistantTreeStates", stateBuffer);
+        shader.SetBuffer(cullKernel, "_DistantTreeRegions", regionBuffer);
+        shader.SetBuffer(cullKernel, "_DistantTreeActiveSlots", indexBuffer);
         shader.SetBuffer(cullKernel, "_DistantTreeDensity", densityBuffer);
         shader.SetBuffer(cullKernel, "_DistantTreeEvaluated", evaluatedBuffer);
         shader.SetBuffer(cullKernel, "_DistantTreeOrder", orderBuffer);
@@ -204,7 +323,6 @@ public sealed class DistantTreeGpuBatch : IDisposable
         shader.SetBuffer(scatterKernel, "_DistantTreeGroups", groupBuffer);
         shader.SetBuffer(scatterKernel, "_DistantTreeVisible", visibleBuffer);
         shader.Dispatch(scatterKernel, groups, 1, 1);
-        for (int i = 0; i < count; i++) states[i].w = 0f;
         properties.SetFloat("_DistantTreeEnabled", 1f);
         properties.SetFloat("_DistantTreeBillboard", 1f);
         properties.SetBuffer("_DistantTreeInstances", visibleBuffer);
@@ -214,15 +332,24 @@ public sealed class DistantTreeGpuBatch : IDisposable
 
     private void EnsureCapacity()
     {
+        if (regionCapacity < regionCount)
+        {
+            regionCapacity = Mathf.NextPowerOfTwo(Mathf.Max(16, regionCount));
+            regionBuffer?.Release();
+            regionBuffer = new ComputeBuffer(regionCapacity, Marshal.SizeOf<RegionInstance>());
+            for (int i = 0; i < regionCount; i++) MarkRegionDirty(i);
+        }
         if (capacity >= count) return;
         int previousCapacity = capacity;
         capacity = Mathf.NextPowerOfTwo(Mathf.Max(64, count));
         ComputeBuffer previousDensity = densityBuffer;
-        sourceBuffer?.Release(); stateBuffer?.Release(); evaluatedBuffer?.Release();
+        sourceBuffer?.Release(); indexBuffer?.Release(); evaluatedBuffer?.Release();
         orderBuffer?.Release(); groupBuffer?.Release(); visibleBuffer?.Release(); argsBuffer?.Release();
         sourceBuffer = new ComputeBuffer(capacity, Marshal.SizeOf<SourceInstance>());
-        stateBuffer = new ComputeBuffer(capacity, 16);
-        densityBuffer = new ComputeBuffer(capacity, 4);
+        indexBuffer = new ComputeBuffer(capacity, 4);
+        densityBuffer = new ComputeBuffer(capacity, 8);
+        // Never depend on driver-specific initial buffer contents for generation matching.
+        densityBuffer.SetData(new Vector2[capacity]);
         evaluatedBuffer = new ComputeBuffer(capacity, Marshal.SizeOf<VisibleInstance>());
         orderBuffer = new ComputeBuffer(capacity, 8);
         groupBuffer = new ComputeBuffer(((capacity + 63) / 64) * 64, 4);
@@ -238,14 +365,15 @@ public sealed class DistantTreeGpuBatch : IDisposable
             shader.Dispatch(copyKernel, (previousCapacity + 63) / 64, 1, 1);
             previousDensity.Release();
         }
-        dirtyFirst = 0; dirtyLast = count - 1;
+        for (int i = 0; i < count; i++) MarkDirty(i);
+        dirtyIndexFirst = 0; dirtyIndexLast = activeCount - 1;
     }
 
     public void Dispose()
     {
-        sourceBuffer?.Release(); stateBuffer?.Release(); densityBuffer?.Release(); evaluatedBuffer?.Release();
+        sourceBuffer?.Release(); regionBuffer?.Release(); indexBuffer?.Release(); densityBuffer?.Release(); evaluatedBuffer?.Release();
         orderBuffer?.Release(); groupBuffer?.Release(); visibleBuffer?.Release(); argsBuffer?.Release();
-        sourceBuffer = stateBuffer = densityBuffer = evaluatedBuffer = null;
+        sourceBuffer = regionBuffer = indexBuffer = densityBuffer = evaluatedBuffer = null;
         orderBuffer = groupBuffer = visibleBuffer = argsBuffer = null;
         capacity = 0;
     }
@@ -254,6 +382,7 @@ public sealed class DistantTreeGpuBatch : IDisposable
     // Explicit correctness checks only. Never read GPU counts during normal rendering.
     public VisibleInstance[] ReadVisibleForValidation()
     {
+        if (SubmittedCount == 0 || argsBuffer == null) return Array.Empty<VisibleInstance>();
         var args = new uint[5];
         argsBuffer.GetData(args);
         var result = new VisibleInstance[args[1]];

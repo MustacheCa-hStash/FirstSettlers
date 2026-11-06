@@ -11,12 +11,19 @@ struct DistantTreeSource
     float4 tint;
     float4 ecology;
     float4 bounds;
+    float4 state;
+    uint region, generation;
+    float2 padding;
 };
 
+struct DistantTreeRegion { float4 state; uint frame; float3 padding; };
+struct DistantTreeDensity { float value; uint generation; };
+
 StructuredBuffer<DistantTreeSource> _DistantTreeSources;
-StructuredBuffer<float4> _DistantTreeStates;
-RWStructuredBuffer<float> _DistantTreeDensity;
-StructuredBuffer<float> _DistantTreeOldDensity;
+StructuredBuffer<DistantTreeRegion> _DistantTreeRegions;
+StructuredBuffer<uint> _DistantTreeActiveSlots;
+RWStructuredBuffer<DistantTreeDensity> _DistantTreeDensity;
+StructuredBuffer<DistantTreeDensity> _DistantTreeOldDensity;
 RWStructuredBuffer<DistantTreeInstance> _DistantTreeEvaluated;
 RWStructuredBuffer<uint2> _DistantTreeOrder;
 RWStructuredBuffer<uint> _DistantTreeGroups;
@@ -25,9 +32,11 @@ RWStructuredBuffer<uint> _DistantTreeArgs;
 
 uint _DistantTreeCandidateCount, _DistantTreeGroupCount, _DistantTreeBandCount;
 uint _DistantTreeFrustumEnabled, _DistantTreeProtectedCount, _DistantTreePreviousCapacity;
+uint _DistantTreeFrame;
 float4 _DistantTreeFrustum[6];
 float3 _DistantTreeViewer, _DistantTreeCamera, _DistantTreeForward;
 float4 _DistantTreeRange, _DistantTreeDensitySettings;
+float4 _DistantTreeHandoff;
 float _DistantTreeDepthRange;
 groupshared uint Bands[64];
 groupshared uint Totals[64];
@@ -42,12 +51,16 @@ bool EvaluateTree(uint index, out DistantTreeInstance result, out uint band)
     result = (DistantTreeInstance)0;
     band = 64;
     if (index >= _DistantTreeCandidateCount) return false;
-    float4 state = _DistantTreeStates[index];
-    if (state.w > 0) _DistantTreeDensity[index] = state.w - 1;
-    if (state.z <= 0 || state.y <= 0) return false;
-    DistantTreeSource source = _DistantTreeSources[index];
-    float3 origin = float3(source.objectToWorld._m03, state.x, source.objectToWorld._m23);
+    uint slot = _DistantTreeActiveSlots[index];
+    DistantTreeSource source = _DistantTreeSources[slot];
+    DistantTreeRegion region = _DistantTreeRegions[source.region];
+    if (region.frame != _DistantTreeFrame || region.state.z <= 0 || region.state.x <= 0) return false;
+    float3 origin = float3(source.objectToWorld._m03, source.objectToWorld._m13, source.objectToWorld._m23);
     float distanceToViewer = length(origin.xz - _DistantTreeViewer.xz);
+    float handoff = source.state.z < 0 ? region.state.y : source.state.z == 0 ? 1 :
+        InverseRange(_DistantTreeHandoff.x, _DistantTreeHandoff.y, distanceToViewer);
+    if (handoff <= 0) return false;
+    origin.y = source.state.z < 0 ? source.state.x : lerp(origin.y, source.state.x, handoff);
     float outer = saturate((_DistantTreeRange.x - distanceToViewer) / _DistantTreeRange.y);
     if (outer <= 0) return false;
     float density = saturate(_DistantTreeDensitySettings.x);
@@ -60,13 +73,16 @@ bool EvaluateTree(uint index, out DistantTreeInstance result, out uint band)
     }
     density = lerp(1, density, InverseRange(_DistantTreeRange.z,
         max(_DistantTreeRange.z + 1, _DistantTreeRange.x - _DistantTreeRange.y), distanceToViewer));
-    float previous = _DistantTreeDensity[index];
+    DistantTreeDensity history = _DistantTreeDensity[slot];
+    float previous = history.generation == source.generation ? history.value : source.state.y;
     density = distanceToViewer <= _DistantTreeRange.z ? 1 :
         previous + clamp(density - previous, -_DistantTreeRange.w, _DistantTreeRange.w);
-    _DistantTreeDensity[index] = density;
-    float thinning = source.ecology.y < _DistantTreeProtectedCount ? 1 :
+    history.value = density;
+    history.generation = source.generation;
+    _DistantTreeDensity[slot] = history;
+    float thinning = source.ecology.y < (float)_DistantTreeProtectedCount ? 1 :
         saturate((density - source.ecology.x) / 0.08);
-    float coverage = min(state.y, min(outer, thinning));
+    float coverage = min(region.state.x, min(outer, thinning));
     if (coverage <= 0) return false;
     // Same conservative scaled/offset bounds as the indirect draw.
     float3 center = origin + float3(0, (source.bounds.y + source.bounds.z) * 0.5, 0);
@@ -76,9 +92,9 @@ bool EvaluateTree(uint index, out DistantTreeInstance result, out uint band)
             if (dot(_DistantTreeFrustum[p].xyz, center) + _DistantTreeFrustum[p].w +
                 dot(abs(_DistantTreeFrustum[p].xyz), extent) < 0) return false;
     result.objectToWorld = source.objectToWorld;
-    result.objectToWorld._m13 = state.x;
+    result.objectToWorld._m13 = origin.y;
     result.tint = source.tint;
-    result.fade = float4(coverage, state.z, 0, 0);
+    result.fade = float4(coverage, handoff, 0, 0);
     float depth = dot(origin - _DistantTreeCamera, _DistantTreeForward);
     band = min((uint)(saturate(depth / _DistantTreeDepthRange) * _DistantTreeBandCount),
         _DistantTreeBandCount - 1);

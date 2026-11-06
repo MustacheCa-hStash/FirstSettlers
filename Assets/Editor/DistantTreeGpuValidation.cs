@@ -9,7 +9,7 @@ public static class DistantTreeGpuValidation
     [MenuItem("Tools/Terrain/Validate Distant Tree Compute (correctness only)")]
     public static void Run()
     {
-        Require(Marshal.SizeOf<DistantTreeGpuBatch.SourceInstance>() == 112, "Source buffer stride mismatch.");
+        Require(Marshal.SizeOf<DistantTreeGpuBatch.SourceInstance>() == 144, "Source buffer stride mismatch.");
         Require(Marshal.SizeOf<DistantTreeGpuBatch.VisibleInstance>() == 96, "Visible buffer stride mismatch.");
         var compute = AssetDatabase.LoadAssetAtPath<ComputeShader>("Assets/Shaders/DistantTreeCompact.compute");
         Require(DistantTreeGpuBatch.IsSupported(compute), "Compute/indirect drawing is unavailable or kernels are missing.");
