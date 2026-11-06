@@ -46,7 +46,7 @@ public static class LimestoneAccessSetup
             d.contentId="build.stone."+p.slug;d.displayName=p.name;d.kind=p.steps>0?BuildPartKind.Stair:p.tag=="L22"?BuildPartKind.Floor:p.tag=="L24"?BuildPartKind.Corner:BuildPartKind.Wall;
             d.sizeUnits=Vector3Int.RoundToInt(V(p.size)/BuildGeometry.Unit);d.boundsOffset=V(p.minimum);d.minimumUnits=Vector3Int.zero;
             d.wallEndInsetUnits=0;d.stackRiseUnits=Mathf.RoundToInt(p.size[1]*4);d.wallPlacementMode=WallPlacementMode.Panel;
-            d.preserveAuthoredMesh=true;d.maxHealth=100;d.material=material;d.requiresFullBearing=p.tag=="L22"||p.tag=="L24";d.topCourseDepth=p.tag=="L18"?.25f:0;d.wallBaseAttachment=p.tag=="L24";
+            d.preserveAuthoredMesh=true;d.maxHealth=100;d.material=material;d.topCourseDepth=p.tag=="L18"?.25f:0;d.wallBaseAttachment=p.tag=="L24";
             d.canGroundOnTerrain=p.tag=="L23"||p.tag=="L24";
             d.jointCoverVariants=Array.Empty<Mesh>();d.jointCoverMaterial=null;d.uvVariants=Array.Empty<Mesh>();
             d.gableSlope=GableSlope.None;d.roofAttachment=RoofAttachmentMode.None;d.flipVariant=null;d.gableRoofSeamMesh=null;

@@ -47,15 +47,15 @@ public static class W21StairValidation
             try
             {
                 var f=w.Session.CreateFrame(new Vector3(26000+yaw*20,26000,26000),yaw);var q=BuildGeometry.Rotation(yaw);
-                var floor=w.Session.Add(catalog.presets[2],f,default,0,true);
-                var wall=w.Session.Add(catalog.presets[0],f,new Vector3Int(15,0,16),4,false);
+                var floor=w.Session.Add(catalog.presets[2],f,default,0);
+                var wall=w.Session.Add(catalog.presets[0],f,new Vector3Int(15,0,16),4);
                 var raw=BuildPlacement.Solve(stair,f.Origin+q*new Vector3(.625f,0,1),Vector3.up,floor,w.Session.Frame(floor.OwnFrameId),0,0,default);
                 Vector3 chosen=raw.Origin;w.Validate(ref raw);Check(raw.Valid && (raw.Origin-chosen).sqrMagnitude<.000001f,"Clearance warning shifted the chosen stair snap");
                 w.Validate(ref raw);Check((raw.Origin-chosen).sqrMagnitude<.000001f,"Repeated validation drifted the stair snap");
                 var first=w.Commit(raw);Check(first!=null,"Starter commit failed");
                 var next=BuildPlacement.Solve(stair,first.Origin+q*new Vector3(.625f,1.5f,2),Vector3.up,first,w.Session.Frame(first.OwnFrameId),0,0,default);
                 w.Validate(ref next);Check(next.Valid && next.Warning==BuildPlacementWarning.BuildOverlap && next.WarningPieceId==wall.Id,"Quarter-metre wall clash was not advisory");
-                var second=w.Commit(next);Check(second!=null && second.Supported,"Overlapping continuation did not commit");
+                var second=w.Commit(next);Check(second!=null && w.Session.Pieces.ContainsKey(second.Id),"Placed construction missing from session: second");
                 w.Remove(first.Id);w.Remove(second.Id);
                 var manual=BuildPlacement.Solve(stair,f.Origin+q*new Vector3(.625f,0,1),Vector3.up,floor,w.Session.Frame(floor.OwnFrameId),0,0,new Vector3Int(1,0,0));
                 w.Validate(ref manual);Check((manual.Origin-(chosen+q*Vector3.right*.25f)).sqrMagnitude<.00002f,"Manual nudge was not exactly one unit");
@@ -72,20 +72,20 @@ public static class W21StairValidation
             foreach (int yaw in new[] { 0,1,2,7 })
             {
                 var frame = world.Session.CreateFrame(new Vector3(24000+yaw*20,24000,24000),yaw);
-                var basePiece = world.Session.Add(catalog.presets[2],frame,default,0,true);
+                var basePiece = world.Session.Add(catalog.presets[2],frame,default,0);
                 var targetFrame = world.Session.Frame(basePiece.OwnFrameId);
                 Vector3 aim = BuildGeometry.WorldPoint(targetFrame,new Vector3Int(2,0,4));
                 var foot = BuildPlacement.Solve(stair,aim,Vector3.up,basePiece,targetFrame,0,0,default);
-                var first = world.Commit(foot); Check(first != null && first.Supported,"Stair foot placement failed.");
+                var first = world.Commit(foot); Check(first != null && world.Session.Pieces.ContainsKey(first.Id),"Stair foot placement failed.");
                 var firstFrame = world.Session.Frame(first.OwnFrameId);
                 var secondPreview = BuildPlacement.Solve(stair,first.Origin+BuildGeometry.Rotation(yaw)*new Vector3(.625f,1.5f,2),Vector3.up,first,firstFrame,0,0,default);
-                var second = world.Commit(secondPreview); Check(second != null && second.Supported,"Direct next stair flight lost its authored connector support.");
+                var second = world.Commit(secondPreview); Check(second != null && world.Session.Pieces.ContainsKey(second.Id),"Placed construction missing from session: second");
                 Vector3 offset = Quaternion.Inverse(BuildGeometry.Rotation(yaw))*(second.Origin-first.Origin);
                 Check((offset-new Vector3(0,1.5f,2)).sqrMagnitude < .000001f,"Stair continuation is not 1.5 m up and 2 m forward.");
                 var landing = BuildPlacement.Solve(catalog.presets[1],second.Origin+BuildGeometry.Rotation(yaw)*new Vector3(.625f,1.5f,2),Vector3.up,second,world.Session.Frame(second.OwnFrameId),0,0,default);
-                var topFloor = world.Commit(landing); Check(topFloor != null && topFloor.Supported,"Landing beyond the high end failed.");
-                world.Remove(basePiece.Id); Check(first.Supported && second.Supported && topFloor.Supported,"Free placement unexpectedly depends on structural support");
-                world.Session.Add(catalog.presets[2],frame,default,0,true); Check(first.Supported && second.Supported && topFloor.Supported,"Stair chain did not reconnect.");
+                var topFloor = world.Commit(landing); Check(topFloor != null && world.Session.Pieces.ContainsKey(topFloor.Id),"Landing beyond the high end failed.");
+                world.Remove(basePiece.Id); Check(world.Session.Pieces.ContainsKey(first.Id) && world.Session.Pieces.ContainsKey(second.Id) && world.Session.Pieces.ContainsKey(topFloor.Id),"Placed construction missing from session: first, second, topFloor");
+                world.Session.Add(catalog.presets[2],frame,default,0); Check(world.Session.Pieces.ContainsKey(first.Id) && world.Session.Pieces.ContainsKey(second.Id) && world.Session.Pieces.ContainsKey(topFloor.Id),"Stair chain did not reconnect.");
                 var highFrame = world.Session.Frame(topFloor.OwnFrameId);
                 Vector3 sideAim = BuildGeometry.WorldPoint(highFrame,new Vector3Int(3,-1,0));
                 var hanging = BuildPlacement.Solve(stair,sideAim,BuildGeometry.Rotation(yaw)*Vector3.back,topFloor,highFrame,0,0,default);
@@ -100,7 +100,7 @@ public static class W21StairValidation
     private static void ValidatePool(BuildDefinition stair,BuildDefinition wall)
     {
         var session = new BuildSession(); var frame = session.CreateFrame(new Vector3(23000,23000,23000),0);
-        var stairs = session.Add(stair,frame,default,0,true); var wood = session.Add(wall,frame,new Vector3Int(30,0,0),0,true);
+        var stairs = session.Add(stair,frame,default,0); var wood = session.Add(wall,frame,new Vector3Int(30,0,0),0);
         var root = new GameObject("Stair proxy reuse"); var proxy = root.AddComponent<BuildGameplayProxy>();
         try
         {
@@ -124,19 +124,19 @@ public static class W21StairValidation
     {
         using var session = new BuildSession(); var origin = new Vector3(100,10,100); var rotation = BuildGeometry.Rotation(yaw);
         var frame = session.CreateFrame(origin,yaw);
-        session.Add(catalog.presets[2],frame,new Vector3Int(-8,0,-8),0,true);
+        session.Add(catalog.presets[2],frame,new Vector3Int(-8,0,-8),0);
         float rise=stair.LocalBounds.size.y,run=stair.LocalBounds.size.z;
         for (int flight = 0; flight < flights; ++flight)
         {
-            session.Add(stair,frame,BuildGeometry.Ticks(new Vector3(0,rise*flight,run*flight)),0,false);
+            session.Add(stair,frame,BuildGeometry.Ticks(new Vector3(0,rise*flight,run*flight)),0);
             if(stair.contentId==StairExtensionSetup.W22Id)
                 foreach(float segment in new[]{0f,2f})foreach(float side in new[]{-.1875f,1.1875f})
                 {
                     var railFrame=session.CreateFrame(origin+rotation*new Vector3(side,rise*flight+segment*.75f,run*flight+segment),yaw);
-                    session.Add(catalog.Find(StairExtensionSetup.W24Id),railFrame,default,0,false);
+                    session.Add(catalog.Find(StairExtensionSetup.W24Id),railFrame,default,0);
                 }
         }
-        session.Add(catalog.presets[1],frame,BuildGeometry.Ticks(new Vector3(0,rise*flights,run*flights)),0,false);
+        session.Add(catalog.presets[1],frame,BuildGeometry.Ticks(new Vector3(0,rise*flights,run*flights)),0);
         using var gameplay = new BuildGameplay(session); gameplay.Update(origin,32,40,64); Physics.SyncTransforms();
         var rig = new GameObject("W21 motor traversal"); rig.layer = GameplayLayers.Player;
         var controller = rig.AddComponent<CharacterController>();

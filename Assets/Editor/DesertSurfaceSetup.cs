@@ -42,9 +42,9 @@ public static class DesertSurfaceSetup
         importer.SaveAndReimport();
     }
 
-    private static void InstallSurface(string name, string slot, float tiling, float normalStrength)
+    public static void InstallSurface(string name, string slot, float tiling, float normalStrength, string root = Root)
     {
-        string albedo=Root+"T_"+name+"_Albedo.png",normal=Root+"T_"+name+"_NormalGL.png",height=Root+"T_"+name+"_Height.png";
+        string albedo=root+"T_"+name+"_Albedo.png",normal=root+"T_"+name+"_NormalGL.png",height=root+"T_"+name+"_Height.png";
         Configure(albedo,false,true);
         var source=AssetDatabase.LoadAssetAtPath<Texture2D>(albedo);
         if(source==null)throw new InvalidOperationException("Expected an imported 2D texture: "+albedo);
@@ -70,12 +70,16 @@ public static class DesertSurfaceSetup
             material.SetColor("_"+slot+"Color",Color.white);
             material.SetFloat("_"+slot+"Tiling",tiling);
             material.SetFloat("_"+slot+"NormalStrength",normalStrength);
-            material.SetFloat("_DrySurfaceStrength",1);
-            material.SetFloat("_DrySurfaceFadeStart",70);material.SetFloat("_DrySurfaceFadeEnd",220);
-            material.SetFloat("_DrySurfaceNormalEnd",65);
+            if(root==Root)
+            {
+                material.SetFloat("_DrySurfaceStrength",1);
+                material.SetFloat("_DrySurfaceFadeStart",70);material.SetFloat("_DrySurfaceFadeEnd",220);
+                material.SetFloat("_DrySurfaceNormalEnd",65);
+            }
+            else { material.SetFloat("_IceFadeStart",90);material.SetFloat("_IceFadeEnd",260); }
         }
         EditorUtility.SetDirty(material);
-        Debug.Log($"DESERT TEXTURE: {name}, {width}x{depth}, BC7/BC5, linear-average distance color {average}.");
+        Debug.Log($"TERRAIN TEXTURE: {name}, {width}x{depth}, BC7/BC5, linear-average distance color {average}.");
     }
 
     private static float[] Blur(float[] source,int width,int height,int radius)

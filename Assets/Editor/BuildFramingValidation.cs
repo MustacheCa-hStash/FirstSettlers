@@ -46,32 +46,32 @@ public static class BuildFramingValidation
         for(int yaw=0;yaw<8;yaw++)
         {
             using var s=new BuildSession();var f=s.CreateFrame(new Vector3(20,7,-12),yaw);var q=BuildGeometry.Rotation(yaw);
-            var basePiece=s.Add(c.presets[2],f,default,0,true);
-            var wall=s.Add(c.presets[0],f,new Vector3Int(1,0,0),0,false);
+            var basePiece=s.Add(c.presets[2],f,default,0);
+            var wall=s.Add(c.presets[0],f,new Vector3Int(1,0,0),0);
             var snap=BuildPlacement.Solve(c.presets[0],wall.Origin+q*new Vector3(1,2.75f,.1f),Vector3.up,wall,s.Frame(wall.OwnFrameId),yaw,0,default);
             Near(snap.Origin,wall.Origin+Vector3.up*3,"Upper wall not on 3m level");
-            var upper=s.Add(c.presets[0],f,new Vector3Int(1,12,0),0,false);
-            Check(upper.Supported && upper.Resolved.boxes.Length==2,"Implicit bearing gap/support");
-            var post=s.Add(c.presets[3],f,default,0,false);
+            var upper=s.Add(c.presets[0],f,new Vector3Int(1,12,0),0);
+            Check(s.Pieces.ContainsKey(upper.Id) && upper.Resolved.boxes.Length==2,"Implicit bearing gap/support");
+            var post=s.Add(c.presets[3],f,default,0);
             var postSnap=BuildPlacement.Solve(c.presets[3],post.Origin+Vector3.up*2.75f,Vector3.up,post,s.Frame(post.OwnFrameId),yaw,0,default);
             Near(postSnap.Origin,post.Origin+Vector3.up*3,"Post stack does not reserve band");
-            var upperPost=s.Add(c.presets[3],f,new Vector3Int(0,12,0),0,false);
-            Check(upperPost.Supported && upperPost.Resolved.boxes.Length==2,"Post bearing cap missing");
-            var floor=s.Add(c.presets[1],f,new Vector3Int(0,12,0),0,false);
-            Check(floor.Supported && upper.Supported && upper.Resolved.boxes.Length==1,"Floor did not replace duplicate bearing");
-            Check(upperPost.Supported && upperPost.Resolved.boxes.Length==1,"Floor did not replace corner cap");
+            var upperPost=s.Add(c.presets[3],f,new Vector3Int(0,12,0),0);
+            Check(s.Pieces.ContainsKey(upperPost.Id) && upperPost.Resolved.boxes.Length==2,"Post bearing cap missing");
+            var floor=s.Add(c.presets[1],f,new Vector3Int(0,12,0),0);
+            Check(s.Pieces.ContainsKey(floor.Id) && s.Pieces.ContainsKey(upper.Id) && upper.Resolved.boxes.Length==1,"Floor did not replace duplicate bearing");
+            Check(s.Pieces.ContainsKey(upperPost.Id) && upperPost.Resolved.boxes.Length==1,"Floor did not replace corner cap");
             Vector3 upperOrigin=upper.Origin;s.Remove(floor.Id);
-            Near(upper.Origin,upperOrigin,"Removing floor moved wall");Check(upper.Supported && upper.Resolved.boxes.Length==2,"Bearing not restored");
-            var roof=s.Add(c.Find(ThatchRoofSetup.ContentId),f,new Vector3Int(0,24,0),0,false);
-            Check(roof.Supported && roof.Resolved.boxes.Length>0,"Roof above second storey has no bearing");
-            var second=s.Add(c.presets[1],f,new Vector3Int(0,24,0),0,false);
-            Check(second.Supported && roof.Supported && roof.Resolved.boxes.Length==0,"Second floor/roof ownership");
-            s.Remove(second.Id);Check(roof.Resolved.boxes.Length>0 && roof.Supported,"Second roof bearing not restored");
-            var finish=s.Add(c.presets[1],f,default,0,false);
-            Check(finish.Supported && basePiece.Resolved.boxes.Length==1,"Foundation cap finish/support");
+            Near(upper.Origin,upperOrigin,"Removing floor moved wall");Check(s.Pieces.ContainsKey(upper.Id) && upper.Resolved.boxes.Length==2,"Bearing not restored");
+            var roof=s.Add(c.Find(ThatchRoofSetup.ContentId),f,new Vector3Int(0,24,0),0);
+            Check(s.Pieces.ContainsKey(roof.Id) && roof.Resolved.boxes.Length>0,"Roof above second storey has no bearing");
+            var second=s.Add(c.presets[1],f,new Vector3Int(0,24,0),0);
+            Check(s.Pieces.ContainsKey(second.Id) && s.Pieces.ContainsKey(roof.Id) && roof.Resolved.boxes.Length==0,"Second floor/roof ownership");
+            s.Remove(second.Id);Check(roof.Resolved.boxes.Length>0 && s.Pieces.ContainsKey(roof.Id),"Second roof bearing not restored");
+            var finish=s.Add(c.presets[1],f,default,0);
+            Check(s.Pieces.ContainsKey(finish.Id) && basePiece.Resolved.boxes.Length==1,"Foundation cap finish/support");
             Near(basePiece.Resolved.boxes[0].max,new Vector3(4,-.25f,4),"Foundation cap not deferred");
             s.Remove(finish.Id);Near(basePiece.Resolved.boxes[0].max,new Vector3(4,0,4),"Foundation cap not restored");
-            s.Remove(basePiece.Id);Check(wall.Supported && upper.Supported && roof.Supported,"Free placement unexpectedly depends on structural support");
+            s.Remove(basePiece.Id);Check(s.Pieces.ContainsKey(wall.Id) && s.Pieces.ContainsKey(upper.Id) && s.Pieces.ContainsKey(roof.Id),"Placed construction missing from session: wall, upper, roof");
         }
     }
     private static void Openings(BuildCatalog c)
@@ -79,10 +79,10 @@ public static class BuildFramingValidation
         for(int yaw=0;yaw<8;yaw++)
         {
             using var s=new BuildSession();var f=s.CreateFrame(new Vector3(-30,11,18),yaw);
-            s.Add(c.presets[2],f,default,0,true);var wall=s.Add(c.presets[0],f,new Vector3Int(1,0,15),0,false);
-            var floor=s.Add(c.presets[1],f,new Vector3Int(0,12,0),0,false);
-            var first=s.Add(c.Find(W21StairSetup.ContentId),f,new Vector3Int(5,0,0),0,false);
-            var second=s.Add(c.Find(W21StairSetup.ContentId),f,new Vector3Int(5,6,8),0,false);
+            s.Add(c.presets[2],f,default,0);var wall=s.Add(c.presets[0],f,new Vector3Int(1,0,15),0);
+            var floor=s.Add(c.presets[1],f,new Vector3Int(0,12,0),0);
+            var first=s.Add(c.Find(W21StairSetup.ContentId),f,new Vector3Int(5,0,0),0);
+            var second=s.Add(c.Find(W21StairSetup.ContentId),f,new Vector3Int(5,6,8),0);
             Check(floor.Resolved.cuts.Length==1 && floor.Resolved.mesh==floor.Definition.floorOpeningMesh,"Full flight did not select authored stairwell");
             foreach(var box in floor.Resolved.boxes)Check(!(box.Contains(new Vector3(1.8f,-.1f,2.5f))),"Floor fills stairwell");
             var obj=new GameObject("Resolved floor collider fixture");var proxy=obj.AddComponent<BuildGameplayProxy>();
@@ -98,7 +98,7 @@ public static class BuildFramingValidation
                 Check(hit,"Restored floor is not physically solid");
             }finally{Object.DestroyImmediate(obj);}
             // A middle-level deck fits to a full-height protected wall.
-            var mid=s.Add(c.presets[1],f,new Vector3Int(0,6,0),0,false);
+            var mid=s.Add(c.presets[1],f,new Vector3Int(0,6,0),0);
             Check(mid.Resolved.cuts.Length>0 && !BuildResolvedGeometry.Overlaps(mid,mid.Resolved,wall,wall.Resolved),"Floor did not defer to wall");
             Check(wall.Resolved.mesh==wall.Definition.mesh,"Floor modified protected wall appearance");
             s.Remove(wall.Id);Check(mid.Resolved.cuts.Length==0,"Wall-edge floor cut not restored");
@@ -110,11 +110,11 @@ public static class BuildFramingValidation
         if(w.Session==null)typeof(BuildWorld).GetMethod("Awake",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).Invoke(w,null);
         try
         {
-            var f=w.Session.CreateFrame(new Vector3(50,20,50),0);var foundation=w.Session.Add(c.presets[2],f,default,0,true);
+            var f=w.Session.CreateFrame(new Vector3(50,20,50),0);var foundation=w.Session.Add(c.presets[2],f,default,0);
             BuildPreview At(BuildDefinition d,Vector3Int a)=>new(){Definition=d,Frame=f,Anchor=a,Origin=BuildGeometry.WorldPoint(f,a),WorldYaw=0};
             var wall=w.Commit(At(c.presets[0],new Vector3Int(1,0,0)));Check(wall!=null,"Wall fixture rejected");
             var roof=w.Commit(At(c.Find(ThatchRoofSetup.ContentId),new Vector3Int(0,12,0)));Check(roof!=null,"Roof with automatic bearing rejected");
-            var floor=w.Commit(At(c.presets[1],new Vector3Int(0,12,0)));Check(floor!=null && roof.Supported,"Floor-after-roof rejected");
+            var floor=w.Commit(At(c.presets[1],new Vector3Int(0,12,0)));Check(floor!=null && w.Session.Pieces.ContainsKey(roof.Id),"Floor-after-roof rejected");
             Check(roof.Resolved.boxes.Length==0,"Committed roof still overlaps floor");
             w.Remove(roof.Id);roof=w.Commit(At(c.Find(ThatchRoofSetup.ContentId),new Vector3Int(0,12,0)));Check(roof!=null,"Roof-after-floor rejected");
             var dup=At(c.presets[1],new Vector3Int(0,12,0));w.Validate(ref dup);Check(!dup.Valid,"Duplicate floor accepted");
@@ -125,9 +125,9 @@ public static class BuildFramingValidation
     private static void Render(BuildCatalog c)
     {
         Directory.CreateDirectory(".utmp/framing");using var s=new BuildSession();var f=s.CreateFrame(Vector3.zero,0);
-        s.Add(c.presets[2],f,default,0,true);s.Add(c.presets[0],f,new Vector3Int(1,0,0),0,false);
-        s.Add(c.presets[0],f,new Vector3Int(1,12,0),0,false);s.Add(c.presets[1],f,new Vector3Int(0,12,0),0,false);
-        s.Add(c.Find(W21StairSetup.ContentId),f,new Vector3Int(5,0,0),0,false);s.Add(c.Find(W21StairSetup.ContentId),f,new Vector3Int(5,6,8),0,false);
+        s.Add(c.presets[2],f,default,0);s.Add(c.presets[0],f,new Vector3Int(1,0,0),0);
+        s.Add(c.presets[0],f,new Vector3Int(1,12,0),0);s.Add(c.presets[1],f,new Vector3Int(0,12,0),0);
+        s.Add(c.Find(W21StairSetup.ContentId),f,new Vector3Int(5,0,0),0);s.Add(c.Find(W21StairSetup.ContentId),f,new Vector3Int(5,6,8),0);
         var camObj=new GameObject("Framing camera");var cam=camObj.AddComponent<Camera>();cam.enabled=false;cam.orthographic=true;cam.aspect=1.5f;cam.clearFlags=CameraClearFlags.SolidColor;cam.backgroundColor=new Color(.16f,.19f,.2f);
         var lightObj=new GameObject("Framing light");var light=lightObj.AddComponent<Light>();light.type=LightType.Directional;light.intensity=1.5f;light.shadows=LightShadows.Soft;lightObj.transform.rotation=Quaternion.Euler(40,-35,0);
         var target=new RenderTexture(1200,800,24);target.Create();var old=GraphicsSettings.defaultRenderPipeline;var quality=QualitySettings.renderPipeline;var active=RenderTexture.active;
@@ -157,7 +157,7 @@ public static class BuildFramingValidation
             if(w.Session==null)typeof(BuildWorld).GetMethod("Awake",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).Invoke(w,null);
             var origin=new Vector3(200+yaw*20,50,200);var f=w.Session.CreateFrame(origin,yaw);var q=BuildGeometry.Rotation(yaw);
             BuildPreview At(BuildDefinition d,Vector3Int a,int turn=0)=>new(){Definition=d,Frame=f,Anchor=a,YawStep=turn,Origin=BuildGeometry.WorldPoint(f,a),WorldYaw=BuildGeometry.Turn(yaw+turn)};
-            w.Session.Add(c.presets[2],f,default,0,true);w.Session.Add(c.presets[2],f,new Vector3Int(0,0,-16),0,true);
+            w.Session.Add(c.presets[2],f,default,0);w.Session.Add(c.presets[2],f,new Vector3Int(0,0,-16),0);
             var rig=new GameObject("Framed stairwell motor");
             BuildGameplay gameplay=null;
             try

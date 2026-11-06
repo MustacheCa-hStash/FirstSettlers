@@ -306,7 +306,7 @@ public static class WattleWallValidation
             definition = ScriptableObject.CreateInstance<BuildDefinition>(); definition.kind = BuildPartKind.Floor;
             definition.sizeUnits = new Vector3Int(14,1,11); definition.minimumUnits = new Vector3Int(0,-1,0);
             definition.mesh = canopy; definition.material = wall.material;
-            var frame = session.CreateFrame(new Vector3(0,3,0),0); session.Add(definition,frame,default,0,true);
+            var frame = session.CreateFrame(new Vector3(0,3,0),0); session.Add(definition,frame,default,0);
             Renderer = new BuildRenderer(session);
             cameraObject = new GameObject("Wattle shadow receiver camera"); camera = cameraObject.AddComponent<Camera>(); camera.enabled = false;
             camera.orthographic = true; camera.orthographicSize = 1.1f; camera.aspect = 1.5f; camera.nearClipPlane = .05f; camera.farClipPlane = 15;

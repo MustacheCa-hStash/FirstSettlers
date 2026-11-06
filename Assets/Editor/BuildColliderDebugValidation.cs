@@ -38,15 +38,15 @@ public static class BuildColliderDebugValidation
         var stair=c.Find(W21StairSetup.ContentId);
         try
         {
-            var floor=w.Session.Add(c.presets[2],f,default,0,true);
-            w.Session.Add(c.presets[0],f,new Vector3Int(15,0,16),4,false);
-            w.Session.Add(c.presets[1],f,new Vector3Int(0,12,0),0,false);
+            var floor=w.Session.Add(c.presets[2],f,default,0);
+            w.Session.Add(c.presets[0],f,new Vector3Int(15,0,16),4);
+            w.Session.Add(c.presets[1],f,new Vector3Int(0,12,0),0);
             BuildPreview Solve(float z)=>BuildPlacement.Solve(stair,f.Origin+q*new Vector3(.625f,0,z),Vector3.up,floor,w.Session.Frame(floor.OwnFrameId),0,0,default);
             var p=Solve(1);w.Validate(ref p);
             var local=Quaternion.Inverse(q)*(p.Origin-f.Origin);
             Check(p.Valid && Mathf.Abs(local.z)<.005f,"Starter moved away from its selected snap: "+p.Message);
             Check(w.DebugPreview.Origin==p.Origin && w.DebugPreview.Resolved==p.Resolved && w.DebugStates[ulong.MaxValue]==p.Resolved,"Debug pose does not match the fitted starter.");
-            w.Session.Add(c.presets[0],f,new Vector3Int(1,0,0),0,false);
+            w.Session.Add(c.presets[0],f,new Vector3Int(1,0,0),0);
             var tight=Solve(1.25f);var before=tight.Origin;w.Validate(ref tight);
             Check(tight.Valid && (tight.Origin-before).sqrMagnitude<.000001f,"An impossible automatic fit moved the preview into its near wall.");
             Check(w.DebugPreview.Origin==tight.Origin && w.DebugPreview.Valid && w.DebugPreview.Resolved==tight.Resolved && w.DebugStates[ulong.MaxValue]==tight.Resolved,"Rejected speculative correction left diagnostics on a different invalid pose.");
@@ -60,8 +60,8 @@ public static class BuildColliderDebugValidation
         try
         {
             Check(w.ColliderDebug.Mode==BuildColliderDebugMode.Off,"Diagnostics should default off.");
-            w.Session.Add(c.presets[2],f,new Vector3Int(0,0,-8),0,true);
-            var wall=w.Session.Add(c.presets[0],f,new Vector3Int(1,0,1),6,false);
+            w.Session.Add(c.presets[2],f,new Vector3Int(0,0,-8),0);
+            var wall=w.Session.Add(c.presets[0],f,new Vector3Int(1,0,1),6);
             var p=At(stair,f,new Vector3Int(1,0,0));w.Validate(ref p);
             Check(p.Valid,"A stair touching the side wall is still rejected: "+p.Message);
             var first=w.Commit(p);Check(first!=null,"Wall-adjacent stair commit failed");
@@ -70,7 +70,7 @@ public static class BuildColliderDebugValidation
             Check(duplicate.Message.Contains("#"+first.Id),"Blocker ID missing from placement feedback.");
             w.ColliderDebug.Mode=BuildColliderDebugMode.SolidsAndClearance;w.ColliderDebug.Rebuild();
             Check(w.ColliderDebug.WireMesh.vertexCount>0,"Logical shapes are invisible before proxy activation");
-            var headWall=w.Session.Add(c.presets[0],f,new Vector3Int(2,8,4),0,true);
+            var headWall=w.Session.Add(c.presets[0],f,new Vector3Int(2,8,4),0);
             w.Remove(first.Id);var head=p;w.Validate(ref head);
             Check(head.Valid && head.Warning==BuildPlacementWarning.StairHeadroom && head.WarningPieceId==headWall.Id,"Headroom collision was hidden or identified as physical intersection: "+head.Message);
             w.Remove(headWall.Id);w.Validate(ref p);Check(p.Valid,"Removing a blocker did not clear diagnostics");
@@ -79,7 +79,7 @@ public static class BuildColliderDebugValidation
             Check(w.ColliderDebug.Frozen && w.ColliderDebug.WireMesh.vertexCount==frozen.Length,"Freeze lost the failed pose when aiming away");
             w.ColliderDebug.ToggleFreeze();Invoke(w.ColliderDebug,"LateUpdate");
             Check(!w.ColliderDebug.Frozen && w.DebugPreview.Definition==null,"Resuming retained stale placement feedback");
-            Physics.SyncTransforms();var ext=At(stair,f,new Vector3Int(80,0,0));w.Session.Add(c.presets[2],f,new Vector3Int(80,0,-8),0,true);w.Validate(ref ext);
+            Physics.SyncTransforms();var ext=At(stair,f,new Vector3Int(80,0,0));w.Session.Add(c.presets[2],f,new Vector3Int(80,0,-8),0);w.Validate(ref ext);
             Check(ext.Failure==BuildPlacementFailure.External && ext.BlockingCollider==outside.GetComponent<BoxCollider>(),"External blocker identity missing: "+ext.Message);
             w.ColliderDebug.Rebuild();var wiresBefore=w.ColliderDebug.WireMesh.bounds;
             outside.transform.position+=Vector3.up*8;Physics.SyncTransforms();Invoke(w.ColliderDebug,"LateUpdate");
@@ -87,7 +87,7 @@ public static class BuildColliderDebugValidation
             var passage=BuildResolvedGeometry.StairPassage(stair);
             Check(Mathf.Abs(passage.vertices[0].x-stair.LocalBounds.min.x)<.00001f && Mathf.Abs(passage.vertices[4].x-stair.LocalBounds.max.x)<.00001f,"Wall headroom still contains floor framing side margins.");
             // Geometry capture uses the bound proxy, including its authored ramp, not a bounding box.
-            var actual=w.Session.Add(stair,f,new Vector3Int(32,0,0),0,true);
+            var actual=w.Session.Add(stair,f,new Vector3Int(32,0,0),0);
             var focus=new GameObject("Debug focus");focus.transform.position=f.Origin;w.Focus=focus.transform;Invoke(w,"LateUpdate");
             Check(w.TryGetCollisionProxy(actual.Id,out var proxy),"Collision proxy was not activated");
             var list=new System.Collections.Generic.List<Collider>();proxy.GetEnabledColliders(list);
@@ -106,8 +106,8 @@ public static class BuildColliderDebugValidation
         var rig=new GameObject("Wall-adjacent motor");
         try
         {
-            w.Session.Add(c.presets[2],f,new Vector3Int(-8,0,-8),0,true);
-            var wall=w.Session.Add(c.presets[0],f,new Vector3Int(1,0,1),6,false);
+            w.Session.Add(c.presets[2],f,new Vector3Int(-8,0,-8),0);
+            var wall=w.Session.Add(c.presets[0],f,new Vector3Int(1,0,1),6);
             var stair=c.Find(W21StairSetup.ContentId);var p=At(stair,f,new Vector3Int(1,0,0));
             Check(w.Commit(p)!=null,"Wall-adjacent foot rejected");
             Check(w.Commit(At(stair,f,new Vector3Int(1,6,8)))!=null,"Wall-adjacent continuation rejected");
@@ -134,8 +134,8 @@ public static class BuildColliderDebugValidation
     private static void Render(BuildCatalog c)
     {
         Directory.CreateDirectory(".utmp/collider-debug");var w=World("Diagnostic render");var f=w.Session.CreateFrame(Vector3.zero,0);
-        w.Session.Add(c.presets[2],f,default,0,true);w.Session.Add(c.presets[0],f,new Vector3Int(1,0,1),6,false);
-        var stair=c.Find(W21StairSetup.ContentId);w.Session.Add(stair,f,new Vector3Int(3,0,0),0,false);
+        w.Session.Add(c.presets[2],f,default,0);w.Session.Add(c.presets[0],f,new Vector3Int(1,0,1),6);
+        var stair=c.Find(W21StairSetup.ContentId);w.Session.Add(stair,f,new Vector3Int(3,0,0),0);
         var p=At(stair,f,new Vector3Int(3,0,0));w.Validate(ref p);Check(p.Failure==BuildPlacementFailure.Solid,"Render needs a real duplicate rejection");
         var camObj=new GameObject("Collider debug camera");var camera=camObj.AddComponent<Camera>();camera.enabled=false;camera.orthographic=true;camera.aspect=1.5f;camera.orthographicSize=4;camera.backgroundColor=new Color(.06f,.08f,.11f);camera.clearFlags=CameraClearFlags.SolidColor;
         camera.transform.position=new Vector3(9,7,-8);camera.transform.LookAt(new Vector3(1.8f,1.5f,1.5f));w.Camera=camera;w.Focus=camObj.transform;

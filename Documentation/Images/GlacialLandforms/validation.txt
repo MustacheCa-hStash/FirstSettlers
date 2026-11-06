@@ -1,0 +1,33 @@
+Snow-biome survey (four seeds, actual heights/slopes/climate): 4194 -> 5321 of 58564, 7.16% -> 9.09%.
+GlacierValley: seed 43, terrain XZ float2(41343.95f, -37812.57f), cold score 1.000.
+ShoulderBenches: seed 43, terrain XZ float2(37815.67f, -38093.65f), cold score 1.000.
+UpperBowl: seed 66, terrain XZ float2(21410.4f, -37778.4f), cold score 1.000.
+MountainPass: seed 66, terrain XZ float2(18130.59f, -41075.29f), cold score 1.000.
+GlacierValley full catchment: maximum .3m edge rise 2.938m, 203 scoured moraine samples, 87 exposed ice samples steeper than 20deg.
+GlacierValley rock wall: sustained >= 60deg rise 77.7m over 10.95m horizontal, seed 43, world XZ float2(12293.35f, -11330.5f).
+  Steep-face chunk (320,-296): 2048 vertical/face-normal PhysX rays, max vertical error 0.000061m; near/far/density pass.
+GlacierValley ice wall: sustained >= 70deg rise 38.9m over 4.35m horizontal, seed 43, world XZ float2(12482.58f, -11373.55f).
+  Steep-face chunk (325,-297): 2048 vertical/face-normal PhysX rays, max vertical error 0.000061m; near/far/density pass.
+GlacierValleyTerminus ice wall: sustained >= 70deg rise 39.4m over 4.35m horizontal, seed 43, world XZ float2(12310.54f, -11207.18f).
+  Steep-face chunk (320,-292): 2048 vertical/face-normal PhysX rays, max vertical error 0.000061m; near/far/density pass.
+GlacierValley: gentle <15deg 87.1%, exposed ice 14683/16384, maximum .3m edge rise 2.371m; 1849 PhysX rays pass, max error 0.000061m; near/far/density and seams pass.
+ShoulderBenches full catchment: maximum .3m edge rise 3.591m, 56 scoured moraine samples, 216 exposed ice samples steeper than 20deg.
+ShoulderBenches rock wall: sustained >= 60deg rise 82.1m over 10.65m horizontal, seed 43, world XZ float2(11377.22f, -11524.82f).
+  Steep-face chunk (296,-301): 2048 vertical/face-normal PhysX rays, max vertical error 0.000061m; near/far/density pass.
+ShoulderBenches ice wall: sustained >= 70deg rise 40.1m over 4.05m horizontal, seed 43, world XZ float2(11222.09f, -11351.06f).
+  Steep-face chunk (292,-296): 2048 vertical/face-normal PhysX rays, max vertical error 0.000031m; near/far/density pass.
+ShoulderBenches: gentle <15deg 88.4%, exposed ice 15445/16384, maximum .3m edge rise 1.516m; 1849 PhysX rays pass, max error 0.000046m; near/far/density and seams pass.
+UpperBowl full catchment: maximum .3m edge rise 3.477m, 152 scoured moraine samples, 324 exposed ice samples steeper than 20deg.
+UpperBowl rock wall: sustained >= 60deg rise 76.6m over 10.05m horizontal, seed 66, world XZ float2(6454.196f, -11490.4f).
+  Steep-face chunk (168,-300): 2048 vertical/face-normal PhysX rays, max vertical error 0.000061m; near/far/density pass.
+UpperBowl ice wall: sustained >= 70deg rise 38.6m over 4.05m horizontal, seed 66, world XZ float2(6451.225f, -11393.66f).
+  Steep-face chunk (168,-297): 2048 vertical/face-normal PhysX rays, max vertical error 0.000061m; near/far/density pass.
+UpperBowl: gentle <15deg 99.9%, exposed ice 15543/16384, maximum .3m edge rise 0.061m; 1849 PhysX rays pass, max error 0.000061m; near/far/density and seams pass.
+MountainPass full catchment: maximum .3m edge rise 1.483m, 173 scoured moraine samples, 96 exposed ice samples steeper than 20deg.
+MountainPass: gentle <15deg 100.0%, exposed ice 848/16384, maximum .3m edge rise 0.013m; 1849 PhysX rays pass, max error 0.000092m; near/far/density and seams pass.
+Selected IceFront capture: seed 43, terrain XZ float2(41034.71f, -37356.63f), world XZ float2(12310.42f, -11206.99f).
+Selected RockWall capture: seed 43, terrain XZ float2(37927.25f, -38409.55f), world XZ float2(11378.17f, -11522.87f).
+Warmed 128-unit height-field median at cold site: old 13.176ms, glacial 15.861ms. This is not live-world FPS.
+IceFront ground preview: observer world XYZ (12296.24, 390.97, -11186.40), looking at (12310.42, 401.26, -11206.99).
+RockWall ground preview: observer world XYZ (11408.79, 227.34, -11459.92), looking at (11378.17, 227.10, -11522.87).
+GLACIAL LANDFORMS PASS: 268237 checks.

@@ -14,6 +14,7 @@ public sealed class TerrainSculptGroup
     public bool Retained { get; internal set; }
     internal long ContentRevision;
     internal int VisualClass;
+    internal TerrainSourceSurfaceLayout SourceLayout;
 }
 
 internal sealed class TerrainSculptChunkBuild
@@ -35,6 +36,8 @@ internal sealed class TerrainSculptBatch : IDisposable
     internal TerrainSculptSuppression Suppression;
     internal int ExtractedBricks,ReusedBricks;
     internal double ExtractMs,AssemblyMs;
+    internal TerrainSourceSurfaceLayout Layout;
+    internal int ReconstructionVersion=TerrainSourceSurfaceLayout.ReconstructionVersion;
     public void Dispose() { Edit?.Dispose(); Edit = null; Chunks.Clear(); Reuse.Clear(); Groups = null; MeshCache=null;Suppression=null; }
 }
 
@@ -76,18 +79,29 @@ internal static class TerrainSculptBatchBuilder
     internal static void Build(TerrainSculptBatch batch, TerrainDensitySnapshot snapshot, Func<double,double,double> height,
         int chunkSize, double3 focus, IReadOnlyList<TerrainSculptGroup> previous, IReadOnlyList<TerrainSculptPin> pins,
         TerrainSculptBuildBudget budget, double3 previousAnchor, long previousDensityRevision, ISet<ChunkCoord> previousChunks,
-        TerrainSculptMeshCache previousCache=null,long cacheLimit=16L*1024*1024,bool prioritizeCollision=false)
+        TerrainSculptMeshCache previousCache=null,long cacheLimit=16L*1024*1024,bool prioritizeCollision=false,
+        TerrainSourceSurfaceLayout? sourceLayout=null)
     {
+        var layout=sourceLayout??TerrainSourceSurfaceLayout.Current(snapshot.Profile);batch.Layout=layout;
+        if(layout.Spacing!=snapshot.Profile.Spacing||layout.BoundaryStep!=1)throw new ArgumentException("Excavation requires the canonical full-resolution source layout.");
         var policy = new TerrainSculptCoveragePolicy(batch.Anchor);
         var visual = new TerrainSculptVisualField(snapshot,policy);
         long assemblyStarted=System.Diagnostics.Stopwatch.GetTimestamp();
         var cache=new TerrainSculptMeshCache.Builder(previousCache,snapshot,budget,cacheLimit);
         var heightCache=new HeightCache(height,snapshot.Profile.Spacing,budget);height=heightCache.Read;
         batch.Groups = Group(snapshot);
+        bool Relevant(TerrainSculptGroup group)
+        {
+            if(policy.Prepare(group.Minimum,group.Maximum)||TerrainSculptCoveragePolicy.Distance(focus,group.Minimum,group.Maximum)<=TerrainSculptCoveragePolicy.CollisionRelease)return true;
+            if(pins!=null)foreach(var pin in pins)if(math.all(pin.Minimum<=group.Maximum)&&math.all(pin.Maximum>=group.Minimum))return true;
+            return false;
+        }
+        TerrainSculptPatchPlanner.PrepareGroups(snapshot,batch.Groups,height,layout,budget,Relevant);
         var chunkCoords = new HashSet<ChunkCoord>();
         double s = snapshot.Profile.Spacing;
         foreach (var group in batch.Groups)
         {
+            group.SourceLayout=layout;
             budget.Check();
             bool wasPrepared = false, wasCollision = false;
             TerrainSculptGroup exactOld=null;
@@ -181,22 +195,19 @@ internal static class TerrainSculptBatchBuilder
                 if((!group.Render&&!group.Collision)||!IntersectsChunk(group,coord,chunkSize))continue;
                 var f=group.Footprint;
                 int2 lo=math.max(f.Min,domain.Min),hi=math.min(f.Max,domain.Max);
-                double low=group.Minimum.y,high=group.Maximum.y;
-                // Local height envelope; an uphill section far along the cave must not
-                // widen the volume sampled for this source chunk.
-                for(int z=lo.y;z<=hi.y;z++)for(int x=lo.x;x<=hi.x;x++)
+                var envelope=TerrainSculptPatchPlanner.Envelope(group,new TerrainSculptFootprint(lo,hi),height,layout,budget);
+                int minY=envelope.Min.y,maxY=envelope.Max.y;
+                TerrainSculptMeshData canonical=null;
+                if(group.Render)
                 {
-                    budget.Check();double h=height(x*s,z*s);
-                    if(!math.isfinite(h))throw new ArgumentException("Nonfinite baseline height.");
-                    low=Math.Min(low,h-2*s);high=Math.Max(high,h+2*s);
+                    var mesh=TerrainSculptPatchBuilder.BuildPatchCached(group.VisualClass==1?(ITerrainDensityField)snapshot:visual,f,minY,maxY,height,layout.BoundaryStep,budget,cache,domain,layout);
+                    render.Add(group,mesh);if(group.VisualClass==1)canonical=mesh;
                 }
-                int minY=TerrainDensityCoordinates.FloorIndex(low/s)-2,maxY=checked(TerrainDensityCoordinates.FloorIndex(high/s)+3);
-                if(group.Render)render.Add(group,TerrainSculptPatchBuilder.BuildPatchCached(group.VisualClass==1?(ITerrainDensityField)snapshot:visual,f,minY,maxY,height,1,budget,cache,domain));
-                if(group.Collision)collision.Add(group,TerrainSculptPatchBuilder.BuildPatchCached(snapshot,f,minY,maxY,height,8,budget,cache,domain));
+                if(group.Collision)collision.Add(group,canonical??TerrainSculptPatchBuilder.BuildPatchCached(snapshot,f,minY,maxY,height,layout.BoundaryStep,budget,cache,domain,layout));
             }
             var output = new TerrainSculptChunkBuild();
-            output.Render = BuildChunk(snapshot.Profile,domain,height,render,1,budget);
-            output.Collision = BuildChunk(snapshot.Profile,domain,height,collision,8,budget);
+            output.Render = BuildChunk(snapshot.Profile,domain,height,render,layout.BoundaryStep,budget,true);
+            output.Collision = BuildChunk(snapshot.Profile,domain,height,collision,layout.BoundaryStep,budget,false);
             batch.Chunks.Add(coord,output);
             budget.CompleteScope(chunkStart,((output.Render?.PayloadBytes??0)+(output.Collision?.PayloadBytes??0))*2,chunkPersistent);
         }
@@ -210,7 +221,7 @@ internal static class TerrainSculptBatchBuilder
         math.all(g.Footprint.Min<new int2(c.x+1,c.z+1)*size)&&math.all(g.Footprint.Max>new int2(c.x,c.z)*size);
     private static bool EquivalentInChunk(TerrainSculptGroup a,TerrainSculptGroup b,ChunkCoord coord,int size,double3 anchor,double3 oldAnchor)
     {
-        if(a.Render!=b.Render||a.Collision!=b.Collision||a.VisualClass!=b.VisualClass||
+        if(!a.SourceLayout.Equals(b.SourceLayout)||a.Render!=b.Render||a.Collision!=b.Collision||a.VisualClass!=b.VisualClass||
             a.VisualClass==2&&!math.all(anchor==oldAnchor))return false;
         int2 lo=new int2(coord.x,coord.z)*size,hi=lo+size;
         if(!math.all(math.max(a.Footprint.Min,lo)==math.max(b.Footprint.Min,lo))||
@@ -221,12 +232,14 @@ internal static class TerrainSculptBatchBuilder
     }
 
     private static TerrainSculptMeshData BuildChunk(TerrainDensityProfile profile,TerrainSculptFootprint domain,
-        Func<double,double,double> height,Dictionary<TerrainSculptGroup,TerrainSculptMeshData> pieces,int step,TerrainSculptBuildBudget budget)
+        Func<double,double,double> height,Dictionary<TerrainSculptGroup,TerrainSculptMeshData> pieces,int step,TerrainSculptBuildBudget budget,bool render)
     {
         long scopeStart=budget.ChargedBytes;
         long persistentStart=budget.PersistentBytes;
         var holes = new List<TerrainSculptFootprint>();
-        foreach (var pair in pieces)
+        var orderedPieces=new List<KeyValuePair<TerrainSculptGroup,TerrainSculptMeshData>>(pieces);
+        orderedPieces.Sort((a,b)=>a.Key.Footprint.Min.x!=b.Key.Footprint.Min.x?a.Key.Footprint.Min.x.CompareTo(b.Key.Footprint.Min.x):a.Key.Footprint.Min.y.CompareTo(b.Key.Footprint.Min.y));
+        foreach (var pair in orderedPieces)
         {
             var f = pair.Key.Footprint;
             if (math.all(f.Min < domain.Max) && math.all(f.Max > domain.Min))
@@ -235,28 +248,27 @@ internal static class TerrainSculptBatchBuilder
         if (holes.Count == 0) return null;
         var baseline = TerrainSculptPatchBuilder.BuildBaseline(profile,domain,height,step,holes,budget);
         int vertexCount=baseline.Positions.Length,indexCount=baseline.Triangles.Length;
-        foreach(var piece in pieces.Values)
-        {vertexCount=checked(vertexCount+piece.Positions.Length);indexCount=checked(indexCount+piece.Triangles.Length);}
+        foreach(var pair in orderedPieces)
+        {
+            var piece=pair.Value;
+            vertexCount=checked(vertexCount+piece.Positions.Length);indexCount=checked(indexCount+piece.Triangles.Length);
+        }
         if(vertexCount>500000||indexCount>3000000)throw new TerrainDensityCapacityException();
         // The source window is already clipped and counts are known: exact concatenation
         // avoids growing/copying large intermediate lists and normalizing every vertex again.
-        long bytes=(long)vertexCount*(step==1?44:36)+(long)indexCount*4;budget.Charge(bytes*2);
+        long bytes=(long)vertexCount*(render?44:36)+(long)indexCount*4;budget.Charge(bytes*2);
         var positions=new double3[vertexCount];var normals=new float3[vertexCount];var triangles=new int[indexCount];
+        float2[] surfaceData=render?new float2[vertexCount]:null;
         int vertex=0,index=0;
         void Append(TerrainSculptMeshData piece)
         {
             Array.Copy(piece.Positions,0,positions,vertex,piece.Positions.Length);
             Array.Copy(piece.Normals,0,normals,vertex,piece.Normals.Length);
+            if(render&&piece.SurfaceData!=null)Array.Copy(piece.SurfaceData,0,surfaceData,vertex,piece.SurfaceData.Length);
             foreach(int i in piece.Triangles)triangles[index++]=i+vertex;
             vertex+=piece.Positions.Length;
         }
-        Append(baseline);foreach(var piece in pieces.Values)Append(piece);
-        float2[] surfaceData=null;
-        if(step==1)
-        {
-            surfaceData=new float2[vertexCount];
-            for(int i=0;i<vertexCount;i++)surfaceData[i]=new float2(TerrainSculptSurfaceSettings.Exposure(height(positions[i].x,positions[i].z)-positions[i].y,profile.Spacing),0);
-        }
+        Append(baseline);foreach(var pair in orderedPieces)Append(pair.Value);
         var result=new TerrainSculptMeshData(positions,normals,triangles,0,0,surfaceData);
         budget.CompleteScope(scopeStart,result.PayloadBytes*2,persistentStart);return result;
     }

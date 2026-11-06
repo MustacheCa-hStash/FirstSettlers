@@ -75,6 +75,17 @@ public static class TerrainSculptingPersistenceValidation
         }
         foreach(var field in typeof(WorldErosionSettings).GetFields(BindingFlags.Instance|BindingFlags.Public))
         {
+            if(field.FieldType==typeof(WorldLandformSettings))
+            {
+                foreach(var nested in typeof(WorldLandformSettings).GetFields(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic))
+                {
+                    object landforms=g.Erosion.landforms;object v=nested.GetValue(landforms);
+                    if(v is float lf)v=lf+.125f;else if(v is int ln)v=ln+1;else if(v is bool lb)v=!lb;else throw new Exception("Uncovered landform field.");
+                    nested.SetValue(landforms,v);var updated=g;updated.Erosion.landforms=(WorldLandformSettings)landforms;
+                    Check(original.Fingerprint!=TerrainEditIdentity.Create("a",updated,P).Fingerprint,"Landform field missing from fingerprint: "+nested.Name);
+                }
+                continue;
+            }
             object erosion=g.Erosion;object value=field.GetValue(erosion);
             if(value is float f)value=f+.125f;else if(value is int n)value=n+1;else if(value is bool b)value=!b;
             else if(value is Vector2 v)value=v+Vector2.one;else if(field.FieldType.IsEnum)value=ErosionFadeTarget.Altitude;else throw new Exception("Uncovered erosion field.");

@@ -105,7 +105,7 @@ public static class BuildUiContent
         "build.stone.l03-narrow-limestone"=>"A 2 m-wide dressed limestone wall for short bays. Same 3 m storey and 0.25 m thickness.",
         "build.stone.l04-limestone-pier"=>"A plain 3 m limestone pier for exposed ends and local bearing.",
         "build.stone.l05-limestone-paving"=>"Limestone slabs for ground paving or elevated floors.",
-        "build.stone.l06-limestone-footing"=>"A 4 m by 1 m masonry footing strip, 0.5 m deep. Supports walls and paving; seats on terrain.",
+        "build.stone.l06-limestone-footing"=>"A 4 m by 1 m masonry footing strip, 0.5 m deep. Fits beneath walls and paving; seats on terrain.",
         "build.stone.l07-limewashed-wall"=>"Warm off-white limewash over coursed limestone. Same 4 m span and 3 m storey.",
         "build.stone.l08-limestone-plinth"=>"A low 0.5 m masonry course. Adds a real half-metre rise below the next wall.",
         "build.stone.l09-limestone-doorway"=>"Limestone doorway with a single stone lintel and a clear 1.25 by 2.25 m opening. No door leaf.",

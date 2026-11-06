@@ -9,7 +9,7 @@ using UnityEngine;
 using Debug=UnityEngine.Debug;
 using Object=UnityEngine.Object;
 
-/// <summary>Installed assets, cursor sweeps, persistent rotation, support parity and village-size preview cost.</summary>
+/// <summary>Installed assets, cursor sweeps, persistent rotation, fitting parity and village-size preview cost.</summary>
 [InitializeOnLoad]
 public static class BuildInteractionValidation
 {
@@ -31,14 +31,14 @@ public static class BuildInteractionValidation
         {
             var c=Resources.Load<BuildCatalog>("Building/PrototypeCatalog");Assets(c);
             for(int yaw=0;yaw<8;yaw++){Footings(c,yaw);FacesAndFloors(c,yaw);Stairs(c,yaw);Canopy(c,yaw);Parity(c,yaw);}
-            Rotation(c);LockedHeadings(c);FittedSupportAndRendering(c);var performance=Performance(c);
+            Rotation(c);LockedHeadings(c);FittedRendering(c);RevisionAndPreviewCaching(c);var performance=Performance(c);
             Directory.CreateDirectory(".utmp/interaction");File.WriteAllText(".utmp/interaction/validation.json","{\"passed\":true,\"checks\":"+checks+",\"performance\":"+performance+"}");
             Debug.Log("BUILD INTERACTION PASS: "+checks+" checks; "+performance);EditorApplication.Exit(0);
         }catch(Exception ex){Debug.LogException(ex);EditorApplication.Exit(1);}
     }
     private static BuildDefinition D(BuildCatalog c,string suffix)
     {foreach(var d in c.presets)if(d.contentId.EndsWith(suffix,StringComparison.Ordinal))return d;throw new Exception("Missing "+suffix);}
-    private static BuildPieceRecord Add(BuildSession s,BuildDefinition d,Vector3 origin,int yaw,bool ground=true)=>s.Add(d,s.CreateFrame(origin,yaw),default,0,ground);
+    private static BuildPieceRecord Add(BuildSession s,BuildDefinition d,Vector3 origin,int yaw)=>s.Add(d,s.CreateFrame(origin,yaw),default,0);
     private static BuildPreview Snap(BuildSession s,BuildDefinition d,BuildPieceRecord target,Vector3 point,Vector3 normal,int? heading=null)
     {
         var q=BuildGeometry.Rotation(target.WorldYawStep);
@@ -55,7 +55,6 @@ public static class BuildInteractionValidation
             {Check(Mathf.Abs(d.LocalBounds.size.x-2)<.001f,"Modular stair width");Near(d.collisionMesh.bounds.max,d.LocalBounds.max,"Walking hull envelope");Check(d.authoringPrefab.GetComponent<MeshCollider>().sharedMesh==d.collisionMesh,"Prefab walking hull stale");}
             if(d.occupiedVolumes!=null)foreach(var v in d.occupiedVolumes){Near(v.bounds.min,v.mesh.bounds.min,"Hull min parity");Near(v.bounds.max,v.mesh.bounds.max,"Hull max parity");}
         }
-        Check(D(c,"l35-braced-door-canopy").relaxedWallMount,"Canopy policy not installed");
         Check(Mathf.Abs(D(c,"l22-solid-bedded-limestone-landing").LocalBounds.size.x-2)<.001f,"Landing not modular");
         Check(BuildTopCourse.Compatible(D(c,"l01-coursed-limestone"),D(c,"l18-limestone-eaves-cornice")),"Thin cornice host compatibility");
     }
@@ -125,8 +124,8 @@ public static class BuildInteractionValidation
         {
             var world=obj.AddComponent<BuildWorld>();var s=world.Session;var wall=Add(s,D(c,"l10-arched-limestone-doorway"),new Vector3(80,60,20),yaw);
             var d=D(c,"l35-braced-door-canopy");var p=Snap(s,d,wall,new Vector3(2,2.5f,.125f),Vector3.forward);world.Validate(ref p);
-            Check(p.Valid,"Canopy still requires every mount: "+p.Message);var placed=world.Commit(p);Check(placed!=null&&placed.Supported,"Canopy commit support");
-            s.Remove(wall.Id);Check(placed.Supported,"Free placement unexpectedly depends on structural support");
+            Check(p.Valid,"Canopy still requires every mount: "+p.Message);var placed=world.Commit(p);Check(placed!=null&&s.Pieces.ContainsKey(placed.Id),"Placed construction missing from session: placed");
+            s.Remove(wall.Id);Check(s.Pieces.ContainsKey(placed.Id),"Placed construction missing from session: placed");
         }finally{Object.DestroyImmediate(obj);}
     }
     private static void Parity(BuildCatalog c,int yaw)
@@ -134,16 +133,14 @@ public static class BuildInteractionValidation
         var obj=new GameObject("Preview parity");try
         {
             var world=obj.AddComponent<BuildWorld>();var s=world.Session;var origin=new Vector3(120,80,20);var foundation=Add(s,c.presets[2],origin,yaw);
-            var q=BuildGeometry.Rotation(yaw);var wall=Add(s,c.presets[0],origin,yaw,false);
-            Add(s,c.presets[0],origin+q*new Vector3(4,0,0),yaw,false);
+            var q=BuildGeometry.Rotation(yaw);var wall=Add(s,c.presets[0],origin,yaw);
+            Add(s,c.presets[0],origin+q*new Vector3(4,0,0),yaw);
             foreach(var d in new[]{c.presets[0],c.presets[1],c.presets[3],D(c,"l20-half-storey-limestone-stair")})
             for(int tick=0;tick<8;tick++)
             {
                 var p=Snap(s,d,foundation,new Vector3(.5f+tick*.25f,0,2),Vector3.up);world.Validate(ref p);
-                var candidate=new BuildPieceRecord{Id=ulong.MaxValue,Definition=d,Origin=p.Origin,WorldYawStep=(byte)p.WorldYaw,Grounded=p.Grounded};candidate.WorldBounds=BuildSession.IndexBounds(d,candidate.Origin,candidate.WorldYawStep);
+                var candidate=new BuildPieceRecord{Id=ulong.MaxValue,Definition=d,Origin=p.Origin,WorldYawStep=(byte)p.WorldYaw};candidate.WorldBounds=BuildSession.IndexBounds(d,candidate.Origin,candidate.WorldYawStep);
                 var all=new List<BuildPieceRecord>(s.Pieces.Values){candidate};using var resolver=new BuildResolution();var full=resolver.Resolve(all,r=>s.NeighboursFor(r,candidate));
-                var supported=BuildSupportState.Resolve(all,full,r=>s.NeighboursFor(r,candidate));bool loss=false;foreach(var existing in s.Pieces.Values)loss|=existing.Supported&&!supported.Contains(existing.Id);
-                Check(p.Valid==(supported.Contains(candidate.Id)&&!loss&&p.Failure!=BuildPlacementFailure.Solid),"Local/global eligibility mismatch: "+d.name+" "+p.Message);
                 foreach(var pair in world.DebugStates)
                 {
                     var expected=full[pair.Key];Check(pair.Value.key==expected.key&&pair.Value.boxes.Length==expected.boxes.Length&&pair.Value.attachments.Length==expected.attachments.Length,"Sparse/full resolution mismatch");
@@ -196,7 +193,7 @@ public static class BuildInteractionValidation
                 {
                     var p=BuildPlacement.Solve(c.presets[0],target.Origin+new Vector3(2,0,.1f),Vector3.up,target,s.Frame(target.OwnFrameId),0,0,new Vector3Int(i%15,0,0));
                     var timer=Stopwatch.StartNew();world.Validate(ref p);timer.Stop();if(stage==1&&i>7)times.Add(timer.Elapsed.TotalMilliseconds);
-                    Check(p.Valid,"Village preview rejected: "+p.Message);Check(!world.PreviewUsedFullSupport,"Ordinary wall preview recomputed global support");
+                    Check(p.Valid,"Village preview rejected: "+p.Message);
                     if(stage==0)localSmall=s.PreviewResolutionCount;else localLarge=s.PreviewResolutionCount;
                 }
             }
@@ -206,36 +203,94 @@ public static class BuildInteractionValidation
             {
                 var floor=BuildPlacement.Solve(c.presets[1],target.Origin+new Vector3(2,0,2),Vector3.up,target,s.Frame(target.OwnFrameId),0,0,new Vector3Int(i%15,0,0));
                 var timer=Stopwatch.StartNew();world.Validate(ref floor);timer.Stop();
-                Check(floor.Valid&&!world.PreviewUsedFullSupport,"Fitted village preview lost support validation");
+                Check(floor.Valid,"Fitted village preview lost support validation");
                 if(i>7)fittedTimes.Add(timer.Elapsed.TotalMilliseconds);
             }
             fittedTimes.Sort();
             var candidate=new BuildPieceRecord{Id=ulong.MaxValue,Definition=c.presets[0],Origin=new Vector3(0,200,0),WorldYawStep=0};candidate.WorldBounds=BuildSession.IndexBounds(candidate.Definition,candidate.Origin,0);
-            var all=new List<BuildPieceRecord>(s.Pieces.Values){candidate};using var fullResolver=new BuildResolution();var oldTimes=new List<double>();
-            for(int i=0;i<12;i++){candidate.Origin=new Vector3((i%15)*.25f,200,0);candidate.WorldBounds=BuildSession.IndexBounds(candidate.Definition,candidate.Origin,0);var timer=Stopwatch.StartNew();var states=fullResolver.Resolve(all,p=>s.NeighboursFor(p,candidate));BuildSupportState.Resolve(all,states,p=>s.NeighboursFor(p,candidate));timer.Stop();if(i>1)oldTimes.Add(timer.Elapsed.TotalMilliseconds);}oldTimes.Sort();
-            return "{\"villagePieces\":"+s.Pieces.Count+",\"resolvedPreviewPieces\":"+localLarge+",\"localMedianMs\":"+times[times.Count/2].ToString("F4",System.Globalization.CultureInfo.InvariantCulture)+",\"localP95Ms\":"+times[(int)(times.Count*.95)].ToString("F4",System.Globalization.CultureInfo.InvariantCulture)+",\"fittedMedianMs\":"+fittedTimes[fittedTimes.Count/2].ToString("F4",System.Globalization.CultureInfo.InvariantCulture)+",\"fullSessionMedianMs\":"+oldTimes[oldTimes.Count/2].ToString("F4",System.Globalization.CultureInfo.InvariantCulture)+"}";
+            var all=new List<BuildPieceRecord>(s.Pieces.Values){candidate};using var fullResolver=new BuildResolution();var fullTimes=new List<double>();
+            for(int i=0;i<12;i++){candidate.Origin=new Vector3((i%15)*.25f,200,0);candidate.WorldBounds=BuildSession.IndexBounds(candidate.Definition,candidate.Origin,0);var timer=Stopwatch.StartNew();fullResolver.Resolve(all,p=>s.NeighboursFor(p,candidate));timer.Stop();if(i>1)fullTimes.Add(timer.Elapsed.TotalMilliseconds);}fullTimes.Sort();
+            return "{\"villagePieces\":"+s.Pieces.Count+",\"resolvedPreviewPieces\":"+localLarge+",\"localMedianMs\":"+times[times.Count/2].ToString("F4",System.Globalization.CultureInfo.InvariantCulture)+",\"localP95Ms\":"+times[(int)(times.Count*.95)].ToString("F4",System.Globalization.CultureInfo.InvariantCulture)+",\"fittedMedianMs\":"+fittedTimes[fittedTimes.Count/2].ToString("F4",System.Globalization.CultureInfo.InvariantCulture)+",\"fullSessionMedianMs\":"+fullTimes[fullTimes.Count/2].ToString("F4",System.Globalization.CultureInfo.InvariantCulture)+"}";
         }finally{Object.DestroyImmediate(obj);}
     }
-    private static void FittedSupportAndRendering(BuildCatalog c)
+    private static void FittedRendering(BuildCatalog c)
     {
-        var obj=new GameObject("Fitted support regression");var cameraObj=new GameObject("Batch camera");
+        var obj=new GameObject("Fitted rendering regression");var cameraObj=new GameObject("Batch camera");
         try
         {
             var world=obj.AddComponent<BuildWorld>();var s=world.Session;var foundation=Add(s,c.presets[2],new Vector3(0,300,0),0);
             var camera=cameraObj.AddComponent<Camera>();camera.transform.position=new Vector3(2,305,-5);camera.transform.LookAt(new Vector3(2,300,2));
             var renderer=new BuildRenderer(s);renderer.Draw(camera,100,0);int rebuilds=renderer.BatchRebuilds;
             var p=Snap(s,c.presets[1],foundation,new Vector3(2,0,2),Vector3.up);world.Validate(ref p);
-            Check(p.Valid&&!world.PreviewUsedFullSupport,"Fitted foundation did not take authoritative support path");
+            Check(p.Valid,"Fitted foundation preview was rejected");
             var changes=new Dictionary<ulong,BuildResolvedState>{{foundation.Id,world.DebugStates[foundation.Id]}};
             renderer.SetPreview(changes);renderer.Draw(camera,100,0);Check(renderer.BatchRebuilds==rebuilds,"Preview rebuilt stable village batches");
             renderer.SetPreview(null);renderer.Draw(camera,100,0);Check(renderer.BatchRebuilds==rebuilds,"Clearing preview rebuilt stable batches");
             var wall=Add(s,D(c,"l01-coursed-limestone"),new Vector3(20,300,0),0);
             var course=Snap(s,D(c,"l18-limestone-eaves-cornice"),wall,new Vector3(2,3,0),Vector3.up);world.Validate(ref course);
-            Check(course.Valid&&!world.PreviewUsedFullSupport,"Cornice fitting skipped global support validation: "+course.Message);
-            var placed=world.Commit(course);Check(placed!=null&&placed.Supported,"Thin cornice failed commit");s.Remove(wall.Id);Check(placed.Supported,"Cornice survived host loss");
+            Check(course.Valid,"Cornice fitting failed: "+course.Message);
+            var placed=world.Commit(course);Check(placed!=null&&s.Pieces.ContainsKey(placed.Id),"Placed construction missing from session: placed");s.Remove(wall.Id);Check(s.Pieces.ContainsKey(placed.Id),"Cornice survived host loss");
             var landing=D(c,"l22-solid-bedded-limestone-landing");var bed=Add(s,c.presets[2],new Vector3(40,300,0),0);
             var tile=Snap(s,landing,bed,new Vector3(1,0,1),Vector3.up);world.Validate(ref tile);Check(tile.Valid,"Two-metre landing rejected full bedding: "+tile.Message);
-            var slab=world.Commit(tile);Check(slab!=null&&slab.Supported,"Free placement unexpectedly depends on structural support");s.Remove(bed.Id);Check(slab.Supported,"Landing survived loss of bedding");
+            var slab=world.Commit(tile);Check(slab!=null&&s.Pieces.ContainsKey(slab.Id),"Placed construction missing from session: slab");s.Remove(bed.Id);Check(s.Pieces.ContainsKey(slab.Id),"Placed construction missing from session: slab");
         }finally{Object.DestroyImmediate(obj);Object.DestroyImmediate(cameraObj);}
+    }
+    private sealed class PlacementGuard : ITerrainMovementGuard
+    {
+        public bool Ready=true;
+        public bool CanMove(Unity.Mathematics.double3 from,Unity.Mathematics.double3 to,double radius,double height)=>Ready;
+    }
+    private static void RevisionAndPreviewCaching(BuildCatalog c)
+    {
+        var obj=new GameObject("Building revision regression");
+        var cameraObj=new GameObject("Revision camera");
+        var blocker=new GameObject("Moving placement blocker") { layer=GameplayLayers.Player };
+        try
+        {
+            var world=obj.AddComponent<BuildWorld>();var s=world.Session;
+            var foundation=Add(s,c.presets[2],new Vector3(0,500,0),0);
+            var camera=cameraObj.AddComponent<Camera>();camera.transform.position=new Vector3(2,505,-5);
+            camera.transform.LookAt(new Vector3(2,500,2));
+            var renderer=new BuildRenderer(s);renderer.Draw(camera,100,0);
+            using var gameplay=new BuildGameplay(s);gameplay.Update(foundation.Origin,32,40,8);
+            Check(gameplay.TryGetProxy(foundation.Id,out var proxy),"Foundation collider did not activate");
+            int collisionRevision=proxy.BoundRevision,geometryRevision=s.GeometryRevision,revision=s.Revision;
+            int rebuilds=renderer.BatchRebuilds;
+            var preview=Snap(s,c.presets[0],foundation,new Vector3(2,0,2),Vector3.up);
+            world.Validate(ref preview);Check(preview.Valid,"Initial cached preview failed: "+preview.Message);
+            var cached=world.DebugStates;
+            world.Validate(ref preview);
+            Check(ReferenceEquals(cached,world.DebugStates),"Unchanged preview rebuilt fitting states");
+            float health=foundation.Health;
+            Check(world.Damage(foundation.Id,1)&&foundation.Health==health-1&&s.Revision==revision+1,"Health mutation was not recorded");
+            Check(s.GeometryRevision==geometryRevision,"Nonfatal damage invalidated geometry");
+            renderer.Draw(camera,100,0);gameplay.Update(foundation.Origin,32,40,8);world.Validate(ref preview);
+            Check(renderer.BatchRebuilds==rebuilds&&proxy.BoundRevision==collisionRevision,"Nonfatal damage rebuilt rendering or collision");
+            Check(ReferenceEquals(cached,world.DebugStates),"Nonfatal damage invalidated preview fitting");
+
+            // Cached fitting must still reject live blockers and unready terrain.
+            var box=blocker.AddComponent<BoxCollider>();box.size=Vector3.one*.1f;
+            blocker.transform.position=preview.Origin+BuildGeometry.Rotation(preview.WorldYaw)*preview.Resolved.Bounds.center;
+            Physics.SyncTransforms();world.Validate(ref preview);
+            Check(!preview.Valid&&preview.Failure==BuildPlacementFailure.External,"Cached preview bypassed a new player blocker");
+            blocker.SetActive(false);Physics.SyncTransforms();world.Validate(ref preview);
+            Check(preview.Valid&&ReferenceEquals(cached,world.DebugStates),"Clearing a blocker failed to restore cached placement");
+            var guard=new PlacementGuard { Ready=false };world.TerrainGuard=guard;world.Validate(ref preview);
+            Check(!preview.Valid&&preview.Failure==BuildPlacementFailure.Terrain,"Cached preview bypassed terrain readiness");
+            guard.Ready=true;world.Validate(ref preview);Check(preview.Valid,"Ready terrain did not restore cached placement");
+
+            var distant=Add(s,c.presets[0],new Vector3(100,500,0),0);
+            gameplay.Update(foundation.Origin,32,40,8);world.Validate(ref preview);
+            Check(foundation.ResolvedRevision==collisionRevision&&proxy.BoundRevision==collisionRevision,"Unrelated construction rebound unchanged collision");
+            Check(!ReferenceEquals(cached,world.DebugStates),"A geometry mutation did not invalidate preview neighbours");
+            var floor=s.Add(c.presets[1],s.Frame(foundation.FrameId),foundation.AnchorUnits,0);
+            gameplay.Update(foundation.Origin,32,40,8);
+            Check(foundation.ResolvedRevision>collisionRevision&&proxy.BoundRevision==foundation.ResolvedRevision,"Fitted geometry failed to refresh collision");
+            var pose=floor.Origin;geometryRevision=s.GeometryRevision;
+            Check(world.Damage(foundation.Id,foundation.Health)&&!s.TryGet(foundation.Id,out _),"Lethal damage failed to remove its target");
+            Check(s.GeometryRevision>geometryRevision&&s.TryGet(floor.Id,out _)&&s.TryGet(distant.Id,out _),"Destruction removed independent pieces or failed to invalidate geometry");
+            Near(floor.Origin,pose,"Removing a neighbour moved floating construction");
+        }
+        finally { Object.DestroyImmediate(blocker);Object.DestroyImmediate(obj);Object.DestroyImmediate(cameraObj);Physics.SyncTransforms(); }
     }
 }

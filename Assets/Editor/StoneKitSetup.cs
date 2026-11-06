@@ -70,7 +70,7 @@ public static class StoneKitSetup
             d.minimumUnits=i==2?new Vector3Int(0,-1,0):Vector3Int.zero;
             d.boundsOffset=i==1?new Vector3(-.25f,0,-.25f):i==2?Vector3.zero:new Vector3(0,0,-.25f);
             d.wallEndInsetUnits=0;d.stackRiseUnits=i==0||i==1?12:i>=4?5:1;d.wallPlacementMode=WallPlacementMode.Panel;
-            d.preserveAuthoredMesh=true;d.requiresFullBearing=i==2;d.canGroundOnTerrain=i>=4;
+            d.preserveAuthoredMesh=true;d.canGroundOnTerrain=i>=4;
             d.jointSockets=Array.Empty<BuildJointSocket>();d.jointCoverVariants=Array.Empty<Mesh>();d.jointCoverMaterial=null;
             d.solidBoxes=Array.Empty<Bounds>();d.wallOpenings=Array.Empty<Bounds>();d.occupiedVolumes=Array.Empty<BuildConvexVolume>();
             if(d.kind==BuildPartKind.Wall)

@@ -14,6 +14,7 @@ Shader "Hidden/FirstSettlers/DistantFog"
         SAMPLER(sampler_FogNoise);
         float4x4 _FogInverseVP;
         float4 _FogCamera, _FogDistance, _FogHeight, _FogShape, _FogClear;
+        float4 _FogViewForward;
         float4 _FogWind, _FogQuality, _FogColor, _FogTexture_TexelSize;
 
         struct FogRay
@@ -48,12 +49,17 @@ Shader "Hidden/FirstSettlers/DistantFog"
             ray.distance = sky ? _FogDistance.z : length(surface - ray.origin);
             ray.surfaceY = surface.y;
             ray.kind = sky ? 1 : 0;
-            if (_FogClear.w > .5 && SAMPLE_TEXTURE2D_X_LOD(_FogWater, sampler_PointClamp, uv, 0).r > .5 && abs(ray.direction.y) > 0.00001)
+            float waterEyeDepth = SAMPLE_TEXTURE2D_X_LOD(_FogWater, sampler_PointClamp, uv, 0).r;
+            float forwardDot = dot(ray.direction, _FogViewForward.xyz);
+            if (_FogClear.w > .5 && waterEyeDepth > 0 && forwardDot > 0.00001)
             {
-                float waterDistance = (_FogClear.z - ray.origin.y) / ray.direction.y;
+                float originEyeDepth = dot(ray.origin - _FogCamera.xyz, _FogViewForward.xyz);
+                float waterDistance = (waterEyeDepth - originEyeDepth) / forwardDot;
                 if (waterDistance > 0 && (sky || waterDistance <= ray.distance + 1))
                 {
-                    ray.distance = waterDistance; ray.surfaceY = _FogClear.z; ray.kind = 2;
+                    ray.distance = waterDistance;
+                    ray.surfaceY = (ray.origin + ray.direction * waterDistance).y;
+                    ray.kind = 2;
                 }
             }
             return ray;

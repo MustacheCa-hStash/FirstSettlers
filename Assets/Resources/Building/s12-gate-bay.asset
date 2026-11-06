@@ -60,7 +60,6 @@ MonoBehaviour:
   wallEndInsetUnits: 0
   mesh: {fileID: -6387321346523279028, guid: 22a89c7bb1f7bc24486a2d6b3574da59, type: 3}
   preserveAuthoredMesh: 1
-  requiresFullBearing: 0
   canGroundOnTerrain: 1
   solidBoxes:
   - m_Center: {x: 0.6875, y: 0.625, z: 0}

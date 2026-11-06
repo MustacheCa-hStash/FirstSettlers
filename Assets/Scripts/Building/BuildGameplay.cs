@@ -43,11 +43,11 @@ public sealed class BuildGameplay : IDisposable
         foreach(var pair in active)if(pair.Value != null && session.TryGet(pair.Key,out var current) && pair.Value.BoundRevision!=current.ResolvedRevision)
         {pair.Value.Bind(current);changed=true;}
         foreach (ulong id in release) { var proxy = active[id]; active.Remove(id); Retire(proxy); }
-        if (revision != session.Revision || Time.unscaledTime >= nextScan || (focus - lastFocus).sqrMagnitude > 1)
+        if (revision != session.GeometryRevision || Time.unscaledTime >= nextScan || (focus - lastFocus).sqrMagnitude > 1)
         {
             session.Query(new Bounds(focus, Vector3.one * (radius * 2)), candidates);
             candidates.Sort((a, b) => a.WorldBounds.SqrDistance(focus).CompareTo(b.WorldBounds.SqrDistance(focus)));
-            lastFocus = focus; nextScan = Time.unscaledTime + .1f; revision = session.Revision;
+            lastFocus = focus; nextScan = Time.unscaledTime + .1f; revision = session.GeometryRevision;
         }
         int activated = 0;
         foreach (var piece in candidates)

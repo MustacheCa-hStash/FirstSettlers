@@ -100,14 +100,14 @@ public static class StoneCompletionKitValidation
         {
             foreach(var slug in StoneCompletionKitSetup.Slugs)
             {
-                var d=c.Find(StoneCompletionKitSetup.Id(slug));var preview=BuildPlacement.Solve(d,origin,Vector3.up,null,null,yaw,0,default);w.Validate(ref preview);Check(preview.Valid,"Free placement rejected "+slug+": "+preview.Message);var piece=w.Commit(preview);Check(piece!=null&&piece.Supported,"Commit failed");
+                var d=c.Find(StoneCompletionKitSetup.Id(slug));var preview=BuildPlacement.Solve(d,origin,Vector3.up,null,null,yaw,0,default);w.Validate(ref preview);Check(preview.Valid,"Free placement rejected "+slug+": "+preview.Message);var piece=w.Commit(preview);Check(piece!=null&&w.Session.Pieces.ContainsKey(piece.Id),"Placed construction missing from session: piece");
                 using(var gameplay=new BuildGameplay(s)){gameplay.Update(piece.Origin,32,40,32);Physics.SyncTransforms();Check(gameplay.TryGetProxy(piece.Id,out var proxy),"Proxy missing");var colliders=new List<Collider>();proxy.GetEnabledColliders(colliders);Check(colliders.Count==(d.kind==BuildPartKind.Stair?1:d.occupiedVolumes.Length),"Runtime collision differs");if(d.kind==BuildPartKind.Stair)Check(proxy.RampShape&&proxy.RampShape.sharedMesh==d.collisionMesh&&proxy.GetComponent<SmoothWalkSurface>(),"Stair ramp missing");}
                 Check(w.Remove(piece.Id),"Removal failed");
             }
             var gable=c.Find("build.stone.s15-stone-gable-rising");Check(gable.flipVariant.flipVariant==gable,"Gable flip does not round trip");
-            var frame=s.CreateFrame(origin,yaw);var a=s.Add(gable,frame,default,0,false);var b=s.Add(gable.flipVariant,frame,new Vector3Int(8,0,0),0,false);
+            var frame=s.CreateFrame(origin,yaw);var a=s.Add(gable,frame,default,0);var b=s.Add(gable.flipVariant,frame,new Vector3Int(8,0,0),0);
             var empty=new Vector3(.1f,1.8f,0);foreach(var volume in a.Resolved.volumes)Check(!BuildOccupancy.Contains(volume,empty),"Gable fills empty attic corner");s.Remove(a.Id);s.Remove(b.Id);
-            var steps=c.Find("build.stone.s19-full-storey-stair");var stair=s.Add(steps,frame,default,0,false);
+            var steps=c.Find("build.stone.s19-full-storey-stair");var stair=s.Add(steps,frame,default,0);
             bool filled=false;foreach(var volume in stair.Resolved.volumes)filled|=BuildOccupancy.Contains(volume,new Vector3(.625f,.1f,3.8f));Check(filled,"Stone stair is hollow below rear treads");s.Remove(stair.Id);
         }finally{Object.DestroyImmediate(host);Physics.SyncTransforms();}
     }
@@ -118,7 +118,7 @@ public static class StoneCompletionKitValidation
         {
             foreach(var pair in new[]{("build.stone.s09-timber-lintel-doorway","build.wood.s10-static-plank-door"),("build.stone.s12-gate-bay","build.wood.s12-static-yard-gate"),("build.stone.s11-open-window-wall","")})
             {
-                var wall=s.Add(c.Find(pair.Item1),frame,default,0,false);var aperture=wall.Definition.wallOpenings[0];
+                var wall=s.Add(c.Find(pair.Item1),frame,default,0);var aperture=wall.Definition.wallOpenings[0];
                 using var gameplay=new BuildGameplay(s);gameplay.Update(origin,32,40,32);Physics.SyncTransforms();Check(gameplay.TryGetProxy(wall.Id,out var proxy),"Opening proxy missing");var colliders=new List<Collider>();proxy.GetEnabledColliders(colliders);
                 var ray=new Ray(origin+q*(aperture.center+Vector3.back),q*Vector3.forward);foreach(var col in colliders)Check(!col.Raycast(ray,out _,2),"Collider blocks fixed opening");
                 if(pair.Item2.Length>0)
@@ -140,7 +140,7 @@ public static class StoneCompletionKitValidation
         {
             foreach(var id in new[]{"build.stone.s01-rubble-wall","build.stone.s02-coursed-wall","build.stone.s09-timber-lintel-doorway","build.stone.s11-open-window-wall"})
             {
-                var wall=s.Add(c.Find(id),frame,default,0,false);var original=wall.Resolved.mesh;var d=c.Find("build.wood.s16-timber-wall-plate");Check(BuildTopCourse.Compatible(wall.Definition,d),"Stone wall declined equal-width plate");
+                var wall=s.Add(c.Find(id),frame,default,0);var original=wall.Resolved.mesh;var d=c.Find("build.wood.s16-timber-wall-plate");Check(BuildTopCourse.Compatible(wall.Definition,d),"Stone wall declined equal-width plate");
                 var preview=BuildPlacement.Solve(d,origin+q*new Vector3(2,3,0),Vector3.up,wall,s.Frame(wall.OwnFrameId),yaw,0,default);Near(preview.Origin,origin+Vector3.up*3,"Plate changed eave datum");w.Validate(ref preview);Check(preview.Valid,"Plate rejected");var plate=w.Commit(preview);Check(plate!=null,"Plate commit failed");
                 Check(wall.Resolved.mesh!=original&&Mathf.Abs(wall.Resolved.mesh.bounds.max.y-2.75f)<.001f,"Stone wall top not replaced");Check(!BuildResolvedGeometry.Overlaps(wall,wall.Resolved,plate,plate.Resolved),"Plate and old course overlap");
                 var roof=BuildPlacement.Solve(c.Find(ThatchRoofSetup.ContentId),plate.Origin+q*new Vector3(2,0,0),Vector3.up,plate,s.Frame(plate.OwnFrameId),yaw,0,default,origin+q*new Vector3(3,4,2));Near(roof.Origin,origin+Vector3.up*3,"Roof raised by plate");
@@ -150,7 +150,7 @@ public static class StoneCompletionKitValidation
     }
     private static void Guards(BuildCatalog c,int yaw)
     {
-        var origin=new Vector3(13000+yaw*50,40,13000);var q=BuildGeometry.Rotation(yaw);using var s=new BuildSession();var f=s.CreateFrame(origin,yaw);var stair=s.Add(c.Find("build.stone.s19-full-storey-stair"),f,default,0,false);var d=c.Find("build.stone.s21-stepped-stone-guard");
+        var origin=new Vector3(13000+yaw*50,40,13000);var q=BuildGeometry.Rotation(yaw);using var s=new BuildSession();var f=s.CreateFrame(origin,yaw);var stair=s.Add(c.Find("build.stone.s19-full-storey-stair"),f,default,0);var d=c.Find("build.stone.s21-stepped-stone-guard");
         foreach(float side in new[]{-1f,1f})foreach(float z in new[]{1f,3f})
         {
             var p=BuildPlacement.Solve(d,origin+q*new Vector3(side<0?0:1.25f,z*.75f,z),q*Vector3.right*side,stair,s.Frame(stair.OwnFrameId),yaw,0,default);
@@ -172,7 +172,7 @@ public static class StoneCompletionKitValidation
                 cam.orthographicSize=2.7f;cam.transform.position=d.mesh.bounds.center+new Vector3(5,3,-8);cam.transform.LookAt(d.mesh.bounds.center);Capture(cam,rt,slug+"-unity.png");cam.transform.position=d.mesh.bounds.center+new Vector3(-5,2,8);cam.transform.LookAt(d.mesh.bounds.center);Capture(cam,rt,slug+"-unity-back.png");ob.SetActive(false);
             }
             for(int i=0;i<objects.Count;i++){objects[i].transform.position=new Vector3(i%4*6,0,i/4*6);objects[i].SetActive(true);}cam.orthographicSize=13;cam.transform.position=new Vector3(33,30,-30);cam.transform.LookAt(new Vector3(10,1,9));Capture(cam,rt,"stone-completion-unity-overview.png");foreach(var ob in objects)ob.SetActive(false);
-            using var session=new BuildSession();var frame=session.CreateFrame(Vector3.zero,1);for(int i=0;i<StoneCompletionKitSetup.Slugs.Length;i++)session.Add(c.Find(StoneCompletionKitSetup.Id(StoneCompletionKitSetup.Slugs[i])),frame,new Vector3Int(i%4*24,0,i/4*24),0,false);var renderer=new BuildRenderer(session);var rotation=BuildGeometry.Rotation(1);cam.transform.position=rotation*new Vector3(33,30,-30);cam.transform.LookAt(rotation*new Vector3(10,1,9));cam.cullingMask=~0;submit=(_,camera)=>{if(camera==cam)renderer.Draw(cam,150,0);};RenderPipelineManager.beginCameraRendering+=submit;Capture(cam,rt,"stone-completion-instanced.png");Check(renderer.DrawCalls>0&&renderer.DrawCalls<=16,"Instanced draws missing");
+            using var session=new BuildSession();var frame=session.CreateFrame(Vector3.zero,1);for(int i=0;i<StoneCompletionKitSetup.Slugs.Length;i++)session.Add(c.Find(StoneCompletionKitSetup.Id(StoneCompletionKitSetup.Slugs[i])),frame,new Vector3Int(i%4*24,0,i/4*24),0);var renderer=new BuildRenderer(session);var rotation=BuildGeometry.Rotation(1);cam.transform.position=rotation*new Vector3(33,30,-30);cam.transform.LookAt(rotation*new Vector3(10,1,9));cam.cullingMask=~0;submit=(_,camera)=>{if(camera==cam)renderer.Draw(cam,150,0);};RenderPipelineManager.beginCameraRendering+=submit;Capture(cam,rt,"stone-completion-instanced.png");Check(renderer.DrawCalls>0&&renderer.DrawCalls<=16,"Instanced draws missing");
         }finally{if(submit!=null)RenderPipelineManager.beginCameraRendering-=submit;GraphicsSettings.defaultRenderPipeline=oldPipeline;QualitySettings.renderPipeline=oldQuality;RenderSettings.ambientMode=oldMode;RenderSettings.ambientLight=oldAmbient;RenderSettings.sun=oldSun;ShaderUtil.allowAsyncCompilation=oldAsync;RenderTexture.active=oldTarget;Object.DestroyImmediate(root);Object.DestroyImmediate(cameraObject);Object.DestroyImmediate(lightObject);rt.Release();Object.DestroyImmediate(rt);}
     }
     private static void Capture(Camera camera,RenderTexture target,string filename)

@@ -97,16 +97,16 @@ public static class BuildingShadowValidation
             int roofIndex = 0;
             foreach (var position in new[] { Vector3Int.zero, new Vector3Int(16, 0, 0), new Vector3Int(0, 0, 16), new Vector3Int(16, 0, 16) })
             {
-                session.Add(catalog.presets[2], frame, position, 0, true);
-                if(!useThatch)roofIds[roofIndex++] = session.Add(catalog.presets[1], frame, position + new Vector3Int(0, 12, 0), 0, false).Id;
+                session.Add(catalog.presets[2], frame, position, 0);
+                if(!useThatch)roofIds[roofIndex++] = session.Add(catalog.presets[1], frame, position + new Vector3Int(0, 12, 0), 0).Id;
             }
             if(useThatch)
             {
                 var l=catalog.Find(ThatchRoofSetup.ContentId);var r=l;
-                roofIds[0]=session.Add(l,frame,new Vector3Int(0,11,0),0,false).Id;
-                roofIds[1]=session.Add(r,frame,new Vector3Int(16,11,0),0,false).Id;
-                roofIds[2]=session.Add(r,frame,new Vector3Int(16,11,16),4,false).Id;
-                roofIds[3]=session.Add(l,frame,new Vector3Int(32,11,16),4,false).Id;
+                roofIds[0]=session.Add(l,frame,new Vector3Int(0,11,0),0).Id;
+                roofIds[1]=session.Add(r,frame,new Vector3Int(16,11,0),0).Id;
+                roofIds[2]=session.Add(r,frame,new Vector3Int(16,11,16),4).Id;
+                roofIds[3]=session.Add(l,frame,new Vector3Int(32,11,16),4).Id;
                 bool first=true;
                 foreach(var piece in session.Pieces.Values)
                     if(piece.Definition.kind==BuildPartKind.Roof)

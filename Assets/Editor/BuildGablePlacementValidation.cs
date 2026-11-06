@@ -42,7 +42,7 @@ public static class BuildGablePlacementValidation
         }catch(Exception ex){Debug.LogException(ex);EditorApplication.Exit(1);}
     }
     private static BuildPieceRecord Add(BuildSession s,BuildDefinition d,Vector3 origin,int yaw)
-        =>s.Add(d,s.CreateFrame(origin,yaw),default,0,false);
+        =>s.Add(d,s.CreateFrame(origin,yaw),default,0);
     private static BuildPreview Snap(BuildSession s,BuildDefinition d,BuildPieceRecord target,Vector3 point,Vector3 normal,int? heading=null,bool automatic=true,Vector3Int nudge=default)
     {
         var q=BuildGeometry.Rotation(target.WorldYawStep);

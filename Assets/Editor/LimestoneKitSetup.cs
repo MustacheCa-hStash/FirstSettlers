@@ -62,7 +62,7 @@ public static class LimestoneKitSetup
             d.wallPlacementMode = WallPlacementMode.Panel;
             d.sizeUnits = new Vector3Int(span, 12, 2); d.minimumUnits = Vector3Int.zero;
             d.boundsOffset = new Vector3(0, 0, -.25f); d.stackRiseUnits = 12; d.wallEndInsetUnits = 0;
-            d.canGroundOnTerrain = false; d.requiresFullBearing = false; d.maxHealth = 100;
+            d.canGroundOnTerrain = false;  d.maxHealth = 100;
             d.material = material; d.preserveAuthoredMesh = true;
             d.jointSockets = new BuildJointSocket[span + 1];
             for (int j = 0; j <= span; j++)

@@ -19,8 +19,8 @@ geometry and wet-channel mask rather than merely hiding a water renderer.
 
 ## Formation order
 
-1. Sample stateless world-space aridity, sedimentary geology, plateau province,
-   sand supply and basin fields. These require the seed and coordinates, not a
+1. Sample stateless world-space aridity, cold/glacial potential, geology, plateau
+   province, sand supply and basin fields. These require the seed and coordinates, not a
    finished heightmap or biome label.
 2. Generate the existing broad land/mountain surface. Add regional plateau
    relief, cliff transitions, detached remnants, secondary ledges, connected
@@ -44,10 +44,12 @@ geometry and wet-channel mask rather than merely hiding a water renderer.
    provincial benches and fade fine erosion detail. Raised plateau provinces
    receive gently inclined shelves and rounded shoulders with regionally varied
    levels; ordinary high mountains retain their rounded profile.
-7. Calculate final slopes, then final climate, biomes, surfaces and ground cover.
+7. Finish suitable [cold catchments and solid glacier bodies](GLACIAL_LANDFORMS.md),
+   with broad valley floors, shoulders, upper bowls, passes and selected ice fronts.
+8. Calculate final slopes, then final climate, biomes, surfaces and ground cover.
    Final climate uses the same early aridity field, biasing its desert cores
    toward warm/dry conditions. Existing hot/dry patches remain eligible.
-8. Place foliage and sparse desert boulders after surfaces are known.
+9. Place foliage and sparse desert boulders after surfaces are known.
 
 This keeps landforms in the canonical height generator. They are not height edits
 applied to chunks after biome assignment.
@@ -103,6 +105,10 @@ with desktop mipmaps; distant sediment detail fades to the texture average.
 snapshot. Version-4 scenes migrate to version 5 with regional defaults; the main
 SmearScene has the new settings explicitly serialized. Regional settings migrate
 from version 1 to 2 with Dry Deserts enabled.
+Version 2 migrates to version 3 with glaciers enabled, strength 1 and cold
+expansion 0.025, preserving all previous regional settings.
+Version 3 migrates to version 4 with independent glacial rock rise, ice height
+and wall width, preserving existing customization.
 
 | Control | Default | Meaning |
 | --- | --- | --- |
@@ -115,6 +121,12 @@ from version 1 to 2 with Dry Deserts enabled.
 | Dune Height | 0.12 | Maximum normalized sand accumulation before regional envelopes. |
 | Dune Wavelength | 200 | Crest spacing in terrain XZ units. |
 | Dry Wash Depth | 0.18 | Maximum normalized cut, limited by dry-bed clearance. |
+| Glaciers | true | Enables cold catchments, solid ice and the cold-climate additions. |
+| Glacial Strength | 1 | Strength of regional cold/glacial provinces. |
+| Cold Expansion | 0.025 | Small cooling of already cool climates. |
+| Glacial Relief | 1.2 | Local cold rock-wall rise, independent of floor smoothing. |
+| Ice Front Height | 0.65 | Solid glacier thickness and exposed-front rise. |
+| Glacial Wall Width | 44 | Rock face width in terrain units; ice uses 45% of this width. |
 
 At the scene's World Scale 0.3 and Height Multiplier 200, one terrain XZ unit is
 0.3 m and one normalized height unit is 60 m. The default dune wavelength is
@@ -147,7 +159,7 @@ the CPU integer hash and field equations, but gameplay never depends on GPU
 field results.
 
 The baseline identity is now
-`firstsettlers-broad-uplands-v4/triangle-ac-v1`; all landform settings are
+`firstsettlers-glacial-cliffs-v7/triangle-ac-v1`; all landform settings are
 included in the existing fingerprint. Future multiplayer peers should exchange
 the seed, sanitized settings and generator identity, and reject incompatible
 generators. Bitwise scheduling repeatability is verified on this Unity/Burst
@@ -158,7 +170,7 @@ since the complete existing generator uses floating-point noise and erosion.
 
 Run `Tools/ValidateWorldLandforms.ps1`. It prepares an isolated Unity project using
 installed package sources, then runs native Burst and D3D11 checks without editing
-the open world. The latest run passed **143,864 checks**, plus the existing world
+the open world. The latest run passed **145,020 checks**, plus the existing world
 erosion, six-batch admission/concurrency, terrain slope and mountain snow suites.
 
 Coverage includes analytic base gradients, signed coordinates, settings migration,

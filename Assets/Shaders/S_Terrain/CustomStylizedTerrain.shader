@@ -30,6 +30,14 @@ Shader "Custom/StylizedTerrainURP"
         _DrySurfaceFadeStart("Dry Surface Detail Fade Start", Float) = 70
         _DrySurfaceFadeEnd("Dry Surface Detail Fade End", Float) = 220
         _DrySurfaceNormalEnd("Dry Surface Normal Fade End", Float) = 65
+        [NoScaleOffset] _IceAlbedo("Glacier Ice Albedo", 2D) = "white" {}
+        [NoScaleOffset] _IceNormal("Glacier Ice Normal", 2D) = "bump" {}
+        _IceColor("Glacier Ice Tint", Color) = (0.84,0.92,1,1)
+        _IceAverageColor("Glacier Ice Distance Average", Color) = (0.60,0.75,0.78,1)
+        _IceTiling("Glacier Ice Repeats Per World Unit", Float) = 0.08
+        _IceNormalStrength("Glacier Ice Normal Strength", Range(0,1)) = 0.16
+        _IceFadeStart("Glacier Ice Detail Fade Start", Float) = 90
+        _IceFadeEnd("Glacier Ice Detail Fade End", Float) = 260
         _RockColor("Rock Color (Distance Fallback)", Color) = (0.45, 0.45, 0.45, 1)
         [Toggle(_ROCK_DETAIL)] _RockDetail("Enable Rock / Cliff Detail", Float) = 0
         [NoScaleOffset] _RockAlbedo("Rock / Cliff Albedo", 2D) = "white" {}
@@ -40,8 +48,13 @@ Shader "Custom/StylizedTerrainURP"
         _RockAverageAlbedo("Rock / Cliff Average Albedo (Distance Fallback)", Color) = (1,1,1,1)
         _RockNormalStrength("Rock Normal Strength", Range(0, 2)) = 0.45
         _CliffNormalStrength("Cliff Normal Strength", Range(0, 2)) = 0.65
-        _RockDetailFadeStart("Rock Detail Fade Start", Float) = 100
-        _RockDetailFadeEnd("Rock Detail Fade End", Float) = 450
+        _RockFarTiling("Rock / Cliff Far Tiling (Repeats Per World Unit)", Float) = 0.0025
+        _RockScaleFadeStart("Rock / Cliff Far Scale Blend Start", Float) = 180
+        _RockScaleFadeEnd("Rock / Cliff Far Scale Blend End", Float) = 650
+        _RockFarMipBias("Rock / Cliff Far Mip Bias", Range(0, 4)) = 1.5
+        _RockFarMinMip("Rock / Cliff Far Minimum Mip", Range(0, 6)) = 3
+        _RockDetailFadeStart("Rock Color Detail Fade Start", Float) = 2500
+        _RockDetailFadeEnd("Rock Color Detail Fade End", Float) = 6000
         _RockNormalFadeStart("Rock / Cliff Normal Fade Start", Float) = 35
         _RockNormalFadeEnd("Rock / Cliff Normal Fade End", Float) = 110
         _SnowColor("Snow Base Color", Color) = (0.92, 0.94, 0.98, 1)
@@ -196,6 +209,8 @@ Shader "Custom/StylizedTerrainURP"
             #include "Assets/Shaders/TerrainSkyAccess.hlsl"
             #include "Assets/Shaders/LocalFlameLighting.hlsl"
             #include "Assets/Shaders/WorldLandformFields.hlsl"
+            #include "Assets/Shaders/HeightfieldCliffNormal.hlsl"
+            #include "Assets/Shaders/TerrainSurfaceFrame.hlsl"
 
             TEXTURE2D(_ControlMap0);
             // Chunk control maps share clamp/filter settings. Repeat detail
@@ -251,6 +266,8 @@ Shader "Custom/StylizedTerrainURP"
             TEXTURE2D(_DenseMossHeight);
 
             TEXTURE2D(_SandAlbedo);
+            TEXTURE2D(_IceAlbedo);
+            TEXTURE2D(_IceNormal);
             TEXTURE2D(_ClayAlbedo);
             TEXTURE2D(_ClayNormal);
             TEXTURE2D(_WashAlbedo);
@@ -283,7 +300,7 @@ Shader "Custom/StylizedTerrainURP"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
-                float3 positionWS : TEXCOORD0;
+                float3 positionRWS : TEXCOORD0;
                 float3 normalWS : TEXCOORD1;
                 float2 uv : TEXCOORD2;
                 float fogFactor : TEXCOORD3;
@@ -307,6 +324,8 @@ Shader "Custom/StylizedTerrainURP"
                 float _DrySurfaceStrength, _ClayTiling, _WashTiling;
                 float _ClayNormalStrength, _WashNormalStrength;
                 float _DrySurfaceFadeStart, _DrySurfaceFadeEnd, _DrySurfaceNormalEnd;
+                half4 _IceColor, _IceAverageColor;
+                float _IceTiling, _IceNormalStrength, _IceFadeStart, _IceFadeEnd;
                 half4 _RockColor;
                 float _RockDetail;
                 float _RockTiling;
@@ -317,6 +336,12 @@ Shader "Custom/StylizedTerrainURP"
                 float _CliffNormalStrength;
                 float _RockDetailFadeStart;
                 float _RockDetailFadeEnd;
+                float _RockFarTiling;
+                float _RockScaleFadeStart;
+                float _RockScaleFadeEnd;
+                float _RockFarMipBias;
+                float _RockFarMinMip;
+                float4 _RockAlbedo_TexelSize;
                 float _RockNormalFadeStart;
                 float _RockNormalFadeEnd;
                 half4 _SnowColor;
@@ -567,6 +592,37 @@ Shader "Custom/StylizedTerrainURP"
                      + float3(sampleZ.y, -sampleZ.x, 0) * blend.z;
             }
 
+            half3 SampleFarRockProjection(float2 uv, float2 dx, float2 dy)
+            {
+                // Use the pixel footprint even under divergent surface/axis branches.
+                // A coarser world scale must not pull full-resolution mips back in.
+                // Far color uses isotropic trilinear filtering (no anisotropic taps).
+                float2 texelDx = dx * _RockAlbedo_TexelSize.zw;
+                float2 texelDy = dy * _RockAlbedo_TexelSize.zw;
+                float footprintSquared = max(dot(texelDx, texelDx), dot(texelDy, texelDy));
+                float mip = max(0.5 * log2(max(footprintSquared, 1e-8)) + max(_RockFarMipBias, 0.0), _RockFarMinMip);
+                return SAMPLE_TEXTURE2D_LOD(_RockAlbedo, sampler_RockAlbedo, uv, mip).rgb;
+            }
+
+            half3 SampleFarRockColor(float3 positionWS, float3 baseNormalWS, float3 positionDx, float3 positionDy)
+            {
+                float3 blend = max(pow(abs(baseNormalWS), 4.0) - 0.01, 0.0);
+                blend /= max(dot(blend, float3(1, 1, 1)), 1e-5);
+                float3 axisSign = step(0.0, baseNormalWS) * 2.0 - 1.0;
+                float tiling = max(_RockFarTiling, 0.0001);
+                float3 p = positionWS * tiling, dx = positionDx * tiling, dy = positionDy * tiling;
+                half3 color = 0;
+                // Same world-up projection frames as near rock; no new texture,
+                // normal reads, sampler, geometry, control map or shader variant.
+                [branch] if (blend.x > 0.0)
+                    color += SampleFarRockProjection(p.zy * float2(-axisSign.x, 1), dx.zy, dy.zy) * blend.x;
+                [branch] if (blend.y > 0.0)
+                    color += SampleFarRockProjection(p.zx * float2(axisSign.y, 1), dx.zx, dy.zx) * blend.y;
+                [branch] if (blend.z > 0.0)
+                    color += SampleFarRockProjection(p.xy * float2(axisSign.z, 1), dx.xy, dy.xy) * blend.z;
+                return color;
+            }
+
             void SampleRockDetail(float3 positionWS, float3 baseNormalWS, float3 positionDx, float3 positionDy, float strength,
                 out half3 albedo, out float3 detailNormalWS)
             {
@@ -624,6 +680,81 @@ Shader "Custom/StylizedTerrainURP"
                 detailNormalWS = normalize(baseNormalWS + perturbation * strength);
             }
 
+            void ReadIceTile(float2 uv,float2 dx,float2 dy,float strength,out half3 albedo,out float3 normalTS)
+            {
+                // Four overlapping interior windows are periodic even when AI artwork
+                // has slightly different edge pixels. The selected source remains untouched.
+                float2 f=frac(uv),blend=smoothstep(0.0,1.0,f);
+                albedo=0;normalTS=0;
+                [unroll] for(int i=0;i<4;i++)
+                {
+                    float2 corner=float2(i&1,i>>1);
+                    float weight=(corner.x>0?blend.x:1.0-blend.x)*(corner.y>0?blend.y:1.0-blend.y);
+                    float2 sampleUV=(f-corner)*.5+.5;
+                    albedo+=SAMPLE_TEXTURE2D_GRAD(_IceAlbedo,sampler_SandAlbedo,sampleUV,dx*.5,dy*.5).rgb*weight;
+                    [branch] if(strength>.001)
+                        normalTS+=UnpackNormal(SAMPLE_TEXTURE2D_GRAD(_IceNormal,sampler_SandAlbedo,sampleUV,dx*.5,dy*.5))*weight;
+                }
+                if(strength<=.001)normalTS=float3(0,0,1);
+                else normalTS=normalize(normalTS);
+                albedo=lerp(_IceAverageColor.rgb,albedo,.7);
+            }
+            void SampleGlacierDetail(float3 positionWS, float3 baseNormalWS, float3 positionDx, float3 positionDy, float strength,
+                out half3 albedo, out float3 detailNormalWS)
+            {
+                // Ease negligible axes to zero before branching: continuous weights,
+                // with one projection on axis-aligned cliffs instead of three.
+                float3 blend = max(pow(abs(baseNormalWS), 4.0) - 0.01, 0.0);
+                blend /= max(dot(blend, float3(1, 1, 1)), 1e-5);
+                float3 axisSign = step(0.0, baseNormalWS) * 2.0 - 1.0;
+                float tiling = max(_IceTiling, 0.0001);
+                float3 p = positionWS * tiling;
+                float3 dx = positionDx * tiling;
+                float3 dy = positionDy * tiling;
+                // Both side projections keep texture V aligned with world up.
+                // Signed U axes match a right-handed tangent frame on either face.
+                float2 uvX = p.zy * float2(-axisSign.x, 1);
+                float2 uvY = p.zx * float2(axisSign.y, 1);
+                float2 uvZ = p.xy * float2(axisSign.z, 1);
+                float2 signX = float2(-axisSign.x, 1);
+                float2 signY = float2(axisSign.y, 1);
+                float2 signZ = float2(axisSign.z, 1);
+                albedo = 0;
+                float3 perturbation = 0;
+                // Explicit gradients are calculated outside divergent branches.
+                // Normals share the albedo repeat sampler; no new sampler registers.
+                [branch] if (blend.x > 0.0)
+                {
+                    half3 color;float3 n;ReadIceTile(uvX,dx.zy*signX,dy.zy*signX,strength,color,n);
+                    albedo += color * blend.x;
+                    [branch] if (strength > 0.001)
+                    {
+                        perturbation += float3(0, n.y, -n.x * axisSign.x) * blend.x;
+                    }
+                }
+                [branch] if (blend.y > 0.0)
+                {
+                    half3 color;float3 n;ReadIceTile(uvY,dx.zx*signY,dy.zx*signY,strength,color,n);
+                    albedo += color * blend.y;
+                    [branch] if (strength > 0.001)
+                    {
+                        perturbation += float3(n.y, 0, n.x * axisSign.y) * blend.y;
+                    }
+                }
+                [branch] if (blend.z > 0.0)
+                {
+                    half3 color;float3 n;ReadIceTile(uvZ,dx.xy*signZ,dy.xy*signZ,strength,color,n);
+                    albedo += color * blend.z;
+                    [branch] if (strength > 0.001)
+                    {
+                        perturbation += float3(n.x * axisSign.z, n.y, 0) * blend.z;
+                    }
+                }
+                // Project slopes onto the actual mesh tangent plane. Flat maps
+                // preserve the mesh normal, including across projection blends.
+                perturbation -= baseNormalWS * dot(perturbation, baseNormalWS);
+                detailNormalWS = normalize(baseNormalWS + perturbation * strength);
+            }
             void SampleSandDetail(float3 positionWS, float3 baseNormalWS, out half3 albedo, out float3 detailNormalWS)
             {
                 float2 uv = positionWS.xz * max(_SandTiling, 0.0001);
@@ -690,7 +821,7 @@ Shader "Custom/StylizedTerrainURP"
                 VertexNormalInputs normalInputs = GetVertexNormalInputs(IN.normalOS);
 
                 OUT.positionCS = positionInputs.positionCS;
-                OUT.positionWS = positionInputs.positionWS;
+                OUT.positionRWS = FSTerrainRelativePosition(positionInputs.positionWS);
                 OUT.normalWS = normalInputs.normalWS;
                 OUT.uv = IN.uv;
                 OUT.exposure = 0;
@@ -737,19 +868,19 @@ Shader "Custom/StylizedTerrainURP"
                 normalWS=normalize(n+perturbation*_ExcavationNormalStrength);albedo*=_ExcavationTint.rgb * geologyTint;
             }
 
-            half4 ShadeTerrainSurface(half3 albedo,float3 normalWS,Varyings IN,half terrainVisibility)
+            half4 ShadeTerrainSurface(half3 albedo,float3 normalWS,Varyings IN,FSTerrainSurfaceFrame surface,half terrainVisibility)
             {
                 float4 shadowCoord=IN.shadowCoord;
                 #if defined(_MAIN_LIGHT_SHADOWS_CASCADE)
                 // Cascade selection is discontinuous. Interpolating coordinates selected
                 // at vertices produces dark triangular streaks across cascade boundaries.
-                shadowCoord=TransformWorldToShadowCoord(IN.positionWS);
+                shadowCoord=TransformWorldToShadowCoord(surface.positionWS);
                 #endif
                 Light mainLight=GetMainLight(shadowCoord);
                 // The field supplies location/ambient, not the direction of the sun.
                 // Use full geometric roof occlusion here even when day/night art
                 // intentionally weakens outdoor directional shadows.
-                half2 caveLighting=TerrainCaveLighting(IN.positionWS,normalize(IN.normalWS));
+                half2 caveLighting=TerrainCaveLighting(surface.positionWS,normalize(IN.normalWS));
                 mainLight.shadowAttenuation=TerrainCaveDirectionalShadow(mainLight.shadowAttenuation,GetMainLightShadowParams().x,caveLighting.y);
                 half shadowAttenuation=lerp(1.0h,mainLight.shadowAttenuation*terrainVisibility,saturate(_ReceiveShadows));
                 half3 diffuse=LightingLambert(mainLight.color,mainLight.direction,normalWS)*mainLight.distanceAttenuation*shadowAttenuation;
@@ -760,17 +891,23 @@ Shader "Custom/StylizedTerrainURP"
                 half3 color=albedo*(diffuse+ambient);
                 half tintWeight=saturate(1.0h-terrainVisibility)*saturate(_TerrainHorizonParams.z)*saturate(_ReceiveShadows);
                 color*=lerp(half3(1,1,1),_TerrainHorizonTint.rgb,tintWeight);
-                color+=albedo*FSLocalFlameDiffuse(IN.positionWS,normalWS);
+                color+=albedo*FSLocalFlameDiffuse(surface.positionWS,normalWS);
                 return half4(MixFogColor(color,unity_FogColor.rgb*caveAmbient,IN.fogFactor),1);
             }
 
             half4 frag(Varyings IN) : SV_Target
             {
+                FSTerrainSurfaceFrame surface=FSCreateTerrainSurfaceFrame(IN.positionRWS);
                 half3 baseNormalWS = normalize(IN.normalWS);
+                float3 surfaceDx=surface.dpdxWS,surfaceDy=surface.dpdyWS;
+                #if !defined(_TERRAIN_EXCAVATION)
+                baseNormalWS=FSHeightfieldCliffNormal(baseNormalWS,surfaceDx,surfaceDy);
+                #endif
+                // Terrain edge diagnostic insertion point.
                 half3 normalWS = baseNormalWS;
                 #if defined(_TERRAIN_EXCAVATION)
                 float exposure=saturate(IN.exposure);
-                float3 excavationDx=ddx(IN.positionWS),excavationDy=ddy(IN.positionWS);
+                float3 excavationDx=surfaceDx,excavationDy=surfaceDy;
                 #endif
 
                 // Control pixels represent mesh samples, including the endpoints of each chunk.
@@ -807,6 +944,32 @@ Shader "Custom/StylizedTerrainURP"
                 control1.g *= rockScale;
                 control1.r = resolvedSnow;
 
+                // Coarse distant control pixels can straddle a snowy cap and a
+                // tall headwall. Reject the interpolated snow on the actual face
+                // instead of stretching white teeth down it. Use the geometric
+                // normal (before texture detail); retain the same total coverage.
+                if (_WorldGlacialParams.x > 0.0 && surface.positionWS.y > _WorldGlacialParams.y + 1.0)
+                {
+                    float shedSnow = control1.r * (1.0 - smoothstep(0.3420, 0.60, abs(baseNormalWS.y)));
+                    control1.r -= shedSnow;
+                    control0.a += shedSnow;
+                }
+
+                // A coarse control pixel across the ice toe otherwise draws a
+                // regular row of rocky lobes up the face. Resolve only its existing
+                // ice/rock support on steep geometry; flat ground keeps its weights.
+                float glacialRegion=0.0;
+                if (control1.b > 0.001 && _WorldGlacialParams.x > 0.0 && surface.positionWS.y > _WorldGlacialParams.y + 0.5)
+                {
+                    glacialRegion=smoothstep(.15,.28,FSColdProvince(surface.positionWS.xz));
+                    float support=smoothstep(.005,.12,control1.b)*glacialRegion;
+                    float steep=1.0-smoothstep(.35,.70,abs(baseNormalWS.y));
+                    float transfer=support*steep;
+                    float rock=control0.a+control1.g;
+                    control1.b+=rock*transfer;
+                    control0.a*=1.0-transfer;control1.g*=1.0-transfer;
+                }
+
                 half sandWeight = control0.r;
                 half mudWeight = control0.g;
                 half grassWeight = control0.b;
@@ -822,23 +985,23 @@ Shader "Custom/StylizedTerrainURP"
                 half mossWeight = control2.a;
                 half forestVariantWeight = forestCoverVariant;
 
-                float distanceToCamera = distance(_WorldSpaceCameraPos.xyz, IN.positionWS);
-                float3 sedimentDx=ddx(IN.positionWS),sedimentDy=ddy(IN.positionWS);
+                float distanceToCamera = surface.distanceToCamera;
+                float3 sedimentDx=surfaceDx,sedimentDy=surfaceDy;
                 #if defined(_ROCK_DETAIL)
-                float3 rockPositionDx = ddx(IN.positionWS);
-                float3 rockPositionDy = ddy(IN.positionWS);
+                float3 rockPositionDx = surface.dpdxWS;
+                float3 rockPositionDy = surface.dpdyWS;
                 #endif
                 #if defined(_GRASS_BLADE_GROUND)
                 // Explicit derivatives remain valid when distant detail takes
                 // the branch that skips texture fetches altogether.
-                float2 grassGroundDx = ddx(IN.positionWS.xz);
-                float2 grassGroundDy = ddy(IN.positionWS.xz);
+                float2 grassGroundDx = surface.dpdxWS.xz;
+                float2 grassGroundDy = surface.dpdyWS.xz;
                 #else
                 float grassDistanceBlend = GetNoisyDistanceBlend(
                     distanceToCamera,
                     _GrassTilingNearDistance,
                     _GrassTilingFarDistance,
-                    IN.positionWS.xz
+                    surface.positionWS.xz
                 );
                 #endif
 
@@ -846,46 +1009,68 @@ Shader "Custom/StylizedTerrainURP"
                     distanceToCamera,
                     _SnowTilingNearDistance,
                     _SnowTilingFarDistance,
-                    IN.positionWS.xz
+                    surface.positionWS.xz
                 );
 
                 half3 baseColor = 0;
                 float3 weightedNormal = baseNormalWS * (sandWeight + mudWeight + rockWeight + cliffWeight + riverbedWeight);
 
                 half3 regionalSandTint = 1.0h;
-                [branch] if (sandWeight > 0.001h) regionalSandTint = FSRegionalSandTint(IN.positionWS);
+                [branch] if (sandWeight > 0.001h) regionalSandTint = FSRegionalSandTint(surface.positionWS);
                 baseColor += _SandColor.rgb * regionalSandTint * sandWeight;
                 baseColor += _MudColor.rgb * mudWeight;
                 half3 regionalRockTint = 1.0h;
-                [branch] if (rockWeight + cliffWeight > 0.001h) regionalRockTint = FSRegionalRockTint(IN.positionWS);
+                [branch] if (rockWeight + cliffWeight > 0.001h) regionalRockTint = FSRegionalRockTint(surface.positionWS);
                 baseColor += _RockColor.rgb * regionalRockTint * rockWeight;
                 baseColor += _CliffColor.rgb * regionalRockTint * cliffWeight;
                 baseColor += _RiverbedColor.rgb * riverbedWeight;
 
                 [branch] if(mudWeight+riverbedWeight>0.001 && _DrySurfaceStrength>0.001 && _WorldLandformParams.x>0.5)
                 {
-                    float dry=smoothstep(0.08,0.18,FSRegionalGeology(IN.positionWS.xz).x)*_DrySurfaceStrength;
+                    float dry=smoothstep(0.08,0.18,FSRegionalGeology(surface.positionWS.xz).x)*_DrySurfaceStrength;
                     [branch] if(dry>0.001 && mudWeight>0.001)
                     {
                         half3 deposit;float3 depositNormal;
-                        SampleDesertSediment(IN.positionWS,baseNormalWS,sedimentDx,sedimentDy,distanceToCamera,false,deposit,depositNormal);
+                        SampleDesertSediment(surface.positionWS,baseNormalWS,sedimentDx,sedimentDy,distanceToCamera,false,deposit,depositNormal);
                         baseColor+=(deposit-_MudColor.rgb)*mudWeight*dry;
                         weightedNormal+=(depositNormal-baseNormalWS)*mudWeight*dry;
                     }
                     [branch] if(dry>0.001 && riverbedWeight>0.001)
                     {
                         half3 clay;float3 clayNormal;
-                        SampleDesertSediment(IN.positionWS,baseNormalWS,sedimentDx,sedimentDy,distanceToCamera,true,clay,clayNormal);
+                        SampleDesertSediment(surface.positionWS,baseNormalWS,sedimentDx,sedimentDy,distanceToCamera,true,clay,clayNormal);
                         baseColor+=(clay-_RiverbedColor.rgb)*riverbedWeight*dry;
                         weightedNormal+=(clayNormal-baseNormalWS)*riverbedWeight*dry;
                     }
                 }
 
+                // Ice uses the riverbed channel only on above-water cold glacier ground.
+                // Desert clay and submerged riverbeds keep their existing meanings.
+                [branch] if(riverbedWeight>0.001h && _WorldGlacialParams.x>0.0 && surface.positionWS.y>_WorldGlacialParams.y+0.5)
+                {
+                    half iceWeight=riverbedWeight*glacialRegion;
+                    [branch] if(iceWeight>0.001h)
+                    {
+                        float iceFade=1.0-GetDistanceBlend(distanceToCamera,_IceFadeStart,_IceFadeEnd);
+                        half3 iceColor=_IceAverageColor.rgb;float3 iceNormal=baseNormalWS;
+                        [branch] if(iceFade>0.001)
+                        {
+                            half3 sampledIce;float3 sampledNormal;
+                            float normalFade=1.0-GetDistanceBlend(distanceToCamera,35.0,110.0);
+                            SampleGlacierDetail(surface.positionWS,baseNormalWS,sedimentDx,sedimentDy,
+                                _IceNormalStrength*normalFade,sampledIce,sampledNormal);
+                            iceColor=lerp(iceColor,sampledIce,iceFade);
+                            iceNormal=normalize(lerp(baseNormalWS,sampledNormal,iceFade));
+                        }
+                        baseColor+=(iceColor*_IceColor.rgb-_RiverbedColor.rgb)*iceWeight;
+                        weightedNormal+=(iceNormal-baseNormalWS)*iceWeight;
+                    }
+                }
                 if (sandWeight > 0.001h)
                 {
                     half3 sandAlbedo;
                     float3 sandNormalWS;
-                    SampleSandDetail(IN.positionWS, baseNormalWS, sandAlbedo, sandNormalWS);
+                    SampleSandDetail(surface.positionWS, baseNormalWS, sandAlbedo, sandNormalWS);
                     baseColor += _SandColor.rgb * regionalSandTint * sandWeight * (sandAlbedo - 1.0h) * _SandDetailStrength;
                     weightedNormal += (sandNormalWS - baseNormalWS) * sandWeight;
                 }
@@ -901,14 +1086,24 @@ Shader "Custom/StylizedTerrainURP"
                 [branch] if (rockSurfaceWeight > 0.001 && rockFade > 0.001)
                 {
                     float normalFade = 1.0 - GetDistanceBlend(distanceToCamera, _RockNormalFadeStart, _RockNormalFadeEnd);
+                    float scaleBlend = smoothstep(0.0, 1.0, GetDistanceBlend(distanceToCamera, _RockScaleFadeStart, _RockScaleFadeEnd));
                     float normalStrength = (_RockNormalStrength * rockWeight + _CliffNormalStrength * cliffWeight)
                                          / max(rockSurfaceWeight, 0.001);
-                    half3 rockAlbedo;
-                    float3 rockNormalWS;
-                    SampleRockDetail(IN.positionWS, baseNormalWS, rockPositionDx, rockPositionDy,
-                        normalStrength * rockFade * normalFade, rockAlbedo, rockNormalWS);
+                    half3 rockAlbedo = 0;
+                    // Only the transition samples both scales. Normal mapping
+                    // keeps its independent near fade, even with custom settings.
+                    [branch] if (scaleBlend < 1.0 || normalStrength * normalFade > 0.001)
+                    {
+                        half3 nearAlbedo;
+                        float3 rockNormalWS;
+                        SampleRockDetail(surface.positionWS, baseNormalWS, rockPositionDx, rockPositionDy,
+                            normalStrength * rockFade * normalFade, nearAlbedo, rockNormalWS);
+                        rockAlbedo = nearAlbedo * (1.0 - scaleBlend);
+                        weightedNormal += (rockNormalWS - baseNormalWS) * rockSurfaceWeight;
+                    }
+                    [branch] if (scaleBlend > 0.0 && _RockTextureStrength > 0.001)
+                        rockAlbedo += SampleFarRockColor(surface.positionWS, baseNormalWS, rockPositionDx, rockPositionDy) * scaleBlend;
                     baseColor += (rockAlbedo * regionalRockTint * rockSurfaceWeight - distantRockColor) * _RockTextureStrength * rockFade;
-                    weightedNormal += (rockNormalWS - baseNormalWS) * rockSurfaceWeight;
                 }
                 #endif
 
@@ -917,11 +1112,11 @@ Shader "Custom/StylizedTerrainURP"
                     #if defined(_GRASS_BLADE_GROUND)
                     half grassVariation;
                     float remainingGrass = (1.0 - leafLitterWeight) * (1.0 - bareDirtWeight) * (1.0 - mossWeight);
-                    SampleGrassGround(IN.positionWS, baseNormalWS, distanceToCamera, remainingGrass,
+                    SampleGrassGround(surface.positionWS, baseNormalWS, distanceToCamera, remainingGrass,
                         grassGroundDx, grassGroundDy, grassVariation, normalWS);
                     #else
-                    float2 grassUVNear = IN.positionWS.xz * _GrassTilingNear;
-                    float2 grassUVFar = IN.positionWS.xz * _GrassTilingFar;
+                    float2 grassUVNear = surface.positionWS.xz * _GrassTilingNear;
+                    float2 grassUVFar = surface.positionWS.xz * _GrassTilingFar;
 
                     half3 grassTexNear = SAMPLE_TEXTURE2D(_GrassAlbedo, sampler_GrassAlbedo, grassUVNear).rgb;
                     half3 grassTexFar = SAMPLE_TEXTURE2D(_GrassAlbedo, sampler_GrassAlbedo, grassUVFar).rgb;
@@ -933,13 +1128,13 @@ Shader "Custom/StylizedTerrainURP"
                     #endif
 
                     half3 grassTint = EvaluateGrassTint(
-                        IN.positionWS.xz,
+                        surface.positionWS.xz,
                         _DarkGrassColor.rgb,
                         _MidGrassColor.rgb,
                         _LightGrassColor.rgb);
 
                     half3 darkGroundGrassTint = EvaluateGrassTint(
-                        IN.positionWS.xz,
+                        surface.positionWS.xz,
                         _GroundDarkGrassColor.rgb,
                         _GroundMidGrassColor.rgb,
                         _GroundLightGrassColor.rgb);
@@ -954,9 +1149,9 @@ Shader "Custom/StylizedTerrainURP"
 
                     // One height sample offsets detail UVs for shallow forest-floor relief.
                     // A zero strength skips the sample, so unassigned maps cost nothing.
-                    float3 viewDirectionWS = normalize(_WorldSpaceCameraPos.xyz - IN.positionWS);
+                    float3 viewDirectionWS = surface.viewDirectionWS;
                     float2 parallaxDirection = viewDirectionWS.xz / max(abs(viewDirectionWS.y), 0.35);
-                    float2 leafLitterBaseUV = IN.positionWS.xz * _LeafLitterTiling;
+                    float2 leafLitterBaseUV = surface.positionWS.xz * _LeafLitterTiling;
                     if (leafLitterWeight > 0.001h && _LeafLitterHeightStrength > 0.0)
                     {
                         float2 heightUV = leafLitterBaseUV * _LeafLitterHeight_ST.xy + _LeafLitterHeight_ST.zw;
@@ -972,7 +1167,7 @@ Shader "Custom/StylizedTerrainURP"
                         half ao = SAMPLE_TEXTURE2D(_LeafLitterAO, sampler_LeafLitterAlbedo, aoUV).r;
                         leafLitterColor *= lerp(1.0h, ao, _LeafLitterAOStrength);
                     }
-                    float2 mixedForestUV = IN.positionWS.xz * _LeafLitterTiling;
+                    float2 mixedForestUV = surface.positionWS.xz * _LeafLitterTiling;
                     if (leafLitterWeight > 0.001h && forestVariantWeight > 0.001h)
                     {
                         if (_MixedForestFloorHeightStrength > 0.0)
@@ -986,7 +1181,7 @@ Shader "Custom/StylizedTerrainURP"
                         leafLitterColor = lerp(leafLitterColor, mixedForestColor, forestVariantWeight);
                     }
 
-                    float2 bareDirtUV = IN.positionWS.xz * _BareDirtTiling;
+                    float2 bareDirtUV = surface.positionWS.xz * _BareDirtTiling;
                     if (bareDirtWeight > 0.001h && _BareDirtHeightStrength > 0.0)
                     {
                         half height = SAMPLE_TEXTURE2D(_BareDirtHeight, sampler_BareDirtAlbedo, bareDirtUV).r;
@@ -1001,7 +1196,7 @@ Shader "Custom/StylizedTerrainURP"
                     }
 
                     if (leafLitterWeight > 0.001h && _ForestFloorMacroStrength > 0.0)
-                        leafLitterColor *= ForestFloorMacroTone(IN.positionWS.xz);
+                        leafLitterColor *= ForestFloorMacroTone(surface.positionWS.xz);
                     grassColor = lerp(grassColor, leafLitterColor, leafLitterWeight);
                     grassColor = lerp(grassColor, bareDirtColor, bareDirtWeight);
                     baseColor += grassColor * grassWeight;
@@ -1065,15 +1260,15 @@ Shader "Custom/StylizedTerrainURP"
 
                 if (snowWeight > 0.001h)
                 {
-                    float2 snowUVNear = RotateUV90(IN.positionWS.xz * _SnowTilingNear);
-                    float2 snowUVFar = RotateUV90(IN.positionWS.xz * _SnowTilingFar);
+                    float2 snowUVNear = RotateUV90(surface.positionWS.xz * _SnowTilingNear);
+                    float2 snowUVFar = RotateUV90(surface.positionWS.xz * _SnowTilingFar);
 
                     half3 snowTexUVNear = SAMPLE_TEXTURE2D(_SnowAlbedo, sampler_SnowAlbedo, snowUVNear).rgb;
                     half3 snowTexUVFar = SAMPLE_TEXTURE2D(_SnowAlbedo, sampler_SnowAlbedo, snowUVFar).rgb;
                     half3 snowTexUV = lerp(snowTexUVNear, snowTexUVFar, snowDistanceBlend);
 
-                    half3 snowTexTriNear = SampleSnowTriplanarAlbedo(IN.positionWS, baseNormalWS, _SnowTilingNear);
-                    half3 snowTexTriFar = SampleSnowTriplanarAlbedo(IN.positionWS, baseNormalWS, _SnowTilingFar);
+                    half3 snowTexTriNear = SampleSnowTriplanarAlbedo(surface.positionWS, baseNormalWS, _SnowTilingNear);
+                    half3 snowTexTriFar = SampleSnowTriplanarAlbedo(surface.positionWS, baseNormalWS, _SnowTilingFar);
                     half3 snowTexTriplanar = lerp(snowTexTriNear, snowTexTriFar, snowDistanceBlend);
 
                     float slope = 1.0 - abs(baseNormalWS.y);
@@ -1094,8 +1289,8 @@ Shader "Custom/StylizedTerrainURP"
                     float3 snowTangentNormalUV = lerp(snowTangentNormalUVNear, snowTangentNormalUVFar, snowDistanceBlend);
                     float3 snowPerturbationUV = float3(snowTangentNormalUV.y, 0, -snowTangentNormalUV.x);
 
-                    float3 snowPerturbationTriNear = SampleSnowTriplanarPerturbation(IN.positionWS, baseNormalWS, _SnowTilingNear);
-                    float3 snowPerturbationTriFar = SampleSnowTriplanarPerturbation(IN.positionWS, baseNormalWS, _SnowTilingFar);
+                    float3 snowPerturbationTriNear = SampleSnowTriplanarPerturbation(surface.positionWS, baseNormalWS, _SnowTilingNear);
+                    float3 snowPerturbationTriFar = SampleSnowTriplanarPerturbation(surface.positionWS, baseNormalWS, _SnowTilingFar);
                     float3 snowPerturbationTri = lerp(snowPerturbationTriNear, snowPerturbationTriFar, snowDistanceBlend);
 
                     float3 snowPerturbation = lerp(snowPerturbationUV, snowPerturbationTri, snowTriplanarBlend);
@@ -1119,9 +1314,9 @@ Shader "Custom/StylizedTerrainURP"
                 if (mossBlend > 0.001)
                 {
                     float reliefFade = 1.0 - smoothstep(12.0, 45.0, distanceToCamera);
-                    float3 viewDirectionWS = normalize(_WorldSpaceCameraPos.xyz - IN.positionWS);
+                    float3 viewDirectionWS = surface.viewDirectionWS;
                     float2 parallaxDirection = viewDirectionWS.xz / max(abs(viewDirectionWS.y), 0.35);
-                    float2 mossUV = IN.positionWS.xz * _MossTiling;
+                    float2 mossUV = surface.positionWS.xz * _MossTiling;
                     if (_MossHeightStrength > 0.0 && reliefFade > 0.001)
                     {
                         half height = SAMPLE_TEXTURE2D(_MossHeight, sampler_MossAlbedo, mossUV).r;
@@ -1133,7 +1328,7 @@ Shader "Custom/StylizedTerrainURP"
                     float denseBlend = smoothstep(0.4, 0.85, mossDominance);
                     if (denseBlend > 0.001)
                     {
-                        float2 denseUV = IN.positionWS.xz * _MossTiling;
+                        float2 denseUV = surface.positionWS.xz * _MossTiling;
                         if (_DenseMossHeightStrength > 0.0 && reliefFade > 0.001)
                         {
                             half height = SAMPLE_TEXTURE2D(_DenseMossHeight, sampler_MossAlbedo,
@@ -1154,7 +1349,7 @@ Shader "Custom/StylizedTerrainURP"
                     mossColor = lerp(_MossFillColor.rgb,mossColor,saturate(_MossDetailContrast));
                     half mossLuma = dot(mossColor,half3(0.299h,0.587h,0.114h));
                     mossColor = lerp(mossLuma.xxx,mossColor,saturate(_MossSaturation));
-                    mossColor *= lerp(1.0,ForestFloorMacroTone(IN.positionWS.xz),0.35);
+                    mossColor *= lerp(1.0,ForestFloorMacroTone(surface.positionWS.xz),0.35);
                     baseColor = lerp(baseColor,mossColor,mossBlend);
                     float3 mossNormalWS = baseNormalWS;
                     if (reliefFade > 0.001 && _MossNormalStrength > 0.0 && denseBlend < 0.999)
@@ -1165,17 +1360,17 @@ Shader "Custom/StylizedTerrainURP"
                 }
 
 
-                half terrainVisibility = TerrainHorizonVisibility(IN.positionWS, IN.horizonLight);
+                half terrainVisibility = TerrainHorizonVisibility(surface.positionWS, IN.horizonLight);
                 #if defined(_TERRAIN_EXCAVATION)
                 [branch] if(exposure>0)
                 {
                     half3 stone;float3 stoneNormal;
-                    SampleExcavation(IN.positionWS,baseNormalWS,excavationDx,excavationDy,stone,stoneNormal);
+                    SampleExcavation(surface.positionWS,baseNormalWS,excavationDx,excavationDy,stone,stoneNormal);
                     baseColor=lerp(baseColor,stone,exposure);normalWS=normalize(lerp(normalWS,stoneNormal,exposure));
                     terrainVisibility=lerp(terrainVisibility,1,exposure);
                 }
                 #endif
-                return ShadeTerrainSurface(baseColor,normalWS,IN,terrainVisibility);
+                return ShadeTerrainSurface(baseColor,normalWS,IN,surface,terrainVisibility);
             }
             ENDHLSL
         }

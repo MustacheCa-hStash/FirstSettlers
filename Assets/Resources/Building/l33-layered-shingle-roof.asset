@@ -24,10 +24,8 @@ MonoBehaviour:
   wallEndInsetUnits: 0
   mesh: {fileID: 4300000, guid: 713c6aa9794fb2b47aae220512bd08c8, type: 2}
   preserveAuthoredMesh: 1
-  requiresFullBearing: 0
   canGroundOnTerrain: 0
   furnitureWallMounted: 0
-  furnitureSupportPoints: []
   solidBoxes: []
   wallOpenings: []
   gableSlope: 0

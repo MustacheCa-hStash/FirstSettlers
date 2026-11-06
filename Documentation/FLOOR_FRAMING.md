@@ -1,5 +1,7 @@
 # Floor framing and reversible building joints
 
+Current placement and lifetime follow [free building](BUILDING_FOLIAGE.md#free-building): pieces may float and remain after neighbouring pieces are removed. Earlier support, bedding and collapse requirements below are historical; geometric fitting and physical collision remain in use.
+
 Current full-span models, varied floor UVs and shared junction visuals are described
 in [full-span wood kit](MODULAR_WOOD_KIT.md). This document retains the earlier
 floor/framing design and source history.

@@ -17,7 +17,7 @@ public readonly struct WorldLandformRegion
 /// </summary>
 public static class WorldLandforms
 {
-    public const int GeneratorSchema = 4;
+    public const int GeneratorSchema = 7;
     // Relative to the water datum, in canonical height units (60 world metres at scene scale).
     public static float Upland(float height, float waterLevel) => math.smoothstep(waterLevel + 1.4f, waterLevel + 3f, height);
     public static float DryProvince(float aridity) => math.smoothstep(0.18f, 0.60f, aridity);
@@ -233,9 +233,13 @@ public static class WorldLandforms
     }
 
     public static SurfaceType Surface(float2 p, int seed, float scale, float height, float slope, float river,
-        BiomeType biome, float waterLevel, in WorldLandformSettings s)
+        BiomeType biome, float waterLevel, in WorldLandformSettings s, float temperature = 0.2f)
     {
         var surface = SurfaceTypeClassifier.Classify(height, slope, river, biome, waterLevel);
+        if(s.enabled && temperature<.48f && biome!=BiomeType.Desert && river<TerrainWaterSettings.RiverBankThreshold &&
+            WorldGlacialLandforms.IceExposure(p,seed,scale,height,waterLevel,s)>.32f) return SurfaceType.Ice;
+        if(s.enabled && temperature<.48f && biome!=BiomeType.Desert && slope<45f && river<TerrainWaterSettings.RiverBankThreshold &&
+            WorldGlacialLandforms.MoraineExposure(p,seed,scale,height,waterLevel,s)>.5f) return SurfaceType.Moraine;
         if (!s.enabled || height <= waterLevel + TerrainWaterSettings.ShoreBand ||
             river >= TerrainWaterSettings.RiverBankThreshold || slope > TerrainSlopePolicy.LooseSurfaceMaxDegrees ||
             surface == SurfaceType.Snow || surface == SurfaceType.Cliff) return surface;

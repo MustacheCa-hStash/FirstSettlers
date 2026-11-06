@@ -78,7 +78,7 @@ public static class SandstoneKitSetup
             d.stackRiseUnits = d.kind == BuildPartKind.Wall || d.kind == BuildPartKind.Corner ? d.sizeUnits.y : 0;
             d.wallEndInsetUnits = 0; d.wallPlacementMode = WallPlacementMode.Panel;
             d.material = material; d.preserveAuthoredMesh = true; d.maxHealth = 100;
-            d.requiresFullBearing = false; d.canGroundOnTerrain = d.kind == BuildPartKind.Foundation;
+             d.canGroundOnTerrain = d.kind == BuildPartKind.Foundation;
             bool gable = !string.IsNullOrEmpty(p.slope);
             d.gableSlope = !gable ? GableSlope.None : p.slope == "falling" ? GableSlope.Falling : GableSlope.Rising;
             d.roofAttachment = gable ? RoofAttachmentMode.Gable : RoofAttachmentMode.None;

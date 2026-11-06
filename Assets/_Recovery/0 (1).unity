@@ -918,7 +918,6 @@ MonoBehaviour:
     activeRingRadius: 1
     nearGrassPrecomputeChunkPadding: 0
     subChunksPerChunk: 10
-    activeSubChunkRadius: 0
     maxSubChunkGenerationsPerFrame: 8
     subChunkGenerationBudgetMsPerFrame: 1
     foregroundFoliageWorkBudgetMsPerFrame: 1.35
@@ -929,7 +928,6 @@ MonoBehaviour:
     groundFoliageGenerationBudgetMsPerFrame: 0.75
     maxRenderBatchRebuildsPerFrame: 1
     renderBatchRebuildBudgetMsPerFrame: 0.35
-    maxQueuedGrassSubChunkWork: 128
     maxQueuedGroundFoliageGenerationWork: 48
     maxQueuedRenderBatchWork: 96
     densityRadius3: 1
@@ -945,8 +943,6 @@ MonoBehaviour:
     forestLightGrassColor: {r: 0.25, g: 0.52, b: 0.19, a: 1}
     billboardGrassPrefab: {fileID: 7070889263170737803, guid: fcbbf5456e50ad94cb3fb0802d388f74, type: 3}
     billboardRingRadius: 3
-    billboardCellsPerAxis: 60
-    billboardSpawnChance: 0.05
   flowerSettings:
     enableFlowers: 1
     flowerPrefab: {fileID: 7417632742218973167, guid: 012753618076f5a44bc43bfe79e09f48, type: 3}
@@ -1305,7 +1301,6 @@ MonoBehaviour:
     bushGrassExclusionRadius: 0.45
     seedOffset: 12000
     gameObjectTreeChunkRingRadius: 3
-    billboardTreeChunkStartRingRadius: 18
     billboardTreeChunkRingRadius: 18
     enableDistantTrees: 1
     distantTreeDistanceChunks: 15
@@ -1328,7 +1323,6 @@ MonoBehaviour:
     distantTreeCacheChunks: 2048
     maxTreeRepresentationRebuildsPerFrame: 2
     treeRepresentationRebuildBudgetMsPerFrame: 0.75
-    treeGameObjectWarmRetainExtraRings: 2
     gameObjectBushChunkRingRadius: 3
     maxForestRocksPerChunk: 2
     forestRockUniformScaleRange: {x: 80, y: 100}

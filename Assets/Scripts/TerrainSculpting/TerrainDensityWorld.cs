@@ -359,6 +359,8 @@ public sealed class TerrainDensitySnapshot : IDisposable, ITerrainDensityField
         return TerrainDensityWorld.Read(brick, sample, Profile, Generator);
     }
     public IDisposable ReserveScratch(long bytes) { RequireAlive();return owner.ReserveScratch(bytes); }
+    public short ReadBaselineEncoded(int3 sample)
+    { RequireAlive();return Profile.Encode(Generator.SampleDensity(TerrainDensityCoordinates.ToWorld(sample,Profile))); }
     public void FillMeshHalo(int3 first,short[] destination) => FillMeshHalo(first,destination,null);
     internal void FillMeshHalo(int3 first,short[] destination,TerrainSculptCoveragePolicy? visual)
     {

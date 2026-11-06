@@ -46,7 +46,8 @@ public static class TerrainControlMapBuilder
                 {
                     int index = z * blended.Width + x;
                     MountainSnow.Apply(ref blended.Maps[0][index], ref blended.Maps[1][index],
-                        mountainSnow[x + 1, z + 1], mountainSnowRenderCoverageGamma);
+                        mountainSnow[x + 1, z + 1], mountainSnowRenderCoverageGamma,
+                        surfaceTypeMap[x + 1, z + 1] == SurfaceType.Ice || surfaceTypeMap[x + 1, z + 1] == SurfaceType.Moraine);
                 }
         return blended;
     }
@@ -144,11 +145,13 @@ public static class TerrainControlMapBuilder
             case SurfaceType.DryWash:
             case SurfaceType.Grass:
             case SurfaceType.Rock:
+            case SurfaceType.Moraine:
                 return true;
 
             case SurfaceType.Snow:
             case SurfaceType.Cliff:
             case SurfaceType.Riverbed:
+            case SurfaceType.Ice:
             case SurfaceType.CrackedClay:
                 return false;
 
@@ -165,11 +168,13 @@ public static class TerrainControlMapBuilder
             case SurfaceType.Mud:
             case SurfaceType.DryWash: return new Color32(0, value, 0, 0);
             case SurfaceType.Grass: return new Color32(0, 0, value, 0);
+            case SurfaceType.Moraine:
             case SurfaceType.Rock: return new Color32(0, 0, 0, value);
 
             case SurfaceType.Snow: return new Color32(value, 0, 0, 0);
             case SurfaceType.Cliff: return new Color32(0, value, 0, 0);
             case SurfaceType.Riverbed:
+            case SurfaceType.Ice:
             case SurfaceType.CrackedClay: return new Color32(0, 0, value, 0);
 
             default: return new Color32(0, 0, 0, 0);

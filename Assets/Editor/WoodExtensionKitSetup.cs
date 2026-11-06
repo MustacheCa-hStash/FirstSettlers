@@ -50,7 +50,7 @@ public static class WoodExtensionKitSetup
             d.sizeUnits=Vector3Int.RoundToInt(V(p.size)/BuildGeometry.Unit);d.minimumUnits=Vector3Int.zero;d.boundsOffset=V(p.minimum);
             d.wallEndInsetUnits=0;d.stackRiseUnits=d.sizeUnits.y;d.wallPlacementMode=WallPlacementMode.Panel;
             d.material=p.tag=="W12"?woven:wood;d.preserveAuthoredMesh=true;d.maxHealth=100;
-            d.requiresFullBearing=false;d.canGroundOnTerrain=p.tag=="W07"||p.tag=="W12";
+            d.canGroundOnTerrain=p.tag=="W07"||p.tag=="W12";
             var model=ModularWoodSetup.Import(Models+"/"+p.file);
             d.mesh=ModularWoodSetup.StructuralMesh(model,new Bounds(V(p.minimum)+V(p.size)*.5f,V(p.size)));
             d.uvVariants=Array.Empty<Mesh>();d.occupiedVolumes=Array.Empty<BuildConvexVolume>();

@@ -1,5 +1,7 @@
 # W05, W06, W07, W08 and W12
 
+Current placement and lifetime follow [free building](BUILDING_FOLIAGE.md#free-building): pieces may float and remain after neighbouring pieces are removed. Earlier support, bedding and collapse requirements below are historical; geometric fitting and physical collision remain in use.
+
 Five ordinary-wood additions are installed in the building catalog. Restart Play mode after importing to reload the catalog.
 
 ![Unity overview](../ArtReferences/IronAgeWood/Extension/wood-extension-unity-overview.png)

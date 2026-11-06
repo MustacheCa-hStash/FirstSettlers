@@ -16,7 +16,7 @@ public class GrassSettings
     public ComputeShader grassCompactShader;
 
     [Header("Subchunk Streaming")]
-    [Range(0f, 1f), Tooltip("Far grass coverage selected from the same candidates as detailed grass. Independent of the retired billboard cell grid.")]
+    [Range(0f, 1f), Tooltip("Far grass coverage selected from the same candidates as detailed grass.")]
     public float billboardCoverage = 0.2f;
     [Min(0.05f)] public float transitionWidthChunks = 0.35f;
     [Min(0.01f)] public float representationTransitionSeconds = 0.4f;
@@ -31,8 +31,6 @@ public class GrassSettings
     public int activeRingRadius = 1;
     [Min(0)] public int nearGrassPrecomputeChunkPadding = 0;
     public int subChunksPerChunk = 10;
-    [Tooltip("Circular generation radius in subchunks. Zero derives the radius from chunk coverage and precompute padding.")]
-    [HideInInspector] public int activeSubChunkRadius = 0;
     public int maxSubChunkGenerationsPerFrame = 8;
     public float subChunkGenerationBudgetMsPerFrame = 1.0f;
 
@@ -48,7 +46,6 @@ public class GrassSettings
     public int maxRenderBatchRebuildsPerFrame = 1;
     [Tooltip("Ground batch and bush/rock publication budget. Final arrays are built in bounded slices; one slice progresses when admitted by the shared world allowance. Scheduling rotates first service. A single prefab instantiation remains indivisible.")]
     public float renderBatchRebuildBudgetMsPerFrame = 0.35f;
-    [HideInInspector] public int maxQueuedGrassSubChunkWork = 128;
     public int maxQueuedGroundFoliageGenerationWork = 48;
     public int maxQueuedRenderBatchWork = 96;
 
@@ -71,7 +68,5 @@ public class GrassSettings
 
     [Tooltip("Outer grass distance in chunk widths from the actual player. Density tapers at the boundary.")]
     public int billboardRingRadius = 2;
-    [HideInInspector] public int billboardCellsPerAxis = 50;
-    [HideInInspector] public float billboardSpawnChance = 0.4f;
 
 }

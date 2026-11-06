@@ -16,7 +16,6 @@ public static class FurnitureKitSetup
     {
         public string tag,content_id,slug,name,file;
         public float[] size,minimum;
-        public Vector3[] support_points;
         public Box[] solid_boxes;
         public bool wall_mounted;
     }
@@ -55,13 +54,13 @@ public static class FurnitureKitSetup
             d.contentId=part.content_id;d.displayName=part.name;d.kind=BuildPartKind.Furniture;
             d.sizeUnits=Vector3Int.RoundToInt(V(part.size)/BuildGeometry.Unit);d.minimumUnits=Vector3Int.zero;d.boundsOffset=V(part.minimum);
             d.preserveAuthoredMesh=true;d.canGroundOnTerrain=!part.wall_mounted;d.furnitureWallMounted=part.wall_mounted;
-            d.furnitureSupportPoints=part.support_points;d.material=material;d.maxHealth=100;
+            d.material=material;d.maxHealth=100;
             d.solidBoxes=new Bounds[part.solid_boxes.Length];
             for(int j=0;j<d.solidBoxes.Length;j++)d.solidBoxes[j]=new Bounds(V(part.solid_boxes[j].center),V(part.solid_boxes[j].size));
             d.mesh=ModularWoodSetup.StructuralMesh(ModularWoodSetup.Import(Models+"/"+part.file),d.LocalBounds);
             if(d.contentId==BakedFurnishingsSetup.BedId)BakedFurnishingsSetup.Apply(d);
             d.uvVariants=Array.Empty<Mesh>();d.jointSockets=Array.Empty<BuildJointSocket>();d.jointCoverVariants=Array.Empty<Mesh>();
-            d.occupiedVolumes=Array.Empty<BuildConvexVolume>();d.wallOpenings=Array.Empty<Bounds>();d.requiresFullBearing=false;
+            d.occupiedVolumes=Array.Empty<BuildConvexVolume>();d.wallOpenings=Array.Empty<Bounds>();
             var root=new GameObject(part.name){layer=GameplayLayers.WorldSolid};
             try
             {

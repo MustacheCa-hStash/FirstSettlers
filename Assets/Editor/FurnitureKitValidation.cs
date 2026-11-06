@@ -15,11 +15,17 @@ public static class FurnitureKitValidation
     private static readonly List<string> errors=new();
     static FurnitureKitValidation()=>EditorApplication.playModeStateChanged+=OnState;
     private static void Check(bool ok,string text){checks++;if(!ok)throw new InvalidOperationException(text);}
-    public static void RunBatch()
+    public static void RunBatch()=>Run(true);
+    public static void RunInstalledBatch()=>Run(false);
+    private static bool IsKitPiece(BuildDefinition d)=>d.contentId is
+        "build.furniture.f01-three-leg-stool" or "build.furniture.f02-plank-bench" or
+        "build.furniture.f03-pegged-table" or "build.furniture.f04-low-work-table" or
+        "build.furniture.f05-sleeping-platform" or "build.furniture.f06-wall-shelf";
+    private static void Run(bool install)
     {
         try
         {
-            FurnitureKitSetup.Install();
+            if(install)FurnitureKitSetup.Install();
             var catalog=AssetDatabase.LoadAssetAtPath<BuildCatalog>(BuildingPrototypeSetup.CatalogPath);
             Assets(catalog);BuildStoneUiAuthoring.Validate();
             SessionState.SetInt(Pending+".checks",checks);SessionState.SetBool(Pending,true);
@@ -32,13 +38,14 @@ public static class FurnitureKitValidation
         foreach(var d in catalog.presets)
         {
             Check(ids.Add(d.contentId),"Duplicate catalog ID");
-            if(!d.contentId.StartsWith("build.furniture."))continue;count++;
+            // Later sandstone furniture has its own material, geometry and validation suite.
+            if(!IsKitPiece(d))continue;count++;
             Check(BuildUiContent.Category(d)==7 && d.preserveAuthoredMesh,"Furniture metadata");
             bool baked=d.contentId==BakedFurnishingsSetup.BedId;
-            Check(baked ? d.material.shader.name=="Custom/BakedStoneWallMatte" : d.material==SplitPlankWallSetup.TrimMaterial,"Furniture material mismatch");
+            Check(baked ? d.material.shader.name=="Custom/BakedStoneWallMatte" : d.material==SplitPlankWallSetup.TrimMaterial,"Furniture material mismatch: "+d.contentId);
             Check(d.mesh!=null && d.mesh.subMeshCount==1 && !d.mesh.isReadable,"Static instanced mesh import");
             Check((d.mesh.bounds.min-d.LocalBounds.min).sqrMagnitude<.000001f && (d.mesh.bounds.max-d.LocalBounds.max).sqrMagnitude<.000001f,"FBX metre scale/origin: "+d.name);
-            Check(d.furnitureSupportPoints.Length>=3 && d.solidBoxes.Length>=3,"Missing feet or shaped collision");
+            Check(d.solidBoxes.Length>=3,"Missing feet or shaped collision");
             Check(d.authoringPrefab.GetComponents<BoxCollider>().Length==d.solidBoxes.Length,"Prefab collider mismatch");
             Check(d.jointSockets.Length==0 && d.jointCoverVariants.Length==0,"Furniture gained structural framing");
             Check(Resources.Load<Texture2D>("Building/UI/Thumbnails/"+BuildUiContent.ThumbnailKey(d))!=null,"Missing actual-mesh icon");
@@ -74,7 +81,7 @@ public static class FurnitureKitValidation
             Ground(catalog);Check(errors.Count==0,string.Join(" | ",errors));
             Directory.CreateDirectory(".utmp/furniture-kit");
             File.WriteAllText(".utmp/furniture-kit/validation.json","{\"passed\":true,\"checks\":"+checks+",\"models\":6,\"headings\":8,\"floorRotationCases\":320,\"uiResolutions\":4}");
-            Debug.Log("FURNITURE PASS: "+checks+" checks; six actual FBXs/icons, all UV triangles, all headings, per-foot support, wall mounting/openings, nonstructural behavior, removal and open table collision.");
+            Debug.Log("FURNITURE PASS: "+checks+" checks; six actual FBXs/icons, all UV triangles, all headings, free placement, wall-face snapping, independent lifetime, removal and open table collision.");
             Application.logMessageReceived-=Log;EditorApplication.Exit(0);
         }catch(Exception ex){Application.logMessageReceived-=Log;Debug.LogException(ex);EditorApplication.Exit(1);}
     }
@@ -84,23 +91,23 @@ public static class FurnitureKitValidation
         var host=new GameObject("Furniture runtime");var world=host.AddComponent<BuildWorld>();world.enabled=false;
         try
         {
-            var s=world.Session;var foundation=s.Add(catalog.Find("build.prototype.foundation"),s.CreateFrame(origin,yaw),default,0,true);
+            var s=world.Session;var foundation=s.Add(catalog.Find("build.prototype.foundation"),s.CreateFrame(origin,yaw),default,0);
             foreach(var d in catalog.presets)
             {
-                if(d.kind!=BuildPartKind.Furniture || d.furnitureWallMounted)continue;
+                if(!IsKitPiece(d) || d.furnitureWallMounted)continue;
                 for(int turn=0;turn<8;turn++)
                 {
                     var preview=BuildPlacement.Solve(d,origin+q*new Vector3(2,0,2),q*Vector3.up,foundation,s.Frame(foundation.OwnFrameId),0,turn,default);
-                    world.Validate(ref preview);Check(preview.Valid && !preview.Grounded,"Floor placement: "+d.name+" / "+preview.Message);
+                    world.Validate(ref preview);Check(preview.Valid,"Floor placement: "+d.name+" / "+preview.Message);
                     Check(preview.WorldYaw==BuildGeometry.Turn(yaw+turn),"Relative furniture heading");
-                    var piece=world.Commit(preview);Check(piece!=null && piece.Supported,"Furniture commit/support");
+                    var piece=world.Commit(preview);Check(piece!=null && s.Pieces.ContainsKey(piece.Id),"Placed construction missing from session: piece");
                     var restored=JsonUtility.FromJson<BuildPieceRecord>(JsonUtility.ToJson(piece));
                     Check(restored.DefinitionId==d.contentId && restored.FrameId==piece.FrameId && restored.YawStep==piece.YawStep,"Stable serialized identity/pose");
                     world.Validate(ref preview);Check(!preview.Valid && preview.Failure==BuildPlacementFailure.Solid,"Duplicate furniture accepted");
                     var blocked=BuildPlacement.Solve(catalog.Find("build.prototype.floor"),piece.Origin+Vector3.up*d.LocalBounds.max.y,Vector3.up,piece,s.Frame(piece.OwnFrameId),0,0,default);
                     world.Validate(ref blocked);Check(blocked.Valid,"Free building on furniture was rejected");
-                    var floatingWall=s.Add(catalog.Find("build.prototype.wall"),s.CreateFrame(piece.Origin+Vector3.up*d.LocalBounds.max.y,piece.WorldYawStep),default,0,false);
-                    Check(floatingWall.Supported,"Free placement unexpectedly depends on structural support");s.Remove(floatingWall.Id);
+                    var floatingWall=s.Add(catalog.Find("build.prototype.wall"),s.CreateFrame(piece.Origin+Vector3.up*d.LocalBounds.max.y,piece.WorldYawStep),default,0);
+                    Check(s.Pieces.ContainsKey(floatingWall.Id),"Placed construction missing from session: floatingWall");s.Remove(floatingWall.Id);
                     if(d.contentId.Contains("f03") && turn==0)
                     {
                         var proxy=new GameObject("Table compound collision").AddComponent<BuildGameplayProxy>();
@@ -116,23 +123,23 @@ public static class FurnitureKitValidation
                 var edge=BuildPlacement.Solve(d,origin+q*new Vector3(0,0,2),Vector3.up,foundation,s.Frame(foundation.OwnFrameId),0,0,default);
                 world.Validate(ref edge);Check(edge.Valid,"Floating furniture was rejected");
             }
-            var wall=s.Add(catalog.Find("build.prototype.wall"),s.CreateFrame(origin,yaw),default,0,false);Check(wall.Supported,"Wall fixture unsupported");
+            var wall=s.Add(catalog.Find("build.prototype.wall"),s.CreateFrame(origin,yaw),default,0);Check(s.Pieces.ContainsKey(wall.Id),"Placed construction missing from session: wall");
             var shelf=catalog.Find("build.furniture.f06-wall-shelf");
             foreach(int side in new[]{-1,1})
             {
                 var p=BuildPlacement.Solve(shelf,origin+q*new Vector3(2,1.5f,side*.125f),q*(Vector3.forward*side),wall,s.Frame(wall.OwnFrameId),0,0,default);
                 world.Validate(ref p);Check(p.Valid,"Shelf on actual timber face: "+p.Message);
                 Check(Mathf.Abs((Quaternion.Inverse(q)*(p.Origin-origin)).z-side*.125f)<.0001f,"Shelf lost half-thickness wall offset");
-                var mounted=world.Commit(p);Check(mounted!=null&&mounted.Supported,"Shelf commit");world.Remove(mounted.Id);
+                var mounted=world.Commit(p);Check(mounted!=null&&s.Pieces.ContainsKey(mounted.Id),"Placed construction missing from session: mounted");world.Remove(mounted.Id);
             }
             var mount=BuildPlacement.Solve(shelf,origin+q*new Vector3(2,1.5f,.125f),q*Vector3.forward,wall,s.Frame(wall.OwnFrameId),0,0,default);
-            var attached=world.Commit(mount);s.Remove(wall.Id);Check(attached.Supported,"Free placement unexpectedly depends on structural support");s.Remove(attached.Id);
-            var window=s.Add(catalog.Find("build.wood.w11-shutter-wall"),s.CreateFrame(origin,yaw),default,0,false);
+            var attached=world.Commit(mount);s.Remove(wall.Id);Check(s.Pieces.ContainsKey(attached.Id),"Placed construction missing from session: attached");s.Remove(attached.Id);
+            var window=s.Add(catalog.Find("build.wood.w11-shutter-wall"),s.CreateFrame(origin,yaw),default,0);
             var voidMount=BuildPlacement.Solve(shelf,origin+q*new Vector3(2,1.5f,.125f),q*Vector3.forward,window,s.Frame(window.OwnFrameId),0,0,default);
             world.Validate(ref voidMount);Check(voidMount.Valid,"Floating shelf was rejected");s.Remove(window.Id);
             var stool=catalog.Find("build.furniture.f01-three-leg-stool");
             var supported=world.Commit(BuildPlacement.Solve(stool,origin+q*new Vector3(2,0,2),Vector3.up,foundation,s.Frame(foundation.OwnFrameId),0,0,default));
-            s.Remove(foundation.Id);Check(supported.Supported,"Free placement unexpectedly depends on structural support");
+            s.Remove(foundation.Id);Check(s.Pieces.ContainsKey(supported.Id),"Placed construction missing from session: supported");
         }finally{Object.DestroyImmediate(host);}
     }
     private static void Ground(BuildCatalog catalog)
@@ -142,14 +149,14 @@ public static class FurnitureKitValidation
         var host=new GameObject("Furniture ground validation");var world=host.AddComponent<BuildWorld>();world.enabled=false;Physics.SyncTransforms();
         try
         {
-            foreach(var d in catalog.presets)if(d.kind==BuildPartKind.Furniture)
+            foreach(var d in catalog.presets)if(IsKitPiece(d))
                 for(int yaw=0;yaw<8;yaw++)
                 {
                     var p=BuildPlacement.Solve(d,Vector3.zero,Vector3.up,null,null,yaw,0,default);world.Validate(ref p);
                     Check(p.Valid,"Free furniture placement rejected");
                     if(d.furnitureWallMounted)continue;
-                    Check(!p.Grounded,"All feet should ground");p.Origin+=Vector3.up*.75f;world.Validate(ref p);
-                    Check(p.Valid && !p.Grounded,"Floating furniture grounded");
+                    Check(p.Valid,"Terrain furniture placement was rejected.");p.Origin+=Vector3.up*.75f;world.Validate(ref p);
+                    Check(p.Valid,"Floating furniture grounded");
                 }
         }finally{Object.DestroyImmediate(host);Object.DestroyImmediate(ground);}
     }

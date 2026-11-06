@@ -1,5 +1,7 @@
 # L04–L09 limestone components
 
+Current placement and lifetime follow [free building](BUILDING_FOLIAGE.md#free-building): pieces may float and remain after neighbouring pieces are removed. Earlier support, bedding and collapse requirements below are historical; geometric fitting and physical collision remain in use.
+
 Six additional parts from the [limestone catalog](../ArtReferences/LimestoneBuildKit/README.md), accompanying the installed [L01–L03 walls](LIMESTONE_BUILD_KIT.md). Editable source, bake metadata and previews live in [ArtReferences/LimestoneBuildKit/Extension](../ArtReferences/LimestoneBuildKit/Extension/LimestoneExtension.blend).
 
 | Part | Dimensions, metres | Menu category | Runtime triangles |

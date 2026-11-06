@@ -44,7 +44,7 @@ public static class LimestoneCourtyardSetup
             d.sizeUnits=Vector3Int.RoundToInt(V(p.size)/BuildGeometry.Unit);d.boundsOffset=V(p.minimum);d.minimumUnits=Vector3Int.zero;
             bool gable=p.tag.StartsWith("L17",StringComparison.Ordinal);
             d.wallEndInsetUnits=0;d.stackRiseUnits=Mathf.RoundToInt(p.size[1]*4);d.wallPlacementMode=WallPlacementMode.Panel;
-            d.preserveAuthoredMesh=true;d.maxHealth=100;d.material=material;d.requiresFullBearing=false;
+            d.preserveAuthoredMesh=true;d.maxHealth=100;d.material=material;
             d.canGroundOnTerrain=p.tag=="L13"||p.tag=="L14"||p.tag=="L16";
             d.jointCoverVariants=Array.Empty<Mesh>();d.jointCoverMaterial=null;d.uvVariants=Array.Empty<Mesh>();
             d.gableSlope=!gable?GableSlope.None:p.slope=="falling"?GableSlope.Falling:GableSlope.Rising;

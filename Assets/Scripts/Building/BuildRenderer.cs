@@ -1,129 +1,206 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Unity.Profiling;
 
-/// <summary>Cached, spatially bounded instanced submissions. No placed-piece renderer GameObjects.</summary>
-public sealed class BuildRenderer
+/// <summary>Spatial instanced groups updated only for changed pieces. Preview overlays have separate ownership.</summary>
+public sealed class BuildRenderer : IDisposable
 {
     private static readonly ProfilerMarker DrawMarker = new("FS.Building.Rendering");
     private static readonly ProfilerMarker RebuildMarker = new("FS.Building.RenderBatchRebuild");
     private const int Capacity = 500;
+    private readonly struct Part
+    {
+        public readonly ulong Id;
+        public readonly Matrix4x4 Matrix;
+        public readonly Bounds Bounds;
+        public Part(ulong id,Matrix4x4 matrix,Bounds bounds) { Id=id;Matrix=matrix;Bounds=bounds; }
+    }
     private sealed class Batch
     {
-        public Material Material;
-        public Mesh Mesh;
         public readonly Matrix4x4[] Matrices = new Matrix4x4[Capacity];
         public readonly ulong[] Ids = new ulong[Capacity];
         public Matrix4x4[] Filtered;
-        public int FilteredCount;
-        public int Count;
+        public int FilteredCount, Count;
+        public bool IsFiltered;
         public Bounds Bounds;
     }
-    private readonly BuildSession session;
-    private readonly Dictionary<(Material, Mesh, Vector3Int), Batch> current = new();
-    private readonly List<Batch> batches = new();
-    private readonly List<Batch> previewBatches = new();
-    private readonly Dictionary<ulong,List<Batch>> pieceBatches=new();
-    private readonly HashSet<ulong> hidden=new();
-    private readonly HashSet<Batch> dirtyBatches=new();
-    private readonly Plane[] planes = new Plane[6];
-    private int revision = -1;
-    private IReadOnlyDictionary<ulong,BuildResolvedState> preview;
-    private IReadOnlyDictionary<ulong,BuildResolvedState> lastPreview;
-    public void SetPreview(IReadOnlyDictionary<ulong,BuildResolvedState> value)
+    private sealed class Group
     {
-        preview=value;
+        public (Material,Mesh,Vector3Int) Key;
+        public Material Material;
+        public Mesh Mesh;
+        public readonly Dictionary<ulong,List<Part>> Members = new();
+        public readonly List<Batch> Batches = new();
     }
+    private readonly BuildSession session;
+    private readonly Dictionary<(Material,Mesh,Vector3Int),Group> groups = new();
+    private readonly Dictionary<(Material,Mesh,Vector3Int),Group> previewGroups = new();
+    private readonly Dictionary<ulong,HashSet<Group>> pieceGroups = new();
+    private readonly HashSet<ulong> pending = new(), hidden = new();
+    private readonly HashSet<Group> dirty = new(), filterGroups = new();
+    private readonly Plane[] planes = new Plane[6];
+    private IReadOnlyDictionary<ulong,BuildResolvedState> preview, lastPreview;
+    private bool disposed;
     public int DrawCalls { get; private set; }
+    // Counts synchronization passes, rather than rebuilding every committed group.
     public int BatchRebuilds { get; private set; }
-    public BuildRenderer(BuildSession session) { this.session = session; }
-    public void Draw(Camera camera, float range, float shadowRange)
+    public int LastUpdatedPieces { get; private set; }
+    public int LastRebuiltGroups { get; private set; }
+    public int CommittedInstanceCount { get; private set; }
+    public int PreviewInstanceCount { get; private set; }
+    public BuildRenderer(BuildSession session)
     {
-        using var scope = DrawMarker.Auto();
-        DrawCalls = 0;
-        if (camera == null) return;
+        this.session=session;
+        foreach(ulong id in session.Pieces.Keys)pending.Add(id);
+        session.VisualChanged+=OnVisualChanged;
+    }
+    private void OnVisualChanged(ulong id)=>pending.Add(id);
+    public void SetPreview(IReadOnlyDictionary<ulong,BuildResolvedState> value)=>preview=value;
+    public void Draw(Camera camera,float range,float shadowRange)
+    {
+        using var scope=DrawMarker.Auto();
+        DrawCalls=0;LastUpdatedPieces=0;LastRebuiltGroups=0;
+        if(disposed || camera==null)return;
         bool samePreview=ReferenceEquals(preview,lastPreview);
         if(!samePreview && preview!=null && lastPreview!=null && preview.Count==lastPreview.Count)
-        {samePreview=true;foreach(var p in preview)if(!lastPreview.TryGetValue(p.Key,out var old) || !p.Value.SameVisuals(old)){samePreview=false;break;}}
-        bool rebuilt=revision!=session.Revision;
-        if(rebuilt)Rebuild();
-        if(rebuilt || !samePreview)RebuildPreview();
-        lastPreview=preview;
-        GeometryUtility.CalculateFrustumPlanes(camera, planes);
-        foreach (var batch in batches)DrawBatch(batch);
-        foreach (var batch in previewBatches)DrawBatch(batch);
-        void DrawBatch(Batch batch)
         {
-            int count=batch.Filtered!=null?batch.FilteredCount:batch.Count;
-            if(count==0)return;
-            float distanceSquared = batch.Bounds.SqrDistance(camera.transform.position);
-            bool visible = distanceSquared <= range * range && GeometryUtility.TestPlanesAABB(planes, batch.Bounds);
-            bool castsShadows = shadowRange > 0 && distanceSquared <= shadowRange * shadowRange;
-            // A roof/wall outside the camera view can still shade visible surfaces.
-            // Keep nearby casters in Unity's light culling without drawing their color/depth passes.
-            if (!visible && !castsShadows) return;
-            bool twoSided = batch.Material.HasProperty("_Cull") && batch.Material.GetFloat("_Cull") < .5f;
-            var parameters = new RenderParams(batch.Material) { camera = camera, worldBounds = batch.Bounds,
-                receiveShadows = true, shadowCastingMode = !visible ? ShadowCastingMode.ShadowsOnly :
-                    castsShadows ? (twoSided ? ShadowCastingMode.TwoSided : ShadowCastingMode.On) : ShadowCastingMode.Off };
-            Graphics.RenderMeshInstanced(parameters, batch.Mesh, 0, batch.Filtered??batch.Matrices, count);
+            samePreview=true;
+            foreach(var p in preview)
+                if(!lastPreview.TryGetValue(p.Key,out var old) || !p.Value.SameVisuals(old)){samePreview=false;break;}
+        }
+        bool changed=ApplyPending();
+        if(changed || !samePreview)RebuildPreview();
+        lastPreview=preview;
+        GeometryUtility.CalculateFrustumPlanes(camera,planes);
+        foreach(var group in groups.Values)DrawGroup(group,camera,range,shadowRange);
+        foreach(var group in previewGroups.Values)DrawGroup(group,camera,range,shadowRange);
+    }
+    private void DrawGroup(Group group,Camera camera,float range,float shadowRange)
+    {
+        foreach(var batch in group.Batches)
+        {
+            int count=batch.IsFiltered?batch.FilteredCount:batch.Count;
+            if(count==0)continue;
+            float distanceSquared=batch.Bounds.SqrDistance(camera.transform.position);
+            bool visible=distanceSquared<=range*range && GeometryUtility.TestPlanesAABB(planes,batch.Bounds);
+            bool castsShadows=shadowRange>0 && distanceSquared<=shadowRange*shadowRange;
+            if(!visible && !castsShadows)continue;
+            bool twoSided=group.Material.HasProperty("_Cull") && group.Material.GetFloat("_Cull")<.5f;
+            var parameters=new RenderParams(group.Material) { camera=camera,worldBounds=batch.Bounds,
+                receiveShadows=true,shadowCastingMode=!visible?ShadowCastingMode.ShadowsOnly:
+                    castsShadows?(twoSided?ShadowCastingMode.TwoSided:ShadowCastingMode.On):ShadowCastingMode.Off };
+            Graphics.RenderMeshInstanced(parameters,group.Mesh,0,batch.IsFiltered?batch.Filtered:batch.Matrices,count);
             DrawCalls++;
         }
     }
-    private void Rebuild()
+    private bool ApplyPending()
     {
-        using var scope = RebuildMarker.Auto();
-        BatchRebuilds++;
-        batches.Clear(); current.Clear();pieceBatches.Clear();hidden.Clear();
-        foreach (var piece in session.Pieces.Values)
+        if(pending.Count==0)return false;
+        using var scope=RebuildMarker.Auto();
+        BatchRebuilds++;LastUpdatedPieces=pending.Count;dirty.Clear();
+        foreach(ulong id in pending)
         {
+            if(pieceGroups.TryGetValue(id,out var previous))
+            {
+                foreach(var group in previous)
+                {
+                    CommittedInstanceCount-=group.Members[id].Count;
+                    group.Members.Remove(id);dirty.Add(group);
+                }
+                pieceGroups.Remove(id);
+            }
+            if(!session.TryGet(id,out var piece))continue;
             var state=piece.Resolved;
-            Add(piece,state!=null?state.mesh:BuildRoof.VisualMesh(piece,session));
-            if(state?.auxiliaryMesh!=null)Add(piece,state.auxiliaryMesh);
-            if(state!=null)foreach(var attachment in state.attachments)Add(piece,attachment.mesh,attachment.material,attachment.localMatrix);
+            AddCommitted(piece,state!=null?state.mesh:BuildRoof.VisualMesh(piece,session),piece.Definition.material,Matrix4x4.identity);
+            if(state==null)continue;
+            if(state.auxiliaryMesh!=null)AddCommitted(piece,state.auxiliaryMesh,piece.Definition.material,Matrix4x4.identity);
+            foreach(var a in state.attachments)AddCommitted(piece,a.mesh,a.material,a.localMatrix);
         }
-        revision = session.Revision;
+        pending.Clear();
+        foreach(var group in dirty)
+        {
+            LastRebuiltGroups++;
+            if(group.Members.Count==0){groups.Remove(group.Key);continue;}
+            RebuildGroup(group);Filter(group);
+        }
+        dirty.Clear();
+        return true;
+    }
+    private static Group AddPart(Dictionary<(Material,Mesh,Vector3Int),Group> target,BuildPieceRecord piece,Mesh mesh,Material material,Matrix4x4 local)
+    {
+        if(mesh==null || material==null)return null;
+        var matrix=Matrix4x4.TRS(piece.Origin,BuildGeometry.Rotation(piece.WorldYawStep),Vector3.one)*local;
+        var bounds=TransformBounds(mesh.bounds,matrix);
+        var key=(material,mesh,BuildGeometry.Cell(bounds.center));
+        if(!target.TryGetValue(key,out var group))target.Add(key,group=new Group { Key=key,Material=material,Mesh=mesh });
+        if(!group.Members.TryGetValue(piece.Id,out var parts))group.Members.Add(piece.Id,parts=new List<Part>());
+        parts.Add(new Part(piece.Id,matrix,bounds));
+        return group;
+    }
+    private void AddCommitted(BuildPieceRecord piece,Mesh mesh,Material material,Matrix4x4 local)
+    {
+        var group=AddPart(groups,piece,mesh,material,local);if(group==null)return;
+        if(!pieceGroups.TryGetValue(piece.Id,out var owned))pieceGroups.Add(piece.Id,owned=new HashSet<Group>());
+        owned.Add(group);dirty.Add(group);CommittedInstanceCount++;
+    }
+    private static void RebuildGroup(Group group)
+    {
+        foreach(var old in group.Batches){old.Count=0;old.IsFiltered=false;}
+        int index=0;Batch batch=null;
+        foreach(var parts in group.Members.Values)foreach(var part in parts)
+        {
+            if(batch==null || batch.Count==Capacity)
+            {
+                if(index==group.Batches.Count)group.Batches.Add(new Batch());
+                batch=group.Batches[index++];
+            }
+            batch.Ids[batch.Count]=part.Id;batch.Matrices[batch.Count++]=part.Matrix;
+            if(batch.Count==1)batch.Bounds=part.Bounds;else batch.Bounds.Encapsulate(part.Bounds);
+        }
+    }
+    private void Filter(Group group)
+    {
+        foreach(var batch in group.Batches)
+        {
+            batch.IsFiltered=false;
+            for(int i=0;i<batch.Count;i++)if(hidden.Contains(batch.Ids[i])){batch.IsFiltered=true;break;}
+            if(!batch.IsFiltered)continue;
+            batch.Filtered??=new Matrix4x4[Capacity];batch.FilteredCount=0;
+            for(int i=0;i<batch.Count;i++)if(!hidden.Contains(batch.Ids[i]))batch.Filtered[batch.FilteredCount++]=batch.Matrices[i];
+        }
     }
     private void RebuildPreview()
     {
-        dirtyBatches.Clear();
-        foreach(var id in hidden)if(pieceBatches.TryGetValue(id,out var old))foreach(var b in old)dirtyBatches.Add(b);
+        filterGroups.Clear();
+        foreach(ulong id in hidden)if(pieceGroups.TryGetValue(id,out var previous))filterGroups.UnionWith(previous);
         hidden.Clear();
         if(preview!=null)foreach(var pair in preview)if(session.TryGet(pair.Key,out _))
-        {hidden.Add(pair.Key);if(pieceBatches.TryGetValue(pair.Key,out var affected))foreach(var b in affected)dirtyBatches.Add(b);}
-        foreach(var b in dirtyBatches)
         {
-            b.Filtered??=new Matrix4x4[Capacity];b.FilteredCount=0;
-            for(int i=0;i<b.Count;i++)if(!hidden.Contains(b.Ids[i]))b.Filtered[b.FilteredCount++]=b.Matrices[i];
+            hidden.Add(pair.Key);
+            if(pieceGroups.TryGetValue(pair.Key,out var affected))filterGroups.UnionWith(affected);
         }
-        previewBatches.Clear();current.Clear();
+        foreach(var group in filterGroups)Filter(group);
+        filterGroups.Clear();previewGroups.Clear();PreviewInstanceCount=0;
         if(preview==null)return;
-        // Reuse Add's batching for the small overlay; stable village batches stay intact.
-        foreach(var pair in preview)if(session.TryGet(pair.Key,out var p))
+        foreach(var pair in preview)if(session.TryGet(pair.Key,out var piece))
         {
-            var state=pair.Value;Add(p,state.mesh,p.Definition.material,Matrix4x4.identity,true);
-            if(state.auxiliaryMesh!=null)Add(p,state.auxiliaryMesh,p.Definition.material,Matrix4x4.identity,true);
-            foreach(var a in state.attachments)Add(p,a.mesh,a.material,a.localMatrix,true);
+            var state=pair.Value;
+            AddPreview(piece,state.mesh,piece.Definition.material,Matrix4x4.identity);
+            if(state.auxiliaryMesh!=null)AddPreview(piece,state.auxiliaryMesh,piece.Definition.material,Matrix4x4.identity);
+            foreach(var a in state.attachments)AddPreview(piece,a.mesh,a.material,a.localMatrix);
         }
+        foreach(var group in previewGroups.Values)RebuildGroup(group);
     }
-    private void Add(BuildPieceRecord piece,Mesh mesh)
-        =>Add(piece,mesh,piece.Definition.material,Matrix4x4.identity);
-    private void Add(BuildPieceRecord piece,Mesh mesh,Material material,Matrix4x4 localMatrix,bool overlay=false)
+    private void AddPreview(BuildPieceRecord piece,Mesh mesh,Material material,Matrix4x4 local)
+    { if(AddPart(previewGroups,piece,mesh,material,local)!=null)PreviewInstanceCount++; }
+    public void Dispose()
     {
-        if(mesh==null || material==null)return;
-        var matrix=Matrix4x4.TRS(piece.Origin,BuildGeometry.Rotation(piece.WorldYawStep),Vector3.one)*localMatrix;
-        var visualBounds=TransformBounds(mesh.bounds,matrix);
-        var key=(material,mesh,BuildGeometry.Cell(visualBounds.center));
-        if(!current.TryGetValue(key,out var batch) || batch.Count==Capacity)
-        {batch=new Batch{Material=material,Mesh=mesh};current[key]=batch;(overlay?previewBatches:batches).Add(batch);}
-        batch.Ids[batch.Count]=piece.Id;batch.Matrices[batch.Count++]=matrix;
-        if(!overlay)
-        {
-            if(!pieceBatches.TryGetValue(piece.Id,out var owned))pieceBatches[piece.Id]=owned=new List<Batch>();
-            if(!owned.Contains(batch))owned.Add(batch);
-        }
-        if(batch.Count==1)batch.Bounds=visualBounds;else batch.Bounds.Encapsulate(visualBounds);
+        if(disposed)return;disposed=true;session.VisualChanged-=OnVisualChanged;
+        groups.Clear();previewGroups.Clear();pieceGroups.Clear();pending.Clear();hidden.Clear();
+        dirty.Clear();filterGroups.Clear();preview=null;lastPreview=null;
+        CommittedInstanceCount=PreviewInstanceCount=0;
     }
     public static Bounds TransformBounds(Bounds bounds,Matrix4x4 matrix)
     {

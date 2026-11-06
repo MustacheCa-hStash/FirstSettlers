@@ -32,20 +32,14 @@ public sealed class BuildDefinition : ScriptableObject
     public Mesh mesh;
     [Tooltip("Keep the imported mesh and its UVs intact instead of generating timber fitting or bearing geometry.")]
     public bool preserveAuthoredMesh;
-    [HideInInspector, Tooltip("Legacy asset metadata; free building does not require bearing coverage.")]
-    public bool requiresFullBearing;
     [Tooltip("Seeds the starting grid downward onto terrain. Free placement does not require foot contact.")]
     public bool canGroundOnTerrain;
     [Min(0),Tooltip("Replaces this depth of a matching full-height wall's top course; the storey datum stays unchanged.")]
     public float topCourseDepth;
-    [Tooltip("Seats the rear plane against an aimed wall face at that wall's base; structural bearing is checked separately.")]
+    [Tooltip("Seats the rear plane against an aimed wall face at that wall's base.")]
     public bool wallBaseAttachment;
     [Tooltip("Furniture attaches by its rear face instead of standing on its feet. Furniture never carries structural loads.")]
     public bool furnitureWallMounted;
-    [Tooltip("Legacy asset metadata; mounting support is not required for free placement.")]
-    public bool relaxedWallMount;
-    [Tooltip("Legacy authored foot or rear mounting samples. Free placement does not require supported contact.")]
-    public Vector3[] furnitureSupportPoints;
     [Tooltip("Authored solid sections around wall openings. Empty uses the full logical box unless convex volumes are supplied.")]
     public Bounds[] solidBoxes;
     [Tooltip("Clear apertures which generated junction framing must preserve.")]

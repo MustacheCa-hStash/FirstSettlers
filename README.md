@@ -1,5 +1,39 @@
 # FirstSettlers Work Notes
 
+## November 5: cliff and ice edge gilling
+
+Resolved the narrow cap/toe profiles on the canonical height grid, locally rounded
+rock-wall intersections, and corrected excessive steep-face normal interpolation.
+Steep ice faces also resolve their filtered rock/ice material transition. Tall
+walls, broad floors and partial travel openings remain. No new terrain meshes,
+control maps or texture assets were needed; the current scene seed 91 is preserved.
+See [cause, paired native views, LOD diagnostics and validation](Documentation/TERRAIN_EDGES.md).
+Restart Play Mode or regenerate terrain for the generator v7 lip geometry.
+
+## November 5: steeper cold cliffs and deeper blue ice
+
+Replaced the shared soft valley/wall profile with independently controlled floors,
+rock walls and ice fronts. Selected measured rock faces rise 77-83 m and ice faces
+about 40 m, while broad interiors and rocky travel benches remain usable. Added
+faceted irregular rims and selected partial openings, a slightly deeper blue ice
+tint, and a material slope guard against snow teeth on coarse distant controls.
+The scene's current seed 66 and customized settings are preserved. See the
+[before/after previews, seed 43 ground-view coordinates and validation](Documentation/GLACIAL_LANDFORMS.md).
+Restart Play Mode or regenerate terrain to apply generator v6.
+
+## November 5: snow regions, glacial valleys and solid ice
+
+Added regional cold catchments with broad travel/village floors, asymmetric
+shoulder benches, upper bowls, mountain passes, solid glacier tongues, exposed
+ice fronts, hanging ice ribbons and broken moraine patches. Snow-biome samples
+increased from 7.16% to 9.15% across four seeds; existing warm/dry eligibility
+and desert water exclusion remain covered by regression checks. New opaque
+blue-grey ice artwork and baked normal/height maps complement existing snow
+and stone. Terrain, collision, near/far views and excavation share the seeded
+canonical surface. See [landforms, settings, validation and native previews](Documentation/GLACIAL_LANDFORMS.md)
+and [texture sources and exact imagegen prompt](ArtReferences/GlacialIce/README.md).
+Restart Play Mode or regenerate terrain to see the new heights and surfaces.
+
 ## November 5: ridge artifacts, collision and broad uplands
 
 Fixed vertical fins in near-terrain LOD border stitching and stopped sharp

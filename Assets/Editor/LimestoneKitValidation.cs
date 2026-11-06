@@ -155,15 +155,15 @@ public static class LimestoneKitValidation
         using var session = new BuildSession();
         var origin = new Vector3(200 + yaw * 30, 30, 200); var q = BuildGeometry.Rotation(yaw);
         var frame = session.CreateFrame(origin, yaw);
-        var footing = session.Add(catalog.Find("build.prototype.foundation"), frame, default, 0, true);
-        var first = session.Add(d, frame, default, 0, false);
+        var footing = session.Add(catalog.Find("build.prototype.foundation"), frame, default, 0);
+        var first = session.Add(d, frame, default, 0);
         float width = d.LocalBounds.size.x;
         var stack = BuildPlacement.Solve(d, origin + q * new Vector3(width / 2, 3, 0), Vector3.up, first, session.Frame(first.OwnFrameId), yaw, 0, default);
         Near(stack.Origin, origin + Vector3.up * 3, "Three-metre stack datum");
         var end = BuildPlacement.Solve(d, origin + q * new Vector3(width, 1, 0), q * Vector3.right, first, session.Frame(first.OwnFrameId), yaw, 0, default);
         Near(end.Origin, origin + q * new Vector3(width, 0, 0), "Wall endpoint span");
-        var upper = session.Add(d, frame, new Vector3Int(0, 12, 0), 0, false);
-        Check(first.Supported && upper.Supported, "Stack lost foundation support");
+        var upper = session.Add(d, frame, new Vector3Int(0, 12, 0), 0);
+        Check(session.Pieces.ContainsKey(first.Id) && session.Pieces.ContainsKey(upper.Id), "Stack lost foundation support");
         foreach (var record in new[] { first, upper })
         {
             Check(Array.IndexOf(d.uvVariants, record.Resolved.mesh) >= 0, "Fitting replaced authored limestone");
@@ -181,7 +181,7 @@ public static class LimestoneKitValidation
             Check(Mathf.Abs(hit.distance - 1.875f) < .001f, "Wall thickness changed in collision");
         }
         session.Remove(footing.Id);
-        Check(first.Supported && upper.Supported, "Walls retained support after footing removal");
+        Check(session.Pieces.ContainsKey(first.Id) && session.Pieces.ContainsKey(upper.Id), "Walls retained support after footing removal");
     }
 
     private static void Render(BuildCatalog catalog)
@@ -239,7 +239,7 @@ public static class LimestoneKitValidation
             foreach (var renderer in renderers) renderer.enabled = false;
             using var session = new BuildSession(); var frame = session.CreateFrame(Vector3.zero, 1);
             for (int row = 0; row < 2; row++) for (int col = 0; col < 3; col++)
-                session.Add(catalog.Find(LimestoneKitSetup.Ids[col]), frame, new Vector3Int(col * 16, row * 12, 0), 0, false);
+                session.Add(catalog.Find(LimestoneKitSetup.Ids[col]), frame, new Vector3Int(col * 16, row * 12, 0), 0);
             var buildingRenderer = new BuildRenderer(session);
             try
             {

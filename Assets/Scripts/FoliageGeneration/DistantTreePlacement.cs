@@ -86,7 +86,7 @@ public static class DistantTreePlacement
                 biomes[x, z] = BiomeClassifier.Classify(center.Height, moisture[x, z], temperature[x, z],
                     slopes[x, z], center.MountainMask, center.RiverMask, waterLevel);
                 surfaces[x, z] = WorldLandforms.Surface(new float2(wx, wz), seed, sampleScale, center.Height,
-                    slopes[x, z], center.RiverMask, biomes[x, z], waterLevel, context.Erosion.landforms);
+                    slopes[x, z], center.RiverMask, biomes[x, z], waterLevel, context.Erosion.landforms,temperature[x,z]);
                 sampled[x, z] = true;
             }
             var plan = WorldFeaturePlanGenerator.GenerateTreePlacements(coord, chunkSize, seed,

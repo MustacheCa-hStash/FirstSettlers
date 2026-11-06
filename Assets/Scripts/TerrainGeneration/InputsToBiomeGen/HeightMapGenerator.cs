@@ -288,6 +288,7 @@ public static partial class HeightMapGenerator
             seed, waterLevel, erosion.landforms);
         height = WorldLandforms.FinishUplands(position, height, input.Height, input.LandformMask, seed, sampleScale,
             waterLevel, erosion.landforms);
+        height = WorldGlacialLandforms.Shape(position,input,height,sampleScale,seed,coverage,waterLevel,erosion);
         return new TerrainHeightSampleData(height, input.MountainMask, carvedRiverMask);
     }
     private static float CarveRiverBasin(float originalHeight, float basinInfluence, float riverMask, float waterLevel,

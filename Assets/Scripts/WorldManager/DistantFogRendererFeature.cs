@@ -53,7 +53,7 @@ public sealed class DistantFogRendererFeature : ScriptableRendererFeature
         struct Settings
         {
             public Matrix4x4 inverseVP;
-            public Vector4 camera, distance, height, shape, clear, wind, quality, color, fogTexel;
+            public Vector4 camera, forward, distance, height, shape, clear, wind, quality, color, fogTexel;
             public Texture3D noise;
         }
         class DrawData
@@ -94,6 +94,7 @@ public sealed class DistantFogRendererFeature : ScriptableRendererFeature
                 inverseVP = (GL.GetGPUProjectionMatrix(camera.GetProjectionMatrix(),
                     !resources.isActiveTargetBackBuffer || camera.targetTexture != null) * view).inverse,
                 camera = new Vector4(view.inverse.m03, view.inverse.m13, view.inverse.m23, camera.camera.orthographic ? 1 : 0),
+                forward = -view.inverse.GetColumn(2),
                 distance = new Vector4(Layer.startDistance, Mathf.Max(1, Layer.distanceFeather), Layer.maxDistance, Layer.density),
                 height = new Vector4(Layer.bottomHeight, Layer.topHeight, Layer.heightFeather, Layer.billowHeight),
                 shape = new Vector4(1f / Mathf.Max(1, Layer.noiseTileSize), Layer.noiseStrength, Layer.detailStrength, Layer.shading),
@@ -118,11 +119,11 @@ public sealed class DistantFogRendererFeature : ScriptableRendererFeature
             depthCopy.Render(graph, frameData, sceneDepth, resources.activeDepthTexture,
                 false, "FS.Fog.SceneDepth");
 
-            // An R8 coverage mask is enough because all water shares one world-space plane.
-            // Use actual water shader passes and camera depth: no phantom plane over dry land.
+            // Actual displaced-water eye depth; zero means uncovered. A float avoids
+            // quantizing distant water, and supports orthographic and mirrored views.
             var waterDesc = new TextureDesc(descriptor.width, descriptor.height)
             {
-                name = "Distant Fog Water Coverage", colorFormat = GraphicsFormat.R8_UNorm,
+                name = "Distant Fog Water Coverage", colorFormat = GraphicsFormat.R32_SFloat,
                 clearBuffer = true, clearColor = Color.clear, filterMode = FilterMode.Point,
                 dimension = descriptor.dimension, slices = descriptor.volumeDepth
             };
@@ -178,6 +179,7 @@ public sealed class DistantFogRendererFeature : ScriptableRendererFeature
             var s = data.settings;
             Properties.SetMatrix("_FogInverseVP", s.inverseVP);
             Properties.SetVector("_FogCamera", s.camera);
+            Properties.SetVector("_FogViewForward", s.forward);
             Properties.SetVector("_FogDistance", s.distance);
             Properties.SetVector("_FogHeight", s.height);
             Properties.SetVector("_FogShape", s.shape);

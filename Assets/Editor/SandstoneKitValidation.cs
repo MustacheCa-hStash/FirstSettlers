@@ -199,7 +199,7 @@ public static class SandstoneKitValidation
                 Check(world.Remove(piece.Id), "Removal failed");
             }
             var wall = c.Find("build.stone.ss01-bedded-sandstone");
-            var baseWall = world.Session.Add(wall, world.Session.CreateFrame(origin, yaw), default, 0, false);
+            var baseWall = world.Session.Add(wall, world.Session.CreateFrame(origin, yaw), default, 0);
             var stack = BuildPlacement.Solve(wall, origin + q * new Vector3(2, 3, 0), Vector3.up, baseWall, world.Session.Frame(baseWall.OwnFrameId), yaw, 0, default);
             world.Validate(ref stack); Check(stack.Valid, "Wall stacking rejected"); Near(stack.Origin, origin + Vector3.up * 3, "3 m sandstone storey datum");
             foreach (var d in new[] { c.Find("build.stone.ss11-sandstone-gable-rising"), c.Find("build.stone.ss11-sandstone-gable-rising").flipVariant })
@@ -272,7 +272,7 @@ public static class SandstoneKitValidation
             Capture(cam, target, "sandstone-unity-overview.png"); foreach (var ob in objects) ob.SetActive(false);
             using var session = new BuildSession(); var frame = session.CreateFrame(Vector3.zero, 0); int index = 0;
             foreach (var p in SandstoneKitSetup.Source().parts)
-            { if (p.slope == "falling") continue; session.Add(c.Find(SandstoneKitSetup.Id(p.slug)), frame, new Vector3Int(index % 4 * 24, 0, index / 4 * 24), 0, false); index++; }
+            { if (p.slope == "falling") continue; session.Add(c.Find(SandstoneKitSetup.Id(p.slug)), frame, new Vector3Int(index % 4 * 24, 0, index / 4 * 24), 0); index++; }
             var renderer = new BuildRenderer(session); cam.cullingMask = ~0;
             submit = (_, camera) => { if (camera == cam) renderer.Draw(cam, 150, 0); };
             RenderPipelineManager.beginCameraRendering += submit; Capture(cam, target, "sandstone-instanced.png");

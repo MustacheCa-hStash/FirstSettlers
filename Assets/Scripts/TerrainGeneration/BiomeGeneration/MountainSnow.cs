@@ -46,8 +46,8 @@ public static class MountainSnow
         float altitude = math.smoothstep(line - 0.35f, line + 1.35f, height);
         // Broad snowfields on benches, exposed rock on headwalls. Concave terrain can retain
         // snow on steeper slopes; convex crests shed it. Reuse the four existing height samples.
-        // Nominal taper: 40 to 75 degrees (still generous for the exaggerated terrain).
-        float retention = math.smoothstep(0.2588f, 0.7660f, normal.y + shelter * 0.12f);
+        // Nominal taper: 35 to 70 degrees, preserving broad benches while opening headwalls.
+        float retention = math.smoothstep(0.3420f, 0.8192f, normal.y + shelter * 0.12f);
         float exposed = 1f - math.saturate(-shelter) * 0.3f;
         // Resolve the accumulation into snow / rock patches with a narrow soft margin,
         // instead of a persistent gray mixture across the whole mountainside.
@@ -122,8 +122,11 @@ public static class MountainSnow
         }
     }
 
-    public static void Apply(ref Color32 map0, ref Color32 map1, float2 snow, float renderCoverageGamma = DefaultRenderCoverageGamma)
+    public static void Apply(ref Color32 map0, ref Color32 map1, float2 snow, float renderCoverageGamma = DefaultRenderCoverageGamma, bool exposedIce = false)
     {
+        // Exposed ice/moraine windows were selected by the seeded glacier plan. Surrounding
+        // snowfields still use ordinary accumulation; do not paint these windows white.
+        if (exposedIce) return;
         if (snow.y <= 0f) return;
         float coverage = RenderCoverage(snow.x, renderCoverageGamma);
         float4 a = new float4(map0.r, map0.g, map0.b, map0.a) / 255f;

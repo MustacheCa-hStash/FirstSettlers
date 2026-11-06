@@ -442,11 +442,11 @@ public class FoliageManager
             if (useRocks)
             {
                 EnsureRocksGenerated(record);
-                RebuildRockGameObjectsIfNeeded(runtime, record);
+                RebuildRocksIfNeeded(runtime, record);
             }
             else
             {
-                runtime.FoliageRuntime.ClearRockGameObjects();
+                runtime.FoliageRuntime.ClearRocks();
             }
         }
 
@@ -663,7 +663,7 @@ public class FoliageManager
                 runtime.FoliageRuntime.AccumulateBushGameObjectRenderStats(ref stats);
 
         }
-        stats.RockGameObjects = rockRenderer.VisibleGeometry;
+        stats.Rocks = rockRenderer.VisibleGeometry;
     }
 
     private void EnsureTreesGenerated(ChunkRecord record) => placement.EnsureTreesGenerated(record);
@@ -683,7 +683,7 @@ public class FoliageManager
             EnqueueFoliageBatchRebuild(record, FoliagePublicationKind.Bush);
     }
 
-    private void RebuildRockGameObjectsIfNeeded(ChunkRuntime runtime, ChunkRecord record)
+    private void RebuildRocksIfNeeded(ChunkRuntime runtime, ChunkRecord record)
     {
         if (!runtime.FoliageRuntime.HasCurrentRockRepresentation())
             EnqueueFoliageBatchRebuild(record, FoliagePublicationKind.Rock);

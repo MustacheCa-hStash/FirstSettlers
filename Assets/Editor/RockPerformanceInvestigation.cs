@@ -102,7 +102,7 @@ public static class RockPerformanceInvestigation
                 groups.Add((mesh,prefab.GetComponent<MeshRenderer>().sharedMaterial));
                 set.Add(prefab,rock,chunkRoot.transform);
             }
-            set.Finish();renderSets.Add(set);worldRenderer.Register(set);collisionPool.Register(set);
+            renderSets.Add(set);worldRenderer.Register(set);collisionPool.Register(set);
             float bh=Mathf.Max(200,g.MeshHeightMultiplier*2+100);chunkBounds.Add(new Bounds(new Vector3(chunkRoot.transform.position.x,bh*.5f,chunkRoot.transform.position.z),new Vector3(size*g.WorldScale,bh,size*g.WorldScale)));
             chunkCounts.Add(count);chunkVertices.Add(cv);actualCalls+=groups.Count;
             if(++index%16==0)Debug.Log($"ROCK_INVESTIGATION_PROGRESS: {index}/{coords.Count} actual world chunks");
@@ -146,8 +146,49 @@ public static class RockPerformanceInvestigation
         worldRenderer.Dispose();UnityEngine.Object.DestroyImmediate(cameraObject);
         File.WriteAllText(".utmp/rocks/performance-investigation.txt",report.ToString());Debug.Log("ROCK_PERFORMANCE_REPORT\n"+report);
     }
+    // Historical per-chunk rendering is retained only for the explicit editor A/B benchmark.
+    // Runtime publication keeps one set of instance records for the world renderer.
+    private sealed class LegacyRockBatches
+    {
+        private readonly struct Batch
+        {
+            public readonly Mesh Mesh;
+            public readonly Material Material;
+            public readonly int Submesh;
+            public readonly Matrix4x4[] Matrices;
+            public Batch(Mesh mesh,Material material,int submesh,Matrix4x4[] matrices)
+            { Mesh=mesh;Material=material;Submesh=submesh;Matrices=matrices; }
+        }
+        private readonly List<Batch> batches=new();
+        public LegacyRockBatches(RockRenderSet source)
+        {
+            var groups=new Dictionary<(Mesh,Material,int),List<Matrix4x4>>();
+            foreach(var visual in source.Visuals)
+            {
+                var key=(visual.Mesh,visual.Material,visual.Submesh);
+                if(!groups.TryGetValue(key,out var matrices))groups.Add(key,matrices=new());
+                matrices.Add(visual.Matrix);
+            }
+            foreach(var group in groups)
+                for(int start=0;start<group.Value.Count;start+=1023)
+                {
+                    int count=Mathf.Min(1023,group.Value.Count-start);
+                    var matrices=new Matrix4x4[count];group.Value.CopyTo(start,matrices,0,count);
+                    batches.Add(new Batch(group.Key.Item1,group.Key.Item2,group.Key.Item3,matrices));
+                }
+        }
+        public void Draw(bool visible,bool shadows)
+        {
+            if(!visible&&!shadows)return;
+            foreach(var batch in batches)
+                Graphics.DrawMeshInstanced(batch.Mesh,batch.Submesh,batch.Material,batch.Matrices,
+                    batch.Matrices.Length,null,visible?(shadows?ShadowCastingMode.On:ShadowCastingMode.Off)
+                        :ShadowCastingMode.ShadowsOnly,true,GameplayLayers.WorldSolid);
+        }
+    }
     private static void Benchmark(StringBuilder report,RockWorldRenderer renderer,List<RockRenderSet> sets,List<Bounds> bounds,Camera camera,Vector3 focus,float padding)
     {
+        var legacy=sets.Select(set=>new LegacyRockBatches(set)).ToArray();
         var target=new RenderTexture(1280,720,24);target.Create();
         var previousPipeline=GraphicsSettings.defaultRenderPipeline;var previousQuality=QualitySettings.renderPipeline;
         bool previousAsync=ShaderUtil.allowAsyncCompilation;
@@ -163,7 +204,7 @@ public static class RockPerformanceInvestigation
                 for(int i=0;i<sets.Count;i++)
                 {
                     bool visible=GeometryUtility.TestPlanesAABB(planes,bounds[i]);var bound=bounds[i];bound.Expand(new Vector3(padding*2,0,padding*2));
-                    bool shadows=GeometryUtility.TestPlanesAABB(planes,bound);sets[i].Draw(visible,shadows);
+                    bool shadows=GeometryUtility.TestPlanesAABB(planes,bound);legacy[i].Draw(visible,shadows);
                 }
             }
             else if(mode==2)renderer.Draw(focus,camera);

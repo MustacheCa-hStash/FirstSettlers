@@ -3,6 +3,7 @@
 // Visual counterpart of WorldLandforms.Noise/Desert. Defaults to no tint outside a live world.
 int _WorldLandformSeed;
 float4 _WorldLandformParams; // enabled, sample scale in metres, desert region scale, world scale
+float4 _WorldGlacialParams; // strength/enabled, water world Y, reserved, reserved
 
 float FSLandformSigned(int2 cell, int seed)
 {
@@ -31,6 +32,17 @@ float2 FSRegionalGeology(float2 positionWS)
     float sediment = smoothstep(-0.35, 0.30,
         FSLandformNoise(positionWS, scale * 5.0, _WorldLandformSeed + 82001));
     return float2(dry, sediment);
+}
+float FSColdProvince(float2 positionWS)
+{
+    if(_WorldGlacialParams.x<=0.0 || _WorldLandformParams.x<0.5)return 0;
+    float scale=_WorldLandformParams.y;
+    float dry=FSRegionalGeology(positionWS).x;
+    float wet=1.0-smoothstep(.015,.15,dry);
+    [branch] if(wet<=0.0)return 0;
+    float n=FSLandformNoise(positionWS,scale*16.0,_WorldLandformSeed+91001)+
+        FSLandformNoise(positionWS,scale*5.5,_WorldLandformSeed+91002)*.12;
+    return smoothstep(.28,.72,n)*wet*_WorldGlacialParams.x;
 }
 float3 FSRegionalRockTint(float3 positionWS)
 {

@@ -104,7 +104,7 @@ public static class RockPresetValidation
         try
         {
             var set=new RockRenderSet();
-            set.Add(prefab,new RockInstanceData(Vector3.zero,Quaternion.identity,Vector3.one,WorldFeatureVariant.GrasslandBoulder,0),root.transform);set.Finish();pool.Register(set);
+            set.Add(prefab,new RockInstanceData(Vector3.zero,Quaternion.identity,Vector3.one,WorldFeatureVariant.GrasslandBoulder,0),root.transform);pool.Register(set);
             pool.Update(Vector3.zero,0);Check(pool.ActiveCount==1,"Near activation");
             var query=Object.FindObjectsByType<RockQueryTarget>().Single(q=>q.gameObject.scene.IsValid());
             query.TryGetInfo(out var oldInfo);
@@ -119,7 +119,7 @@ public static class RockPresetValidation
             Check(!oldInfo.IsValid,"Old identity revived after reuse");
             pool.Unregister(set);Check(pool.ActiveCount==0,"Stream unload did not release bodies");
             var snowSet=new RockRenderSet();snowSet.Add(Resources.Load<GameObject>("Rocks/Fieldstone_Snow"),
-                set.Entries[0].Placement,root.transform);snowSet.Finish();pool.Register(snowSet);
+                set.Entries[0].Placement,root.transform);pool.Register(snowSet);
             pool.Update(Vector3.zero,.9);Check(pool.CreatedCount==1 && pool.ActiveCount==1,"Snow/bare coatings did not share the hull pool");
             pool.Unregister(snowSet);
             root.SetActive(true);
@@ -127,13 +127,13 @@ public static class RockPresetValidation
             var runtime=new ChunkFoliageRuntime{root=root.transform,RockPool=pool,grasslandRockPrefabs=new[]{prefab}};
             var placements=new List<RockInstanceData>();
             for(int i=0;i<1040;i++)placements.Add(new RockInstanceData(new Vector3(i*2,0,0),Quaternion.identity,Vector3.one,WorldFeatureVariant.GrasslandBoulder,0));
-            runtime.RebuildRockGameObjects(placements,root.transform);
+            runtime.RebuildRocks(placements,root.transform);
             Check(runtime.RockInstanceCount==1040,"1023 instance boundary");
             Check(Object.FindObjectsByType<Transform>().Length==objectsBefore,"Publication created per-rock GameObjects");
-            var stats=new WorldRenderStatsDebugInfo();runtime.AccumulateRockGameObjectRenderStats(ref stats);
-            Check(stats.RockGameObjects.instances==1040 && stats.RockGameObjects.triangles==1040*320,"Instanced geometry stats");
+            var stats=new WorldRenderStatsDebugInfo();runtime.AccumulateRockRenderStats(ref stats);
+            Check(stats.Rocks.instances==1040 && stats.Rocks.triangles==1040*320,"Instanced geometry stats");
             pool.Update(Vector3.zero,1);pool.Update(Vector3.zero,1.2);Check(pool.ActiveCount<=4,"Active body cap");
-            runtime.ClearRockGameObjects();Check(pool.ActiveCount==0 && pool.PooledCount<=2,"Unload and retained pool cap");
+            runtime.ClearRocks();Check(pool.ActiveCount==0 && pool.PooledCount<=2,"Unload and retained pool cap");
         }
         finally{Object.DestroyImmediate(root);}
     }
@@ -159,7 +159,7 @@ public static class RockPresetValidation
             // Identity chunk transform, independent of the preview camera's transform.
             set.Add(prefab,placement,chunk.transform);
         }
-        set.Finish();
+
         using var worldRenderer=new RockWorldRenderer(new TreeSettings());worldRenderer.Register(set);
         Action<ScriptableRenderContext,Camera> submit=(_,c)=>{if(c==camera)worldRenderer.Draw(new Vector3(5,0,4),camera);};
         try

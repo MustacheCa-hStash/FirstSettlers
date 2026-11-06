@@ -24,7 +24,6 @@ MonoBehaviour:
   wallEndInsetUnits: 0
   mesh: {fileID: -3386271749471768455, guid: 3d5e956b2662d984b96fe7982eeeca2c, type: 3}
   preserveAuthoredMesh: 1
-  requiresFullBearing: 1
   solidBoxes: []
   wallOpenings: []
   gableSlope: 0

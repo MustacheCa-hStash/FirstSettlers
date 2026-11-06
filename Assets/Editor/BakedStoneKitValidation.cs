@@ -166,7 +166,7 @@ public static class BakedStoneKitValidation
             using var session = new BuildSession(); var frame = session.CreateFrame(Vector3.zero, 1);
             for (int i = 0; i < definitions.Length; i++)
                 for (int variation = 0; variation < 3; variation++)
-                    session.Add(definitions[i], frame, new Vector3Int(i * 24, 0, variation * 22), 0, false);
+                    session.Add(definitions[i], frame, new Vector3Int(i * 24, 0, variation * 22), 0);
             var buildRenderer = new BuildRenderer(session);
             var rotation = BuildGeometry.Rotation(1);
             camera.orthographicSize = 13; camera.transform.position = rotation * new Vector3(26, 22, -28);

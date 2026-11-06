@@ -38,8 +38,8 @@ public static class StairExtensionValidation
         var controller=host.AddComponent<BuildingController>();controller.enabled=false;
         try
         {
-            world.Session.Add(c.presets[2],f,default,0,true);world.Session.Add(c.presets[0],f,default,0,false);world.Session.Add(c.presets[1],f,new Vector3Int(0,12,0),0,false);
-            var fixedFrame=world.Session.CreateFrame(f.Origin+q*new Vector3(1.375f,3,0),yaw);var fixedStair=world.Session.Add(fixedDefinition,fixedFrame,default,0,false);C(fixedStair.Supported,"Controller fixture stair unsupported");
+            world.Session.Add(c.presets[2],f,default,0);world.Session.Add(c.presets[0],f,default,0);world.Session.Add(c.presets[1],f,new Vector3Int(0,12,0),0);
+            var fixedFrame=world.Session.CreateFrame(f.Origin+q*new Vector3(1.375f,3,0),yaw);var fixedStair=world.Session.Add(fixedDefinition,fixedFrame,default,0);C(world.Session.Pieces.ContainsKey(fixedStair.Id),"Placed construction missing from session: fixedStair");
             typeof(BuildingController).GetField("viewCamera",fields).SetValue(controller,camera);typeof(BuildingController).GetMethod("Start",fields).Invoke(controller,null);
             controller.enabled=true;controller.Toggle();controller.Select(selectedDefinition);
             Stream(world);
@@ -72,7 +72,7 @@ public static class StairExtensionValidation
         var s=w.Session;var f=s.CreateFrame(host.transform.position,yaw);var q=BuildGeometry.Rotation(yaw);GameObject ground=null;TerrainData terrainData=null;
         try
         {
-            s.Add(c.presets[2],f,default,0,true);s.Add(c.presets[0],f,default,0,false);var floor=s.Add(c.presets[1],f,new Vector3Int(0,12,0),0,false);C(floor.Supported,"Fixture floor unsupported");
+            s.Add(c.presets[2],f,default,0);s.Add(c.presets[0],f,default,0);var floor=s.Add(c.presets[1],f,new Vector3Int(0,12,0),0);C(s.Pieces.ContainsKey(floor.Id),"Placed construction missing from session: floor");
             var downward=BuildPlacement.Solve(d,f.Origin+q*new Vector3(2,2.75f,.1f),Vector3.down,floor,s.Frame(floor.OwnFrameId),0,0,default);
             Near(BuildStairAttachment.High(new BuildPieceRecord{Definition=d,Origin=downward.Origin,WorldYawStep=(byte)downward.WorldYaw}),f.Origin+q*new Vector3(2,3,0),"Underside floor snap must use high end and walking level");
             var fixedStair=w.Commit(downward);C(fixedStair!=null,"Underside descending placement failed");
@@ -85,7 +85,7 @@ public static class StairExtensionValidation
             foreach(float segment in d.LocalBounds.size.z>2.01f?new[]{0f,2f}:new[]{0f})foreach(bool left in new[]{true,false})
             {
                 var snap=BuildPlacement.Solve(rail,fixedStair.Origin+q*new Vector3(left?0:1.25f,segment*.75f,segment+.5f),q*(left?Vector3.left:Vector3.right),fixedStair,s.Frame(fixedStair.OwnFrameId),0,0,default);
-                var r=w.Commit(snap);C(r!=null && r.Supported,"Side handrail rejected");Near(r.Origin,fixedStair.Origin+q*new Vector3(left?-.1875f:1.1875f,segment*.75f,segment),"Rail intrudes into walking width");rails.Add(r);
+                var r=w.Commit(snap);C(r!=null && s.Pieces.ContainsKey(r.Id),"Side handrail rejected");Near(r.Origin,fixedStair.Origin+q*new Vector3(left?-.1875f:1.1875f,segment*.75f,segment),"Rail intrudes into walking width");rails.Add(r);
             }
             Stream(w);
             foreach(var r in rails){C(w.TryGetCollisionProxy(r.Id,out var p),"Rail proxy missing");var colliders=new List<Collider>();p.GetEnabledColliders(colliders);C(colliders.Count==3 && p.Shape==null,"Rail collision filled its envelope");}
@@ -94,9 +94,9 @@ public static class StairExtensionValidation
             // Ground is a true TerrainCollider, with a flat top 2m above the fixture's foundation datum.
             terrainData=new TerrainData{heightmapResolution=33,size=new Vector3(32,5,32)};var heights=new float[33,33];for(int x=0;x<33;x++)for(int z=0;z<33;z++)heights[x,z]=1;
             terrainData.SetHeights(0,0,heights);ground=Terrain.CreateTerrainGameObject(terrainData);ground.layer=GameplayLayers.WorldSolid;ground.transform.position=f.Origin+new Vector3(-16,-3,-16);Physics.SyncTransforms();
-            fixedStair=w.Commit(downward);C(fixedStair!=null,"Attached flight intersecting terrain rejected");C(fixedStair.Supported && !fixedStair.Grounded,"Terrain grounded stair instead of building attachment");
+            fixedStair=w.Commit(downward);C(fixedStair!=null,"Attached flight intersecting terrain rejected");C(s.Pieces.ContainsKey(fixedStair.Id),"Placed construction missing from session: fixedStair");
             below=BuildPlacement.Solve(other,fixedStair.Origin+q*new Vector3(.625f,0,.5f),Vector3.down,fixedStair,s.Frame(fixedStair.OwnFrameId),0,0,default);
-            var buriedLower=w.Commit(below);C(buriedLower!=null && buriedLower.Supported && !buriedLower.Grounded,"A buried toe lost its structural attachment or terrain granted a stair grounding");w.Remove(buriedLower.Id);
+            var buriedLower=w.Commit(below);C(buriedLower!=null && s.Pieces.ContainsKey(buriedLower.Id),"Placed construction missing from session: buriedLower");w.Remove(buriedLower.Id);
             var upper=BuildPlacement.Solve(other,fixedStair.Origin+q*new Vector3(.625f,d.LocalBounds.size.y,d.LocalBounds.size.z),Vector3.up,fixedStair,s.Frame(fixedStair.OwnFrameId),0,0,default);
             var extension=w.Commit(upper);C(extension!=null,"Exposed high end of partly buried stair rejected");w.Remove(extension.Id);
             var terrainStart=BuildPlacement.Solve(d,f.Origin+q*new Vector3(2,2,0),Vector3.up,null,null,yaw,0,default);w.Validate(ref terrainStart);C(terrainStart.Valid && terrainStart.Failure==BuildPlacementFailure.None,"Direct terrain start accepted");
@@ -109,17 +109,17 @@ public static class StairExtensionValidation
             Object.DestroyImmediate(ground);Object.DestroyImmediate(terrainData);ground=GameObject.CreatePrimitive(PrimitiveType.Cube);ground.layer=GameplayLayers.WorldSolid;ground.AddComponent<WorldGroundSurface>();ground.transform.position=f.Origin+Vector3.down*1.5f;ground.transform.localScale=new Vector3(32,7,32);Physics.SyncTransforms();
             fixedStair=w.Commit(downward);C(fixedStair!=null,"Marked streamed terrain embedding rejected");
             // Underside roof aim must be handled by stair logic before generic roof placement.
-            var roof=s.Add(c.Find(ThatchRoofSetup.ContentId),f,new Vector3Int(0,12,0),0,false);
+            var roof=s.Add(c.Find(ThatchRoofSetup.ContentId),f,new Vector3Int(0,12,0),0);
             var underRoof=BuildPlacement.Solve(d,roof.Origin+q*new Vector3(2,1,1),q*new Vector3(0,-1,1).normalized,roof,s.Frame(roof.OwnFrameId),0,0,default);
             var roofStair=w.Commit(underRoof);C(roofStair!=null && underRoof.Hint.Contains("under roof"),"Roof underside did not place downward stair");
             Near(BuildStairAttachment.High(roofStair),roof.Origin+q*new Vector3(2,1,1),"Roof underside socket");
             // Terrain overlap is unrestricted, including a completely hidden flight.
             w.Remove(fixedStair.Id);ground.transform.position=f.Origin+Vector3.up;Physics.SyncTransforms();var buried=downward;
-            var hidden=w.Commit(buried);C(hidden!=null && hidden.Supported && !hidden.Grounded,"Fully buried stair lost its existing attachment");w.Remove(hidden.Id);
+            var hidden=w.Commit(buried);C(hidden!=null && s.Pieces.ContainsKey(hidden.Id),"Fully buried stair lost its existing attachment");w.Remove(hidden.Id);
             var infill=w.Commit(At(c.Find(SquareInfillSetup.Id),f,new Vector3(.5f,0,0)));
-            C(infill!=null && infill.Supported && !infill.Grounded,"Supported wall fully embedded in marked terrain rejected");w.Remove(infill.Id);
+            C(infill!=null && s.Pieces.ContainsKey(infill.Id),"Placed construction missing from session: infill");w.Remove(infill.Id);
             Object.DestroyImmediate(ground);ground=GameObject.CreatePrimitive(PrimitiveType.Plane);ground.layer=GameplayLayers.WorldSolid;ground.AddComponent<WorldGroundSurface>();ground.transform.position=f.Origin+Vector3.up*40;Physics.SyncTransforms();
-            var caveFlight=w.Commit(downward);C(caveFlight!=null && caveFlight.Supported,"A high cave ceiling was treated as solid terrain at the stair");
+            var caveFlight=w.Commit(downward);C(caveFlight!=null && s.Pieces.ContainsKey(caveFlight.Id),"A high cave ceiling was treated as solid terrain at the stair");
         }
         finally{if(ground!=null)Object.DestroyImmediate(ground);if(terrainData!=null)Object.DestroyImmediate(terrainData);Object.DestroyImmediate(host);Physics.SyncTransforms();}
     }

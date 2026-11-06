@@ -75,14 +75,6 @@ public sealed class BuildGameplayProxy : QueryTarget
                 collider.sharedMesh=record.Definition.occupiedVolumes[i].mesh; collider.enabled=true;
             }
         }
-        else if (record.Definition.kind == BuildPartKind.Stair)
-        {
-            RampShape ??= gameObject.AddComponent<MeshCollider>();
-            RampShape.convex = true; RampShape.isTrigger = false;
-            if (RampShape.sharedMesh != record.Definition.collisionMesh) RampShape.sharedMesh = record.Definition.collisionMesh;
-            RampShape.enabled = true;
-            smoothWalk ??= gameObject.AddComponent<SmoothWalkSurface>(); smoothWalk.enabled = true;
-        }
         else
         {
             Shape ??= gameObject.AddComponent<BoxCollider>();

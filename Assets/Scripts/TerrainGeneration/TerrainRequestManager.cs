@@ -242,7 +242,7 @@ public class TerrainRequestManager : System.IDisposable
                         mapHeight,
                         waterSettings.WaterLevel,
                         Allocator.Persistent,
-                        out nativeSurfaces, chunkCoord, chunkSize, seed, sampleScale, erosion.landforms);
+                        out nativeSurfaces, chunkCoord, chunkSize, seed, sampleScale, erosion.landforms,nativeTemperatures);
                     TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainSurfaceMap, stageStart);
 
                     stageStart = TerrainGenerationProfiler.GetTimestamp();
@@ -514,12 +514,15 @@ public class TerrainRequestManager : System.IDisposable
             TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.TerrainMeshBuild, stageStart);
 
             stageStart = TerrainGenerationProfiler.GetTimestamp();
-            WaterMeshData waterMeshData = WaterMeshGenerator.GenerateWaterMesh(
+            WaterMeshData waterMeshData = workItem.LOD <= 2 ? WaterMeshGenerator.GenerateWaveMesh(
                 workItem.NativeData.WaterStateMap,
+                workItem.NativeData.HeightMap,
                 workItem.NativeData.WaterStateMapWidth,
-                workItem.StepIncrement,
                 workItem.WorldScale,
-                workItem.Manager.waterSettings.SurfaceY);
+                workItem.MeshHeightMultiplier,
+                workItem.Manager.waterSettings.SurfaceY) : WaterMeshGenerator.GenerateWaterMesh(
+                    workItem.NativeData.WaterStateMap, workItem.NativeData.WaterStateMapWidth,
+                    workItem.StepIncrement, workItem.WorldScale, workItem.Manager.waterSettings.SurfaceY);
             TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.WaterMeshBuild, stageStart);
 
             MeshRequestResult result = new MeshRequestResult(

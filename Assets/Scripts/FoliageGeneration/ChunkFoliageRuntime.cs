@@ -177,7 +177,7 @@ public class ChunkFoliageRuntime
         cloverRenderBatches = new(); dandelionRenderBatches = new();
         hasBuiltFlowerRenderData = hasBuiltLilyPadRenderData = hasBuiltCattailRenderData = false;
         hasBuiltCloverRenderData = hasBuiltDandelionRenderData = false;
-        ClearBushGameObjects(); ClearRockGameObjects(); TreePlacementReady = false;
+        ClearBushGameObjects(); ClearRocks(); TreePlacementReady = false;
     }
     internal void PublishFlowers(List<FlowerRenderBatch> batches) { foreach(var old in flowerRenderBatches)RetireBuildingBatch(old.matrices);flowerRenderBatches = batches; hasBuiltFlowerRenderData = true;SmallBatchesChanged(); }
     internal void PublishClover(List<CloverRenderBatch> batches) { foreach(var old in cloverRenderBatches)RetireBuildingBatch(old.matrices);cloverRenderBatches = batches; hasBuiltCloverRenderData = true;SmallBatchesChanged(); }
@@ -251,12 +251,7 @@ public class ChunkFoliageRuntime
             using (RockAddMarker.Auto()) staging.Add(GetRockPrefab(instance.variant, instance.prefabIndex), instance, root);
             yield return true;
         }
-        if (RockRenderer == null)
-        {
-            using var batches = staging.FinishIncrementally();
-            while (batches.MoveNext()) yield return true;
-        }
-        using (RockClearMarker.Auto()) ClearRockGameObjects();
+        using (RockClearMarker.Auto()) ClearRocks();
         rockRenderSet = staging;
         using (RockColliderMarker.Auto()) RockPool?.Register(staging);
         staging.Enabled = rangeVisible;
@@ -270,7 +265,7 @@ public class ChunkFoliageRuntime
     }
 #if UNITY_EDITOR
     // Authoring fixtures drain the production iterator; there is no alternate object builder.
-    public void RebuildRockGameObjects(List<RockInstanceData> instances, Transform chunkRoot)
+    public void RebuildRocks(List<RockInstanceData> instances, Transform chunkRoot)
     {
         if (root == null || chunkRoot == null) return;
         using var work = BuildRocksIncrementally(instances);
@@ -346,19 +341,6 @@ public class ChunkFoliageRuntime
         return dandelionMesh != null && dandelionMaterial != null && hasBuiltDandelionRenderData;
     }
 
-    public bool HasBushGameObjects()
-    {
-        return bushGameObjects.Count > 0;
-    }
-
-    public bool HasRockGameObjects()
-    {
-        // Kept for callers of the legacy API: generated rendering now owns instance data only.
-        return RockInstanceCount > 0;
-    }
-
-    public void DrawRocks() => rockRenderSet?.Draw(isVisible, rangeVisible && shadowCasterVisible);
-
     public void AccumulateFlowerRenderStats(ref WorldRenderStatsDebugInfo stats)
     {
         AccumulateFlowerStats(ref stats.Flowers);
@@ -399,10 +381,10 @@ public class ChunkFoliageRuntime
         AccumulateGameObjectStats(bushGameObjects, ref stats.BushGameObjects);
     }
 
-    public void AccumulateRockGameObjectRenderStats(ref WorldRenderStatsDebugInfo stats)
+    public void AccumulateRockRenderStats(ref WorldRenderStatsDebugInfo stats)
     {
-        // Preserve the debug bucket while reporting the actual instanced geometry.
-        rockRenderSet?.Accumulate(ref stats.RockGameObjects);
+        // Authoring fixtures report resident geometry; the world renderer reports culled LOD geometry.
+        rockRenderSet?.Accumulate(ref stats.Rocks);
     }
 
     private bool CacheGrassRenderBatches(
@@ -725,7 +707,7 @@ public class ChunkFoliageRuntime
         bushGameObjectRoot = null; bushGameObjects = new(); hasCurrentBushRepresentation = false;
     }
 
-    public void ClearRockGameObjects()
+    public void ClearRocks()
     {
         RockPool?.Unregister(rockRenderSet);
         RockRenderer?.Unregister(rockRenderSet);
@@ -739,43 +721,11 @@ public class ChunkFoliageRuntime
         hasBuiltFlowerRenderData = false;
     }
 
-    public void CacheLilyPadBatches(List<Matrix4x4> matrices)
-    {
-        suppressionDirty=true;
-        foreach(var old in lilyPadRenderBatches)RetireBuildingBatch(old);
-        lilyPadRenderBatches.Clear();
-        const int maxBatchSize = 1023;
-        for (int start = 0; start < matrices.Count; start += maxBatchSize)
-        {
-            int count = Mathf.Min(maxBatchSize, matrices.Count - start);
-            Matrix4x4[] batch = new Matrix4x4[count];
-            matrices.CopyTo(start, batch, 0, count);
-            lilyPadRenderBatches.Add(batch);
-        }
-        hasBuiltLilyPadRenderData = true;
-    }
-
     public void ClearLilyPadBatches()
     {
         foreach(var old in lilyPadRenderBatches)RetireBuildingBatch(old);
         lilyPadRenderBatches.Clear();
         hasBuiltLilyPadRenderData = false;
-    }
-
-    public void CacheCattailBatches(List<Matrix4x4> matrices)
-    {
-        suppressionDirty=true;
-        foreach(var old in cattailRenderBatches)RetireBuildingBatch(old);
-        cattailRenderBatches.Clear();
-        const int maxBatchSize = 1023;
-        for (int start = 0; start < matrices.Count; start += maxBatchSize)
-        {
-            int count = Mathf.Min(maxBatchSize, matrices.Count - start);
-            Matrix4x4[] batch = new Matrix4x4[count];
-            matrices.CopyTo(start, batch, 0, count);
-            cattailRenderBatches.Add(batch);
-        }
-        hasBuiltCattailRenderData = true;
     }
 
     public void ClearCattailBatches()

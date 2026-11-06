@@ -8,6 +8,78 @@ using UnityEngine;
 
 public static class WaterMeshGenerator
 {
+    // Identical topology at every normal terrain LOD. Macro tiles keep the greedy
+    // flat path below; their boundary is outside the owner's wave distance limit.
+    public const float WaveVertexSpacing = 0.6f;
+    public const float MaximumWaveDisplacement = 0.3f;
+
+    public static WaterMeshData GenerateWaveMesh(NativeArray<WaterState> states,
+        NativeArray<float> heights, int mapSize, float worldScale, float heightMultiplier, float waterY)
+    {
+        int size = mapSize - 3;
+        if (size <= 0 || !states.IsCreated || !heights.IsCreated ||
+            states.Length != mapSize * mapSize || heights.Length != states.Length || !(worldScale > 0))
+            throw new ArgumentException("Wave water requires matching padded terrain and water maps.");
+
+        // Integer subdivisions make neighboring chunks share exactly the same edge
+        // samples. Larger world scales subdivide the source cells instead.
+        int subdivisions = math.max(1, (int)math.ceil(worldScale / WaveVertexSpacing));
+        int stride = subdivisions > 1 ? 1 : math.max(1, (int)math.floor(WaveVertexSpacing / worldScale));
+        int cells = (size * subdivisions + stride - 1) / stride;
+        int width = cells + 1;
+        var occupied = new List<int>(64);
+        for (int z = 0; z < cells; z++) for (int x = 0; x < cells; x++)
+        {
+            int x0 = x * stride / subdivisions, z0 = z * stride / subdivisions;
+            int x1 = math.min((int)math.ceil((x + 1) * stride / (float)subdivisions), size);
+            int z1 = math.min((int)math.ceil((z + 1) * stride / (float)subdivisions), size);
+            bool wet = false;
+            for (int sx = x0; sx <= x1 && !wet; sx++) for (int sz = z0; sz <= z1; sz++)
+            {
+                WaterState state = states[(sx + 1) * mapSize + sz + 1];
+                if (state == WaterState.Shallow || state == WaterState.Deep) { wet = true; break; }
+            }
+            if (wet) occupied.Add(z * cells + x);
+        }
+        // Avoid allocating a full grid for a dry chunk, and reserve shared vertices
+        // rather than four copies per wet cell in an open lake.
+        if (occupied.Count == 0) return new WaterMeshData(0);
+        var mesh = new WaterMeshData(math.min(width * width, occupied.Count * 4), occupied.Count * 6);
+        var indices = new int[width * width];
+        Array.Fill(indices, -1);
+        float heightScale = heightMultiplier * worldScale;
+
+        int Vertex(int x, int z)
+        {
+            int key = z * width + x;
+            if (indices[key] >= 0) return indices[key];
+            float sx = math.min(x * stride / (float)subdivisions, size);
+            float sz = math.min(z * stride / (float)subdivisions, size);
+            int ix = (int)sx + 1, iz = (int)sz + 1;
+            // Central gradients at source samples are continuous across the padded
+            // chunk border. Their interpolation supplies the shore-envelope normal.
+            float Depth(int px, int pz) => waterY - heights[px * mapSize + pz] * heightScale;
+            Vector3 Sample(int px, int pz) => new Vector3(Depth(px, pz),
+                (Depth(px + 1, pz) - Depth(px - 1, pz)) / (2 * worldScale),
+                (Depth(px, pz + 1) - Depth(px, pz - 1)) / (2 * worldScale));
+            int nx = math.min(ix + 1, size + 1), nz = math.min(iz + 1, size + 1);
+            Vector3 d = subdivisions == 1 ? Sample(ix, iz) :
+                Vector3.Lerp(Vector3.Lerp(Sample(ix, iz), Sample(nx, iz), sx - (int)sx),
+                    Vector3.Lerp(Sample(ix, nz), Sample(nx, nz), sx - (int)sx), sz - (int)sz);
+            indices[key] = mesh.AddWaveVertex(new Vector3((sx - size * .5f) * worldScale, waterY,
+                (sz - size * .5f) * worldScale), new Vector2(sx / size, sz / size), new Vector4(d.x, d.y, d.z, 1));
+            return indices[key];
+        }
+
+        foreach (int cell in occupied)
+        {
+            int x = cell % cells, z = cell / cells;
+            int a = Vertex(x, z), b = Vertex(x + 1, z), c = Vertex(x, z + 1), d = Vertex(x + 1, z + 1);
+            mesh.AddIndexedTriangle(a, c, b); mesh.AddIndexedTriangle(b, c, d);
+        }
+        return mesh;
+    }
+
     public static WaterMeshData GenerateWaterMesh(
         NativeArray<WaterState> waterStateMap, int mapSize, int stepIncrement, float worldScale, float waterY)
     {
@@ -191,20 +263,22 @@ public class WaterMeshData
     private readonly List<Vector2> uvs;
     private readonly List<int> triangles;
     private readonly List<Color> colors;
+    private readonly List<Vector4> waveData;
+    private bool hasWaves;
 
     private static readonly Color WaterColor = new Color(0.05f, 0.25f, 0.60f, 1f);
 
     public int VertexCount => vertices.Count;
 
-    public WaterMeshData(int initialCellCount)
-    {
-        int initialVertexCapacity = Mathf.Max(4, initialCellCount * 4);
-        int initialTriangleCapacity = Mathf.Max(6, initialCellCount * 6);
+    public WaterMeshData(int initialCellCount) : this(Mathf.Max(4, initialCellCount * 4), Mathf.Max(6, initialCellCount * 6)) { }
 
+    public WaterMeshData(int initialVertexCapacity, int initialTriangleCapacity)
+    {
         vertices = new List<Vector3>(initialVertexCapacity);
         uvs = new List<Vector2>(initialVertexCapacity);
         triangles = new List<int>(initialTriangleCapacity);
         colors = new List<Color>(initialVertexCapacity);
+        waveData = new List<Vector4>(initialVertexCapacity);
     }
 
     public WaterMeshData(Vector3[] vertices, Vector2[] uvs, int[] triangles)
@@ -213,10 +287,22 @@ public class WaterMeshData
         this.uvs = new List<Vector2>(uvs);
         this.triangles = new List<int>(triangles);
         colors = new List<Color>(vertices.Length);
+        waveData = new List<Vector4>(vertices.Length);
 
         for (int i = 0; i < vertices.Length; i++)
-            colors.Add(WaterColor);
+        { colors.Add(WaterColor); waveData.Add(Vector4.zero); }
     }
+
+    public int AddWaveVertex(Vector3 position, Vector2 uv, Vector4 depthGradient)
+    {
+        int index = vertices.Count;
+        vertices.Add(position); uvs.Add(uv); colors.Add(WaterColor); waveData.Add(depthGradient);
+        hasWaves = true;
+        return index;
+    }
+
+    public void AddIndexedTriangle(int a, int b, int c)
+    { triangles.Add(a); triangles.Add(b); triangles.Add(c); }
 
     public void AddCell(
         Vector3 a,
@@ -234,6 +320,7 @@ public class WaterMeshData
         vertices.Add(b);
         vertices.Add(c);
         vertices.Add(d);
+        for (int i = 0; i < 4; i++) waveData.Add(Vector4.zero);
 
         uvs.Add(uvA);
         uvs.Add(uvB);
@@ -268,6 +355,8 @@ public class WaterMeshData
         vertices.Add(b);
         vertices.Add(c);
 
+        for (int i = 0; i < 3; i++) waveData.Add(Vector4.zero);
+
         uvs.Add(uvA);
         uvs.Add(uvB);
         uvs.Add(uvC);
@@ -291,8 +380,15 @@ public class WaterMeshData
             mesh.uv = uvs.ToArray();
             mesh.triangles = triangles.ToArray();
             mesh.colors = colors.ToArray();
+            mesh.SetUVs(1, waveData);
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
+            if (hasWaves)
+            {
+                Bounds bounds = mesh.bounds;
+                bounds.Expand(Vector3.one * (2 * WaterMeshGenerator.MaximumWaveDisplacement));
+                mesh.bounds = bounds;
+            }
             return mesh;
 
         }

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Unity.Profiling;
 
 [Serializable]
 public sealed class BuildGridFrame
@@ -20,9 +19,6 @@ public sealed class BuildPieceRecord
     public Vector3Int AnchorUnits;
     public byte YawStep;
     public float Health;
-    // Legacy serialized metadata. Free placement does not query or require terrain grounding.
-    public bool Grounded;
-    [NonSerialized] public bool Supported;
     [NonSerialized] public Vector3 Origin;
     [NonSerialized] public byte WorldYawStep;
     [NonSerialized] public BuildDefinition Definition;
@@ -46,6 +42,10 @@ public sealed class BuildSession : IDisposable
     public IReadOnlyDictionary<ulong, BuildPieceRecord> Pieces => pieces;
     public IReadOnlyDictionary<ulong, BuildGridFrame> Frames => frames;
     public int Revision { get; private set; }
+    // Health changes are mutations, but do not invalidate derived geometry or preview fitting.
+    public int GeometryRevision { get; private set; }
+    public int LastResolutionCount { get; private set; }
+    internal event Action<ulong> VisualChanged;
     public BuildFoliageExclusion Foliage { get; } = new();
     public bool TryGet(ulong id, out BuildPieceRecord piece) => pieces.TryGetValue(id, out piece);
     public BuildGridFrame Frame(ulong id) => frames[id];
@@ -55,12 +55,12 @@ public sealed class BuildSession : IDisposable
         frames.Add(frame.Id, frame);
         return frame;
     }
-    public BuildPieceRecord Add(BuildDefinition definition, BuildGridFrame frame, Vector3Int anchor, int yaw, bool grounded)
+    public BuildPieceRecord Add(BuildDefinition definition, BuildGridFrame frame, Vector3Int anchor, int yaw)
     {
         if (definition == null || frame == null || !frames.ContainsKey(frame.Id)) throw new ArgumentException("A registered frame and component are required.");
         var piece = new BuildPieceRecord { Id = nextPiece++, DefinitionId = definition.contentId, Definition = definition,
             FrameId = frame.Id, AnchorUnits = anchor, YawStep = (byte)BuildGeometry.Turn(yaw), Health = definition.maxHealth,
-            Grounded = grounded, Origin = BuildGeometry.WorldPoint(frame, anchor), WorldYawStep = (byte)BuildGeometry.Turn(frame.YawStep + yaw) };
+            Origin = BuildGeometry.WorldPoint(frame, anchor), WorldYawStep = (byte)BuildGeometry.Turn(frame.YawStep + yaw) };
         // Index covers structural sockets AND occupied solids. Rendering has its
         // own mesh bounds and never depends on this broad-phase envelope.
         piece.WorldBounds = IndexBounds(definition,piece.Origin,piece.WorldYawStep);
@@ -70,7 +70,7 @@ public sealed class BuildSession : IDisposable
             if (!cells.TryGetValue(key, out var ids)) cells.Add(key, ids = new HashSet<ulong>());
             ids.Add(piece.Id);
         });
-        RebuildResolution();
+        RebuildResolution(piece);
         return piece;
     }
     public bool Remove(ulong id)
@@ -79,7 +79,7 @@ public sealed class BuildSession : IDisposable
         foreach (ulong neighbour in piece.Connections) if (pieces.TryGetValue(neighbour, out var other)) other.Connections.Remove(id);
         ForCells(piece.WorldBounds, key => { if (cells.TryGetValue(key, out var ids)) { ids.Remove(id); if (ids.Count == 0) cells.Remove(key); } });
         LocalFlameGeometry.Remove(piece); Foliage.Remove(id);
-        pieces.Remove(id); RebuildResolution(); return true;
+        pieces.Remove(id); RebuildResolution(piece); VisualChanged?.Invoke(id); return true;
     }
     public bool Damage(ulong id, float amount)
     {
@@ -88,8 +88,6 @@ public sealed class BuildSession : IDisposable
         if (piece.Health == 0) Remove(id); else Revision++;
         return true;
     }
-    // Compatibility state for existing tools. Pieces are independent of load-bearing support.
-    public void RecomputeSupport() { foreach(var piece in pieces.Values)piece.Supported=true; }
     public void Query(Bounds bounds, List<BuildPieceRecord> output)
     {
         output.Clear(); seen.Clear();
@@ -99,24 +97,45 @@ public sealed class BuildSession : IDisposable
             if (cells.TryGetValue(new Vector3Int(x, y, z), out var ids))
                 foreach (ulong id in ids) if (seen.Add(id) && pieces.TryGetValue(id, out var piece) && piece.WorldBounds.Intersects(bounds)) output.Add(piece);
     }
-    private void RebuildResolution()
+    private void RebuildResolution(BuildPieceRecord changed)
     {
-        var list=new List<BuildPieceRecord>(pieces.Values);var states=resolution.Resolve(list,p=>NeighboursFor(p));Revision++;
+        // Fitting reads authored neighbours, then their resolved floor cuts. Two rings
+        // include those dependants without traversing an entire connected settlement.
+        var list=new List<BuildPieceRecord>();NeighboursFor(changed,list);
+        var ids=new HashSet<ulong>();foreach(var p in list)ids.Add(p.Id);
+        int directCount=list.Count;
+        for(int i=0;i<directCount;i++)
+            foreach(var other in NeighboursFor(list[i]))if(ids.Add(other.Id))list.Add(other);
+        list.Sort((a,b)=>a.Id.CompareTo(b.Id));
+        LastResolutionCount=list.Count;
+        var states=resolution.ResolveLocal(list,p=>NeighboursFor(p));
+        var visualChanges=new List<BuildPieceRecord>();
+        Revision++; GeometryRevision++;
         foreach(var p in list)
         {
-            var state=states[p.Id]; bool changed=!SameFoliageSolids(state,p.Resolved);
-            p.Resolved=state;p.ResolvedRevision=Revision;p.Connections.Clear();
-            if(changed)Foliage.Set(p);
+            var state=states[p.Id]; bool solidsChanged=!state.SameSolids(p.Resolved);
+            if(!state.SameVisuals(p.Resolved))visualChanges.Add(p);
+            p.Resolved=state;
+            if(solidsChanged) { p.ResolvedRevision++; Foliage.Set(p); }
+        }
+        // Clear both ends of affected edges, including the unchanged boundary records.
+        foreach(var p in list)
+        {
+            foreach(ulong id in p.Connections)if(pieces.TryGetValue(id,out var other))other.Connections.Remove(p.Id);
+            p.Connections.Clear();
         }
         foreach(var p in list)
         {
             Bounds search=p.WorldBounds;search.Expand(.04f);Query(search,neighbours);
             foreach(var other in neighbours)
-                if(other.Id>p.Id && BuildResolvedGeometry.Connects(p,p.Resolved,other,other.Resolved))
+            {
+                if(other.Id==p.Id || other.Id<p.Id && ids.Contains(other.Id))continue;
+                var a=p.Id<other.Id?p:other;var b=p.Id<other.Id?other:p;
+                if(BuildResolvedGeometry.Connects(a,a.Resolved,b,b.Resolved))
                 {p.Connections.Add(other.Id);other.Connections.Add(p.Id);}
+            }
         }
-        RecomputeSupport();
-        foreach(var p in list)
+        foreach(var p in visualChanges)
         {
             flameParts.Clear();var matrix=Matrix4x4.TRS(p.Origin,BuildGeometry.Rotation(p.WorldYawStep),Vector3.one);
             var state=p.Resolved;
@@ -125,19 +144,7 @@ public sealed class BuildSession : IDisposable
             foreach(var a in state.attachments)if(a.mesh!=null)flameParts.Add(new(a.mesh,matrix*a.localMatrix,a.material));
             LocalFlameGeometry.Set(p,flameParts);
         }
-    }
-    private static bool SameFoliageSolids(BuildResolvedState a,BuildResolvedState b)
-    {
-        if(b==null || a.boxes.Length!=b.boxes.Length || a.volumes.Length!=b.volumes.Length)return false;
-        for(int i=0;i<a.boxes.Length;i++)if(a.boxes[i]!=b.boxes[i])return false;
-        for(int i=0;i<a.volumes.Length;i++)
-        {
-            var x=a.volumes[i];var y=b.volumes[i];
-            // Fitting may rebuild the numeric wrapper around an unchanged cached convex mesh.
-            if(ReferenceEquals(x,y))continue;
-            if(x.mesh==null || x.mesh!=y.mesh || x.bounds!=y.bounds)return false;
-        }
-        return true;
+        foreach(var p in visualChanges)VisualChanged?.Invoke(p.Id);
     }
     public Dictionary<ulong,BuildResolvedState> ResolvePreview(BuildPieceRecord candidate)
     {
@@ -153,12 +160,16 @@ public sealed class BuildSession : IDisposable
         return result;
     }
     public int PreviewResolutionCount { get; private set; }
-    public HashSet<ulong> PreviewSupport(BuildPieceRecord candidate,Dictionary<ulong,BuildResolvedState> proposed)
-    { var result=new HashSet<ulong>(pieces.Keys);result.Add(candidate.Id);return result; }
     public IReadOnlyList<BuildPieceRecord> NeighboursFor(BuildPieceRecord p,BuildPieceRecord extra=null)
     {
-        var output=new List<BuildPieceRecord>();Bounds b=p.WorldBounds;b.Expand(.04f);Query(b,output);
-        if(extra!=null && p.Id!=extra.Id && b.Intersects(extra.WorldBounds))output.Add(extra);return output;
+        var output=new List<BuildPieceRecord>();
+        NeighboursFor(p,output,extra);
+        return output;
+    }
+    public void NeighboursFor(BuildPieceRecord p,List<BuildPieceRecord> output,BuildPieceRecord extra=null)
+    {
+        Bounds b=p.WorldBounds;b.Expand(.04f);Query(b,output);
+        if(extra!=null && p.Id!=extra.Id && b.Intersects(extra.WorldBounds))output.Add(extra);
     }
     public static Bounds IndexBounds(BuildDefinition d,Vector3 origin,int yaw)
     {
@@ -168,7 +179,7 @@ public sealed class BuildSession : IDisposable
         if(d.kind==BuildPartKind.Stair)b.Encapsulate(new Bounds(d.LocalBounds.center+Vector3.up,d.LocalBounds.size+new Vector3(1,2,1)));
         return BuildGeometry.WorldBounds(b,origin,yaw);
     }
-    public void Dispose(){Foliage.Dispose();foreach(var p in pieces.Values)LocalFlameGeometry.Remove(p);resolution.Dispose();}
+    public void Dispose(){VisualChanged=null;Foliage.Dispose();foreach(var p in pieces.Values)LocalFlameGeometry.Remove(p);resolution.Dispose();}
     private static void ForCells(Bounds bounds, Action<Vector3Int> visit)
     {
         Vector3Int min = BuildGeometry.Cell(bounds.min), max = BuildGeometry.Cell(bounds.max);

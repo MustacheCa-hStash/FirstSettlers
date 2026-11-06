@@ -23,6 +23,7 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
     private readonly TerrainDensityWorld world;
     private readonly Func<double,double,double> height;
     private readonly int chunkSize;
+    private readonly TerrainSourceSurfaceLayout sourceLayout;
     private readonly TerrainRequestManager requests;
     private readonly Func<ChunkCoord,ChunkRuntime> findRuntime;
     private readonly Func<double3,bool> destinationReady;
@@ -64,8 +65,8 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
     public int CommittedEdits { get; private set; }
     public int LiveChunkCount => live.Count;
     public int ActiveJobs { get { lock(resultGate)return workerRunning?1:0; } }
-    public long DerivedReservedBytes => reservedCharge+(SkyAccess!=null&&!SkyAccess.Allocated?TerrainSkyAccess.ResidentCharge:0);
-    public long DerivedLiveBytes => liveCharge+(SkyAccess?.Allocated==true?TerrainSkyAccess.ResidentCharge:0);
+    public long DerivedReservedBytes => disposed?0:reservedCharge+(SkyAccess!=null&&!SkyAccess.Allocated?TerrainSkyAccess.ResidentCharge:0);
+    public long DerivedLiveBytes => disposed?0:liveCharge+(SkyAccess?.Allocated==true?TerrainSkyAccess.ResidentCharge:0);
     public int PreparedGroupCount { get; private set; }
     public int RetainedGroupCount { get; private set; }
     public int LiveRenderTriangles { get; private set; }
@@ -97,9 +98,11 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
     public TerrainSculptRuntime(TerrainDensityWorld world, Func<double,double,double> baselineHeight, int chunkSize,
         TerrainRequestManager requests, Func<ChunkCoord,ChunkRuntime> findRuntime, Transform viewer,
         TerrainSculptConfiguration configuration, bool ownsWorld = false, Func<double3,bool> destinationReady = null, Func<bool> hostReady = null,
-        TerrainEditPersistence persistence = null)
+        TerrainEditPersistence persistence = null,TerrainSourceSurfaceLayout? sourceLayout=null,bool useDefaultSkyAccess=true)
     {
         this.world=world??throw new ArgumentNullException(nameof(world));height=baselineHeight??throw new ArgumentNullException(nameof(baselineHeight));
+        this.sourceLayout=sourceLayout??TerrainSourceSurfaceLayout.Current(world.Profile);
+        if(this.sourceLayout.Spacing!=world.Profile.Spacing||this.sourceLayout.BoundaryStep!=1)throw new ArgumentException("Unsupported canonical source layout.");
         if(chunkSize<=0||chunkSize%16!=0)throw new ArgumentException("Source chunks must align to 16-cell columns.");
         this.chunkSize=chunkSize;this.requests=requests??throw new ArgumentNullException(nameof(requests));
         this.findRuntime=findRuntime??throw new ArgumentNullException(nameof(findRuntime));this.viewer=viewer;
@@ -111,7 +114,7 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
         this.hostReady=hostReady;
         Persistence=persistence;
         surfaceAppearance=configuration.SurfaceAppearance!=null?configuration.SurfaceAppearance:Resources.Load<TerrainSculptSurfaceSettings>("TerrainSculpting/ExcavatedStone");
-        var skySettings=configuration.SkyAccess!=null?configuration.SkyAccess:Resources.Load<TerrainSkyAccessSettings>("TerrainSculpting/CaveLighting");
+        var skySettings=configuration.SkyAccess!=null?configuration.SkyAccess:useDefaultSkyAccess?Resources.Load<TerrainSkyAccessSettings>("TerrainSculpting/CaveLighting"):null;
         // Reserve lighting inside the existing derived cap, including readable Unity
         // copies/GPU storage and bounded tracing scratch. Tiny synthetic hosts opt out.
         if(skySettings!=null&&derivedLimit>=TerrainSkyAccess.ResidentCharge+8L*1024*1024)
@@ -273,7 +276,8 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
     }
 
     private bool Current(TerrainSculptBatch batch) => !disposed&&batch.Epoch==epoch&&batch.Request==requestIdentity&&
-        batch.Coverage==coverageRevision&&batch.BaseRevision==world.Revision;
+        batch.Coverage==coverageRevision&&batch.BaseRevision==world.Revision&&batch.Layout.Equals(sourceLayout)&&
+        batch.ReconstructionVersion==TerrainSourceSurfaceLayout.ReconstructionVersion;
 
     private void Dispatch(double3 focus,double3 occupied)
     {
@@ -281,7 +285,7 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
         if(capacity<=0){Status="Derived terrain budget is full";dirty=false;pendingBrush=null;destination=null;return;}
         cancellation?.Dispose();cancellation=new CancellationTokenSource();
         var token=cancellation.Token;var brush=pendingBrush;
-        var batch=new TerrainSculptBatch{Epoch=epoch,Request=++requestIdentity,Coverage=coverageRevision,BaseRevision=world.Revision,Anchor=anchor};
+        var batch=new TerrainSculptBatch{Epoch=epoch,Request=++requestIdentity,Coverage=coverageRevision,BaseRevision=world.Revision,Anchor=anchor,Layout=sourceLayout};
         var capturedPins=new List<TerrainSculptPin>(pins)
         { new TerrainSculptPin(occupied-new double3(1,1,1),occupied+new double3(1,3,1)) };
         var oldGroups=new List<TerrainSculptGroup>(groups);
@@ -306,7 +310,7 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
                     using var snapshot=batch.Edit!=null?world.CaptureMeshingSnapshot(batch.Edit):world.CaptureSnapshot();
                     var budget=new TerrainSculptBuildBudget(capacity,token);
                     using(SuppressionMarker.Auto())batch.Suppression=TerrainSculptSuppression.Build(snapshot,batch.Edit,oldSuppression,budget,consumerCacheLimit,height);
-                    using(CoverageMarker.Auto())TerrainSculptBatchBuilder.Build(batch,snapshot,height,chunkSize,focus,oldGroups,capturedPins,budget,oldAnchor,oldDensityRevision,oldChunks,oldCache,cacheLimit,prioritizeCollision);
+                    using(CoverageMarker.Auto())TerrainSculptBatchBuilder.Build(batch,snapshot,height,chunkSize,focus,oldGroups,capturedPins,budget,oldAnchor,oldDensityRevision,oldChunks,oldCache,cacheLimit,prioritizeCollision,sourceLayout);
                     token.ThrowIfCancellationRequested();
                 }
                 catch(Exception ex){batch.Error=ex;}

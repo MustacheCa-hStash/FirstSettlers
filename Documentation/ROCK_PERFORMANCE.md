@@ -20,6 +20,13 @@ The triplanar material does not need UV seams. Removing them preserves the nearb
 
 ## Native Unity rendering A/B
 
+The historical per-chunk draw implementation now lives inside
+`RockPerformanceInvestigation` and allocates its comparison batches only when
+the explicit editor benchmark runs. Production `RockRenderSet` publication keeps
+one set of instance records and no legacy staging lists or draw arrays. The
+recorded measurements below describe the original comparison, not a new benchmark
+of the November 6 cleanup.
+
 Identical updated meshes, placements, lighting, camera and 1280 × 720 target were rendered with the old and new submission paths. Each stage uses 24 warm-up frames and 80 measured frames; the order is none → legacy → optimized → optimized → legacy → none. There is exactly one render request per actual editor frame, since instanced submissions persist until a frame ends.
 
 | Path | Median camera-render wall time | p95 | Mean managed/native rock submission time |

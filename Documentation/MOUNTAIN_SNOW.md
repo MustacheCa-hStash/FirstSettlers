@@ -1,5 +1,19 @@
 # Mountain snow distribution
 
+November 5 follow-up: [cold valleys and glacier integration](GLACIAL_LANDFORMS.md)
+adds restrained cold-region expansion, exposed ice/moraine windows and broader
+usable terrain. Current nominal slope retention is 35–70 degrees, and Snow
+substrates above 45 degrees expose rock unless the retention overlay restores
+coverage. The November 3 comparison captures and parameter history below
+document the earlier 40–75-degree version.
+
+The later cliff revision adds a geometric-normal guard to the terrain material
+while glaciers are enabled. Above the waterline, it sheds interpolated snow
+between approximately 53 and 70 degrees, returning that coverage to rock. This
+keeps coarse distant snow-control pixels from stretching repeated white teeth
+down steep headwalls. It adds no texture reads or height samples and does not
+change baked biome labels. See the glacial guide for current captures and limits.
+
 Implemented November 3, 2026 in `Assets/Scripts/TerrainGeneration/BiomeGeneration/MountainSnow.cs`.
 
 The selected approach is a static terrain-aware retention mask, baked into the existing control maps. Near terrain and Burst far/macro terrain already call the same evaluator, so the change applies to both. The comparison favored this over adjusting the existing snow coverage gamma alone.

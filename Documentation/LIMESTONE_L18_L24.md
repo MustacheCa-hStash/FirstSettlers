@@ -20,17 +20,17 @@ The seven visible meshes total **292 triangles**. Individual blocks, shallow joi
 
 Aim L18 at a compatible full-height wall. It automatically aligns with the wall and occupies local Y=2.75…3.00 m. The wall's visible mesh and physical solids are clipped to 2.75 m; removing L18 restores the original mesh, UV variant and collision. The wall's canonical origin and 3 m storey sockets stay fixed, so gables and roofs retain their original datums.
 
-Validated limestone hosts are L01, L02, L07, L09, L10, L11 and L12. The fitting rule requires a full 4 m bay, 3 m wall height, 0.5 m thickness and a continuous solid upper band. L03 is only 2 m wide; L17 is triangular. Neither accepts this full-width cornice. A shifted, partial or floating cornice is rejected. Its matching wall must remain supported; adjoining pieces cannot make the cornice a bridge after that wall is removed.
+Validated limestone hosts are L01, L02, L07, L09, L10, L11 and L12. Automatic cornice fitting requires a compatible full-width wall and continuous solid upper band; L03 is narrower and L17 is triangular. This controls fitting geometry, not placement eligibility. A floating or shifted cornice retains its full authored shape, and removing its wall leaves the cornice in place. Installed dimensions follow [the later interaction refinements](BUILDING_INTERACTION_FIXES.md).
 
 This implements the masonry course only. L36's timber bearing plate remains a catalog proposal. The existing roof and half-gable attachment rules still govern roof placement.
 
 ## Access and bearing
 
-L19–L21 ascend along local +Z. Their visible and occupied masonry extends down to the base beneath every tread. Independent filled triangular walking hulls provide continuous character movement, following the established stair system. These pieces attach to supported building surfaces or matching flight endpoints; terrain alone cannot anchor a stair. Aim at a floor's underside or edge to attach a descending flight. L20 and L21 share the existing 0.75 pitch.
+L19–L21 ascend along local +Z. Their visible and occupied masonry extends down to the base beneath every tread. Independent filled triangular walking hulls provide continuous character movement, following the established stair system. Building surfaces and matching flight endpoints supply snaps; a stair may also be placed freely. Aim at a floor's underside or edge to attach a descending flight. L20 and L21 share the existing 0.75 pitch.
 
-L22 needs continuous supported foundation or solid paving coverage beneath its **whole underside**, at walking height minus 0.25 m. Timber floors and contact with a wall or stair endpoint do not supply bedding. For a turn at 1.5 m, build solid support up to 1.25 m, then seat the landing at 1.5 m. Multiple aligned footing strips may supply the area together; removing one required strip removes support. The slab cannot be used as a cantilevered balcony.
+L22 is an independently placed solid landing. Snapping seats its underside on the selected surface, but bedding coverage is not required. It may form a cantilevered balcony and remains after underlying pieces are removed.
 
-L23 can seat on terrain or supported construction. L24 automatically seats its rear plane against an aimed wall face at that wall's base; it also needs terrain contact or complete foundation/solid paving bedding beneath its 1 × 1 m footprint. Raising it off its bedding does not let the wall carry it in midair. Both terrain pieces reject floating placements.
+L23 can seat on terrain or construction. L24 automatically seats its rear plane against an aimed wall face at that wall's base. Both permit floating placement under the current [free-building policy](BUILDING_FOLIAGE.md#free-building).
 
 No handrail has been added for the 1.5 m flights. Existing narrower timber rails are separate pieces with their own dimensions. The retaining wall does not excavate terrain or simulate soil pressure, and the buttress grants no numerical strength bonus. Health remains the catalog's 100-point placeholder.
 

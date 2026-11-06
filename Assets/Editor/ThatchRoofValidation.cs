@@ -55,10 +55,10 @@ public static class ThatchRoofValidation
             for(int yaw=0;yaw<8;yaw++)
             {
                 var session=new BuildSession();var frame=session.CreateFrame(new Vector3(0,3,0),yaw);
-                var a=session.Add(roof,frame,Vector3Int.zero,0,false);
-                var b=session.Add(roof,frame,new Vector3Int(0,8,8),0,false);
-                var side=session.Add(roof,frame,new Vector3Int(16,0,0),0,false);
-                var opposite=session.Add(roof,frame,new Vector3Int(16,0,16),4,false);
+                var a=session.Add(roof,frame,Vector3Int.zero,0);
+                var b=session.Add(roof,frame,new Vector3Int(0,8,8),0);
+                var side=session.Add(roof,frame,new Vector3Int(16,0,0),0);
+                var opposite=session.Add(roof,frame,new Vector3Int(16,0,16),4);
                 Check(BuildRoof.VisualMesh(b,session)==roof.roofContinuationMesh,"Uphill visual not selected");
                 foreach(var other in new[]{b,side,opposite})
                 {
@@ -132,21 +132,21 @@ public static class ThatchRoofValidation
         {
             var session=new BuildSession();var frame=session.CreateFrame(new Vector3(-12,3,9),yaw);Quaternion q=BuildGeometry.Rotation(yaw);
             Vector3 At(Vector3 p)=>frame.Origin+q*p;
-            var foundation=session.Add(catalog.presets[2],frame,default,0,true);
-            var wall=session.Add(catalog.presets[0],frame,new Vector3Int(1,0,0),0,false);
-            Check(wall.Supported,"Fixture wall unsupported");
+            var foundation=session.Add(catalog.presets[2],frame,default,0);
+            var wall=session.Add(catalog.presets[0],frame,new Vector3Int(1,0,0),0);
+            Check(session.Pieces.ContainsKey(wall.Id),"Placed construction missing from session: wall");
             var wallFrame=session.Frame(wall.OwnFrameId);
             var snap=BuildPlacement.Solve(single,At(new Vector3(2,2.75f,.125f)),Vector3.up,wall,wallFrame,yaw,0,default,At(new Vector3(2,1,2)));
             Near(snap.Origin,At(new Vector3(0,3,0)),"Wall top roof snap");Check(snap.WorldYaw==yaw,"Wall roof yaw");
-            var a=session.Add(single,frame,new Vector3Int(0,12,0),0,false);
-            var post=session.Add(catalog.presets[3],frame,new Vector3Int(0,0,0),0,false);
+            var a=session.Add(single,frame,new Vector3Int(0,12,0),0);
+            var post=session.Add(catalog.presets[3],frame,new Vector3Int(0,0,0),0);
             var postSnap=BuildPlacement.Solve(single,At(new Vector3(.125f,2.75f,.125f)),Vector3.up,post,session.Frame(post.OwnFrameId),yaw,0,default,At(new Vector3(2,1,2)));
             Near(postSnap.Origin,At(new Vector3(0,3,0)),"Post top socket shifted bay");
             session.Remove(post.Id);
             var uphill=BuildPlacement.Solve(single,At(new Vector3(2,4.75f,2)),q*new Vector3(0,1,-1).normalized,a,session.Frame(a.OwnFrameId),yaw,0,default);
             Near(uphill.Origin,At(new Vector3(0,5,2)),"High edge must continue the slope");Check(uphill.WorldYaw==yaw,"Uphill snap reversed direction");
-            var upper=session.Add(single,frame,new Vector3Int(0,20,8),0,false);
-            Check(upper.Supported && !BuildOccupancy.Overlaps(single,a.Origin,yaw,single,upper.Origin,yaw),"Uphill continuation is unsupported/overlapping");
+            var upper=session.Add(single,frame,new Vector3Int(0,20,8),0);
+            Check(session.Pieces.ContainsKey(upper.Id) && !BuildOccupancy.Overlaps(single,a.Origin,yaw,single,upper.Origin,yaw),"Uphill continuation is unsupported/overlapping");
             Check(BuildRoof.VisualMesh(upper,session)==single.roofContinuationMesh,"Actual renderer retains overlapping eave");
             var down=BuildPlacement.Solve(single,At(new Vector3(2,4.8f,2.1f)),q*Vector3.back,upper,session.Frame(upper.OwnFrameId),yaw,0,default);
             Near(down.Origin,a.Origin,"Low edge does not continue downhill");Check(down.WorldYaw==yaw,"Downhill snap reversed heading");
@@ -154,12 +154,12 @@ public static class ThatchRoofValidation
             Near(third.Origin,At(new Vector3(0,7,4)),"Third slope segment moved off grid");
             session.Remove(upper.Id);
             // Opposing slopes are started from the other wall, as requested.
-            var farWall=session.Add(catalog.presets[0],frame,new Vector3Int(15,0,16),4,false);
+            var farWall=session.Add(catalog.presets[0],frame,new Vector3Int(15,0,16),4);
             var opposite=BuildPlacement.Solve(single,At(new Vector3(2,2.75f,3.9f)),Vector3.up,farWall,session.Frame(farWall.OwnFrameId),yaw,0,default,At(new Vector3(2,1,2)));
             Near(opposite.Origin,At(new Vector3(4,3,4)),"Other wall cannot start opposing roof");Check(opposite.WorldYaw==BuildGeometry.Turn(yaw+4),"Wall-side roof orientation");
             session.Remove(farWall.Id);
-            var b=session.Add(single,frame,new Vector3Int(16,12,16),4,false);
-            Check(a.Supported && b.Supported,"4x4 roof pair unsupported");
+            var b=session.Add(single,frame,new Vector3Int(16,12,16),4);
+            Check(session.Pieces.ContainsKey(a.Id) && session.Pieces.ContainsKey(b.Id),"Placed construction missing from session: a, b");
             Check(!BuildOccupancy.Overlaps(a.Definition,a.Origin,a.WorldYawStep,b.Definition,b.Origin,b.WorldYawStep),"Opposing collision overlaps");
             Check(!BuildOccupancy.Overlaps(a.Definition,a.Origin,yaw,wall.Definition,wall.Origin,yaw),"Roof cuts into wall");
             var small=ScriptableObject.CreateInstance<BuildDefinition>();small.sizeUnits=new Vector3Int(1,1,1);small.wallEndInsetUnits=0;small.kind=BuildPartKind.Corner;
@@ -202,18 +202,18 @@ public static class ThatchRoofValidation
                 Check(!BuildOccupancy.Overlaps(single,b.Origin,b.WorldYawStep,gable,gp.Origin,gp.WorldYaw),"Gable intersects opposing slope");
             }
             finally{Object.DestroyImmediate(gable);}
-            session.Remove(wall.Id);Check(a.Supported && b.Supported,"Free placement unexpectedly depends on structural support");
-            wall=session.Add(catalog.presets[0],frame,new Vector3Int(1,0,0),0,false);Check(a.Supported && b.Supported,"Support reconnection failed");
-            session.Remove(foundation.Id);Check(a.Supported && b.Supported,"Free placement unexpectedly depends on structural support");
+            session.Remove(wall.Id);Check(session.Pieces.ContainsKey(a.Id) && session.Pieces.ContainsKey(b.Id),"Placed construction missing from session: a, b");
+            wall=session.Add(catalog.presets[0],frame,new Vector3Int(1,0,0),0);Check(session.Pieces.ContainsKey(a.Id) && session.Pieces.ContainsKey(b.Id),"Placed construction missing from session: a, b");
+            session.Remove(foundation.Id);Check(session.Pieces.ContainsKey(a.Id) && session.Pieces.ContainsKey(b.Id),"Placed construction missing from session: a, b");
             // 4x8 building along X: mirrored far-side variants are reversed.
             var longSession=new BuildSession();var longFrame=longSession.CreateFrame(frame.Origin,yaw);
-            longSession.Add(catalog.presets[2],longFrame,default,0,true);
-            longSession.Add(catalog.presets[0],longFrame,new Vector3Int(1,0,0),0,false);
-            var pieces=new[]{longSession.Add(left,longFrame,new Vector3Int(0,12,0),0,false),
-                longSession.Add(right,longFrame,new Vector3Int(16,12,0),0,false),
-                longSession.Add(right,longFrame,new Vector3Int(16,12,16),4,false),
-                longSession.Add(left,longFrame,new Vector3Int(32,12,16),4,false)};
-            foreach(var p in pieces)Check(p.Supported,"4x8 repeated roof unsupported");
+            longSession.Add(catalog.presets[2],longFrame,default,0);
+            longSession.Add(catalog.presets[0],longFrame,new Vector3Int(1,0,0),0);
+            var pieces=new[]{longSession.Add(left,longFrame,new Vector3Int(0,12,0),0),
+                longSession.Add(right,longFrame,new Vector3Int(16,12,0),0),
+                longSession.Add(right,longFrame,new Vector3Int(16,12,16),4),
+                longSession.Add(left,longFrame,new Vector3Int(32,12,16),4)};
+            foreach(var p in pieces)Check(longSession.Pieces.ContainsKey(p.Id),"Placed construction missing from session: p");
             for(int i=0;i<pieces.Length;i++)for(int j=i+1;j<pieces.Length;j++)
                 Check(!BuildOccupancy.Overlaps(pieces[i].Definition,pieces[i].Origin,pieces[i].WorldYawStep,pieces[j].Definition,pieces[j].Origin,pieces[j].WorldYawStep),"4x8 occupied joint overlaps");
             var next=BuildPlacement.Solve(right,At(new Vector3(3.9f,3.5f,.8f)),q*Vector3.right,pieces[0],longSession.Frame(pieces[0].OwnFrameId),yaw,0,default);
@@ -237,8 +237,8 @@ public static class ThatchRoofValidation
         var host=new GameObject("Roof placement world");var world=host.AddComponent<BuildWorld>();
         if(world.Session==null) typeof(BuildWorld).GetMethod("Awake",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).Invoke(world,null);
         var frame=world.Session.CreateFrame(new Vector3(30,10,30),0);
-        world.Session.Add(catalog.presets[2],frame,default,0,true);
-        world.Session.Add(catalog.presets[0],frame,new Vector3Int(1,0,0),0,false);
+        world.Session.Add(catalog.presets[2],frame,default,0);
+        world.Session.Add(catalog.presets[0],frame,new Vector3Int(1,0,0),0);
         var obstacle=new GameObject("Roof external blocker"){layer=GameplayLayers.Player};var box=obstacle.AddComponent<BoxCollider>();box.size=new Vector3(.4f,.4f,.4f);
         var preview=new BuildPreview{Definition=roof,Frame=frame,Anchor=new Vector3Int(0,12,0),Origin=frame.Origin+new Vector3(0,3,0),WorldYaw=0};
         try
@@ -260,12 +260,12 @@ public static class ThatchRoofValidation
             var uphill=BuildPlacement.Solve(roof,placed.Origin+new Vector3(2,2.3f,1.9f),Vector3.up,placed,world.Session.Frame(placed.OwnFrameId),0,0,default);
             world.Validate(ref uphill);Check(uphill.Valid && uphill.RoofContinuesFromBelow,"Actual uphill preview rejected: "+uphill.Message);
             Check(uphill.VisualMesh==roof.roofContinuationMesh,"Ghost still overlaps the lower roof eave");
-            var upper=world.Commit(uphill);Check(upper!=null && upper.Supported,"Actual uphill commit failed");
+            var upper=world.Commit(uphill);Check(upper!=null && world.Session.Pieces.ContainsKey(upper.Id),"Placed construction missing from session: upper");
             Check(BuildRoof.VisualMesh(upper,world.Session)==roof.roofContinuationMesh,"Placed upper roof still overlaps");
-            world.Remove(placed.Id);Check(upper.Supported,"Free placement unexpectedly depends on structural support");
+            world.Remove(placed.Id);Check(world.Session.Pieces.ContainsKey(upper.Id),"Placed construction missing from session: upper");
             Check(BuildRoof.VisualMesh(upper,world.Session)==roof.mesh,"Removing lower neighbor did not restore eave");
-            world.Session.Add(roof,frame,new Vector3Int(0,12,0),0,false);
-            Check(upper.Supported && BuildRoof.VisualMesh(upper,world.Session)==roof.roofContinuationMesh,"Reconnected roof did not restore join/support");
+            world.Session.Add(roof,frame,new Vector3Int(0,12,0),0);
+            Check(world.Session.Pieces.ContainsKey(upper.Id) && BuildRoof.VisualMesh(upper,world.Session)==roof.roofContinuationMesh,"Reconnected roof did not restore join/support");
 
         }
         finally
@@ -299,8 +299,8 @@ public static class ThatchRoofValidation
         Directory.CreateDirectory(".utmp/building-prototype");
         var session=new BuildSession();var frame=session.CreateFrame(Vector3.zero,0);
         var l=catalog.Find(ThatchRoofSetup.ContentId);var r=l;
-        session.Add(l,frame,new Vector3Int(0,12,0),0,false);session.Add(r,frame,new Vector3Int(16,12,0),0,false);
-        session.Add(r,frame,new Vector3Int(16,12,16),4,false);session.Add(l,frame,new Vector3Int(32,12,16),4,false);
+        session.Add(l,frame,new Vector3Int(0,12,0),0);session.Add(r,frame,new Vector3Int(16,12,0),0);
+        session.Add(r,frame,new Vector3Int(16,12,16),4);session.Add(l,frame,new Vector3Int(32,12,16),4);
         var root=new GameObject("Roof render fixture");var cameraObject=new GameObject("Roof camera");var camera=cameraObject.AddComponent<Camera>();camera.enabled=false;
         var lightObject=new GameObject("Roof sun");var light=lightObject.AddComponent<Light>();light.type=LightType.Directional;light.intensity=1.5f;light.shadows=LightShadows.Soft;lightObject.transform.rotation=Quaternion.Euler(45,-35,0);
         var target=new RenderTexture(1200,800,24,RenderTextureFormat.ARGB32);target.Create();
@@ -329,14 +329,14 @@ public static class ThatchRoofValidation
             if(l.material.IsKeywordEnabled("_THATCH_BAKED"))
             {
                 foreach(var id in new List<ulong>(session.Pieces.Keys))session.Remove(id);
-                session.Add(l,frame,Vector3Int.zero,0,false);
+                session.Add(l,frame,Vector3Int.zero,0);
                 var baked=Capture("roof-baked-comparison",new Vector3(6,5,-6),new Vector3(2,1,1),2.8f);
                 var originalMesh=l.mesh;var originalMaterial=l.material;var control=new Material(originalMaterial);control.DisableKeyword("_THATCH_BAKED");
                 try
                 {
                     l.material=control;
                     foreach(var id in new List<ulong>(session.Pieces.Keys))session.Remove(id);
-                    session.Add(l,frame,Vector3Int.zero,0,false);
+                    session.Add(l,frame,Vector3Int.zero,0);
                     var flat=Capture("roof-flat-control",new Vector3(6,5,-6),new Vector3(2,1,1),2.8f);
                     int changed=0;for(int i=0;i<baked.Length;i++)if(Mathf.Abs(baked[i].r-flat[i].r)+Mathf.Abs(baked[i].g-flat[i].g)+Mathf.Abs(baked[i].b-flat[i].b)>6)changed++;
                     Check(changed>1000,"Bake has no visible effect in the actual shader");
@@ -350,7 +350,7 @@ public static class ThatchRoofValidation
                         var reference=WattleWallSetup.BakeStaticMesh(AssetDatabase.LoadAssetAtPath<GameObject>(path),new Vector3(4,2,2),"Detailed roof reference",out _,true);
                         try
                         {
-                            l.mesh=reference;session.Add(l,frame,Vector3Int.zero,0,false);
+                            l.mesh=reference;session.Add(l,frame,Vector3Int.zero,0);
                             var detailed=Capture("roof-detailed-comparison",new Vector3(6,5,-6),new Vector3(2,1,1),2.8f);
                             Color32 background=detailed[0];int intersection=0,union=0;
                             bool Covered(Color32 c)=>Mathf.Abs(c.r-background.r)+Mathf.Abs(c.g-background.g)+Mathf.Abs(c.b-background.b)>6;
@@ -363,17 +363,17 @@ public static class ThatchRoofValidation
                 }
                 finally{l.material=originalMaterial;Object.DestroyImmediate(control);}
                 foreach(var id in new List<ulong>(session.Pieces.Keys))session.Remove(id);
-                session.Add(l,frame,new Vector3Int(0,12,0),0,false);session.Add(l,frame,new Vector3Int(16,12,0),0,false);
-                session.Add(l,frame,new Vector3Int(16,12,16),4,false);session.Add(l,frame,new Vector3Int(32,12,16),4,false);
+                session.Add(l,frame,new Vector3Int(0,12,0),0);session.Add(l,frame,new Vector3Int(16,12,0),0);
+                session.Add(l,frame,new Vector3Int(16,12,16),4);session.Add(l,frame,new Vector3Int(32,12,16),4);
             }
             Capture("roof-join-close",new Vector3(6,6,-2),new Vector3(4,4,1),1.2f);
             Capture("roof-underside",new Vector3(4,2.5f,-2),new Vector3(4,4,2),3.2f);
             Capture("roof-ridge",new Vector3(12,7,2),new Vector3(4,4.7f,2),2.8f);
             Capture("roof-distant",new Vector3(35,22,-32),new Vector3(4,3.5f,2),16);
             foreach(var id in new List<ulong>(session.Pieces.Keys))session.Remove(id);
-            session.Add(l,frame,new Vector3Int(0,12,0),0,false);
-            session.Add(l,frame,new Vector3Int(0,20,8),0,false);
-            session.Add(l,frame,new Vector3Int(0,28,16),0,false);
+            session.Add(l,frame,new Vector3Int(0,12,0),0);
+            session.Add(l,frame,new Vector3Int(0,20,8),0);
+            session.Add(l,frame,new Vector3Int(0,28,16),0);
             Capture("roof-uphill-chain",new Vector3(9,12,-8),new Vector3(2,6,3),5.5f);
             Capture("roof-uphill-join",new Vector3(6,7,-1),new Vector3(2,5.1f,2),1.2f);
         }

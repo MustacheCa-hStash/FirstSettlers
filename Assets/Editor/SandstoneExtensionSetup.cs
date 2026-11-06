@@ -52,9 +52,9 @@ public static class SandstoneExtensionSetup
             d.contentId=Id(p);d.displayName=p.name;d.kind=(BuildPartKind)p.kind;
             d.sizeUnits=Vector3Int.RoundToInt(V(p.size)/BuildGeometry.Unit);d.minimumUnits=Vector3Int.zero;d.boundsOffset=V(p.minimum);
             d.wallEndInsetUnits=0;d.stackRiseUnits=d.sizeUnits.y;d.wallPlacementMode=WallPlacementMode.Panel;
-            d.material=material;d.preserveAuthoredMesh=true;d.maxHealth=100;d.requiresFullBearing=false;
+            d.material=material;d.preserveAuthoredMesh=true;d.maxHealth=100;
             d.canGroundOnTerrain=p.ground||d.kind==BuildPartKind.Furniture&&!p.wallMounted;
-            d.furnitureWallMounted=p.wallMounted;d.relaxedWallMount=false;d.furnitureSupportPoints=Array.Empty<Vector3>();
+            d.furnitureWallMounted=p.wallMounted;
             d.topCourseDepth=0;d.wallBaseAttachment=false;d.gableSlope=GableSlope.None;d.roofAttachment=RoofAttachmentMode.None;d.flipVariant=null;
             d.jointCoverVariants=Array.Empty<Mesh>();d.jointCoverMaterial=null;d.floorParts=Array.Empty<BuildTimberPart>();
             d.wallOpenings=Array.Empty<Bounds>();d.floorOpeningMesh=null;d.floorOpeningUvVariants=Array.Empty<Mesh>();

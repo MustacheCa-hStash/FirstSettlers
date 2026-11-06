@@ -185,7 +185,8 @@ public static class BuildStoneUiAuthoring
             var gable=source.Find(OpeningWallSetup.GableId);
             view.SetSelection(gable);view.Filter(6);Draw();
             int shown=0;foreach(var b in presets)if(b.resolvedStyle.display!=DisplayStyle.None)shown++;
-            Require(shown==2,"Roofs filter did not contain roof and one half-gable");
+            Require(shown==Array.FindAll(source.presets,d=>BuildUiContent.Category(d)==6).Length,
+                "Roofs filter does not match the installed catalog");
             view.FlipSelection();Require(view.Highlighted==gable.flipVariant,"Menu slope flip failed");
             view.ConfirmSelection();Require(committed==gable.flipVariant,"Confirmation selected wrong slope");
             committed=null;view.SetSelection(gable.flipVariant);
@@ -197,12 +198,16 @@ public static class BuildStoneUiAuthoring
             using(var doubleClick=ClickEvent.GetPooled(up)){doubleClick.target=root.Q<Button>(gable.contentId);root.Q<Button>(gable.contentId).SendEvent(doubleClick);}
             Require(committed==gable.flipVariant,"Double-click lost staged gable slope");
             view.Filter(5);Draw();int stairsShown=0;foreach(var button in presets)if(button.resolvedStyle.display!=DisplayStyle.None)stairsShown++;
-            Require(stairsShown==3,"Stairs filter must include W21/W22/W24");
+            Require(stairsShown==Array.FindAll(source.presets,d=>BuildUiContent.Category(d)==5).Length,
+                "Stairs filter does not match the installed catalog");
+            foreach(var id in new[]{W21StairSetup.ContentId,StairExtensionSetup.W22Id,StairExtensionSetup.W24Id})
+                Require(root.Q<Button>(id).resolvedStyle.display!=DisplayStyle.None,"Stairs filter lost "+id);
             if(source.Find("build.furniture.f01-three-leg-stool")!=null)
             {
                 view.Filter(7);Draw();int furnitureShown=0;
                 foreach(var button in presets)if(button.resolvedStyle.display!=DisplayStyle.None)furnitureShown++;
-                Require(furnitureShown==6,"Furniture filter must contain exactly F01-F06");
+                Require(furnitureShown==Array.FindAll(source.presets,d=>BuildUiContent.Category(d)==7).Length,
+                    "Furniture filter does not match the installed catalog");
                 var stool=source.Find("build.furniture.f01-three-leg-stool");view.SetSelection(stool);view.ConfirmSelection();
                 Require(committed==stool,"Furniture selection did not reach its catalog definition");Draw();
                 Save(target,$"{Captures}/furniture-{width}x{height}.png");
@@ -243,12 +248,12 @@ public static class BuildStoneUiAuthoring
             catalog.panel.scale=originalScale;
             typeof(PanelSettings).GetMethod("ApplyPanelSettings",Methods).Invoke(catalog.panel,null);
             Draw();CheckCentered();
-            view.SetState(true,false);view.Show("Half-gable · 45°","Supported · ready to place",true);Draw();
+            view.SetState(true,false);view.Show("Half-gable · 45°","Ready to place",true);Draw();
             Require(root.Q<VisualElement>("build-hud").pickingMode==PickingMode.Ignore,"HUD captures world input");
-            Save(target,$"{Captures}/placement-{width}x{height}.png");
-            view.Show("Half-gable · 45°","Detached · 3 seconds to reconnect",true,true);Draw();
+            Require(root.Q<VisualElement>("build-hud").resolvedStyle.display==DisplayStyle.None,
+                "Placement unexpectedly exposed the hidden HUD");
+            view.Show("Half-gable · 45°","Build overlap · full shape retained",true,true);Draw();
             Require(root.Q<Label>("build-status").ClassListContains("build-warning"),"Warning styling missing");
-            Save(target,$"{Captures}/warning-{width}x{height}.png");
             view.Show("Half-gable","Aim at a surface within reach",false);Draw();
             Require(root.Q<Label>("build-status").ClassListContains("build-error"),"Invalid styling missing");
         }

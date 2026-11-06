@@ -24,14 +24,8 @@ MonoBehaviour:
   wallEndInsetUnits: 1
   mesh: {fileID: -7327493104057821903, guid: 1fb135b46eb63354aabdb4cb57f99c6e, type: 3}
   preserveAuthoredMesh: 1
-  requiresFullBearing: 0
   canGroundOnTerrain: 1
   furnitureWallMounted: 0
-  furnitureSupportPoints:
-  - {x: -0.56, y: 0, z: -0.17}
-  - {x: -0.56, y: 0, z: 0.17}
-  - {x: 0.56, y: 0, z: -0.17}
-  - {x: 0.56, y: 0, z: 0.17}
   solidBoxes:
   - m_Center: {x: 0, y: 0.465, z: 0}
     m_Extent: {x: 0.75, y: 0.035, z: 0.25}

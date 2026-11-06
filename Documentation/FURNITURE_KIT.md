@@ -31,15 +31,15 @@ Every face, including hidden caps and bevels, has non-degenerate UV0. Long faces
 
 The authored mesh is preserved by resolution; no timber bearing geometry, automatic posts or wall sockets are generated for furniture. Runtime rendering stays in the existing instanced building renderer. Collision uses pooled compound boxes around the actual seat/top, legs, slab supports, stretcher, bed deck/frame or shelf braces. Spaces beneath tables and benches remain open. Rounded/slanted surfaces use conservative box approximations rather than individual visual triangles. The bed has a thin continuous walking collider over its cord deck so the character cannot fall between small visual gaps.
 
-## Placement and support
+## Placement
 
 The Furniture category contains the six pieces, each with a rendered thumbnail, name, dimensions, description and quick-piece entry. Existing staged confirmation, rotation, removal and grid nudge controls apply. Ground and floor placement retain the 0.25 m increment and eight yaw headings.
 
-F01–F05 can ground directly on terrain, with every authored foot checked. They can stand on supported foundations or floor sections; each foot must touch a real resolved top surface. A furniture envelope overhanging an edge is permitted only when all its feet remain supported. Aim at the floor's top, not a neighboring wall or another piece of furniture. Ground aiming does not acquire a nearby structural piece's snap.
+F01–F05 can seat on terrain or snap to building surfaces. Placement is free: foot contact and full underside coverage are not required, so furniture may overhang an edge or float. Ground aiming does not acquire a nearby structural piece's snap.
 
-F06 aims at the side face of a supported wall or post. Its rear mounting points must all meet a real solid section; window/door apertures do not provide support. The shelf preserves a timber wall's actual 0.125 m face offset, using a persistent surface frame rather than rounding that offset to 0.25 m. The shelf's tangent/elevation still use the quarter-metre grid. Normal-direction nudges or rotations that detach its rear mounts are invalid.
+F06 aims at the side face of a wall or post. The shelf preserves a timber wall's actual 0.125 m face offset, using a persistent surface frame rather than rounding that offset to 0.25 m. Tangent/elevation still use the quarter-metre grid. Nudges and rotations may detach the shelf from its wall; rear-contact samples are not required.
 
-Furniture receives support after the structural graph resolves. It does not enter that graph and cannot carry walls, floors, stairs, roofs, other furniture or a bridge between structural islands. Structural aiming at furniture is rejected. Losing a supporting floor/wall makes the furnishing unsupported; the existing building world's collapse grace period applies. Terrain grounding is latched at placement, following the existing terrain-edit policy.
+Furniture and structural pieces have independent lifetimes. Building on furniture is allowed, and removing a floor or wall leaves its furnishings in place. The retired support graph, grounding flags and collapse timers do not participate in [free building](BUILDING_FOLIAGE.md#free-building). The validation counts below are historical; current fixtures check session membership, fitted shapes and physical collision.
 
 Build-piece intersections retain the current building system's advisory warnings. Furniture does not introduce a new general prohibition against interpenetrating build pieces. External objects/player obstruction checks use its shaped solids.
 

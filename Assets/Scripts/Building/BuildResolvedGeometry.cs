@@ -22,7 +22,7 @@ public static class BuildResolvedGeometry
         if(a.Definition.kind==BuildPartKind.Stair)return BuildStairAttachment.Connects(a,b,sb);
         if(b.Definition.kind==BuildPartKind.Stair)return BuildStairAttachment.Connects(b,a,sa);
         if(a.Definition.kind==BuildPartKind.Handrail || b.Definition.kind==BuildPartKind.Handrail)return false;
-        // Accepted interpenetration is real structural contact. Clearance alone never grants support.
+        // Accepted interpenetration establishes geometric contact; clearance alone does not.
         if(Overlaps(a,sa,b,sb))return true;
         if(StackSocket(a,b) || StackSocket(b,a))return true;
         foreach(var joint in sa.joints)if(joint.OtherPieceId==b.Id)return true;
@@ -59,7 +59,7 @@ public static class BuildResolvedGeometry
         Bounds a=lower.Definition.LocalBounds,b=upper.Definition.LocalBounds;float rise=lower.Definition.StackRise;
         if(rise<a.size.y-.012f || rise>a.size.y+BuildResolution.Band+.012f)return false;
         if(Mathf.Abs(lower.Origin.y+a.min.y+rise-upper.Origin.y-b.min.y)>.012f)return false;
-        // Declared stacking remains a support connection when optional bearing output is suppressed.
+        // Declared stacking remains a geometric connection when optional bearing output is suppressed.
         var envelope=new Bounds(new Vector3(a.center.x,a.min.y+rise*.5f,a.center.z),new Vector3(a.size.x,rise,a.size.z));
         return BuildGeometry.Connects(envelope,lower.Origin,lower.WorldYawStep,b,upper.Origin,upper.WorldYawStep);
     }

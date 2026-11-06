@@ -27,10 +27,8 @@ public static class BuildKitDimensions
     }
     public static bool Apply(BuildDefinition d)
     {
-        bool changed=false;
-        if(d.contentId=="build.wood.l35-braced-door-canopy" && !d.relaxedWallMount){d.relaxedWallMount=true;changed=true;}
         var scale=Scale(d);
-        if((scale-Vector3.one).sqrMagnitude<.000001f){if(changed)EditorUtility.SetDirty(d);return changed;}
+        if((scale-Vector3.one).sqrMagnitude<.000001f)return false;
         string path=AssetDatabase.GetAssetPath(d);path=path.Substring(0,path.Length-6)+"-modular";
         Mesh original=d.mesh;d.mesh=Mesh(original,scale,path+"-mesh.asset");
         if(d.uvVariants!=null)for(int i=0;i<d.uvVariants.Length;i++)

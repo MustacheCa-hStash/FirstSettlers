@@ -28,17 +28,17 @@ public static class BuildingPrototypeRenderValidation
     private static void RenderRoom(BuildCatalog catalog)
     {
         var session = new BuildSession(); var frame = session.CreateFrame(new Vector3(0,.5f,0), 0);
-        var foundation = session.Add(catalog.presets[2], frame, default, 0, true);
+        var foundation = session.Add(catalog.presets[2], frame, default, 0);
         var baseFrame = session.Frame(foundation.OwnFrameId);
         foreach (var p in new[] { new Vector3(2,0,0), new Vector3(0,0,2), new Vector3(2,0,4), new Vector3(4,0,2) })
         {
             var preview = BuildPlacement.Solve(catalog.presets[0], frame.Origin + p, Vector3.up, foundation, baseFrame, 0, 0, default);
-            session.Add(preview.Definition, baseFrame, preview.Anchor, preview.YawStep, false);
+            session.Add(preview.Definition, baseFrame, preview.Anchor, preview.YawStep);
         }
         foreach (var p in new[] { Vector3.zero, new Vector3(4,0,0), new Vector3(4,0,4), new Vector3(0,0,4) })
         {
             var preview = BuildPlacement.Solve(catalog.presets[3], frame.Origin + p, Vector3.up, foundation, baseFrame, 0, 0, default);
-            session.Add(preview.Definition, baseFrame, preview.Anchor, preview.YawStep, false);
+            session.Add(preview.Definition, baseFrame, preview.Anchor, preview.YawStep);
         }
         var root = new GameObject("Room authoring fixture");
         var cameraObject = new GameObject("Room authoring camera"); var camera = cameraObject.AddComponent<Camera>(); camera.enabled = false;
@@ -118,7 +118,7 @@ public static class BuildingPrototypeRenderValidation
             authoring.GetComponent<MeshRenderer>().enabled = false;
             camera.cullingMask = ~0;
             var session = new BuildSession(); var frame = session.CreateFrame(Vector3.zero, 1);
-            session.Add(wall, frame, default, 0, false);
+            session.Add(wall, frame, default, 0);
             camera.transform.position = BuildGeometry.Rotation(1) * new Vector3(6, 3.5f, -6);
             camera.transform.LookAt(BuildGeometry.Rotation(1) * wall.LocalBounds.center);
             int before = Object.FindObjectsByType<Transform>().Length;

@@ -58,7 +58,7 @@ internal static class WorldManagerInspectorRules
         {
             string name = path.Substring("treeSettings.".Length);
             if (name.StartsWith("distantTree", StringComparison.Ordinal) && Off(so, "treeSettings.enableDistantTrees")) return "Enable Distant Trees is off.";
-            if ((name == "billboardTreeChunkStartRingRadius" || name == "billboardTreeChunkRingRadius") && On(so, "treeSettings.enableDistantTrees")) return "Legacy billboard rings are replaced by Distant Tree Distance Chunks.";
+            if (name == "billboardTreeChunkRingRadius" && On(so, "treeSettings.enableDistantTrees")) return "Distant Tree Distance Chunks supplies the outer range while distant trees are enabled.";
             if ((name == "distantTreeCrowdingThreshold" || name == "distantTreeEdgeProtection") && Off(so, "treeSettings.distantTreeDensityAware")) return "Density-aware thinning is off.";
             if (name == "distantTreeDepthBands" && Off(so, "treeSettings.distantTreeDepthOrdering")) return "Depth ordering is off.";
             if (name == "distantTreeCompactShader" && Off(so, "treeSettings.distantTreeGpuCompaction")) return "GPU tree compaction is off; CPU fallback remains available.";

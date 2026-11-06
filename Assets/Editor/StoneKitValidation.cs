@@ -93,7 +93,6 @@ public static class StoneKitValidation
                 }
             }
         }
-        Check(catalog.Find(StoneKitSetup.Ids[2]).requiresFullBearing,"Flagstone floor can span without solid support");
     }
     private static void OnState(PlayModeStateChange change)
     {
@@ -127,9 +126,9 @@ public static class StoneKitValidation
                 try
                 {
                     var preview=BuildPlacement.Solve(d,origin+q*new Vector3(2,.15f,0),Vector3.up,null,null,yaw,0,default);
-                    world.Validate(ref preview);Check(preview.Valid&&!preview.Grounded,"Direct TerrainCollider placement rejected: "+preview.Message);
+                    world.Validate(ref preview);Check(preview.Valid,"Direct TerrainCollider placement rejected: "+preview.Message);
                     Near(preview.Origin,origin,"Boundary seed did not seat downward on grid");
-                    var floating=preview;floating.Origin+=Vector3.up*.5f;world.Validate(ref floating);Check(floating.Valid&&!floating.Grounded,"Floating boundary wall grounded");
+                    var floating=preview;floating.Origin+=Vector3.up*.5f;world.Validate(ref floating);Check(floating.Valid,"Floating boundary wall grounded");
                     if(index==5)
                     {
                         Check(d.solidBoxes.Length==2&&d.wallOpenings.Length==1,"Gate bay solids/opening missing");
@@ -148,14 +147,14 @@ public static class StoneKitValidation
                             if(marked)pad.AddComponent<WorldGroundSurface>();Physics.SyncTransforms();return pad;
                         }
                         var middle=Pad("Ground only inside empty gate",2,1,true);
-                        world.Validate(ref preview);Check(preview.Valid&&!preview.Grounded,"Ground in empty gate counted as wing bearing");Object.DestroyImmediate(middle);
+                        world.Validate(ref preview);Check(preview.Valid,"Ground in empty gate counted as wing bearing");Object.DestroyImmediate(middle);
                         var left=Pad("Left wing ground",.6875f,1.375f,true);
-                        world.Validate(ref preview);Check(preview.Valid&&!preview.Grounded,"Only one gate wing grounded the whole bay");
+                        world.Validate(ref preview);Check(preview.Valid,"Only one gate wing grounded the whole bay");
                         var right=Pad("Right wing ground",3.3125f,1.375f,true);
-                        world.Validate(ref preview);Check(preview.Valid&&!preview.Grounded,"Two marked ground wings rejected");
+                        world.Validate(ref preview);Check(preview.Valid,"Two marked ground wings rejected");
                         Object.DestroyImmediate(left);Object.DestroyImmediate(right);Physics.SyncTransforms();terrainCollider.enabled=true;
                     }
-                    world.Validate(ref preview);var piece=world.Commit(preview);Check(piece!=null&&!piece.Grounded&&piece.Supported,"Boundary commit lost terrain support");
+                    world.Validate(ref preview);var piece=world.Commit(preview);Check(piece!=null&&world.Session.Pieces.ContainsKey(piece.Id),"Placed construction missing from session: piece");
                     typeof(BuildWorld).GetMethod("LateUpdate",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(world,null);Physics.SyncTransforms();
                     Check(world.TryGetCollisionProxy(piece.Id,out var proxy),"Boundary runtime proxy missing");
                     var physical=new List<Collider>();proxy.GetEnabledColliders(physical);Check(physical.Count==(index==5?2:1),"Gate collider seals aperture");
@@ -195,20 +194,20 @@ public static class StoneKitValidation
         var wall=catalog.Find(StoneKitSetup.Ids[0]);var pier=catalog.Find(StoneKitSetup.Ids[1]);var floor=catalog.Find(StoneKitSetup.Ids[2]);var cap=catalog.Find(StoneKitSetup.Ids[3]);
         var foundation=catalog.Find("build.prototype.foundation");
         using var session=new BuildSession();var frame=session.CreateFrame(new Vector3(500+yaw*30,20,500),yaw);var q=BuildGeometry.Rotation(yaw);
-        var footing=session.Add(foundation,frame,default,0,true);
-        var first=session.Add(wall,frame,default,0,false);
+        var footing=session.Add(foundation,frame,default,0);
+        var first=session.Add(wall,frame,default,0);
         var stack=BuildPlacement.Solve(wall,first.Origin+q*new Vector3(2,3,0),q*Vector3.up,first,session.Frame(first.OwnFrameId),yaw,0,default);
         Near(stack.Origin,first.Origin+Vector3.up*3,"Stone wall stack datum");
         var capPreview=BuildPlacement.Solve(cap,first.Origin+q*new Vector3(2,3,0),Vector3.up,first,session.Frame(first.OwnFrameId),yaw,0,default);
         Near(capPreview.Origin,first.Origin+Vector3.up*3,"Cap snap datum");
-        var capRecord=session.Add(cap,frame,new Vector3Int(0,12,0),0,false);
-        Check(first.Supported&&capRecord.Supported,"Wall/cap support missing");
+        var capRecord=session.Add(cap,frame,new Vector3Int(0,12,0),0);
+        Check(session.Pieces.ContainsKey(first.Id)&&session.Pieces.ContainsKey(capRecord.Id),"Placed construction missing from session: first, capRecord");
         Check(first.Resolved.auxiliaryMesh==null&&capRecord.Resolved.auxiliaryMesh==null&&first.Resolved.attachments.Length==0,"Stone gained timber seams");
-        var column=session.Add(pier,frame,new Vector3Int(8,0,8),0,false);
+        var column=session.Add(pier,frame,new Vector3Int(8,0,8),0);
         var side=BuildPlacement.Solve(pier,column.Origin+q*new Vector3(.25f,1,0),q*Vector3.right,column,session.Frame(column.OwnFrameId),yaw,0,default);
         Check(Mathf.Abs((side.Origin-column.Origin).magnitude-.5f)<.0001f,"Stone pier adjacency still uses timber's 0.25m spacing");
-        var paving=session.Add(floor,frame,default,0,false);
-        Check(paving.Supported,"Fully bedded paving unsupported");Check(paving.Resolved.cuts.Length==0&&paving.Resolved.auxiliaryMesh==null,"Paving rebuilt with timber cuts/UVs");
+        var paving=session.Add(floor,frame,default,0);
+        Check(session.Pieces.ContainsKey(paving.Id),"Placed construction missing from session: paving");Check(paving.Resolved.cuts.Length==0&&paving.Resolved.auxiliaryMesh==null,"Paving rebuilt with timber cuts/UVs");
         Check(Array.IndexOf(floor.uvVariants,paving.Resolved.mesh)>=0,"Paving lost its UV variation");
         using(var gameplay=new BuildGameplay(session))
         {
@@ -220,24 +219,22 @@ public static class StoneKitValidation
                 Near(box.size,p.Definition.LocalBounds.size,"Runtime collider extent");
             }
         }
-        session.Remove(footing.Id);Check(paving.Supported,"Free placement unexpectedly depends on structural support");
+        session.Remove(footing.Id);Check(session.Pieces.ContainsKey(paving.Id),"Placed construction missing from session: paving");
         using var cantilever=new BuildSession();var cf=cantilever.CreateFrame(frame.Origin+Vector3.right*12,yaw);
-        cantilever.Add(foundation,cf,default,0,true);
-        var overhang=cantilever.Add(floor,cf,new Vector3Int(8,0,0),0,false);Check(overhang.Supported,"Free placement unexpectedly depends on structural support");
-        var states=cantilever.ResolvePreview(new BuildPieceRecord{Id=ulong.MaxValue,Definition=wall,Origin=cf.Origin,WorldYawStep=(byte)yaw,WorldBounds=BuildSession.IndexBounds(wall,cf.Origin,yaw)});
-        var all=new List<BuildPieceRecord>(cantilever.Pieces.Values);Check(BuildSupportState.Resolve(all,states).Contains(overhang.Id),"Preview/commit paving support disagree");
-        // Grounded timber below a broad slab is still a framed floor, not masonry bedding.
+        cantilever.Add(foundation,cf,default,0);
+        var overhang=cantilever.Add(floor,cf,new Vector3Int(8,0,0),0);Check(cantilever.Pieces.ContainsKey(overhang.Id),"Placed construction missing from session: overhang");
+        // Placing a broad slab over timber retains both independent pieces.
         using var timber=new BuildSession();var tf=timber.CreateFrame(frame.Origin+Vector3.left*12,yaw);
-        timber.Add(catalog.Find("build.prototype.floor"),tf,default,0,true);
-        var stoneOverTimber=timber.Add(floor,tf,new Vector3Int(0,1,0),0,false);Check(stoneOverTimber.Supported,"Paving accepted on timber-only bearing");
-        // The union of several supports must cover the whole footprint; removing one creates a hole.
+        timber.Add(catalog.Find("build.prototype.floor"),tf,default,0);
+        var stoneOverTimber=timber.Add(floor,tf,new Vector3Int(0,1,0),0);Check(timber.Pieces.ContainsKey(stoneOverTimber.Id),"Placed construction missing from session: stoneOverTimber");
+        // Removing one underlying tile must leave the broad slab in place.
         var small=Object.Instantiate(foundation);small.sizeUnits=new Vector3Int(8,2,8);
         try
         {
             using var tiled=new BuildSession();var sf=tiled.CreateFrame(frame.Origin+Vector3.forward*12,yaw);BuildPieceRecord last=null;
-            foreach(int x in new[]{0,8})foreach(int z in new[]{0,8})last=tiled.Add(small,sf,new Vector3Int(x,0,z),0,true);
-            var tile=tiled.Add(floor,sf,default,0,false);Check(tile.Supported,"Union of four footing tiles did not supply full bearing");
-            tiled.Remove(last.Id);Check(tile.Supported,"Paving survived a hole in its bearing coverage");
+            foreach(int x in new[]{0,8})foreach(int z in new[]{0,8})last=tiled.Add(small,sf,new Vector3Int(x,0,z),0);
+            var tile=tiled.Add(floor,sf,default,0);Check(tiled.Pieces.ContainsKey(tile.Id),"Placed construction missing from session: tile");
+            tiled.Remove(last.Id);Check(tiled.Pieces.ContainsKey(tile.Id),"Placed construction missing from session: tile");
         }finally{Object.DestroyImmediate(small);}
     }
 }

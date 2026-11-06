@@ -85,7 +85,7 @@ public static class TerrainSculptingIntegrationValidation
             config.SurfaceAppearance=appearance;
             config.SkyAccess=skyAccess;
             var persistence=store==null?null:new TerrainEditPersistence(World,store,report,saveClock);
-            Runtime=new TerrainSculptRuntime(World,Baseline.Read,128,Requests,Find,Viewer.transform,config,false,p=>DestinationAvailable,null,persistence);
+            Runtime=new TerrainSculptRuntime(World,Baseline.Read,128,Requests,Find,Viewer.transform,config,false,p=>DestinationAvailable,null,persistence,useDefaultSkyAccess:false);
             var shared=WorldStreamingConfiguration.Default;shared.SculptReserveMs=.5f;
             Shared=new WorldStreamingBudget(shared);
         }
@@ -103,7 +103,7 @@ public static class TerrainSculptingIntegrationValidation
             runtime=new ChunkRuntime(record,size,(float)P.Spacing,null,Material,Material,receiveShadows);Runtimes.Add(coord,runtime);
             var domain=new TerrainSculptFootprint(new int2(coord.x,coord.z)*size,new int2(coord.x+1,coord.z+1)*size);
             var render=TerrainSculptPatchBuilder.BuildBaseline(P,domain,Baseline.Function).CreateMesh((float3)runtime.RootTransform.position,"Original P3 render");
-            var collider=TerrainSculptPatchBuilder.BuildBaseline(P,domain,Baseline.Function,8).CreateMesh((float3)runtime.RootTransform.position,"Original P3 collision");
+            var collider=TerrainSculptPatchBuilder.BuildBaseline(P,domain,Baseline.Function,ColliderMeshGenerator.RuntimeStep).CreateMesh((float3)runtime.RootTransform.position,"Original P3 collision");
             SourceMeshes.Add(render);SourceMeshes.Add(collider);runtime.SetMeshes(render,null,0);runtime.ApplyCollider(collider);runtime.SetVisible(true);Physics.SyncTransforms();return runtime;
         }
         internal void Tick(Action simulation=null)

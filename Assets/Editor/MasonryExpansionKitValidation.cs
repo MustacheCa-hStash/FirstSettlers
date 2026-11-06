@@ -136,7 +136,7 @@ public static class MasonryExpansionKitValidation
             }
             foreach(string style in new[]{"stone","limestone"})
             {
-                var wall=s.Add(c.Find(style=="stone"?"build.stone.s02-coursed-wall":"build.stone.l01-coursed-limestone"),s.CreateFrame(origin,yaw),default,0,false);
+                var wall=s.Add(c.Find(style=="stone"?"build.stone.s02-coursed-wall":"build.stone.l01-coursed-limestone"),s.CreateFrame(origin,yaw),default,0);
                 var infill=c.Find(MasonryExpansionKitSetup.Id(style+"-square-infill"));
                 foreach(float x in new[]{1f,3f}){var p=BuildPlacement.Solve(infill,origin+q*new Vector3(x,3,0),Vector3.up,wall,s.Frame(wall.OwnFrameId),yaw,0,default);Near(p.Origin,origin+q*new Vector3(x<2?0:2,3,0),"Square infill half-bay datum");}
                 var deck=c.Find(MasonryExpansionKitSetup.Id(style+"-slab-roof"));
@@ -178,7 +178,7 @@ public static class MasonryExpansionKitValidation
                 cam.orthographicSize=2.4f;cam.transform.position=d.mesh.bounds.center+new Vector3(5,3,-8);cam.transform.LookAt(d.mesh.bounds.center);Capture(cam,target,p.slug+"-unity.png");ob.SetActive(false);
             }
             for(int i=0;i<objects.Count;i++){objects[i].transform.position=new Vector3(i%4*6,0,i/4*6);objects[i].SetActive(true);}cam.orthographicSize=12.5f;cam.transform.position=new Vector3(31,29,-31);cam.transform.LookAt(new Vector3(10,1,7));Capture(cam,target,"masonry-expansion-unity.png");foreach(var ob in objects)ob.SetActive(false);
-            using var session=new BuildSession();var frame=session.CreateFrame(Vector3.zero,0);int index=0;foreach(var p in MasonryExpansionKitSetup.Source().parts){session.Add(c.Find(MasonryExpansionKitSetup.Id(p.slug)),frame,new Vector3Int(index%4*24,0,index/4*24),0,false);index++;}
+            using var session=new BuildSession();var frame=session.CreateFrame(Vector3.zero,0);int index=0;foreach(var p in MasonryExpansionKitSetup.Source().parts){session.Add(c.Find(MasonryExpansionKitSetup.Id(p.slug)),frame,new Vector3Int(index%4*24,0,index/4*24),0);index++;}
             var renderer=new BuildRenderer(session);cam.cullingMask=~0;submit=(_,camera)=>{if(camera==cam)renderer.Draw(cam,150,0);};RenderPipelineManager.beginCameraRendering+=submit;Capture(cam,target,"masonry-expansion-instanced.png");Check(renderer.DrawCalls>0&&renderer.DrawCalls<=11,"Instanced drawing failed");
         }finally{if(submit!=null)RenderPipelineManager.beginCameraRendering-=submit;GraphicsSettings.defaultRenderPipeline=oldPipeline;QualitySettings.renderPipeline=oldQuality;RenderSettings.ambientLight=oldAmbient;RenderSettings.ambientMode=oldMode;RenderSettings.sun=oldSun;ShaderUtil.allowAsyncCompilation=oldAsync;RenderTexture.active=previous;Object.DestroyImmediate(root);Object.DestroyImmediate(cameraObj);Object.DestroyImmediate(lightObj);target.Release();Object.DestroyImmediate(target);}
     }

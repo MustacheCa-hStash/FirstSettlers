@@ -241,9 +241,14 @@ public static class TerrainSculptingMeshValidation
         public override int GetHashCode()=>HashCode.Combine(x,y,z);
     }
     private static ulong Edge(int a,int b)=>((ulong)(uint)Math.Min(a,b)<<32)|(uint)Math.Max(a,b);
-    private static void Topology(IReadOnlyList<TerrainSculptMeshData> meshes,TerrainSculptFootprint? outer)
+    private sealed class EdgeHash:IEqualityComparer<ulong>
     {
-        var vertices=new Dictionary<Point,int>();var positions=new List<double3>();var counts=new Dictionary<ulong,int>();
+        public bool Equals(ulong a,ulong b)=>a==b;
+        public int GetHashCode(ulong e)=>HashCode.Combine((uint)(e>>32),(uint)e);
+    }
+    internal static void Topology(IReadOnlyList<TerrainSculptMeshData> meshes,TerrainSculptFootprint? outer)
+    {
+        var vertices=new Dictionary<Point,int>();var positions=new List<double3>();var counts=new Dictionary<ulong,int>(new EdgeHash());
         foreach(var mesh in meshes)
         {
             var remap=new int[mesh.Positions.Length];

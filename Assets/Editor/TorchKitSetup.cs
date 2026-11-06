@@ -36,7 +36,7 @@ public static class TorchKitSetup
         d.contentId=Id;d.displayName="Mounted torch";d.kind=BuildPartKind.Furniture;
         d.sizeUnits=new Vector3Int(1,3,2);d.minimumUnits=Vector3Int.zero;d.boundsOffset=new Vector3(-.125f,0,0);
         d.mesh=mounted;d.material=wood;d.preserveAuthoredMesh=true;d.canGroundOnTerrain=false;d.furnitureWallMounted=true;
-        d.furnitureSupportPoints=new[]{new Vector3(-.035f,.22f,0),new Vector3(.035f,.22f,0),new Vector3(0,.43f,0)};
+
         d.solidBoxes=new[]{new Bounds(new Vector3(0,.315f,.019f),new Vector3(.16f,.35f,.038f)),
             new Bounds(new Vector3(0,.285f,.19f),new Vector3(.14f,.04f,.3f)),new Bounds(new Vector3(0,.38f,.32f),new Vector3(.11f,.73f,.11f))};
         d.jointSockets=Array.Empty<BuildJointSocket>();d.uvVariants=Array.Empty<Mesh>();d.jointCoverVariants=Array.Empty<Mesh>();d.wallOpenings=Array.Empty<Bounds>();d.occupiedVolumes=Array.Empty<BuildConvexVolume>();
@@ -113,16 +113,16 @@ public static class TorchKitSetup
             var mesh=data[0];using var uv=new NativeArray<Vector2>(mesh.vertexCount,Allocator.Temp);mesh.GetUVs(0,uv);
             foreach(var p in uv)Check(p.x>=0 && p.x<=1 && p.y>=0 && p.y<=1,"Torch UV outside atlas.");
         }
-        // Actual placement and support on both faces at each of eight headings.
+        // Actual placement on both faces at each of eight headings.
         var wall=catalog.Find("build.prototype.wall");
         for(int yaw=0;yaw<8;yaw++)foreach(int side in new[]{-1,1})
         {
-            using var session=new BuildSession();var frame=session.CreateFrame(Vector3.zero,yaw);var record=session.Add(wall,frame,Vector3Int.zero,0,true);
+            using var session=new BuildSession();var frame=session.CreateFrame(Vector3.zero,yaw);var record=session.Add(wall,frame,Vector3Int.zero,0);
             var rotation=BuildGeometry.Rotation(yaw);Vector3 hit=rotation*new Vector3(2,1,side*wall.LocalBounds.extents.z);
             var preview=BuildFurnishing.Solve(torch,hit,rotation*(Vector3.forward*side),record,session.Frame(record.OwnFrameId),0,0,Vector3Int.zero);
-            Check(!preview.InvalidAttachment,"Mounted torch face attachment failed.");
-            var p=session.Add(torch,session.CreateFrame(preview.Frame.Origin,preview.Frame.YawStep),preview.Anchor,preview.YawStep,false);
-            Check(p.Supported,"Torch lost supported rear contacts.");
+            Check((preview.Origin-hit).sqrMagnitude<.000001f,"Mounted torch left the aimed wall face.");
+            var p=session.Add(torch,session.CreateFrame(preview.Frame.Origin,preview.Frame.YawStep),preview.Anchor,preview.YawStep);
+            Check(session.Pieces.ContainsKey(p.Id),"Placed construction missing from session: p");
         }
         BuildStoneUiAuthoring.Validate();Capture(torch);
         Directory.CreateDirectory(".utmp/local-flame");File.WriteAllText(".utmp/local-flame/torch-validation.json","{\"checks\":"+checks+",\"vertices\":"+torch.mesh.vertexCount+",\"triangles\":"+(torch.mesh.GetIndexCount(0)/3)+"}");

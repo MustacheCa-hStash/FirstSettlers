@@ -2117,72 +2117,6 @@ public static partial class FoliageGenerator
         return Quaternion.FromToRotation(Vector3.up, new Vector3(-dx, 1, -dz).normalized) * placement.rotation;
     }
 
-    private static bool IsInsideTreeExclusion(
-        float localX,
-        float localZ,
-        List<TreeInstanceData> treeInstances,
-        float exclusionRadiusSqr)
-    {
-        for (int i = 0; i < treeInstances.Count; i++)
-        {
-            TreeInstanceData tree = treeInstances[i];
-
-            float dx = localX - tree.localPosition.x;
-            float dz = localZ - tree.localPosition.z;
-
-            float distSqr = dx * dx + dz * dz;
-
-            if (distSqr < exclusionRadiusSqr)
-                return true;
-        }
-
-        return false;
-    }
-
-    private static bool IsInsideBushExclusion(
-        float localX,
-        float localZ,
-        List<BerryBushInstanceData> bushInstances,
-        float exclusionRadiusSqr)
-    {
-        for (int i = 0; i < bushInstances.Count; i++)
-        {
-            BerryBushInstanceData bush = bushInstances[i];
-
-            float dx = localX - bush.localPosition.x;
-            float dz = localZ - bush.localPosition.z;
-
-            float distSqr = dx * dx + dz * dz;
-
-            if (distSqr < exclusionRadiusSqr)
-                return true;
-        }
-
-        return false;
-    }
-
-    private static bool IsInsideRockExclusion(
-        float localX,
-        float localZ,
-        List<RockInstanceData> rockInstances,
-        float exclusionRadiusSqr)
-    {
-        for (int i = 0; i < rockInstances.Count; i++)
-        {
-            RockInstanceData rock = rockInstances[i];
-
-            float dx = localX - rock.localPosition.x;
-            float dz = localZ - rock.localPosition.z;
-
-            float distSqr = dx * dx + dz * dz;
-
-            if (distSqr < exclusionRadiusSqr)
-                return true;
-        }
-
-        return false;
-    }
-
     private static NativeArray<byte> FlattenMembershipMap(byte[,] source)
     {
         int width = source?.GetLength(0) ?? 0, height = source?.GetLength(1) ?? 0;
@@ -2295,20 +2229,6 @@ public static partial class FoliageGenerator
         baseColor.a = 1f;
 
         return (Color32)baseColor;
-    }
-
-    private static void SortSubChunkBucketsBySelectionRank(ChunkFoliageData foliageData)
-    {
-        int subChunksPerChunk = foliageData.subChunksPerChunk;
-
-        for (int x = 0; x < subChunksPerChunk; x++)
-        {
-            for (int z = 0; z < subChunksPerChunk; z++)
-            {
-                foliageData.nearGrassInstancesBySubChunk[x, z].Sort((a, b) =>
-                    a.selectionRank.CompareTo(b.selectionRank));
-            }
-        }
     }
 
     private static void SortSubChunkBucketBySelectionRank(
@@ -4131,44 +4051,6 @@ public static partial class FoliageGenerator
             value ^= value >> 14;
 
             return value / 4294967295f;
-        }
-    }
-
-    private static float GetDeterministicYaw(
-        int worldSeed,
-        int seedOffset,
-        ChunkCoord chunkCoord,
-        int cellX,
-        int cellZ)
-    {
-        int hash = Hash(worldSeed, seedOffset, chunkCoord.x, chunkCoord.z, cellX, cellZ, 17);
-        float t = Hash01(hash);
-        return t * 360f;
-    }
-
-    private static float GetDeterministicScale(
-        int worldSeed,
-        int seedOffset,
-        ChunkCoord chunkCoord,
-        int cellX,
-        int cellZ,
-        Vector2 scaleRange)
-    {
-        int hash = Hash(worldSeed, seedOffset, chunkCoord.x, chunkCoord.z, cellX, cellZ, 29);
-        float t = Hash01(hash);
-        return Mathf.Lerp(scaleRange.x, scaleRange.y, t);
-    }
-
-    private static uint GetDeterministicSelectionRank(
-        int worldSeed,
-        int seedOffset,
-        ChunkCoord chunkCoord,
-        int cellX,
-        int cellZ)
-    {
-        unchecked
-        {
-            return (uint)Hash(worldSeed, seedOffset, chunkCoord.x, chunkCoord.z, cellX, cellZ, 101);
         }
     }
 

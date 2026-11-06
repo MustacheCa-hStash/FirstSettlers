@@ -61,7 +61,7 @@ public static class OpeningWallValidation
         var s=w.Session;var f=s.CreateFrame(host.transform.position,yaw);var q=BuildGeometry.Rotation(yaw);
         try
         {
-            var foundation=s.Add(c.presets[2],f,default,0,true);s.Add(c.presets[2],f,new Vector3Int(0,0,-16),0,true);
+            var foundation=s.Add(c.presets[2],f,default,0);s.Add(c.presets[2],f,new Vector3Int(0,0,-16),0);
             var starter=BuildPlacement.Solve(d,f.Origin+q*new Vector3(2,0,0),Vector3.up,foundation,s.Frame(foundation.OwnFrameId),0,0,default);
             var wall=w.Commit(starter);C(wall!=null,"Opening wall does not build on foundation");Near(wall.Origin,f.Origin,"Opening wall boundary shift");
             Stream(w);C(w.TryGetCollisionProxy(wall.Id,out var proxy),"Opening wall proxy missing");
@@ -98,14 +98,14 @@ public static class OpeningWallValidation
         foreach(var id in new[]{OpeningWallSetup.DoorId,OpeningWallSetup.WindowId})
         {
             using var s=new BuildSession();var f=s.CreateFrame(new Vector3(47000,47000,47000),yaw);
-            s.Add(c.Find(id),f,default,0,true);var floor=s.Add(c.presets[1],f,new Vector3Int(0,7,-8),0,false);
+            s.Add(c.Find(id),f,default,0);var floor=s.Add(c.presets[1],f,new Vector3Int(0,7,-8),0);
             bool Contains(Vector3 p){foreach(var box in floor.Resolved.boxes)if(box.Contains(p))return true;return false;}
             C(Contains(new Vector3(2,-.125f,2)),"Floor unnecessarily cut through clear aperture");C(!Contains(new Vector3(.5f,-.125f,2)),"Floor ignored solid side");
         }
         using(var s=new BuildSession())
         {
-            var f=s.CreateFrame(new Vector3(47000,47000,47000),yaw);s.Add(c.Find(OpeningWallSetup.GableId),f,default,0,true);
-            var floor=s.Add(c.presets[1],f,new Vector3Int(0,6,-8),0,false);bool left=false,right=false;
+            var f=s.CreateFrame(new Vector3(47000,47000,47000),yaw);s.Add(c.Find(OpeningWallSetup.GableId),f,default,0);
+            var floor=s.Add(c.presets[1],f,new Vector3Int(0,6,-8),0);bool left=false,right=false;
             foreach(var box in floor.Resolved.boxes){left|=box.Contains(new Vector3(.5f,-.125f,2));right|=box.Contains(new Vector3(1.75f,-.125f,2));}
             C(left && !right,"Floor used rectangular gable envelope instead of occupied slope");
         }
@@ -129,7 +129,7 @@ public static class OpeningWallValidation
         var s=w.Session;var f=s.CreateFrame(host.transform.position,yaw);var q=BuildGeometry.Rotation(yaw);var rise=c.Find(OpeningWallSetup.GableId);var fall=rise.flipVariant;var roof=c.Find(ThatchRoofSetup.ContentId);
         try
         {
-            s.Add(c.presets[2],f,default,0,true);var wall=s.Add(c.Find(OpeningWallSetup.DoorId),f,default,0,false);
+            s.Add(c.presets[2],f,default,0);var wall=s.Add(c.Find(OpeningWallSetup.DoorId),f,default,0);
             var left=BuildPlacement.Solve(rise,wall.Origin+q*new Vector3(1,2.9f,0),q*Vector3.forward,wall,s.Frame(wall.OwnFrameId),0,0,default);
             var a=w.Commit(left);C(a!=null,"Rising half on wall top rejected");Near(a.Origin,wall.Origin+Vector3.up*3,"Left half datum");
             var right=BuildPlacement.Solve(fall,wall.Origin+q*new Vector3(3,2.9f,0),q*Vector3.forward,wall,s.Frame(wall.OwnFrameId),0,0,default);
@@ -146,7 +146,7 @@ public static class OpeningWallValidation
             var roofA=BuildPlacement.Solve(roof,a.Origin+q*new Vector3(1,1,0),q*Vector3.forward,a,s.Frame(a.OwnFrameId),0,0,default,a.Origin+q*new Vector3(1,1,2));
             var r=w.Commit(roofA);C(r!=null,"Roof from gable rejected");Near(r.Origin,a.Origin+q*new Vector3(0,0,4),"Roof did not use gable eave");
             var roofB=BuildPlacement.Solve(roof,b.Origin+q*new Vector3(1,1,0),q*Vector3.forward,b,s.Frame(b.OwnFrameId),0,0,default,b.Origin+q*new Vector3(1,1,2));
-            var rr=w.Commit(roofB);C(rr!=null,"Opposite roof from gable rejected");C(r.Supported && rr.Supported,"Roof lost support through gable");
+            var rr=w.Commit(roofB);C(rr!=null,"Opposite roof from gable rejected");C(s.Pieces.ContainsKey(r.Id) && s.Pieces.ContainsKey(rr.Id),"Placed construction missing from session: r, rr");
             C(a.Resolved.attachments.Length==1 && b.Resolved.attachments.Length==1,"Aligned roofs did not seal their visual gable seams");
             C(a.Resolved.volumes.Length==1 && a.Resolved.boxes.Length==0,"Visual seam changed gable collision");
             var frame=s.Frame(r.OwnFrameId);var rq=BuildGeometry.Rotation(r.WorldYawStep);
@@ -160,7 +160,7 @@ public static class OpeningWallValidation
             // A mirrored piece at the same box origin is a different solid, not a false duplicate.
             C(!BuildPlacementPolicy.IsDuplicate(a,new BuildPieceRecord{Definition=fall,Origin=a.Origin,WorldYawStep=a.WorldYawStep}),"Mirrored triangle falsely treated as duplicate");
             w.Remove(r.Id);C(a.Resolved.attachments.Length==0,"Roof removal left orphaned seam trim");
-            s.Remove(wall.Id);C(a.Supported && rr.Supported,"Unsupported gable/roof retained false support");
+            s.Remove(wall.Id);C(s.Pieces.ContainsKey(a.Id) && s.Pieces.ContainsKey(rr.Id),"Placed construction missing from session: a, rr");
         }
         finally{Object.DestroyImmediate(host);Physics.SyncTransforms();}
     }

@@ -164,7 +164,7 @@ public static class SandstoneExtensionValidation
             }
             foreach(var pair in new[]{("SS13","SS15"),("SS13S","SS15S")})
             {
-                var wall=world.Session.Add(D(c,pair.Item1),world.Session.CreateFrame(origin,yaw),default,0,false);
+                var wall=world.Session.Add(D(c,pair.Item1),world.Session.CreateFrame(origin,yaw),default,0);
                 var cap=BuildPlacement.Solve(D(c,pair.Item2),origin+q*new Vector3(wall.Definition.LocalBounds.center.x,1.25f,0),Vector3.up,wall,world.Session.Frame(wall.OwnFrameId),yaw,0,default);
                 world.Validate(ref cap);Check(cap.Valid,"Court coping snap rejected");Near(cap.Origin,origin+Vector3.up*1.25f,"Court coping top datum");world.Remove(wall.Id);
             }
@@ -178,8 +178,8 @@ public static class SandstoneExtensionValidation
         var shelfFrame=s.CreateFrame(shelfOrigin,sy);BuildPieceRecord wall=null,shelf=null;
         try
         {
-            if(shelfFirst)shelf=s.Add(sd,shelfFrame,default,0,false);
-            wall=s.Add(wd,wallFrame,default,0,false);
+            if(shelfFirst)shelf=s.Add(sd,shelfFrame,default,0);
+            wall=s.Add(wd,wallFrame,default,0);
             if(!shelfFirst)
             {
                 var preview=BuildPlacement.Solve(sd,shelfOrigin,q*(back?Vector3.back:Vector3.forward),wall,wallFrame,yaw,0,default);
@@ -189,7 +189,7 @@ public static class SandstoneExtensionValidation
             Check(wall.Resolved.mesh!=wd.mesh,"Embedded tails did not create wall pockets");
             var cuts=BuildCorbelPocket.Cuts(wall,new[]{shelf},wall.Resolved.mesh.bounds);Check(cuts.Count==2,"Expected two tail pockets");
             foreach(var cut in cuts)foreach(var box in wall.Resolved.boxes)Check(!box.Contains(cut.center),"Host collision still fills tail pocket");
-            var before=wall.Resolved.mesh;var duplicate=s.Add(sd,shelfFrame,default,0,false);
+            var before=wall.Resolved.mesh;var duplicate=s.Add(sd,shelfFrame,default,0);
             Check(wall.Resolved.mesh==before,"Duplicate tails caused a different cached mesh");s.Remove(shelf.Id);
             Check(wall.Resolved.mesh==before,"Removing one overlapping shelf restored an occupied pocket");
             using(var gameplay=new BuildGameplay(s))
@@ -204,8 +204,8 @@ public static class SandstoneExtensionValidation
                 }
             }
             s.Remove(duplicate.Id);Check(wall.Resolved.mesh==wd.mesh&&wall.Resolved.boxes.Length==1,"Host wall did not restore after shelf removal");
-            var niche=c.Find("build.stone.ss09-sandstone-niche");var thin=s.Add(niche,s.CreateFrame(origin+q*new Vector3(6,0,0),yaw),default,0,false);
-            var incompatible=s.Add(sd,s.CreateFrame(thin.Origin+q*new Vector3(1.5f,1,.25f),yaw),default,0,false);
+            var niche=c.Find("build.stone.ss09-sandstone-niche");var thin=s.Add(niche,s.CreateFrame(origin+q*new Vector3(6,0,0),yaw),default,0);
+            var incompatible=s.Add(sd,s.CreateFrame(thin.Origin+q*new Vector3(1.5f,1,.25f),yaw),default,0);
             Check(thin.Resolved.mesh==niche.mesh,"Corbel fitting cut an opening or thin niche backing");pockets++;
         }finally{Object.DestroyImmediate(host);Physics.SyncTransforms();}
     }
@@ -229,11 +229,11 @@ public static class SandstoneExtensionValidation
             }
             for(int i=0;i<objects.Count;i++){objects[i].transform.position=new Vector3(i%4*6,0,i/4*6);objects[i].SetActive(true);}cam.orthographicSize=13;cam.transform.position=new Vector3(32,33,-32);cam.transform.LookAt(new Vector3(10,1,9));Capture(cam,target,"extension-unity-overview.png");foreach(var ob in objects)ob.SetActive(false);
             using var session=new BuildSession();var frame=session.CreateFrame(Vector3.zero,0);int index=0;
-            foreach(var p in SandstoneExtensionSetup.Source().parts){session.Add(c.Find(SandstoneExtensionSetup.Id(p)),frame,new Vector3Int(index%4*24,0,index/4*24),0,false);index++;}
+            foreach(var p in SandstoneExtensionSetup.Source().parts){session.Add(c.Find(SandstoneExtensionSetup.Id(p)),frame,new Vector3Int(index%4*24,0,index/4*24),0);index++;}
             var renderer=new BuildRenderer(session);cam.cullingMask=~0;submit=(_,camera)=>{if(camera==cam)renderer.Draw(cam,150,0);};RenderPipelineManager.beginCameraRendering+=submit;Capture(cam,target,"extension-instanced.png");Check(renderer.DrawCalls>0&&renderer.DrawCalls<=14,"Instanced rendering failed");
             foreach(var p in new List<BuildPieceRecord>(session.Pieces.Values))session.Remove(p.Id);
-            var wall=session.Add(c.Find("build.stone.ss01-bedded-sandstone"),frame,default,0,false);
-            session.Add(D(c,"SS23"),session.CreateFrame(new Vector3(1.5f,1,.25f),0),default,0,false);
+            var wall=session.Add(c.Find("build.stone.ss01-bedded-sandstone"),frame,default,0);
+            session.Add(D(c,"SS23"),session.CreateFrame(new Vector3(1.5f,1,.25f),0),default,0);
             Check(wall.Resolved.mesh!=wall.Definition.mesh,"Mounted shelf render did not fit wall");
             cam.orthographicSize=2;cam.transform.position=new Vector3(5,3,8);cam.transform.LookAt(new Vector3(2,1.3f,0));Capture(cam,target,"SS23-mounted-unity.png");
         }finally{if(submit!=null)RenderPipelineManager.beginCameraRendering-=submit;GraphicsSettings.defaultRenderPipeline=oldPipeline;QualitySettings.renderPipeline=oldQuality;RenderSettings.ambientLight=oldAmbient;RenderSettings.ambientMode=oldMode;RenderSettings.sun=oldSun;ShaderUtil.allowAsyncCompilation=oldAsync;RenderTexture.active=previous;Object.DestroyImmediate(root);Object.DestroyImmediate(cameraObj);Object.DestroyImmediate(lightObj);target.Release();Object.DestroyImmediate(target);}

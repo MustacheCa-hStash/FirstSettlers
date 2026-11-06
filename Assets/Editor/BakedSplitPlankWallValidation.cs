@@ -132,7 +132,7 @@ public static class BakedSplitPlankWallValidation
             camera.cullingMask = ~0; // RenderMeshInstanced uses the building renderer's default layer.
             using var session = new BuildSession(); var frame = session.CreateFrame(Vector3.zero, 1);
             for (int row = 0; row < 2; row++)
-                for (int col = 0; col < 3; col++) session.Add(d, frame, new Vector3Int(col * 16, row * 13, 0), 0, false);
+                for (int col = 0; col < 3; col++) session.Add(d, frame, new Vector3Int(col * 16, row * 13, 0), 0);
             int bearings = 0;
             foreach (var piece in session.Pieces.Values) if (piece.Resolved.auxiliaryMesh != null) bearings++;
             Check(bearings == 3, "Procedural bearing trim fixture missing");

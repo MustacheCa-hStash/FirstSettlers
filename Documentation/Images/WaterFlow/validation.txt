@@ -1,0 +1,21 @@
+Near: mean RGB motion=0.0109101, before/after=0.0097375
+PASS: Near water visibly changes over time
+Grazing: mean RGB motion=0.0104263, before/after=0.0089755
+PASS: Grazing water visibly changes over time
+Middle: mean RGB motion=0.0022036, before/after=0.0016961
+Far: mean RGB motion=0.0000000, before/after=0.0000099
+PASS: Far water remains stable beyond ripple fade
+PASS: Geometric diagnostic contains visible water fragments
+GPU geometric height range: -0.15564 .. 0.15869 metres
+PASS: GPU vertices form bounded troughs and crests above and below the mean plane
+PASS: Geometric diagnostic contains visible water fragments
+PASS: Zero amplitude restores an exactly flat geometric surface
+PASS: Zero current and wave speeds freeze geometry and ripples
+PASS: Split chunks match the uninterrupted water surface
+PASS: A zero flow direction gives a finite fallback
+PASS: Water renders without a reflection texture
+PASS: Geometric waves remain animated without a ripple texture
+PASS: Production water shader compiles and renders on the GPU
+PASS: existing water mesh/global-water, reflection visibility, and distant-fog GPU regressions
+GPU: NVIDIA GeForce RTX 5090
+Synthetic pond fixture; deterministic variants substitute only _Time.y. Not a gameplay or performance benchmark.

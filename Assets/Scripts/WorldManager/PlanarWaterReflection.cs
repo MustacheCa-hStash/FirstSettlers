@@ -37,7 +37,7 @@ public sealed class PlanarWaterReflection : MonoBehaviour
 
     public void Configure(Camera source, float surfaceY, float textureScale = 0.7f,
         float stationaryUpdatesPerSecond = 30f, float movingUpdatesPerSecond = 120f,
-        float reflectionDistance = 300f)
+        float reflectionDistance = 300f, float waveDistanceLimit = 120f)
     {
         sourceCamera = source;
         waterY = surfaceY;
@@ -45,6 +45,7 @@ public sealed class PlanarWaterReflection : MonoBehaviour
         stationaryUpdateInterval = 1f / Mathf.Max(1f, stationaryUpdatesPerSecond);
         movingUpdateInterval = 1f / Mathf.Max(1f, movingUpdatesPerSecond);
         maxDistance = Mathf.Max(20f, reflectionDistance);
+        Shader.SetGlobalFloat("_WaterWaveDistanceLimit", Mathf.Max(0.01f, waveDistanceLimit));
         lastUpdateTime = float.NegativeInfinity;
         hasRendered = false;
         requestChecked = false;
@@ -268,6 +269,7 @@ public sealed class PlanarWaterReflection : MonoBehaviour
 
     private void OnDestroy()
     {
+        Shader.SetGlobalFloat("_WaterWaveDistanceLimit", 0f);
         Shader.SetGlobalFloat(ReflectionValidId, 0f);
         Shader.SetGlobalFloat(NormalValidId, 0f);
         if (reflectionTexture != null)

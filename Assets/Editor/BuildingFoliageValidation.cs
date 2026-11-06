@@ -131,20 +131,20 @@ public static class BuildingFoliageValidation
     {
         var go=new GameObject("Free building validation");var definition=ScriptableObject.CreateInstance<BuildDefinition>();
         definition.contentId="validation.floating";definition.kind=BuildPartKind.Foundation;definition.sizeUnits=new Vector3Int(8,1,8);
-        definition.preserveAuthoredMesh=true;definition.requiresFullBearing=true;
+        definition.preserveAuthoredMesh=true;
         try
         {
             var world=go.AddComponent<BuildWorld>();if(world.Session==null)typeof(BuildWorld).GetMethod("Awake",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).Invoke(world,null);
             var p=new BuildPreview { Definition=definition,Origin=new Vector3(9000,100,9000),Frame=new BuildGridFrame { Origin=new Vector3(9000,100,9000) } };
-            world.Validate(ref p);Check(p.Valid&&!world.PreviewUsedFullSupport,"Floating foundation rejected: "+p.Message);
+            world.Validate(ref p);Check(p.Valid,"Floating foundation rejected: "+p.Message);
             var first=world.Commit(p);Check(first!=null,"Floating placement commit failed");
             p.Origin+=Vector3.up*10;p.Frame=new BuildGridFrame { Origin=p.Origin };var second=world.Commit(p);
             Check(second!=null,"Independent elevated placement failed");world.Remove(first.Id);
-            Check(world.Session.TryGet(second.Id,out _)&&second.Supported,"Removing neighbour invalidated floating piece");
+            Check(world.Session.TryGet(second.Id,out _)&&world.Session.Pieces.ContainsKey(second.Id),"Removing neighbour invalidated floating piece");
             Check(world.Damage(second.Id,100)&&!world.Session.TryGet(second.Id,out _),"Explicit damage/removal no longer works");
             definition.kind=BuildPartKind.Stair;p.Origin+=Vector3.up*10;p.Frame=new BuildGridFrame { Origin=p.Origin };p.Hint="Ground grid";
             world.Validate(ref p);Check(p.Valid,"Unattached stair rejected: "+p.Message);
-            definition.kind=BuildPartKind.Furniture;definition.furnitureWallMounted=true;p.InvalidAttachment=true;
+            definition.kind=BuildPartKind.Furniture;definition.furnitureWallMounted=true;
             world.Validate(ref p);Check(p.Valid,"Floating furnishing rejected: "+p.Message);
         }
         finally { Object.DestroyImmediate(go);Object.DestroyImmediate(definition); }

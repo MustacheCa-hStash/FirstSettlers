@@ -42,7 +42,7 @@ public static class MasonryExpansionKitSetup
             if(d==null){d=ScriptableObject.CreateInstance<BuildDefinition>();AssetDatabase.CreateAsset(d,path+".asset");}
             d.contentId=Id(p.slug);d.displayName=p.name;d.kind=(BuildPartKind)p.kind;d.sizeUnits=Vector3Int.RoundToInt(V(p.size)/BuildGeometry.Unit);
             d.minimumUnits=Vector3Int.zero;d.boundsOffset=V(p.minimum);d.stackRiseUnits=d.kind==BuildPartKind.Wall?d.sizeUnits.y:0;d.wallEndInsetUnits=0;
-            d.wallPlacementMode=p.infill?WallPlacementMode.Infill:WallPlacementMode.Panel;d.preserveAuthoredMesh=true;d.requiresFullBearing=false;d.canGroundOnTerrain=false;d.maxHealth=100;
+            d.wallPlacementMode=p.infill?WallPlacementMode.Infill:WallPlacementMode.Panel;d.preserveAuthoredMesh=true;d.canGroundOnTerrain=false;d.maxHealth=100;
             d.material=p.style=="wood"?SplitPlankWallSetup.TrimMaterial:material;d.gableSlope=GableSlope.None;d.flipVariant=null;d.roofAttachment=RoofAttachmentMode.None;d.topCourseDepth=0;d.wallBaseAttachment=false;
             d.uvVariants=Array.Empty<Mesh>();d.jointCoverVariants=Array.Empty<Mesh>();d.floorParts=Array.Empty<BuildTimberPart>();d.solidBoxes=Array.Empty<Bounds>();d.wallOpenings=Array.Empty<Bounds>();
             var mesh=WattleWallSetup.BakeStaticMesh(ModularWoodSetup.Import(Models+"/"+p.file),Vector3.zero,p.name,out _,true);mesh.RecalculateTangents();d.mesh=Save(mesh,path+"-mesh.asset");

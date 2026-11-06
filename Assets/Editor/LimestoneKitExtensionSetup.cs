@@ -52,7 +52,7 @@ public static class LimestoneKitExtensionSetup
             d.kind = i == 0 ? BuildPartKind.Corner : i == 1 ? BuildPartKind.Floor : i == 2 ? BuildPartKind.Foundation : BuildPartKind.Wall;
             d.sizeUnits = Vector3Int.RoundToInt(Sizes[i] / BuildGeometry.Unit); d.minimumUnits = Vector3Int.zero; d.boundsOffset = Minima[i];
             d.stackRiseUnits = i == 1 ? 1 : i == 2 || i == 4 ? 2 : 12; d.wallEndInsetUnits = 0; d.wallPlacementMode = WallPlacementMode.Panel;
-            d.requiresFullBearing = i == 1; d.canGroundOnTerrain = false; d.preserveAuthoredMesh = true; d.maxHealth = 100;
+             d.canGroundOnTerrain = false; d.preserveAuthoredMesh = true; d.maxHealth = 100;
             d.material = material; d.jointCoverVariants = Array.Empty<Mesh>(); d.jointCoverMaterial = null;
             d.solidBoxes = Array.Empty<Bounds>(); d.wallOpenings = Array.Empty<Bounds>(); d.occupiedVolumes = Array.Empty<BuildConvexVolume>();
             if (i == 5)

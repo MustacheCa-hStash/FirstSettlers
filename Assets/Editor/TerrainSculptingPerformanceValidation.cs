@@ -71,13 +71,13 @@ public static class TerrainSculptingPerformanceValidation
             foreach(int step in new[]{1,8})
             {
                 var plain=TerrainSculptPatchBuilder.BuildPatch(field,footprint,0,40,(x,z)=>10,step);
-                var cached=(TerrainSculptMeshData)build.Invoke(null,new object[]{field,footprint,0,40,(Func<double,double,double>)((x,z)=>10),step,budget,builder,null});
+                var cached=(TerrainSculptMeshData)build.Invoke(null,new object[]{field,footprint,0,40,(Func<double,double,double>)((x,z)=>10),step,budget,builder,null,null});
                 SameGeometry(plain,new[]{cached});
                 var windows=new List<TerrainSculptMeshData>();
                 for(int z=0;z<2;z++)for(int x=0;x<2;x++)
                 {
                     var window=new TerrainSculptFootprint(new int2(x,z)*32,new int2(x+1,z+1)*32);
-                    windows.Add((TerrainSculptMeshData)build.Invoke(null,new object[]{field,footprint,0,40,(Func<double,double,double>)((a,b)=>10),step,budget,builder,window}));
+                    windows.Add((TerrainSculptMeshData)build.Invoke(null,new object[]{field,footprint,0,40,(Func<double,double,double>)((a,b)=>10),step,budget,builder,window,null}));
                 }
                 SameGeometry(plain,windows);
             }
@@ -88,9 +88,9 @@ public static class TerrainSculptingPerformanceValidation
     }
     private static void SameGeometry(TerrainSculptMeshData expected,IReadOnlyList<TerrainSculptMeshData> pieces)
     {
-        var ids=new Dictionary<double3,int>();var normals=new Dictionary<double3,float3>();
+        var ids=new Dictionary<double3,int>();var normals=new Dictionary<double3,float3>();var exposure=new Dictionary<double3,float2>();
         for(int i=0;i<expected.Positions.Length;i++)
-        {ids[expected.Positions[i]]=i;normals[expected.Positions[i]]=expected.Normals[i];}
+        {ids[expected.Positions[i]]=i;normals[expected.Positions[i]]=expected.Normals[i];exposure[expected.Positions[i]]=expected.SurfaceData[i];}
         (int,int,int) Triangle(int a,int b,int c)=>a<b&&a<c?(a,b,c):b<c?(b,c,a):(c,a,b);
         var triangles=new HashSet<(int,int,int)>();
         for(int i=0;i<expected.Triangles.Length;i+=3)
@@ -102,6 +102,7 @@ public static class TerrainSculptingPerformanceValidation
             {
                 Check(ids.TryGetValue(mesh.Positions[i],out remap[i]),"Cache/window changed a vertex position.");
                 Check(math.distance(normals[mesh.Positions[i]],mesh.Normals[i])<1e-6,"Cache/window changed a seam normal.");
+                Check(math.all(exposure[mesh.Positions[i]]==mesh.SurfaceData[i]),"Cache/window changed excavation material coverage.");
             }
             for(int i=0;i<mesh.Triangles.Length;i+=3)
                 Check(triangles.Remove(Triangle(remap[mesh.Triangles[i]],remap[mesh.Triangles[i+1]],remap[mesh.Triangles[i+2]])),"Cache/window changed triangle topology or winding.");

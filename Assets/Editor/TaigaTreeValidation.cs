@@ -126,7 +126,7 @@ public static class TaigaTreeValidation
         var placement = TreeGenerationSnapshot.Create(settings);
         var viewer = (Transform)so.FindProperty("viewer").objectReferenceValue;
         var center = new ChunkCoord(Mathf.FloorToInt(viewer.position.x / (size * ws)), Mathf.FloorToInt(viewer.position.z / (size * ws)));
-        Debug.Log($"TAIGA SCENE: seed={seed}, saved viewer={viewer.position}, center=({center.x},{center.z}), distant enabled={settings.enableDistantTrees}, instance radius={settings.gameObjectTreeChunkRingRadius}, distant radius={settings.distantTreeDistanceChunks}. Legacy billboard start={settings.billboardTreeChunkStartRingRadius} is ignored while distant trees are enabled.");
+        Debug.Log($"TAIGA SCENE: seed={seed}, saved viewer={viewer.position}, center=({center.x},{center.z}), distant enabled={settings.enableDistantTrees}, instance radius={settings.gameObjectTreeChunkRingRadius}, distant radius={settings.distantTreeDistanceChunks}.");
         var context = HeightMapGenerator.CreateSamplingContext(seed, water, mountain, erosion);
         int climateOctaves = ClimateGenerator.GetClimateOctaveCount(octaves);
         float max = ClimateGenerator.GetMaxPossibleNoise(climateOctaves, persistence);

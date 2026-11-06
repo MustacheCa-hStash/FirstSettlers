@@ -1,0 +1,28 @@
+Slope 0.4, angle 0.00: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Slope 0.4, angle 1.57: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Slope 0.4, angle 0.71: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Slope 0.4, angle 3.80: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Slope 7.0, angle 0.00: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Slope 7.0, angle 1.57: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Slope 7.0, angle 0.71: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Slope 7.0, angle 3.80: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Slope 10.0, angle 0.00: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Slope 10.0, angle 1.57: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Slope 10.0, angle 0.71: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Slope 10.0, angle 3.80: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Slope 12.0, angle 0.00: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Slope 12.0, angle 1.57: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Slope 12.0, angle 0.71: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Slope 12.0, angle 3.80: untouched, sphere and repeated box cuts; connected oriented collars, negative coordinates and repeatability passed.
+Pending snapshot guard expansion and group re-merge passed without committing or restaging the edit.
+Steep entrance at signed source boundary z=0.00: four cuts, actual PhysX capsule traversal and published render/collision equality passed. Peak live 25.68 MiB; last worker 80.9 ms.
+Steep entrance at signed source boundary z=38.40: four cuts, actual PhysX capsule traversal and published render/collision equality passed. Peak live 25.68 MiB; last worker 198.7 ms.
+Steep entrance at signed source boundary z=-38.40: four cuts, actual PhysX capsule traversal and published render/collision equality passed. Peak live 25.68 MiB; last worker 90.0 ms.
+Native URP rock-wall overview, entrance and close views captured using the production terrain/excavation shader and published meshes.
+Production shader precision, (0.00, 0.00, 0.00), absolute: 2359296 pixels, RMS 0.0000 degrees, max 0.000; 0 above 1 degree.
+Production shader precision, (0.00, 0.00, 0.00), relative: 2359296 pixels, RMS 0.0000 degrees, max 0.000; 0 above 1 degree.
+Production shader precision, (12000.00, 400.00, -11000.00), absolute: 2359296 pixels, RMS 7.1538 degrees, max 27.640; 1813232 above 1 degree.
+Production shader precision, (12000.00, 400.00, -11000.00), relative: 2359296 pixels, RMS 0.0000 degrees, max 0.000; 0 above 1 degree.
+Production shader precision, (-12000.00, 400.00, 11000.00), absolute: 2359296 pixels, RMS 7.1454 degrees, max 27.640; 1813491 above 1 degree.
+Production shader precision, (-12000.00, 400.00, 11000.00), relative: 2359296 pixels, RMS 0.0000 degrees, max 0.000; 0 above 1 degree.
+STEEP EXCAVATION PASS: 14599499 new checks, plus existing foundation, mesh/motor, transactions, persistence, interaction and performance suites.

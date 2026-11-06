@@ -1,0 +1,16 @@
+Snow-biome survey (four seeds, actual heights/slopes/climate): 4194 -> 5357 of 58564, 7.16% -> 9.15%.
+GlacierValley: seed 43, terrain XZ float2(41343.95f, -37812.57f), cold score 1.000.
+ShoulderBenches: seed 43, terrain XZ float2(37815.67f, -38093.65f), cold score 1.000.
+UpperBowl: seed 66, terrain XZ float2(21410.4f, -37778.4f), cold score 1.000.
+MountainPass: seed 66, terrain XZ float2(18130.59f, -41075.29f), cold score 1.000.
+GlacierValley full catchment: maximum .3m edge rise 0.476m, 284 scoured moraine samples, 40 exposed ice samples steeper than 20deg.
+GlacierValley: gentle <15deg 98.4%, exposed ice 16384/16384, maximum .3m edge rise 0.081m; 1849 PhysX rays pass, max error 0.000092m; near/far/density and seams pass.
+ShoulderBenches full catchment: maximum .3m edge rise 0.458m, 202 scoured moraine samples, 83 exposed ice samples steeper than 20deg.
+ShoulderBenches: gentle <15deg 100.0%, exposed ice 16384/16384, maximum .3m edge rise 0.030m; 1849 PhysX rays pass, max error 0.000031m; near/far/density and seams pass.
+UpperBowl full catchment: maximum .3m edge rise 0.509m, 52 scoured moraine samples, 368 exposed ice samples steeper than 20deg.
+UpperBowl: gentle <15deg 100.0%, exposed ice 15543/16384, maximum .3m edge rise 0.050m; 1849 PhysX rays pass, max error 0.000061m; near/far/density and seams pass.
+MountainPass full catchment: maximum .3m edge rise 0.601m, 261 scoured moraine samples, 0 exposed ice samples steeper than 20deg.
+MountainPass: gentle <15deg 100.0%, exposed ice 0/16384, maximum .3m edge rise 0.016m; 1849 PhysX rays pass, max error 0.000092m; near/far/density and seams pass.
+Selected ice-wall capture: seed 43, terrain XZ float2(37968.27f, -38018.52f), slope 59.1deg.
+Warmed 128-unit height-field median at cold site: old 10.706ms, glacial 12.678ms. This is not live-world FPS.
+GLACIAL LANDFORMS PASS: 167877 checks.

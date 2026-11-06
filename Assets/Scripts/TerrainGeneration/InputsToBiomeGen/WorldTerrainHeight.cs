@@ -60,7 +60,7 @@ public static class WorldTerrainHeight
 
     // Directional erosion follows this broad surface, never the derivatives of added
     // caprock/cliff thresholds. Those can rotate almost 180 degrees within one mesh cell.
-    private static WorldBaseSample BroadBase(float2 p, float sampleScale, int seed, float coverage, in WorldErosionSettings s)
+    internal static WorldBaseSample BroadBase(float2 p, float sampleScale, int seed, float coverage, in WorldErosionSettings s)
     {
         float scale = math.max(sampleScale, 0.0001f);
         float3 land = Fbm(p, scale * 1.6f, seed + 20000, s.baseOctaves, s.baseRoughness);

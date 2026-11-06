@@ -110,9 +110,6 @@ public class TreeSettings
     [Range(1, 8), Tooltip("World-aligned chunk widths grouped into each standing-tree draw region. 1 keeps per-chunk draws; larger regions reduce submissions with broader camera/shadow culling bounds. Does not change tree detail or coverage.")]
     public int standingTreeBatchSizeChunks = 4;
 
-    [HideInInspector, Tooltip("Legacy billboard ring start; retained for serialized compatibility.")]
-    public int billboardTreeChunkStartRingRadius = 2;
-
     [Tooltip("Maximum chunk-ring radius for billboard trees.")]
     public int billboardTreeChunkRingRadius = 8;
 
@@ -165,9 +162,6 @@ public class TreeSettings
 
     [Tooltip("Approximate per-frame time budget for tree representation rebuilds. Set to 0 to use only the per-frame count cap.")]
     public float treeRepresentationRebuildBudgetMsPerFrame = 0.75f;
-
-    [HideInInspector, Tooltip("Legacy visual GameObject pooling setting; retained for serialized compatibility.")]
-    public int treeGameObjectWarmRetainExtraRings = 1;
 
     [Header("Berry Bush Rendering")]
     [Tooltip("Circular chunk radius for berry bush GameObjects. Bushes do not currently use billboards.")]

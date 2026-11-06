@@ -72,7 +72,7 @@ public static class BuildGeometry
         return (aToB || bToA) && width > .015f;
     }
 
-    /// <summary>Ordinary face contacts transmit support. Mere edge/corner touching does not.</summary>
+    /// <summary>Ordinary face contacts establish geometric adjacency. Mere edge/corner touching does not.</summary>
     public static bool Connects(Bounds a, Vector3 ao, int ay, Bounds b, Vector3 bo, int by)
     {
         const float tolerance = .012f;

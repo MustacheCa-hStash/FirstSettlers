@@ -1,4 +1,4 @@
-WORLD LANDFORMS PASS: 143864 checks.
+WORLD LANDFORMS PASS: 145020 checks.
 Plateaus: seed 7, terrain XZ float2(-12341.1f, -5957.85f)
 Dunes: seed 7, terrain XZ float2(-11008f, 5376f)
 DryMountains: seed 7, terrain XZ float2(13575.21f, -13107.27f)

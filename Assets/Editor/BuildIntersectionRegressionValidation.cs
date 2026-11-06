@@ -63,7 +63,7 @@ public static class BuildIntersectionRegressionValidation
             var w=World(new Vector3(20000+yaw*20,20000,20000));var f=w.Session.CreateFrame(w.transform.position,yaw);
             try
             {
-                w.Session.Add(c.presets[2],f,default,0,true);
+                w.Session.Add(c.presets[2],f,default,0);
                 var lower=w.Commit(At(d,f,new Vector3Int(1,0,0)));Check(lower!=null,"Lower component failed");
                 var p=At(d,f,new Vector3Int(1,12,0));w.Validate(ref p);
                 var upperCore=BuildTrimUV.Core(new BuildPieceRecord{Definition=d,Origin=p.Origin,WorldYawStep=(byte)p.WorldYaw});
@@ -76,8 +76,8 @@ public static class BuildIntersectionRegressionValidation
                 Check(w.DebugStates[upper.Id].mesh==upperCore && w.DebugStates[upper.Id].auxiliaryMesh==null,"Floor preview did not suppress just the auxiliary bearing");
                 var floor=w.Commit(floorPreview);Check(floor!=null && upper.Resolved.auxiliaryMesh==null && upper.Resolved.mesh==upperCore,"Floor insertion replaced the wall core");
                 w.Remove(floor.Id);Check(upper.Resolved.mesh==upperCore && (upper.Resolved.auxiliaryMesh!=null)==separateBearing,"Removing a floor lost the restored bearing/core");
-                w.Remove(lower.Id);Check(upper.Resolved.mesh==upperCore && upper.Resolved.auxiliaryMesh==null && upper.Supported,"Removing lower wall changed the upper core or invalidated floating placement");
-                var restored=w.Commit(At(d,f,new Vector3Int(1,0,0)));Check(restored!=null && upper.Supported && (upper.Resolved.auxiliaryMesh!=null)==separateBearing,"Restoring lower wall did not restore bearing/support");
+                w.Remove(lower.Id);Check(upper.Resolved.mesh==upperCore && upper.Resolved.auxiliaryMesh==null && w.Session.Pieces.ContainsKey(upper.Id),"Removing lower wall changed the upper core or invalidated floating placement");
+                var restored=w.Commit(At(d,f,new Vector3Int(1,0,0)));Check(restored!=null && w.Session.Pieces.ContainsKey(upper.Id) && (upper.Resolved.auxiliaryMesh!=null)==separateBearing,"Restoring lower wall did not restore bearing/support");
             }finally{Object.DestroyImmediate(w.gameObject);Physics.SyncTransforms();}
         }
     }
@@ -87,7 +87,7 @@ public static class BuildIntersectionRegressionValidation
         var roof=c.Find(ThatchRoofSetup.ContentId);var stair=c.Find(W21StairSetup.ContentId);
         try
         {
-            w.Session.Add(c.presets[2],f,default,0,true);w.Commit(At(c.presets[0],f,new Vector3Int(1,0,0)));
+            w.Session.Add(c.presets[2],f,default,0);w.Commit(At(c.presets[0],f,new Vector3Int(1,0,0)));
             if(overlap)Check(w.Commit(At(c.presets[1],f,new Vector3Int(0,8,0)))!=null,"Raised stair platform failed");
             var rp=At(roof,f,new Vector3Int(0,12,0));var sp=At(stair,f,new Vector3Int(2,overlap?8:0,6),2);
             var first=w.Commit(roofFirst?rp:sp);Check(first!=null,"First roof/stair placement failed");
@@ -120,7 +120,7 @@ public static class BuildIntersectionRegressionValidation
         var stair=c.Find(W21StairSetup.ContentId);
         try
         {
-            w.Session.Add(c.presets[2],f,default,0,true);
+            w.Session.Add(c.presets[2],f,default,0);
             var wall=w.Commit(At(c.presets[0],f,new Vector3Int(1,0,0)));Check(wall!=null,"Permissive base wall failed");
             var first=w.Commit(At(stair,f,new Vector3Int(2,0,6),2));Check(first!=null,"Adjacent stair foot failed");
             var second=w.Commit(At(stair,f,new Vector3Int(10,6,6),2));Check(second!=null,"Adjacent second flight failed");
@@ -130,7 +130,7 @@ public static class BuildIntersectionRegressionValidation
             Check(head.Valid && head.Warning==BuildPlacementWarning.StairHeadroom,"Wall headroom still rejects build eligibility: "+head.Message);
             var crossing=At(stair,f,new Vector3Int(2,0,4),2);w.Validate(ref crossing);
             Check(crossing.Valid && crossing.Warning==BuildPlacementWarning.BuildOverlap,"Stair/wall solid overlap still rejects placement");
-            var crossed=w.Commit(crossing);Check(crossed!=null && crossed.Supported,"Overlap did not transmit physical support");
+            var crossed=w.Commit(crossing);Check(crossed!=null && w.Session.Pieces.ContainsKey(crossed.Id),"Placed construction missing from session: crossed");
             Invoke(w,"LateUpdate");
             Check(w.TryGetCollisionProxy(wall.Id,out var wallProxy) && wallProxy.Shape.enabled && wallProxy.Shape.size==wall.Definition.LocalBounds.size,"Permissive placement carved the wall collider");
             Check(w.TryGetCollisionProxy(crossed.Id,out var stairProxy) && stairProxy.RampShape.enabled && stairProxy.RampShape.sharedMesh==stair.collisionMesh,"Permissive placement changed the walking hull");
@@ -161,8 +161,8 @@ public static class BuildIntersectionRegressionValidation
                 foreach(bool reverse in new[]{false,true})
                 {
                     using var s=new BuildSession();var f=s.CreateFrame(new Vector3(10,10,10),yaw);BuildPieceRecord a,b;
-                    if(reverse){b=s.Add(wall,f,new Vector3Int(16,0,0),2,true);a=s.Add(wall,f,default,0,true);}
-                    else{a=s.Add(wall,f,default,0,true);b=s.Add(wall,f,new Vector3Int(16,0,0),2,true);}
+                    if(reverse){b=s.Add(wall,f,new Vector3Int(16,0,0),2);a=s.Add(wall,f,default,0);}
+                    else{a=s.Add(wall,f,default,0);b=s.Add(wall,f,new Vector3Int(16,0,0),2);}
                     Check(a.Resolved.joints.Length==1 && b.Resolved.joints.Length==1 && a.Resolved.joints[0].Kind==BuildJointKind.Corner,"Declared corner endpoints did not resolve");
                     Check(a.Resolved.joints[0].PrimaryOwner!=b.Resolved.joints[0].PrimaryOwner,"Corner has two primary owners");
                     if(owner.HasValue)Check(owner.Value==a.Resolved.joints[0].PrimaryOwner,"Corner owner depends on placement order");else owner=a.Resolved.joints[0].PrimaryOwner;
@@ -189,7 +189,7 @@ public static class BuildIntersectionRegressionValidation
     private static void Render(BuildCatalog c)
     {
         Directory.CreateDirectory(".utmp/intersection-regression");var w=World(Vector3.zero);var f=w.Session.CreateFrame(Vector3.zero,0);
-        w.Session.Add(c.presets[2],f,default,0,true);var lower=w.Commit(At(c.presets[0],f,new Vector3Int(1,0,0)));var upper=w.Commit(At(c.presets[0],f,new Vector3Int(1,12,0)));
+        w.Session.Add(c.presets[2],f,default,0);var lower=w.Commit(At(c.presets[0],f,new Vector3Int(1,0,0)));var upper=w.Commit(At(c.presets[0],f,new Vector3Int(1,12,0)));
         var camObj=new GameObject("Stack runtime camera");var cam=camObj.AddComponent<Camera>();cam.enabled=false;cam.orthographic=true;cam.orthographicSize=3.4f;cam.aspect=1.5f;cam.clearFlags=CameraClearFlags.SolidColor;cam.backgroundColor=new Color(.03f,.04f,.06f);
         cam.transform.position=new Vector3(2,2.9f,-8);cam.transform.LookAt(new Vector3(2,2.9f,0));
         var lightObj=new GameObject("Stack runtime light");var light=lightObj.AddComponent<Light>();light.type=LightType.Directional;light.intensity=1.4f;lightObj.transform.rotation=Quaternion.Euler(35,-35,0);

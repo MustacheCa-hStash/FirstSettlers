@@ -121,7 +121,7 @@ try {
         Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force
     }
     Copy-Item -LiteralPath 'Assets/Editor/BuildStoneUiAuthoring.cs','Assets/Editor/BuildStoneUiAuthoring.cs.meta' -Destination "$buildingProject/Assets/Editor" -Force
-    foreach ($buildingName in 'BuildKitDimensions','BuildInteractionValidation','BuildGablePlacementValidation') {
+    foreach ($buildingName in 'BuildKitDimensions','BuildInteractionValidation','BuildGablePlacementValidation','BuildIncrementalValidation') {
         if (Test-Path -LiteralPath "Assets/Editor/$buildingName.cs") {
             if (-not (Test-Path -LiteralPath "Assets/Editor/$buildingName.cs.meta")) { "fileFormatVersion: 2`nguid: $([guid]::NewGuid().ToString('N'))" | Set-Content -LiteralPath "Assets/Editor/$buildingName.cs.meta" }
             Copy-Item -LiteralPath "Assets/Editor/$buildingName.cs","Assets/Editor/$buildingName.cs.meta" -Destination "$buildingProject/Assets/Editor" -Force

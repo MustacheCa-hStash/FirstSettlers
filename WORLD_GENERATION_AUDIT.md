@@ -38,7 +38,7 @@ The saved [SmearScene](C:/Users/samee/GitProjects/FirstSettlers/Assets/Scenes/Sm
 
 Its climate setting `octaves = 2` produces **one actual climate octave**. Persistence and lacunarity therefore do not change climate in that configuration. Climate correlation scales are approximately 1,800/2,160 world units before interpreting the noise shape. This explains broad biome regions; it is not an erosion-octave setting.
 
-The old `BaseLandGenerator`, `MountainMaskGenerator` and `MountainTerrainGenerator` files are not the active height path. The compatibility octave-offset arrays passed through the height API are ignored by the current `SampleWorldHeight` implementation, and mountain anchors are now always empty.
+The retired base-land, mountain, derivative-fBm and river generators, their private noise utility, and the empty mountain-anchor compatibility API were removed on November 6, 2026. `HeightMapGenerator.SampleWorldHeight` and `WorldTerrainHeight` remain the active height path. Climate octave offsets and the shared `AnalyticValueNoise2D` / `NoiseSample2D` types still have active consumers and are retained.
 
 ## Determinism and correctness findings
 
@@ -157,7 +157,7 @@ For one warmed mixed-habitat 128-sample chunk, the median of 20 paired full-plan
 
 ## Implementation checkpoint: A3 only
 
-Removed the unused one-step X/Z gradient maps from the near-terrain job, managed result, and request handoff. The gameplay slope still uses its original four-sample stencil. Also removed creation and carriage of the four legacy octave-offset arrays and empty mountain-anchor buffers from near/far height jobs, mountain-snow coverage, and distant-tree terrain sampling. Climate octave offsets remain, since climate sampling uses them. The compatibility `GetMountainAnchors` method remains available but has no active generation call sites.
+Removed the unused one-step X/Z gradient maps from the near-terrain job, managed result, and request handoff. The gameplay slope still uses its original four-sample stencil. Also removed creation and carriage of the four legacy octave-offset arrays and empty mountain-anchor buffers from near/far height jobs, mountain-snow coverage, and distant-tree terrain sampling. Climate octave offsets remain, since climate sampling uses them. At this checkpoint, the compatibility `GetMountainAnchors` method remained available without active generation call sites; the November 6, 2026 cleanup removed it along with the retired generators.
 
 Unity 6000.4.8f1 compared the original and optimized near-height implementations across 12 cases (three seeds, positive/negative chunk coordinates, 32/128-sample chunks, default/customized erosion): height, slope, mountain mask, and river mask were bit-exact. A warmed 128-sample height-field case had median **6.419 ms before / 6.152 ms after** over 12 paired runs (about **4.2% lower**). The two removed managed gradient maps and two native gradient buffers save about **285 KiB** of transient storage per size-128 request, excluding object overhead.
 

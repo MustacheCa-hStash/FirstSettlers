@@ -21,7 +21,7 @@ public sealed class TerrainEditStorageConfiguration
 public sealed class TerrainEditIdentity
 {
     // Bump when canonical generation, cave policy or baseline interpolation changes.
-    public const string GeneratorVersion = "firstsettlers-broad-uplands-v4/triangle-ac-v1";
+    public const string GeneratorVersion = "firstsettlers-glacial-cliffs-v7/triangle-ac-v1";
     public string WorldId { get; }
     public string Fingerprint { get; }
     public TerrainDensityProfile Profile { get; }

@@ -128,7 +128,7 @@ public static class ModularWoodValidation
     private static void GameplayLifetime(BuildCatalog c)
     {
         using var s=new BuildSession();var f=s.CreateFrame(new Vector3(31000,31000,31000),0);
-        var a=s.Add(c.presets[0],f,default,0,true);
+        var a=s.Add(c.presets[0],f,default,0);
         // Individual active proxy disappears while the pool is still running.
         using(var gameplay=new BuildGameplay(s))
         {
@@ -156,7 +156,7 @@ public static class ModularWoodValidation
             gameplay.Dispose();gameplay.Dispose();proxy.Unbind();Check(gameplay.ActiveCount==0,"Destroyed hierarchy retained active entries");
         }
         var host=new GameObject("World teardown fixture");host.transform.position=f.Origin;var world=host.AddComponent<BuildWorld>();world.enabled=false;world.Focus=host.transform;
-        var frame=world.Session.CreateFrame(f.Origin,0);var wall=world.Session.Add(c.presets[0],frame,default,0,true);
+        var frame=world.Session.CreateFrame(f.Origin,0);var wall=world.Session.Add(c.presets[0],frame,default,0);
         typeof(BuildWorld).GetMethod("LateUpdate",BindingFlags.NonPublic|BindingFlags.Instance).Invoke(world,null);
         Check(world.TryGetCollisionProxy(wall.Id,out var target),"BuildWorld teardown fixture missing proxy");
         Object.DestroyImmediate(target.transform.parent.gameObject);Object.DestroyImmediate(host);Physics.SyncTransforms();
@@ -174,14 +174,14 @@ public static class ModularWoodValidation
             using var s=new BuildSession();var f=s.CreateFrame(new Vector3(200+yaw*20,50,200),yaw);BuildPieceRecord a,b;
             var position=kind==BuildJointKind.Butt?new Vector3Int(16,0,0):kind==BuildJointKind.Corner?new Vector3Int(16,0,0):kind==BuildJointKind.Tee?new Vector3Int(8,0,0):new Vector3Int(8,0,8);
             int turn=kind==BuildJointKind.Butt?0:2;
-            if(reverse){b=s.Add(mate,f,position,turn,true);a=s.Add(d,f,default,0,true);}else{a=s.Add(d,f,default,0,true);b=s.Add(mate,f,position,turn,true);}
+            if(reverse){b=s.Add(mate,f,position,turn);a=s.Add(d,f,default,0);}else{a=s.Add(d,f,default,0);b=s.Add(mate,f,position,turn);}
             Check(Covers(s)==1,"Junction cover duplicated/missing: "+kind+" yaw="+yaw);
             foreach(var p in s.Pieces.Values)foreach(var attachment in p.Resolved.attachments)Check(attachment.material==SplitPlankWallSetup.TrimMaterial,"Wattle joint used cutout rather than solid wood");
             bool seen=false;foreach(var contact in a.Resolved.joints)if(contact.Kind==kind)seen=true;Check(seen,"Junction type wrong: "+kind);
             Vector3 point=kind is BuildJointKind.Corner or BuildJointKind.Butt?new Vector3(4,0,0):new Vector3(2,0,0);
-            var post=s.Add(c.presets[3],f,BuildGeometry.Ticks(point),0,false);Check(Covers(s)==0,"Explicit post failed to suppress generated cover");
+            var post=s.Add(c.presets[3],f,BuildGeometry.Ticks(point),0);Check(Covers(s)==0,"Explicit post failed to suppress generated cover");
             s.Remove(post.Id);Check(Covers(s)==1,"Removing explicit post did not restore cover");
-            var upperA=s.Add(d,f,new Vector3Int(0,12,0),0,false);var upperB=s.Add(mate,f,position+new Vector3Int(0,12,0),turn,false);
+            var upperA=s.Add(d,f,new Vector3Int(0,12,0),0);var upperB=s.Add(mate,f,position+new Vector3Int(0,12,0),turn);
             Check(Covers(s)==2,"Storey junctions were merged or duplicated");
             s.Remove(b.Id);Check(Covers(s)==1,"Removing a wall left its cover orphaned");
             Check(a.Resolved.mesh==d.mesh,"Cover replaced original wall body");
@@ -189,7 +189,7 @@ public static class ModularWoodValidation
         // Three walls meeting at the same endpoint still produce one cover.
         using(var s=new BuildSession())
         {
-            var f=s.CreateFrame(new Vector3(100,20,100),yaw);s.Add(c.presets[0],f,default,0,true);s.Add(c.presets[0],f,new Vector3Int(16,0,0),2,false);s.Add(c.Find(WattleWallSetup.ContentId),f,new Vector3Int(32,0,0),4,false);
+            var f=s.CreateFrame(new Vector3(100,20,100),yaw);s.Add(c.presets[0],f,default,0);s.Add(c.presets[0],f,new Vector3Int(16,0,0),2);s.Add(c.Find(WattleWallSetup.ContentId),f,new Vector3Int(32,0,0),4);
             Check(Covers(s)==1,"Three-wall joint generated multiple posts");
         }
     }
@@ -198,7 +198,7 @@ public static class ModularWoodValidation
         var host=new GameObject("Full-span placement fixture");host.transform.position=new Vector3(23000+yaw*20,23000,23000);var w=host.AddComponent<BuildWorld>();w.enabled=false;w.Focus=host.transform;var f=w.Session.CreateFrame(host.transform.position,yaw);var q=BuildGeometry.Rotation(yaw);
         try
         {
-            var foundation=w.Session.Add(c.presets[2],f,default,0,true);
+            var foundation=w.Session.Add(c.presets[2],f,default,0);
             var start=BuildPlacement.Solve(d,f.Origin+q*new Vector3(2,0,0),Vector3.up,foundation,w.Session.Frame(foundation.OwnFrameId),0,0,default);
             var wall=w.Commit(start);Check(wall!=null,"Full-span wall on bay boundary failed");Near(wall.Origin,f.Origin,"Wall still has an end reservation");
             var frame=w.Session.Frame(wall.OwnFrameId);
@@ -232,9 +232,9 @@ public static class ModularWoodValidation
     private static void Render(BuildCatalog c)
     {
         Directory.CreateDirectory(".utmp/modular-kit");using var s=new BuildSession();var f=s.CreateFrame(Vector3.zero,0);
-        s.Add(c.presets[2],f,new Vector3Int(0,0,-16),0,true);var a=s.Add(c.presets[0],f,default,0,false);var b=s.Add(c.Find(WattleWallSetup.ContentId),f,new Vector3Int(16,0,0),2,false);
-        s.Add(c.presets[0],f,new Vector3Int(0,12,0),0,false);s.Add(c.Find(WattleWallSetup.ContentId),f,new Vector3Int(16,12,0),2,false);
-        s.Add(c.presets[1],f,new Vector3Int(0,12,-16),0,false);
+        s.Add(c.presets[2],f,new Vector3Int(0,0,-16),0);var a=s.Add(c.presets[0],f,default,0);var b=s.Add(c.Find(WattleWallSetup.ContentId),f,new Vector3Int(16,0,0),2);
+        s.Add(c.presets[0],f,new Vector3Int(0,12,0),0);s.Add(c.Find(WattleWallSetup.ContentId),f,new Vector3Int(16,12,0),2);
+        s.Add(c.presets[1],f,new Vector3Int(0,12,-16),0);
         var camObj=new GameObject("Modular render camera");var camera=camObj.AddComponent<Camera>();camera.enabled=false;camera.orthographic=true;camera.aspect=1.5f;camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=new Color(.08f,.1f,.13f);
         var lightObj=new GameObject("Modular light");var light=lightObj.AddComponent<Light>();light.type=LightType.Directional;light.intensity=1.5f;lightObj.transform.rotation=Quaternion.Euler(35,-35,0);
         var renderer=new BuildRenderer(s);var target=new RenderTexture(1200,800,24);target.Create();var old=GraphicsSettings.defaultRenderPipeline;var quality=QualitySettings.renderPipeline;var active=RenderTexture.active;
@@ -250,37 +250,37 @@ public static class ModularWoodValidation
             }
             Capture("two-storey-corner",new Vector3(9,7,-9),new Vector3(2,2.8f,-1),4.5f);
             Capture("wall-back",new Vector3(-4,4,8),new Vector3(2,3,0),4);
-            var post=s.Add(c.presets[3],f,new Vector3Int(16,0,0),0,false);Capture("explicit-post",new Vector3(8,4,-8),new Vector3(3,2,-1),3.3f);s.Remove(post.Id);
+            var post=s.Add(c.presets[3],f,new Vector3Int(16,0,0),0);Capture("explicit-post",new Vector3(8,4,-8),new Vector3(3,2,-1),3.3f);s.Remove(post.Id);
             Capture("cover-restored",new Vector3(8,4,-8),new Vector3(3,2,-1),3.3f);
             s.Remove(a.Id);s.Remove(b.Id);Capture("floor-underside",new Vector3(7,0,-7),new Vector3(2,3,-2),3.7f);
             foreach(ulong id in new List<ulong>(s.Pieces.Keys))s.Remove(id);
-            for(int i=0;i<3;i++)s.Add(c.presets[1],f,new Vector3Int(i*16,0,0),0,true);
+            for(int i=0;i<3;i++)s.Add(c.presets[1],f,new Vector3Int(i*16,0,0),0);
             Capture("varied-floorboards",new Vector3(6,12,3),new Vector3(6,0,2),5.2f);
             foreach(ulong id in new List<ulong>(s.Pieces.Keys))s.Remove(id);
-            s.Add(c.Find(OpeningWallSetup.DoorId),f,default,0,true);s.Add(c.Find(OpeningWallSetup.WindowId),f,new Vector3Int(20,0,0),0,true);
-            s.Add(c.Find(OpeningWallSetup.GableId),f,new Vector3Int(40,0,0),0,true);s.Add(c.Find(OpeningWallSetup.FallingId),f,new Vector3Int(48,0,0),0,true);
+            s.Add(c.Find(OpeningWallSetup.DoorId),f,default,0);s.Add(c.Find(OpeningWallSetup.WindowId),f,new Vector3Int(20,0,0),0);
+            s.Add(c.Find(OpeningWallSetup.GableId),f,new Vector3Int(40,0,0),0);s.Add(c.Find(OpeningWallSetup.FallingId),f,new Vector3Int(48,0,0),0);
             Capture("opening-kit-front",new Vector3(7,5,-16),new Vector3(7,1.5f,0),5.2f);
             Capture("opening-kit-back",new Vector3(7,5,16),new Vector3(7,1.5f,0),5.2f);
             foreach(ulong id in new List<ulong>(s.Pieces.Keys))s.Remove(id);
-            s.Add(c.presets[2],f,default,0,true);s.Add(c.Find(OpeningWallSetup.DoorId),f,default,0,false);
-            s.Add(c.Find(OpeningWallSetup.WindowId),f,new Vector3Int(16,0,0),6,false);s.Add(c.presets[0],f,new Vector3Int(0,0,16),0,false);
-            s.Add(c.Find(OpeningWallSetup.GableId),f,new Vector3Int(0,12,0),0,false);s.Add(c.Find(OpeningWallSetup.FallingId),f,new Vector3Int(8,12,0),0,false);
-            s.Add(c.Find(ThatchRoofSetup.ContentId),f,new Vector3Int(0,12,16),2,false);s.Add(c.Find(ThatchRoofSetup.ContentId),f,new Vector3Int(16,12,0),6,false);
+            s.Add(c.presets[2],f,default,0);s.Add(c.Find(OpeningWallSetup.DoorId),f,default,0);
+            s.Add(c.Find(OpeningWallSetup.WindowId),f,new Vector3Int(16,0,0),6);s.Add(c.presets[0],f,new Vector3Int(0,0,16),0);
+            s.Add(c.Find(OpeningWallSetup.GableId),f,new Vector3Int(0,12,0),0);s.Add(c.Find(OpeningWallSetup.FallingId),f,new Vector3Int(8,12,0),0);
+            s.Add(c.Find(ThatchRoofSetup.ContentId),f,new Vector3Int(0,12,16),2);s.Add(c.Find(ThatchRoofSetup.ContentId),f,new Vector3Int(16,12,0),6);
             Capture("opening-kit-house",new Vector3(9,7,-11),new Vector3(2,2.5f,2),4.6f);
             foreach(ulong id in new List<ulong>(s.Pieces.Keys))s.Remove(id);
-            s.Add(c.Find(StairExtensionSetup.W22Id),f,default,0,true);
+            s.Add(c.Find(StairExtensionSetup.W22Id),f,default,0);
             foreach(float z in new[]{0f,2f})foreach(float x in new[]{-.1875f,1.1875f})
-                s.Add(c.Find(StairExtensionSetup.W24Id),s.CreateFrame(new Vector3(x,z*.75f,z),0),default,0,false);
-            s.Add(c.presets[1],f,new Vector3Int(0,12,16),0,false);
+                s.Add(c.Find(StairExtensionSetup.W24Id),s.CreateFrame(new Vector3(x,z*.75f,z),0),default,0);
+            s.Add(c.presets[1],f,new Vector3Int(0,12,16),0);
             Capture("w22-with-handrails",new Vector3(7,6,-7),new Vector3(1.5f,1.9f,2.5f),3.9f);
             Capture("w22-back",new Vector3(-5,5,9),new Vector3(.625f,1.5f,2),3.1f);
             foreach(ulong id in new List<ulong>(s.Pieces.Keys))s.Remove(id);
-            for(int i=0;i<2;i++)s.Add(c.presets[0],f,new Vector3Int(i*16,0,0),0,true);
-            s.Add(c.Find(OpeningWallSetup.GableId),f,new Vector3Int(0,12,0),0,false);
-            s.Add(c.Find(OpeningWallSetup.FallingId),f,new Vector3Int(24,12,0),0,false);
-            for(int i=1;i<=2;i++)s.Add(c.Find(SquareInfillSetup.Id),f,new Vector3Int(i*8,12,0),0,false);
-            s.Add(c.Find(OpeningWallSetup.GableId),f,new Vector3Int(8,20,0),0,false);
-            s.Add(c.Find(OpeningWallSetup.FallingId),f,new Vector3Int(16,20,0),0,false);
+            for(int i=0;i<2;i++)s.Add(c.presets[0],f,new Vector3Int(i*16,0,0),0);
+            s.Add(c.Find(OpeningWallSetup.GableId),f,new Vector3Int(0,12,0),0);
+            s.Add(c.Find(OpeningWallSetup.FallingId),f,new Vector3Int(24,12,0),0);
+            for(int i=1;i<=2;i++)s.Add(c.Find(SquareInfillSetup.Id),f,new Vector3Int(i*8,12,0),0);
+            s.Add(c.Find(OpeningWallSetup.GableId),f,new Vector3Int(8,20,0),0);
+            s.Add(c.Find(OpeningWallSetup.FallingId),f,new Vector3Int(16,20,0),0);
             Capture("square-infill-wide-gable-front",new Vector3(4,4,-15),new Vector3(4,3.5f,0),4.2f);
             Capture("square-infill-wide-gable-back",new Vector3(4,4,15),new Vector3(4,3.5f,0),4.2f);
         }finally{RenderPipelineManager.beginCameraRendering-=submit;GraphicsSettings.defaultRenderPipeline=old;QualitySettings.renderPipeline=quality;RenderTexture.active=active;target.Release();Object.DestroyImmediate(target);Object.DestroyImmediate(camObj);Object.DestroyImmediate(lightObj);}

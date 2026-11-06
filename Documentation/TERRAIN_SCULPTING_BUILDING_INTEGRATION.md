@@ -1,6 +1,6 @@
 # P6: building in excavated terrain
 
-Implemented October 16, 2026 following the user's building/support review. This checkpoint supersedes the original A14 proposal to remove grounding after excavation. It does not begin P7 or implement lighting changes.
+Historical checkpoint from October 16, 2026. The support/grounding requirements below were superseded by [free building](BUILDING_FOLIAGE.md#free-building) on October 22. Their compatibility APIs and metadata were removed on November 6. Current placement permits floating and buried pieces, preserves complete physical geometry, checks live terrain readiness and external blockers, and removes only the explicitly targeted piece. Retain this checkpoint as implementation history; it does not define current support or save policy.
 
 ## Approved behavior
 

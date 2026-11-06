@@ -17,7 +17,7 @@ Shader "Hidden/FirstSettlers/LandformFieldValidation"
             float4 frag(V input) : SV_Target
             {
                 float2 p=_DebugRect.xy+input.uv*_DebugRect.zw;
-                return float4(FSRegionalGeology(p),FSLandformNoise(p,_WorldLandformParams.y*2.2,_WorldLandformSeed+82004),1);
+                return float4(FSRegionalGeology(p),FSLandformNoise(p,_WorldLandformParams.y*2.2,_WorldLandformSeed+82004),FSColdProvince(p));
             }
             ENDHLSL
         }

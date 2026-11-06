@@ -1,0 +1,6 @@
+Cliff shader warmup: 48 variants on Direct3D11
+CLIFF MIP PASS: center red unrestricted=60, floor3=141, bias3=135, larger footprint=141.
+CLIFF GENERATED TERRAIN PASS: real far mesh/control maps; mean image difference from old fallback 0.0037.
+TERRAIN MATERIAL INSPECTOR PASS: 165 properties grouped once; 10 working UV transforms retained; runtime inputs read-only; mode, optional-map and mixed-selection dependencies passed.
+CLIFF DISTANCE COLOR PASS: distant color retained; normal-map isolation; smaller mip floor/bias/footprint; final horizon fallback independent of detail maps.
+CLIFF VALIDATION PASS: BC7 albedo / BC5 normal; rock on/off, grass on/off, Forward/Forward+, shadows and fog; offscreen cliff captures. No FPS benchmark.

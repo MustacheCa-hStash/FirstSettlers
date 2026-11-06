@@ -42,11 +42,11 @@ public static class LocalFlameValidation
         camera.transform.SetParent(world.transform,true);
         LocalFlameSource[] MountedSources()=>Array.FindAll(Object.FindObjectsByType<LocalFlameSource>(),s=>s.stationary && s.coverageWorld==world);
         var catalog=world.Catalog;Check(catalog.Find("build.lighting.wall-torch")!=null,"Installed torch missing in Play mode.");
-        var frame=world.Session.CreateFrame(Vector3.zero,0);var wall=world.Session.Add(catalog.Find("build.prototype.wall"),frame,Vector3Int.zero,0,true);
+        var frame=world.Session.CreateFrame(Vector3.zero,0);var wall=world.Session.Add(catalog.Find("build.prototype.wall"),frame,Vector3Int.zero,0);
         BuildPieceRecord AddTorch()
         {
             var p=BuildFurnishing.Solve(catalog.Find("build.lighting.wall-torch"),new Vector3(2,1,.125f),Vector3.forward,wall,world.Session.Frame(wall.OwnFrameId),0,0,Vector3Int.zero);
-            return world.Session.Add(p.Definition,world.Session.CreateFrame(p.Frame.Origin,p.Frame.YawStep),p.Anchor,p.YawStep,false);
+            return world.Session.Add(p.Definition,world.Session.CreateFrame(p.Frame.Origin,p.Frame.YawStep),p.Anchor,p.YawStep);
         }
         var torch=AddTorch();
         for(int i=0;i<40;i++){camera.Render();yield return null;}

@@ -31,6 +31,7 @@ public static class SurfaceMapGenerator
                 height = height,
                 waterLevel = waterLevel,
                 heights = heights,
+                temperatures = heights,
                 slopes = slopes,
                 riverMasks = riverMasks,
                 biomes = biomes,
@@ -69,7 +70,7 @@ public static class SurfaceMapGenerator
         float waterLevel,
         Allocator resultAllocator,
         out NativeArray<SurfaceType> nativeSurfaces, ChunkCoord chunkCoord = default, int chunkSize = 0,
-        int seed = 0, float sampleScale = 600f, WorldLandformSettings landforms = default)
+        int seed = 0, float sampleScale = 600f, WorldLandformSettings landforms = default, NativeArray<float> temperatures = default)
     {
         nativeSurfaces = new NativeArray<SurfaceType>(width * height, resultAllocator, NativeArrayOptions.UninitializedMemory);
         SurfaceMapJob job = new SurfaceMapJob
@@ -77,6 +78,7 @@ public static class SurfaceMapGenerator
             regional = chunkSize > 0,
             chunkSize = chunkSize, chunkCoord = chunkCoord, seed = seed,
             sampleScale = sampleScale, landforms = landforms.Sanitized(),
+            hasTemperature = temperatures.IsCreated, temperatures = temperatures.IsCreated ? temperatures : heights,
             width = width,
             height = height,
             waterLevel = waterLevel,
@@ -147,6 +149,8 @@ public static class SurfaceMapGenerator
     private struct SurfaceMapJob : IJobParallelFor
     {
         public bool regional;
+        public bool hasTemperature;
+        [ReadOnly] public NativeArray<float> temperatures;
         public int chunkSize, seed;
         public ChunkCoord chunkCoord;
         public float sampleScale;
@@ -169,7 +173,7 @@ public static class SurfaceMapGenerator
                 var p = new Unity.Mathematics.float2(chunkCoord.x * chunkSize + index / height - 1,
                     chunkCoord.z * chunkSize + index % height - 1);
                 surface = WorldLandforms.Surface(p, seed, sampleScale, heights[index], slopes[index],
-                    riverMasks[index], biomes[index], waterLevel, landforms);
+                    riverMasks[index], biomes[index], waterLevel, landforms,hasTemperature?temperatures[index]:.2f);
             }
             surfaces[index] = surface;
             if (surface != SurfaceType.Grass)

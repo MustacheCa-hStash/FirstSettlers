@@ -1,5 +1,7 @@
 # S02, S03, S04 and S06: Blender source and building integration
 
+Current placement and lifetime follow [free building](BUILDING_FOLIAGE.md#free-building): pieces may float and remain after neighbouring pieces are removed. Earlier support, bedding and collapse requirements below are historical; geometric fitting and physical collision remain in use.
+
 The remaining ordinary-stone catalog is covered by [stone completion](STONE_COMPLETION_KIT.md):
 walls/openings, static leaves, gables, plate, stairs/guard, footing, landing and landscape pieces.
 

@@ -34,7 +34,13 @@ public sealed class BuildResolvedState
     {
         if(other==null || boxes.Length!=other.boxes.Length || volumes.Length!=other.volumes.Length)return false;
         for(int i=0;i<boxes.Length;i++)if(boxes[i]!=other.boxes[i])return false;
-        for(int i=0;i<volumes.Length;i++)if(volumes[i]!=other.volumes[i])return false;
+        for(int i=0;i<volumes.Length;i++)
+        {
+            var a=volumes[i];var b=other.volumes[i];
+            // Fitting can create a new numeric wrapper for the same cached convex mesh.
+            if(ReferenceEquals(a,b))continue;
+            if(a.mesh==null || a.mesh!=b.mesh || a.bounds!=b.bounds)return false;
+        }
         return true;
     }
     public bool SameVisuals(BuildResolvedState other)

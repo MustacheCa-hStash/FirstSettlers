@@ -54,14 +54,14 @@ public static class TimberInfillKitSetup
             d.kind = roof ? BuildPartKind.Roof : canopy ? BuildPartKind.Furniture : BuildPartKind.Wall;
             d.sizeUnits = Vector3Int.RoundToInt(V(p.size)/BuildGeometry.Unit); d.minimumUnits = Vector3Int.zero; d.boundsOffset = V(p.minimum);
             d.stackRiseUnits = gable || roof ? 8 : 12; d.wallEndInsetUnits = 0; d.wallPlacementMode = WallPlacementMode.Panel;
-            d.material = material; d.preserveAuthoredMesh = true; d.maxHealth = 100; d.canGroundOnTerrain = false; d.requiresFullBearing = false;
+            d.material = material; d.preserveAuthoredMesh = true; d.maxHealth = 100; d.canGroundOnTerrain = false;
             d.jointCoverVariants = Array.Empty<Mesh>(); d.jointCoverMaterial = null; d.uvVariants = Array.Empty<Mesh>();
             d.solidBoxes = Array.Empty<Bounds>(); d.wallOpenings = Array.Empty<Bounds>(); d.occupiedVolumes = Array.Empty<BuildConvexVolume>();
             d.roofContinuationMesh = null; d.gableRoofSeamMesh = null; d.roofAttachment = gable ? RoofAttachmentMode.Gable : RoofAttachmentMode.None;
             d.gableSlope = !gable ? GableSlope.None : p.slope == "falling" ? GableSlope.Falling : GableSlope.Rising; d.flipVariant = null;
             d.furnitureWallMounted = canopy;
-            d.relaxedWallMount = canopy;
-            d.furnitureSupportPoints = canopy ? new[] {new Vector3(-.85f,-.65f,0), new Vector3(.85f,-.65f,0),new Vector3(-.85f,.92f,0),new Vector3(.85f,.92f,0)} : Array.Empty<Vector3>();
+
+
             var sockets = new List<BuildJointSocket>();
             if (d.kind == BuildPartKind.Wall)
             {

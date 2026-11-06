@@ -9,6 +9,10 @@ public sealed class BuildResolution : IDisposable
     public const float Band=.25f, PassageHeight=2f, PassageMargin=.5f;
     private readonly Dictionary<string,Mesh> meshes=new();
     public Dictionary<ulong,BuildResolvedState> Resolve(IReadOnlyList<BuildPieceRecord> pieces,Func<BuildPieceRecord,IReadOnlyList<BuildPieceRecord>> nearby=null)
+        =>ResolveCore(pieces,nearby,false);
+    internal Dictionary<ulong,BuildResolvedState> ResolveLocal(IReadOnlyList<BuildPieceRecord> pieces,Func<BuildPieceRecord,IReadOnlyList<BuildPieceRecord>> nearby)
+        =>ResolveCore(pieces,nearby,true);
+    private Dictionary<ulong,BuildResolvedState> ResolveCore(IReadOnlyList<BuildPieceRecord> pieces,Func<BuildPieceRecord,IReadOnlyList<BuildPieceRecord>> nearby,bool local)
     {
         var result=new Dictionary<ulong,BuildResolvedState>();
         foreach(var p in pieces)if(p.Definition.kind==BuildPartKind.Floor)result[p.Id]=Floor(p,nearby?.Invoke(p)??pieces);
@@ -21,7 +25,24 @@ public sealed class BuildResolution : IDisposable
         foreach(var p in pieces)
             if(p.Definition.jointSockets!=null && p.Definition.jointSockets.Length>0)
                 result[p.Id].joints=BuildJointPlanning.Contacts(p,nearby?.Invoke(p)??pieces);
-        BuildJointCovers.Resolve(pieces,result,nearby);
+        if(local)
+        {
+            // Boundary walls participate in ownership at every endpoint of a changed wall.
+            // Their committed geometry is never modified by resolving this local neighbourhood.
+            var context=new List<BuildPieceRecord>(pieces);
+            var states=new Dictionary<ulong,BuildResolvedState>(result);
+            foreach(var p in pieces)
+                if(result[p.Id].joints.Length>0)
+                    foreach(var other in nearby(p))
+                        if(!states.ContainsKey(other.Id) && other.Definition.jointSockets?.Length>0)
+                        {
+                            context.Add(other);
+                            states.Add(other.Id,new BuildResolvedState { joints=BuildJointPlanning.Contacts(other,nearby(other)) });
+                        }
+            context.Sort((a,b)=>a.Id.CompareTo(b.Id));
+            BuildJointCovers.Resolve(context,states,nearby);
+        }
+        else BuildJointCovers.Resolve(pieces,result,nearby);
         return result;
     }
     private BuildResolvedState Floor(BuildPieceRecord p,IReadOnlyList<BuildPieceRecord> pieces)
@@ -113,7 +134,7 @@ public sealed class BuildResolution : IDisposable
         var cuts=new List<Bounds>();
         foreach(var floor in pieces)
             if(floor.Definition.kind==BuildPartKind.Floor && Aligned(p,floor) && Mathf.Abs(floor.Origin.y-p.Origin.y)<.012f)
-                foreach(var box in states[floor.Id].boxes)cuts.Add(Relative(box,floor,p));
+                foreach(var box in (states.TryGetValue(floor.Id,out var state)?state:floor.Resolved).boxes)cuts.Add(Relative(box,floor,p));
         if(cuts.Count==0)return new BuildResolvedState{mesh=p.Definition.mesh,boxes=p.Definition.solidBoxes,key="sleeper-full"};
         Sort(cuts);string key=Key(p.Definition,"sleeper-fitted",cuts);
         var parts=new List<BuildTimberPart>();

@@ -14,6 +14,8 @@ foreach ($p6File in @('Assets/Editor/TerrainSculptingWorldGraphicsValidation.cs'
     'Assets/Shaders/S_Terrain/CustomStylizedTerrain.shader','Assets/Shaders/S_Terrain/CustomStylizedTerrain.shader.meta',
     'Assets/Shaders/S_Terrain/GrassGroundSurface.hlsl','Assets/Shaders/S_Terrain/GrassGroundSurface.hlsl.meta',
     'Assets/Shaders/WorldLandformFields.hlsl','Assets/Shaders/WorldLandformFields.hlsl.meta',
+    'Assets/Shaders/HeightfieldCliffNormal.hlsl','Assets/Shaders/HeightfieldCliffNormal.hlsl.meta',
+    'Assets/Shaders/TerrainSurfaceFrame.hlsl','Assets/Shaders/TerrainSurfaceFrame.hlsl.meta',
     'Assets/Shaders/GrassCompact.compute','Assets/Shaders/GrassCompact.compute.meta',
     'Assets/Shaders/GrassIndirectInstance.hlsl','Assets/Shaders/GrassIndirectInstance.hlsl.meta',
     'Assets/Shaders/ForestScatterInstance.hlsl','Assets/Shaders/ForestScatterInstance.hlsl.meta',

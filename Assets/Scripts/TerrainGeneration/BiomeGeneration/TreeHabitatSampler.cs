@@ -56,7 +56,7 @@ public sealed class TreeHabitatSampler : IDisposable
         float moisture=ClimateGenerator.SampleWorldClimate01(x,z,seed,scale,false,persistence,lacunarity,climateMax,moistureOffsets,context.Erosion.landforms);
         float temperature=ClimateGenerator.SampleWorldClimate01(x,z,seed,scale,true,persistence,lacunarity,climateMax,temperatureOffsets,context.Erosion.landforms);
         var biome=BiomeClassifier.Classify(center.Height,moisture,temperature,slope,center.MountainMask,center.RiverMask,water);
-        var surface=WorldLandforms.Surface(new float2(x,z),seed,scale,center.Height,slope,center.RiverMask,biome,water,context.Erosion.landforms);
+        var surface=WorldLandforms.Surface(new float2(x,z),seed,scale,center.Height,slope,center.RiverMask,biome,water,context.Erosion.landforms,temperature);
         if(surface==SurfaceType.Grass)
             for(int ox=-1;ox<=1;ox++)for(int oz=-1;oz<=1;oz++)
                 if(Height(x+ox,z+oz).Height<=water)surface=SurfaceType.Mud;

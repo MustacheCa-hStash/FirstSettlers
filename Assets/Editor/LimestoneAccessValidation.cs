@@ -109,11 +109,11 @@ public static class LimestoneAccessValidation
         var origin=new Vector3(6000+yaw*30,40,6000);var q=BuildGeometry.Rotation(yaw);var frame=s.CreateFrame(origin,yaw);
         try
         {
-            var foundation=s.Add(c.Find("build.prototype.foundation"),frame,new Vector3Int(0,0,-16),0,true);
+            var foundation=s.Add(c.Find("build.prototype.foundation"),frame,new Vector3Int(0,0,-16),0);
             foreach(int part in new[]{1,2,3})
             {
                 var d=c.Find(LimestoneAccessSetup.Ids[part]);var snap=BuildPlacement.Solve(d,origin+q*new Vector3(.75f,0,0),Vector3.up,foundation,s.Frame(foundation.OwnFrameId),yaw,0,default);
-                w.Validate(ref snap);Check(snap.Valid,"Stair placement rejected: "+snap.Message);var p=w.Commit(snap);Check(p!=null&&p.Supported,"Stair commit failed");
+                w.Validate(ref snap);Check(snap.Valid,"Stair placement rejected: "+snap.Message);var p=w.Commit(snap);Check(p!=null&&s.Pieces.ContainsKey(p.Id),"Placed construction missing from session: p");
                 using(var gameplay=new BuildGameplay(s)){gameplay.Update(p.Origin,32,40,32);Physics.SyncTransforms();Check(gameplay.TryGetProxy(p.Id,out var proxy)&&proxy.RampShape&&proxy.RampShape.sharedMesh==d.collisionMesh&&proxy.GetComponent<SmoothWalkSurface>(),"Stair smoothing proxy missing");}
                 // The full masonry body is occupied, including below the rear treads.
                 bool solid=false;foreach(var v in p.Resolved.volumes)solid|=BuildOccupancy.Contains(v,new Vector3(.75f,.1f,d.LocalBounds.max.z-.1f));Check(solid,"Stair is hollow underneath");
@@ -132,8 +132,8 @@ public static class LimestoneAccessValidation
             var host=new GameObject("Cornice course fixture");var w=host.AddComponent<BuildWorld>();w.enabled=false;var s=w.Session;var origin=new Vector3(7000+yaw*30,40,7000);var q=BuildGeometry.Rotation(yaw);var f=s.CreateFrame(origin,yaw);
             try
             {
-                s.Add(c.Find("build.prototype.foundation"),f,new Vector3Int(0,0,-8),0,true);var wall=s.Add(c.Find(id),f,default,0,false);var original=wall.Resolved.mesh;var d=c.Find(LimestoneAccessSetup.Ids[0]);Check(BuildTopCourse.Compatible(wall.Definition,d),"Compatible limestone wall declined: "+id);
-                var snap=BuildPlacement.Solve(d,origin+q*new Vector3(2,2.9f,.25f),q*Vector3.forward,wall,s.Frame(wall.OwnFrameId),yaw,0,default);Near(snap.Origin,origin+Vector3.up*2.75f,"Cornice added storey height");w.Validate(ref snap);Check(snap.Valid,"Cornice preview rejected: "+snap.Message);var course=w.Commit(snap);Check(course!=null&&course.Supported,"Cornice lacks bearing");
+                s.Add(c.Find("build.prototype.foundation"),f,new Vector3Int(0,0,-8),0);var wall=s.Add(c.Find(id),f,default,0);var original=wall.Resolved.mesh;var d=c.Find(LimestoneAccessSetup.Ids[0]);Check(BuildTopCourse.Compatible(wall.Definition,d),"Compatible limestone wall declined: "+id);
+                var snap=BuildPlacement.Solve(d,origin+q*new Vector3(2,2.9f,.25f),q*Vector3.forward,wall,s.Frame(wall.OwnFrameId),yaw,0,default);Near(snap.Origin,origin+Vector3.up*2.75f,"Cornice added storey height");w.Validate(ref snap);Check(snap.Valid,"Cornice preview rejected: "+snap.Message);var course=w.Commit(snap);Check(course!=null&&s.Pieces.ContainsKey(course.Id),"Placed construction missing from session: course");
                 Check(wall.Resolved.mesh!=original&&Mathf.Abs(wall.Resolved.mesh.bounds.max.y-2.75f)<.001f,"Wall mesh top was not replaced");Check(Mathf.Abs(wall.Resolved.Bounds.max.y-2.75f)<.001f,"Wall collision top was not replaced");Check(!BuildResolvedGeometry.Overlaps(wall,wall.Resolved,course,course.Resolved),"Cornice and wall interpenetrate");Near(course.Origin+Vector3.up*.25f,origin+Vector3.up*3,"Cornice eave datum shifted");
                 using(var gameplay=new BuildGameplay(s))
                 {
@@ -143,7 +143,7 @@ public static class LimestoneAccessValidation
                 var gable=c.Find(LimestoneCourtyardSetup.Ids[7]);var roofSnap=BuildPlacement.Solve(gable,origin+q*new Vector3(1,2.9f,0),q*Vector3.forward,wall,s.Frame(wall.OwnFrameId),yaw,0,default);Near(roofSnap.Origin,origin+Vector3.up*3,"Gable storey datum changed");w.Validate(ref roofSnap);Check(roofSnap.Valid,"Cornice broke gable placement: "+roofSnap.Message);
                 var shifted=snap;shifted.Origin+=q*Vector3.right*.25f;w.Validate(ref shifted);Check(shifted.Valid,"Free offset cornice placement rejected");
                 w.Remove(course.Id);Check(wall.Resolved.mesh==original&&Mathf.Abs(wall.Resolved.Bounds.max.y-3)<.001f,"Removing cornice did not restore original wall");
-                course=w.Commit(snap);Check(course!=null,"Cornice reinstall failed");w.Remove(wall.Id);Check(course.Supported,"Free placement unexpectedly depends on structural support");
+                course=w.Commit(snap);Check(course!=null,"Cornice reinstall failed");w.Remove(wall.Id);Check(s.Pieces.ContainsKey(course.Id),"Placed construction missing from session: course");
             }finally{Object.DestroyImmediate(host);Physics.SyncTransforms();}
         }
         Check(!BuildTopCourse.Compatible(c.Find(LimestoneCourtyardSetup.Ids[7]),c.Find(LimestoneAccessSetup.Ids[0])),"Gable accepted cornice band");
@@ -151,23 +151,23 @@ public static class LimestoneAccessValidation
     private static void Landing(BuildCatalog c,int yaw)
     {
         var origin=new Vector3(7500+yaw*30,40,7500);using var s=new BuildSession();var f=s.CreateFrame(origin,yaw);var d=c.Find(LimestoneAccessSetup.Ids[4]);
-        var foundation=s.Add(c.Find("build.prototype.foundation"),f,default,0,true);var landing=s.Add(d,f,new Vector3Int(0,1,0),0,false);Check(landing.Supported,"Full bedding did not support landing");
+        var foundation=s.Add(c.Find("build.prototype.foundation"),f,default,0);var landing=s.Add(d,f,new Vector3Int(0,1,0),0);Check(s.Pieces.ContainsKey(landing.Id),"Placed construction missing from session: landing");
         using(var gameplay=new BuildGameplay(s)){gameplay.Update(origin,32,40,32);Physics.SyncTransforms();Check(gameplay.TryGetProxy(landing.Id,out var proxy),"Landing proxy absent");Check(proxy.Shape&&Mathf.Abs(proxy.Shape.center.y+.125f)<.001f,"Landing collider is not below walking plane");}
-        s.Remove(foundation.Id);Check(landing.Supported,"Landing floated after foundation removal");s.Remove(landing.Id);
-        var strip=s.Add(c.Find(LimestoneKitExtensionSetup.Ids[2]),f,default,0,true);landing=s.Add(d,f,new Vector3Int(0,1,0),0,false);Check(landing.Supported,"Free placement unexpectedly depends on structural support");s.Remove(landing.Id);s.Remove(strip.Id);
-        var timber=s.Add(c.Find("build.prototype.floor"),f,default,0,true);landing=s.Add(d,f,new Vector3Int(0,1,0),0,false);Check(landing.Supported,"Timber granted solid stone bedding");s.Remove(landing.Id);s.Remove(timber.Id);
+        s.Remove(foundation.Id);Check(s.Pieces.ContainsKey(landing.Id),"Placed construction missing from session: landing");s.Remove(landing.Id);
+        var strip=s.Add(c.Find(LimestoneKitExtensionSetup.Ids[2]),f,default,0);landing=s.Add(d,f,new Vector3Int(0,1,0),0);Check(s.Pieces.ContainsKey(landing.Id),"Placed construction missing from session: landing");s.Remove(landing.Id);s.Remove(strip.Id);
+        var timber=s.Add(c.Find("build.prototype.floor"),f,default,0);landing=s.Add(d,f,new Vector3Int(0,1,0),0);Check(s.Pieces.ContainsKey(landing.Id),"Placed construction missing from session: landing");s.Remove(landing.Id);s.Remove(timber.Id);
         // Two solid footing strips provide continuous coverage at a half-storey turn.
-        var a=s.Add(c.Find(LimestoneKitExtensionSetup.Ids[2]),f,new Vector3Int(0,5,2),0,true);var b=s.Add(c.Find(LimestoneKitExtensionSetup.Ids[2]),f,new Vector3Int(0,5,6),0,true);landing=s.Add(d,f,new Vector3Int(0,6,0),0,false);Check(landing.Supported,"Union of solid footing coverage rejected");s.Remove(b.Id);Check(landing.Supported,"Free placement unexpectedly depends on structural support");
+        var a=s.Add(c.Find(LimestoneKitExtensionSetup.Ids[2]),f,new Vector3Int(0,5,2),0);var b=s.Add(c.Find(LimestoneKitExtensionSetup.Ids[2]),f,new Vector3Int(0,5,6),0);landing=s.Add(d,f,new Vector3Int(0,6,0),0);Check(s.Pieces.ContainsKey(landing.Id),"Union of solid footing coverage rejected");s.Remove(b.Id);Check(s.Pieces.ContainsKey(landing.Id),"Placed construction missing from session: landing");
     }
     private static void Buttress(BuildCatalog c,int yaw)
     {
         var origin=new Vector3(7800+yaw*30,40,7800);var q=BuildGeometry.Rotation(yaw);var host=new GameObject("Buttress wall fixture");var w=host.AddComponent<BuildWorld>();w.enabled=false;var s=w.Session;var f=s.CreateFrame(origin,yaw);
         try
         {
-            var foundation=s.Add(c.Find("build.prototype.foundation"),f,new Vector3Int(0,0,-8),0,true);var wall=s.Add(c.Find(LimestoneKitSetup.Ids[0]),f,default,0,false);var d=c.Find(LimestoneAccessSetup.Ids[6]);
+            var foundation=s.Add(c.Find("build.prototype.foundation"),f,new Vector3Int(0,0,-8),0);var wall=s.Add(c.Find(LimestoneKitSetup.Ids[0]),f,default,0);var d=c.Find(LimestoneAccessSetup.Ids[6]);
             foreach(float side in new[]{-1f,1f})
             {
-                var snap=BuildPlacement.Solve(d,origin+q*new Vector3(2,1,side*.25f),q*Vector3.forward*side,wall,s.Frame(wall.OwnFrameId),yaw,0,default);w.Validate(ref snap);Check(snap.Valid,"Buttress did not seat at wall base: "+snap.Message);var p=w.Commit(snap);Check(p!=null&&p.Supported,"Buttress commit failed");Check(!BuildResolvedGeometry.Overlaps(wall,wall.Resolved,p,p.Resolved),"Buttress rear penetrates wall");w.Remove(p.Id);
+                var snap=BuildPlacement.Solve(d,origin+q*new Vector3(2,1,side*.25f),q*Vector3.forward*side,wall,s.Frame(wall.OwnFrameId),yaw,0,default);w.Validate(ref snap);Check(snap.Valid,"Buttress did not seat at wall base: "+snap.Message);var p=w.Commit(snap);Check(p!=null&&s.Pieces.ContainsKey(p.Id),"Placed construction missing from session: p");Check(!BuildResolvedGeometry.Overlaps(wall,wall.Resolved,p,p.Resolved),"Buttress rear penetrates wall");w.Remove(p.Id);
                 snap.Origin+=Vector3.up*.25f;w.Validate(ref snap);Check(snap.Valid,"Floating buttress rejected");
             }
         }finally{Object.DestroyImmediate(host);Physics.SyncTransforms();}
@@ -175,7 +175,7 @@ public static class LimestoneAccessValidation
     private static void Terrain(BuildCatalog c,int part,int yaw)
     {
         var origin=new Vector3(8000+yaw*30,30,8000);var q=BuildGeometry.Rotation(yaw);var data=new TerrainData{heightmapResolution=33,size=new Vector3(12,4,12)};data.SetHeights(0,0,new float[33,33]);var ground=UnityEngine.Terrain.CreateTerrainGameObject(data);ground.layer=GameplayLayers.WorldSolid;ground.transform.position=origin-new Vector3(6,0,6);Physics.SyncTransforms();var host=new GameObject("Access terrain fixture");var w=host.AddComponent<BuildWorld>();w.enabled=false;
-        try{var d=c.Find(LimestoneAccessSetup.Ids[part]);var p=BuildPlacement.Solve(d,origin+q*new Vector3(d.LocalBounds.center.x,0,0),Vector3.up,null,null,yaw,0,default);w.Validate(ref p);Check(p.Valid&&!p.Grounded,"Boundary cannot ground on terrain: "+p.Message);var floating=p;floating.Origin+=Vector3.up;w.Validate(ref floating);Check(floating.Valid&&!floating.Grounded,"Floating access grounded");Check(w.Commit(p)!=null,"Terrain boundary commit rejected");}finally{Object.DestroyImmediate(host);Object.DestroyImmediate(ground);Object.DestroyImmediate(data);Physics.SyncTransforms();}
+        try{var d=c.Find(LimestoneAccessSetup.Ids[part]);var p=BuildPlacement.Solve(d,origin+q*new Vector3(d.LocalBounds.center.x,0,0),Vector3.up,null,null,yaw,0,default);w.Validate(ref p);Check(p.Valid,"Boundary cannot ground on terrain: "+p.Message);var floating=p;floating.Origin+=Vector3.up;w.Validate(ref floating);Check(floating.Valid,"Floating access grounded");Check(w.Commit(p)!=null,"Terrain boundary commit rejected");}finally{Object.DestroyImmediate(host);Object.DestroyImmediate(ground);Object.DestroyImmediate(data);Physics.SyncTransforms();}
     }
     private static void Render(BuildCatalog c)
     {
@@ -193,7 +193,7 @@ public static class LimestoneAccessValidation
                 obj.SetActive(false);
             }
             for(int i=0;i<7;i++){objects[i].transform.position=new Vector3(i%3*6,0,i/3*5);objects[i].SetActive(true);}camera.orthographicSize=8.5f;camera.transform.position=new Vector3(20,15,-20);camera.transform.LookAt(new Vector3(8,1,5));Capture(camera,target,"access-unity-overview.png");foreach(var obj in objects)obj.SetActive(false);
-            using var s=new BuildSession();var f=s.CreateFrame(Vector3.zero,1);for(int i=0;i<7;i++)s.Add(c.Find(LimestoneAccessSetup.Ids[i]),f,new Vector3Int(i%3*24,0,i/3*20),0,false);var renderer=new BuildRenderer(s);var rotation=BuildGeometry.Rotation(1);camera.transform.position=rotation*new Vector3(20,15,-20);camera.transform.LookAt(rotation*new Vector3(8,1,5));camera.cullingMask=~0;submit=(_,current)=>{if(current==camera)renderer.Draw(camera,100,0);};RenderPipelineManager.beginCameraRendering+=submit;Capture(camera,target,"access-instanced.png");Check(renderer.DrawCalls>0&&renderer.DrawCalls<=7,"Instanced draws missing");
+            using var s=new BuildSession();var f=s.CreateFrame(Vector3.zero,1);for(int i=0;i<7;i++)s.Add(c.Find(LimestoneAccessSetup.Ids[i]),f,new Vector3Int(i%3*24,0,i/3*20),0);var renderer=new BuildRenderer(s);var rotation=BuildGeometry.Rotation(1);camera.transform.position=rotation*new Vector3(20,15,-20);camera.transform.LookAt(rotation*new Vector3(8,1,5));camera.cullingMask=~0;submit=(_,current)=>{if(current==camera)renderer.Draw(camera,100,0);};RenderPipelineManager.beginCameraRendering+=submit;Capture(camera,target,"access-instanced.png");Check(renderer.DrawCalls>0&&renderer.DrawCalls<=7,"Instanced draws missing");
         }finally{if(submit!=null)RenderPipelineManager.beginCameraRendering-=submit;GraphicsSettings.defaultRenderPipeline=oldPipeline;QualitySettings.renderPipeline=oldQuality;RenderSettings.ambientLight=oldAmbient;RenderSettings.ambientMode=oldMode;RenderSettings.sun=oldSun;ShaderUtil.allowAsyncCompilation=oldAsync;RenderTexture.active=oldTarget;Object.DestroyImmediate(root);Object.DestroyImmediate(cameraObject);Object.DestroyImmediate(lightObject);target.Release();Object.DestroyImmediate(target);}
     }
     private static void Capture(Camera camera,RenderTexture target,string filename)

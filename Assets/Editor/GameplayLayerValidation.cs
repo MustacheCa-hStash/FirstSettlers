@@ -99,7 +99,7 @@ public static class GameplayLayerValidation
             grasslandLargeRockPrefabs = new[] { source } };
         try
         {
-            runtime.RebuildRockGameObjects(new List<RockInstanceData>
+            runtime.RebuildRocks(new List<RockInstanceData>
             {
                 new(Vector3.zero, Quaternion.identity, Vector3.one, WorldFeatureVariant.Boulder, 0),
                 new(Vector3.right * 3, Quaternion.identity, Vector3.one, WorldFeatureVariant.GrasslandBoulder, 0),

@@ -311,6 +311,8 @@ public static class WorldLandformValidation
                     float error=math.max(math.abs(color.r-r.Aridity.x),math.abs(color.g-r.Sediment.x));
                     maxError=math.max(maxError,error);
                     Check(error<.0003f,$"CPU/GPU geography mismatch for seed {seed}, pixel {x},{y}: {error}.");
+                    Check(math.abs(color.a-WorldGlacialLandforms.Cold(p,seed,600,WorldLandformSettings.Default))<.0003f,
+                        $"CPU/GPU cold province differs for seed {seed}, pixel {x},{y}.");
                 }
             }
             Check(!ShaderUtil.ShaderHasError(shader),"Geology shader error.");

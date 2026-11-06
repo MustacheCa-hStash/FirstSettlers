@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>Structural stair contacts are independent of terrain overlap and visibility.
-/// Terrain never grants a stair its own grounding anchor.</summary>
+/// Terrain residency does not affect these geometric connections.</summary>
 public static class BuildStairAttachment
 {
     public static Vector3 LowLocal(BuildDefinition d)=>new(d.LocalBounds.center.x,d.LocalBounds.min.y,d.LocalBounds.min.z);

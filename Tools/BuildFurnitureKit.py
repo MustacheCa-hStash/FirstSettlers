@@ -148,23 +148,17 @@ def shelf():
 def bounds_boxes(*rows):return [{'center':list(c),'size':list(s)} for c,s in rows]
 spec=[
  ('F01','f01-three-leg-stool','Three-leg stool',[.5,.5,.5],[-.25,0,-.25],stool,
-  bounds_boxes(((0,.47,0),(.46,.06,.42)),((-.167,.22,-.157),(.166,.44,.186)),((.167,.22,-.157),(.166,.44,.186)),((0,.22,.167),(.072,.44,.166))),
-  [[-.214,0,-.214],[.214,0,-.214],[0,0,.214]]),
+  bounds_boxes(((0,.47,0),(.46,.06,.42)),((-.167,.22,-.157),(.166,.44,.186)),((.167,.22,-.157),(.166,.44,.186)),((0,.22,.167),(.072,.44,.166)))),
  ('F02','f02-plank-bench','Plank bench',[1.5,.5,.5],[-.75,0,-.25],bench,
-  bounds_boxes(((0,.465,0),(1.5,.07,.5)),((-.56,.215,0),(.13,.43,.44)),((.56,.215,0),(.13,.43,.44)),((0,.235,0),(1.24,.07,.07))),
-  [[x,0,z] for x in [-.56,.56] for z in [-.17,.17]]),
- ('F03','f03-pegged-table','Pegged table',[1.5,.75,.75],[-.75,0,-.375],lambda:table('F03',1.5,.75),None,
-  [[x,0,z] for x in [-.625,.625] for z in [-.265,.265]]),
- ('F04','f04-low-work-table','Low work table',[1,.5,.75],[-.5,0,-.375],lambda:table('F04',1,.5),None,
-  [[x,0,z] for x in [-.375,.375] for z in [-.265,.265]]),
- ('F05','f05-sleeping-platform','Sleeping platform',[2,.5,1],[-1,0,-.5],bed,None,
-  [[x,0,z] for x in [-.95,.95] for z in [-.475,.475]]),
+  bounds_boxes(((0,.465,0),(1.5,.07,.5)),((-.56,.215,0),(.13,.43,.44)),((.56,.215,0),(.13,.43,.44)),((0,.235,0),(1.24,.07,.07)))),
+ ('F03','f03-pegged-table','Pegged table',[1.5,.75,.75],[-.75,0,-.375],lambda:table('F03',1.5,.75),None),
+ ('F04','f04-low-work-table','Low work table',[1,.5,.75],[-.5,0,-.375],lambda:table('F04',1,.5),None),
+ ('F05','f05-sleeping-platform','Sleeping platform',[2,.5,1],[-1,0,-.5],bed,None),
  ('F06','f06-wall-shelf','Wall shelf',[1,.25,.25],[-.5,-.25,0],shelf,
-  bounds_boxes(((0,-.025,.125),(1,.05,.25)),((-.35,-.15,.025),(.07,.2,.05)),((.35,-.15,.025),(.07,.2,.05)),((-.35,-.14,.13),(.06,.17,.20)),((.35,-.14,.13),(.06,.17,.20))),
-  [[-.35,-.11,0],[.35,-.11,0],[-.35,-.22,0],[.35,-.22,0]])]
+  bounds_boxes(((0,-.025,.125),(1,.05,.25)),((-.35,-.15,.025),(.07,.2,.05)),((.35,-.15,.025),(.07,.2,.05)),((-.35,-.14,.13),(.06,.17,.20)),((.35,-.14,.13),(.06,.17,.20))))]
 manifest={'texture':str(texture.relative_to(ROOT)),'texture_sha256':hashlib.sha256(texture.read_bytes()).hexdigest(),'models':[]}
 groups=[]
-for k,(tag,slug,name,size,minimum,maker,colliders,points) in enumerate(spec):
+for k,(tag,slug,name,size,minimum,maker,colliders) in enumerate(spec):
     parts=maker()
     if colliders is None:
         colliders=[]
@@ -198,7 +192,7 @@ for k,(tag,slug,name,size,minimum,maker,colliders,points) in enumerate(spec):
     offset=Vector(((k%3)*2.5,(k//3)*2.1,0))
     for ob in parts:ob.location=offset
     groups.append((tag,parts,offset))
-    manifest['models'].append({'tag':tag,'content_id':'build.furniture.'+slug,'slug':slug,'name':name,'file':filename,'size':size,'minimum':minimum,'triangles':tris,'parts':len(parts),'support_points':[dict(zip(['x','y','z'],point)) for point in points],'solid_boxes':colliders,'wall_mounted':tag=='F06'})
+    manifest['models'].append({'tag':tag,'content_id':'build.furniture.'+slug,'slug':slug,'name':name,'file':filename,'size':size,'minimum':minimum,'triangles':tris,'parts':len(parts),'solid_boxes':colliders,'wall_mounted':tag=='F06'})
 exports.hide_render=True
 scene=bpy.context.scene;scene.unit_settings.system='METRIC';scene.unit_settings.scale_length=1
 scene.render.engine='CYCLES';scene.cycles.samples=24;scene.cycles.use_denoising=True

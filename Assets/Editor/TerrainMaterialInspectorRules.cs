@@ -72,7 +72,11 @@ internal static class TerrainMaterialInspectorRules
             case "_MossTiling": text = "Moss / Dense Moss World Tiling"; break;
             case "_MossDetailContrast": text = "Moss Texture / Broad Fill Blend"; tip = "0 uses Broad Fill Color, 1 uses the sampled ordinary/dense moss textures. This is a color blend, not a texture contrast exponent."; break;
             case "_RockDetailStrength": text = "Distance Fallback Average Color Strength"; tip = "Blends average albedo into Rock/Cliff fallback colors. Does not tint fully applied near rock textures."; break;
-            case "_RockTextureStrength": tip = "At 1, nearby rock/cliff uses the texture color with the live world's regional geology tint. Lower values blend toward distance fallback color. Normal strength is independent."; break;
+            case "_RockTextureStrength": tip = "At 1, rock/cliff uses near or far texture color with the live world's regional geology tint. Lower values blend toward distance fallback color. Normal strength is independent."; break;
+            case "_RockFarTiling": tip = "Broader distant color patterns from the same rock albedo. Use a smaller frequency than near Rock / Cliff Tiling."; break;
+            case "_RockScaleFadeStart": case "_RockScaleFadeEnd": tip = "Smoothly blends near color into far color. Outside this interval only one color scale is sampled; normals keep their own fade."; break;
+            case "_RockFarMipBias": tip = "Additional mip levels above the pixel-footprint mip for far color only. Positive values use smaller textures and reduce bandwidth. Near filtering is unchanged."; break;
+            case "_RockFarMinMip": tip = "Finest allowed far-color mip. 3 caps a 1024 texture at 128 pixels; footprint and bias can select smaller levels. Prevents broad world tiling from requesting full-resolution textures."; break;
             case "_ReceiveShadows": text = "Preview Receive Shadows"; tip = "Used on standalone previews. World Manager > Terrain Receive Shadows overrides this on generated near/far chunks."; break;
             case "_GrassSurfaceMap": tip = "Packed linear texture: R=tone, GB=normal XZ, A=height. It is not an ordinary albedo or Unity normal map."; break;
         }

@@ -193,7 +193,11 @@ public class WorldManager : MonoBehaviour
                 planarWaterReflection = gameObject.AddComponent<PlanarWaterReflection>();
             planarWaterReflection.Configure(viewerCamera, globalWaterY, waterReflectionResolution,
                 waterReflectionUpdatesPerSecond, waterReflectionMovingUpdatesPerSecond,
-                waterReflectionDistance);
+                waterReflectionDistance,
+                // LOD 3 starts at ring 6. End waves before either that flat mesh
+                // boundary or an earlier macro-tile boundary, even for small chunks.
+                Mathf.Max(0.01f, (Mathf.Min(enableFarTerrain ? farTerrainStartRing : 6, 6) - 1)
+                    * chunkSize * worldScale - 2 * WaterMeshGenerator.WaveVertexSpacing));
             planarWaterReflection.SetWaterVisibilityProvider((planes, mask) =>
                 chunkManager != null && chunkManager.HasVisibleWater(planes, mask));
         }

@@ -102,7 +102,7 @@ public static class TimberInfillKitValidation
         int steps=0;foreach(var p in roof.mesh.vertices)if(p.z<.12f&&p.y-p.z>.22f)steps++;
         Check(steps>100&&roof.mesh.bounds.max.y>2.25f,"Roof lost solid overlapping course depth");
         var canopy=catalog.Find(TimberInfillKitSetup.Ids[5]);
-        Check(canopy.furnitureWallMounted&&canopy.furnitureSupportPoints.Length==4&&canopy.occupiedVolumes.Length==6&&BuildUiContent.Category(canopy)==6,"Canopy mounts/real brackets/menu category missing");
+        Check(canopy.furnitureWallMounted&&canopy.occupiedVolumes.Length==6&&BuildUiContent.Category(canopy)==6,"Canopy mounts/real brackets/menu category missing");
         Check(Array.Find(catalog.presets,d=>d.contentId==TimberInfillKitSetup.FallingId)==null,"Opposite gable added redundant menu tile");
     }
 
@@ -163,11 +163,11 @@ public static class TimberInfillKitValidation
         var origin=new Vector3(2000+yaw*40,30,2000);var q=BuildGeometry.Rotation(yaw);
         for(int part=0;part<3;part++)
         {
-            using var s=new BuildSession();var frame=s.CreateFrame(origin,yaw);var foundation=s.Add(c.Find("build.prototype.foundation"),frame,default,0,true);
-            var d=c.Find(TimberInfillKitSetup.Ids[part]);var wall=s.Add(d,frame,default,0,false);Check(wall.Supported,"Wall lost foundation bearing");
+            using var s=new BuildSession();var frame=s.CreateFrame(origin,yaw);var foundation=s.Add(c.Find("build.prototype.foundation"),frame,default,0);
+            var d=c.Find(TimberInfillKitSetup.Ids[part]);var wall=s.Add(d,frame,default,0);Check(s.Pieces.ContainsKey(wall.Id),"Placed construction missing from session: wall");
             var preview=BuildPlacement.Solve(d,origin+q*new Vector3(2,3,0),Vector3.up,wall,s.Frame(wall.OwnFrameId),yaw,0,default);
             Near(preview.Origin,origin+Vector3.up*3,"Timber wall stack datum");
-            var upper=s.Add(d,frame,new Vector3Int(0,12,0),0,false);Check(upper.Supported&&upper.Resolved.mesh==d.mesh&&upper.Resolved.auxiliaryMesh==null,"Stack replaced integral timber frame");
+            var upper=s.Add(d,frame,new Vector3Int(0,12,0),0);Check(s.Pieces.ContainsKey(upper.Id)&&upper.Resolved.mesh==d.mesh&&upper.Resolved.auxiliaryMesh==null,"Stack replaced integral timber frame");
             using var gameplay=new BuildGameplay(s);gameplay.Update(origin+q*new Vector3(2,1,1),32,40,32);Physics.SyncTransforms();
             Check(gameplay.TryGetProxy(wall.Id,out var proxy),"Wall proxy absent");var solids=new List<Collider>();proxy.GetEnabledColliders(solids);
             Check(solids.Count==(part==0?1:part==1?3:4),"Physical aperture sections wrong");
@@ -184,7 +184,7 @@ public static class TimberInfillKitValidation
                 }
                 else Check(Ray(new Vector3(2,.5f,-1),Vector3.forward)&&Ray(new Vector3(2,2.5f,-1),Vector3.forward),"Window sill/head collision missing");
             }
-            s.Remove(foundation.Id);Check(wall.Supported&&upper.Supported,"Free placement unexpectedly depends on structural support");
+            s.Remove(foundation.Id);Check(s.Pieces.ContainsKey(wall.Id)&&s.Pieces.ContainsKey(upper.Id),"Placed construction missing from session: wall, upper");
         }
     }
     private static void Walk(Vector3 origin,Quaternion q,bool reverse)
@@ -204,12 +204,12 @@ public static class TimberInfillKitValidation
         var origin=new Vector3(3000+yaw*40,30,3000);var q=BuildGeometry.Rotation(yaw);var s=world.Session;var frame=s.CreateFrame(origin,yaw);
         try
         {
-            var foundation=s.Add(c.Find("build.prototype.foundation"),frame,default,0,true);var wall=s.Add(c.Find(TimberInfillKitSetup.Ids[0]),frame,default,0,false);
+            var foundation=s.Add(c.Find("build.prototype.foundation"),frame,default,0);var wall=s.Add(c.Find(TimberInfillKitSetup.Ids[0]),frame,default,0);
             var rising=c.Find(TimberInfillKitSetup.Ids[3]);BuildPieceRecord first=null;
             foreach(var d in new[]{rising,rising.flipVariant})
             {
                 bool falling=d.gableSlope==GableSlope.Falling;var p=BuildPlacement.Solve(d,origin+q*new Vector3(falling?3:1,2.9f,0),q*Vector3.forward,wall,s.Frame(wall.OwnFrameId),yaw,0,default);
-                world.Validate(ref p);Check(p.Valid,"Gable rejected on framed wall: "+p.Message);var a=world.Commit(p);Check(a!=null&&a.Supported,"Gable commit failed");if(first==null)first=a;
+                world.Validate(ref p);Check(p.Valid,"Gable rejected on framed wall: "+p.Message);var a=world.Commit(p);Check(a!=null&&s.Pieces.ContainsKey(a.Id),"Placed construction missing from session: a");if(first==null)first=a;
                 Near(a.Origin,origin+q*new Vector3(falling?2:0,3,0),"Gable base datum");
                 using var gameplay=new BuildGameplay(s);gameplay.Update(origin+q*new Vector3(2,4,1),32,40,32);Physics.SyncTransforms();
                 Check(gameplay.TryGetProxy(a.Id,out var proxy),"Gable collider absent");var colliders=new List<Collider>();proxy.GetEnabledColliders(colliders);Check(colliders.Count==1&&colliders[0] is MeshCollider,"Gable uses attic box");
@@ -217,26 +217,26 @@ public static class TimberInfillKitValidation
             }
             var roof=c.Find(TimberInfillKitSetup.Ids[4]);var snap=BuildPlacement.Solve(roof,first.Origin+q*new Vector3(1,1,0),q*Vector3.forward,first,s.Frame(first.OwnFrameId),yaw,0,default,first.Origin+q*new Vector3(1,1,2));
             world.Validate(ref snap);Check(snap.Valid,"L33 cannot attach to L31: "+snap.Message);Check(world.Commit(snap)!=null,"L31 roof commit failed");
-            s.Remove(foundation.Id);foreach(var a in s.Pieces.Values)Check(a.Supported,"Free placement unexpectedly depends on structural support");
+            s.Remove(foundation.Id);foreach(var a in s.Pieces.Values)Check(s.Pieces.ContainsKey(a.Id),"Placed construction missing from session: a");
         }finally{Object.DestroyImmediate(host);Physics.SyncTransforms();}
     }
     private static void Roofs(BuildCatalog c,int yaw)
     {
         using var s=new BuildSession();var origin=new Vector3(4000+yaw*40,30,4000);var q=BuildGeometry.Rotation(yaw);var frame=s.CreateFrame(origin,yaw);
-        var foundation=s.Add(c.Find("build.prototype.foundation"),frame,default,0,true);var wall=s.Add(c.Find(TimberInfillKitSetup.Ids[0]),frame,default,0,false);var d=c.Find(TimberInfillKitSetup.Ids[4]);
+        var foundation=s.Add(c.Find("build.prototype.foundation"),frame,default,0);var wall=s.Add(c.Find(TimberInfillKitSetup.Ids[0]),frame,default,0);var d=c.Find(TimberInfillKitSetup.Ids[4]);
         var snap=BuildPlacement.Solve(d,wall.Origin+q*new Vector3(2,3,0),Vector3.up,wall,s.Frame(wall.OwnFrameId),yaw,0,default,origin+q*new Vector3(2,1,2));
-        Near(snap.Origin,origin+Vector3.up*3,"Roof eave datum");var a=s.Add(d,frame,new Vector3Int(0,12,0),0,false);Check(a.Supported,"Roof lost eave bearing");
+        Near(snap.Origin,origin+Vector3.up*3,"Roof eave datum");var a=s.Add(d,frame,new Vector3Int(0,12,0),0);Check(s.Pieces.ContainsKey(a.Id),"Placed construction missing from session: a");
         foreach(var join in new[]{(new Vector3Int(16,12,0),0),(new Vector3Int(0,20,8),0),(new Vector3Int(16,12,16),4)})
         {
-            var b=s.Add(d,frame,join.Item1,join.Item2,false);Check(b.Supported,"Roof join unsupported");Check(!BuildOccupancy.Overlaps(d,a.Origin,a.WorldYawStep,d,b.Origin,b.WorldYawStep),"Roof join colliders overlap");
+            var b=s.Add(d,frame,join.Item1,join.Item2);Check(s.Pieces.ContainsKey(b.Id),"Placed construction missing from session: b");Check(!BuildOccupancy.Overlaps(d,a.Origin,a.WorldYawStep,d,b.Origin,b.WorldYawStep),"Roof join colliders overlap");
             if(join.Item1.y==20)Check(b.Resolved.mesh==d.roofContinuationMesh,"Uphill eave not clipped");s.Remove(b.Id);
         }
-        var mixed=s.Add(c.Find(ThatchRoofSetup.ContentId),frame,new Vector3Int(16,12,0),0,false);Check(mixed.Supported,"Shingle/thatch interface lost standard sockets");s.Remove(mixed.Id);
+        var mixed=s.Add(c.Find(ThatchRoofSetup.ContentId),frame,new Vector3Int(16,12,0),0);Check(s.Pieces.ContainsKey(mixed.Id),"Shingle/thatch interface lost standard sockets");s.Remove(mixed.Id);
         using var gameplay=new BuildGameplay(s);gameplay.Update(origin+q*new Vector3(2,4,1),32,40,32);Physics.SyncTransforms();Check(gameplay.TryGetProxy(a.Id,out var proxy),"Roof proxy missing");
         var colliders=new List<Collider>();proxy.GetEnabledColliders(colliders);Check(colliders.Count==2,"Roof missing thin slab and bearing");
         var attic=new Ray(a.Origin+q*new Vector3(-1,.5f,1.5f),q*Vector3.right);var slope=new Ray(a.Origin+q*new Vector3(2,4,1.5f),Vector3.down);bool hit=false;
         foreach(var col in colliders){Check(!col.Raycast(attic,out _,6),"Roof fills attic");hit|=col.Raycast(slope,out _,4);}Check(hit,"Roof slope is not physical");
-        s.Remove(foundation.Id);Check(a.Supported,"Free placement unexpectedly depends on structural support");
+        s.Remove(foundation.Id);Check(s.Pieces.ContainsKey(a.Id),"Placed construction missing from session: a");
     }
     private static void Canopy(BuildCatalog c,int yaw)
     {
@@ -244,24 +244,24 @@ public static class TimberInfillKitValidation
         var s=world.Session;var origin=new Vector3(5000+yaw*40,30,5000);var q=BuildGeometry.Rotation(yaw);var frame=s.CreateFrame(origin,yaw);
         try
         {
-            s.Add(c.Find("build.prototype.foundation"),frame,default,0,true);var door=s.Add(c.Find(TimberInfillKitSetup.Ids[1]),frame,default,0,false);
+            s.Add(c.Find("build.prototype.foundation"),frame,default,0);var door=s.Add(c.Find(TimberInfillKitSetup.Ids[1]),frame,default,0);
             var d=c.Find(TimberInfillKitSetup.Ids[5]);var point=origin+q*new Vector3(2,2.5f,.125f);
             var preview=BuildPlacement.Solve(d,point,q*Vector3.forward,door,s.Frame(door.OwnFrameId),yaw,0,default);world.Validate(ref preview);
             Check(preview.Valid,"Canopy still requires every upper ledger mount");
-            var upper=s.Add(c.Find(TimberInfillKitSetup.Ids[0]),frame,new Vector3Int(0,12,0),0,false);
+            var upper=s.Add(c.Find(TimberInfillKitSetup.Ids[0]),frame,new Vector3Int(0,12,0),0);
             preview=BuildPlacement.Solve(d,point,q*Vector3.forward,door,s.Frame(door.OwnFrameId),yaw,0,default);world.Validate(ref preview);
             Check(preview.Valid,"Canopy rejected complete supported wall face: "+preview.Message);Near(preview.Origin,point,"Canopy moved away from actual wall face");
-            var canopy=world.Commit(preview);Check(canopy!=null&&canopy.Supported,"Canopy failed commit");
+            var canopy=world.Commit(preview);Check(canopy!=null&&s.Pieces.ContainsKey(canopy.Id),"Placed construction missing from session: canopy");
             using var gameplay=new BuildGameplay(s);gameplay.Update(point,32,40,32);Physics.SyncTransforms();Check(gameplay.TryGetProxy(canopy.Id,out var proxy),"Canopy proxy missing");
             var colliders=new List<Collider>();proxy.GetEnabledColliders(colliders);Check(colliders.Count==6,"Canopy has no real roof/bracket hulls");
             foreach(var col in colliders)Check(!col.Raycast(new Ray(canopy.Origin+q*new Vector3(0,-.4f,-1),q*Vector3.forward),out _,3),"Canopy blocks clear headway between brackets");
-            var invalid=BuildPlacement.Solve(d,origin,Vector3.up,null,null,yaw,0,default);Check(invalid.InvalidAttachment,"Canopy can start unsupported on terrain");
-            s.Remove(upper.Id);Check(canopy.Supported,"Canopy lost supported lower bracket contact");
-            var gable=c.Find(TimberInfillKitSetup.Ids[3]);var left=s.Add(gable,frame,new Vector3Int(0,12,0),0,false);var right=s.Add(gable.flipVariant,frame,new Vector3Int(8,12,0),0,false);
-            Check(canopy.Supported,"Canopy cannot mount across a supported wall and triangular gables");
+            var floating=BuildPlacement.Solve(d,origin,Vector3.up,null,null,yaw,0,default);world.Validate(ref floating);Check(floating.Valid,"Floating canopy placement was rejected");
+            s.Remove(upper.Id);Check(s.Pieces.ContainsKey(canopy.Id),"Placed construction missing from session: canopy");
+            var gable=c.Find(TimberInfillKitSetup.Ids[3]);var left=s.Add(gable,frame,new Vector3Int(0,12,0),0);var right=s.Add(gable.flipVariant,frame,new Vector3Int(8,12,0),0);
+            Check(s.Pieces.ContainsKey(canopy.Id),"Placed construction missing from session: canopy");
             var tooHigh=BuildPlacement.Solve(d,point+Vector3.up*6,q*Vector3.forward,door,s.Frame(door.OwnFrameId),yaw,0,default);world.Validate(ref tooHigh);
             Check(tooHigh.Valid,"Floating canopy rejected");
-            s.Remove(right.Id);Check(canopy.Supported,"Canopy requires every gable mount");s.Remove(left.Id);s.Remove(door.Id);Check(canopy.Supported,"Canopy survives loss of all structural hosts");
+            s.Remove(right.Id);Check(s.Pieces.ContainsKey(canopy.Id),"Canopy requires every gable mount");s.Remove(left.Id);s.Remove(door.Id);Check(s.Pieces.ContainsKey(canopy.Id),"Canopy survives loss of all structural hosts");
         }finally{Object.DestroyImmediate(host);Physics.SyncTransforms();}
     }
 
@@ -300,7 +300,7 @@ public static class TimberInfillKitValidation
             camera.orthographicSize=6.2f;camera.transform.position=new Vector3(18,13,-18);camera.transform.LookAt(new Vector3(8,1,3));Capture(camera,target,"timber-infill-unity-overview.png");foreach(var obj in objects)obj.SetActive(false);
             using(var session=new BuildSession())
             {
-                var frame=session.CreateFrame(Vector3.zero,1);for(int i=0;i<6;i++)session.Add(c.Find(TimberInfillKitSetup.Ids[i]),frame,new Vector3Int(i%3*24,0,i/3*20),0,false);
+                var frame=session.CreateFrame(Vector3.zero,1);for(int i=0;i<6;i++)session.Add(c.Find(TimberInfillKitSetup.Ids[i]),frame,new Vector3Int(i%3*24,0,i/3*20),0);
                 var renderer=new BuildRenderer(session);var rotation=BuildGeometry.Rotation(1);camera.transform.position=rotation*new Vector3(18,13,-18);camera.transform.LookAt(rotation*new Vector3(8,1,3));camera.cullingMask=~0;
                 submit=(_,current)=>{if(current==camera)renderer.Draw(camera,100,0);};RenderPipelineManager.beginCameraRendering+=submit;Capture(camera,target,"timber-infill-instanced.png");Check(renderer.DrawCalls>0&&renderer.DrawCalls<=6,"Instanced timber rendering missing");RenderPipelineManager.beginCameraRendering-=submit;submit=null;camera.cullingMask=1<<31;
             }

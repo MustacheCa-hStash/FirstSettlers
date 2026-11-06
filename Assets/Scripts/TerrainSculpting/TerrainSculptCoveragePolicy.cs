@@ -43,6 +43,7 @@ public interface ITerrainDensityField
 {
     TerrainDensityProfile Profile { get; }
     short ReadEncoded(int3 sample);
+    short ReadBaselineEncoded(int3 sample);
     void FillMeshHalo(int3 first,short[] destination);
     bool HasOverrides(int3 minimum, int3 maximum);
     bool IsSurfaceFree(TerrainDensityCellBounds bounds);
@@ -70,6 +71,7 @@ public sealed class TerrainSculptVisualField : ITerrainDensityField
         return (short)Math.Round(math.lerp((double)original, edited, w), MidpointRounding.AwayFromZero);
     }
     public bool HasOverrides(int3 minimum, int3 maximum) => source.HasOverrides(minimum,maximum);
+    public short ReadBaselineEncoded(int3 sample)=>source.ReadBaselineEncoded(sample);
     public void FillMeshHalo(int3 first,short[] destination) => source.FillMeshHalo(first,destination,policy);
     public bool IsSurfaceFree(TerrainDensityCellBounds cells)
     {

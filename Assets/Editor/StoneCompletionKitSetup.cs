@@ -43,9 +43,9 @@ public static class StoneCompletionKitSetup
             d.contentId=Id(p.slug);d.displayName=p.name;d.kind=p.steps>0?BuildPartKind.Stair:p.staticLeaf?BuildPartKind.Furniture:p.guard?BuildPartKind.Handrail:p.tag=="S16"?BuildPartKind.Beam:p.tag=="S05"?BuildPartKind.Foundation:p.tag=="S20"?BuildPartKind.Floor:p.tag=="S24"?BuildPartKind.Corner:BuildPartKind.Wall;
             d.sizeUnits=Vector3Int.RoundToInt(V(p.size)/BuildGeometry.Unit);d.boundsOffset=V(p.minimum);d.minimumUnits=Vector3Int.zero;
             d.wallEndInsetUnits=0;d.stackRiseUnits=d.sizeUnits.y;d.wallPlacementMode=WallPlacementMode.Panel;
-            d.preserveAuthoredMesh=true;d.material=material;d.maxHealth=100;d.requiresFullBearing=false;d.canGroundOnTerrain=p.tag is "S05" or "S23" or "S24";
+            d.preserveAuthoredMesh=true;d.material=material;d.maxHealth=100;d.canGroundOnTerrain=p.tag is "S05" or "S23" or "S24";
             d.wallBaseAttachment=p.tag=="S24";d.topCourseDepth=p.tag=="S16"?.25f:0;
-            d.furnitureWallMounted=false;d.relaxedWallMount=false;d.furnitureSupportPoints=Array.Empty<Vector3>();
+            d.furnitureWallMounted=false;
             d.jointCoverVariants=Array.Empty<Mesh>();d.jointCoverMaterial=null;d.uvVariants=Array.Empty<Mesh>();d.wallOpenings=Array.Empty<Bounds>();d.solidBoxes=Array.Empty<Bounds>();
             d.gableSlope=p.slope=="rising"?GableSlope.Rising:p.slope=="falling"?GableSlope.Falling:GableSlope.None;d.roofAttachment=d.IsHalfGable?RoofAttachmentMode.Gable:RoofAttachmentMode.None;d.flipVariant=null;d.gableRoofSeamMesh=null;
             var mesh=WattleWallSetup.BakeStaticMesh(ModularWoodSetup.Import(Models+"/"+p.file),Vector3.zero,p.name,out _,true);mesh.RecalculateTangents();d.mesh=Save(mesh,path+"-mesh.asset");

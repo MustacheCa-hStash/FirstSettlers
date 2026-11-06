@@ -10,13 +10,14 @@ public sealed class TerrainSculptMeshData
     public readonly double3[] Positions;
     public readonly float3[] Normals;
     public readonly int[] Triangles;
-    public readonly float2[] SurfaceData; // UV1.x = exposed stone blend; absent on collision/cache meshes.
+    public readonly float2[] SurfaceData; // UV1.x = actual removal blend; absent on final collision/baseline meshes.
     public readonly int SampledBricks,SkippedBricks;
+    internal readonly TerrainMeshBoundary Boundary;
     public int TriangleCount => Triangles.Length / 3;
-    public long PayloadBytes => (long)Positions.Length * 24 + (long)Normals.Length * 12 + (long)Triangles.Length * 4+(long)(SurfaceData?.Length??0)*8;
+    public long PayloadBytes => (long)Positions.Length * 24 + (long)Normals.Length * 12 + (long)Triangles.Length * 4+(long)(SurfaceData?.Length??0)*8+(Boundary?.PayloadBytes??0);
 
-    internal TerrainSculptMeshData(double3[] positions, float3[] normals, int[] triangles,int sampledBricks,int skippedBricks,float2[] surfaceData=null)
-    { Positions = positions; Normals = normals; Triangles = triangles;SampledBricks=sampledBricks;SkippedBricks=skippedBricks;SurfaceData=surfaceData; }
+    internal TerrainSculptMeshData(double3[] positions, float3[] normals, int[] triangles,int sampledBricks,int skippedBricks,float2[] surfaceData=null,TerrainMeshBoundary boundary=null)
+    { Positions = positions; Normals = normals; Triangles = triangles;SampledBricks=sampledBricks;SkippedBricks=skippedBricks;SurfaceData=surfaceData;Boundary=boundary; }
 
     // Unity Mesh allocation/publication belongs on the main thread. Use one common origin for
     // adjoining pieces so shared double positions undergo exactly the same float conversion.
@@ -72,6 +73,12 @@ internal sealed class TerrainSculptMeshBuffer
         if (math.dot(cross, towardAir) < 0) { int swap = b; b = c; c = swap; }
         Triangles.Add(a); Triangles.Add(b); Triangles.Add(c);
     }
+    internal void TriangleOriented(int a,int b,int c)
+    {
+        if(a==b||b==c||a==c||math.lengthsq(math.cross(Positions[b]-Positions[a],Positions[c]-Positions[a]))<1e-24)return;
+        if(Triangles.Count/3>=maxTriangles)throw new TerrainDensityCapacityException();
+        budget?.Charge(64);Triangles.Add(a);Triangles.Add(b);Triangles.Add(c);
+    }
     internal void Append(TerrainSculptMeshData mesh)
     {
         if((long)Positions.Count+mesh.Positions.Length>maxVertices||(long)Triangles.Count+mesh.Triangles.Length>(long)maxTriangles*3)
@@ -81,7 +88,7 @@ internal sealed class TerrainSculptMeshBuffer
         budget?.Charge((long)mesh.Triangles.Length*22);
         foreach(int index in mesh.Triangles)Triangles.Add(index+offset);
     }
-    internal TerrainSculptMeshData Finish(int sampledBricks=0,int skippedBricks=0) => new TerrainSculptMeshData(Positions.ToArray(), Normals.ToArray(), Triangles.ToArray(),sampledBricks,skippedBricks);
+    internal TerrainSculptMeshData Finish(int sampledBricks=0,int skippedBricks=0,TerrainMeshBoundary boundary=null,float2[] surfaceData=null) => new TerrainSculptMeshData(Positions.ToArray(), Normals.ToArray(), Triangles.ToArray(),sampledBricks,skippedBricks,surfaceData,boundary);
 }
 
 public readonly struct TerrainDensityCellBounds

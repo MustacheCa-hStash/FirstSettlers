@@ -484,11 +484,15 @@ public static class MeshGenerator
                 case SurfaceType.Grass:
                     baseColor = new float4(0.1255f, 0.5451f, 0.1569f, 1f);
                     break;
+                case SurfaceType.Moraine:
                 case SurfaceType.Rock:
                     baseColor = new float4(0.45f, 0.45f, 0.45f, 1f);
                     break;
                 case SurfaceType.Snow:
                     baseColor = new float4(0.92f, 0.94f, 0.98f, 1f);
+                    break;
+                case SurfaceType.Ice:
+                    baseColor = new float4(0.55f,0.72f,0.76f,1f);
                     break;
                 case SurfaceType.Cliff:
                     baseColor = new float4(0.30f, 0.30f, 0.30f, 1f);

@@ -8,5 +8,7 @@ public enum SurfaceType
     Cliff,
     Riverbed,
     DryWash,
-    CrackedClay
+    CrackedClay,
+    Ice,
+    Moraine
 }

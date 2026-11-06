@@ -91,8 +91,8 @@ public static class WoodExtensionKitValidation
             foreach(var d in new[]{low,fence})
             {
                 var p=BuildPlacement.Solve(d,origin,Vector3.up,null,null,yaw,0,default);world.Validate(ref p);
-                Check(p.Valid&&!p.Grounded,"Boundary cannot start on terrain: "+d.name+" / "+p.Message);
-                var piece=world.Commit(p);Check(piece!=null&&piece.Supported,"Boundary commit failed");
+                Check(p.Valid,"Boundary cannot start on terrain: "+d.name+" / "+p.Message);
+                var piece=world.Commit(p);Check(piece!=null&&s.Pieces.ContainsKey(piece.Id),"Placed construction missing from session: piece");
                 var next=BuildPlacement.Solve(d,piece.Origin+q*new Vector3(4,.5f,0),q*Vector3.right,piece,s.Frame(piece.OwnFrameId),yaw,0,default);
                 Near(next.Origin,piece.Origin+q*Vector3.right*4,"Boundary endpoint");
                 var stacked=BuildPlacement.Solve(d,piece.Origin+q*new Vector3(2,1.25f,0),Vector3.up,piece,s.Frame(piece.OwnFrameId),yaw,0,default);
@@ -100,42 +100,42 @@ public static class WoodExtensionKitValidation
             }
             var invalid=BuildPlacement.Solve(beam,origin,Vector3.up,null,null,yaw,0,default);world.Validate(ref invalid);Check(invalid.Valid,"Free beam placement rejected");
             invalid=BuildPlacement.Solve(narrow,origin,Vector3.up,null,null,yaw,0,default);world.Validate(ref invalid);Check(invalid.Valid,"Free narrow wall placement rejected");
-            var preview=BuildPlacement.Solve(footing,origin,Vector3.up,null,null,yaw,0,default);world.Validate(ref preview);Check(preview.Valid&&!preview.Grounded,"Sleeper footing ground placement: "+preview.Message);
+            var preview=BuildPlacement.Solve(footing,origin,Vector3.up,null,null,yaw,0,default);world.Validate(ref preview);Check(preview.Valid,"Sleeper footing ground placement: "+preview.Message);
             var basePiece=world.Commit(preview);var frame=s.Frame(basePiece.OwnFrameId);
-            var paving=s.Add(c.Find("build.stone.s04-flagstone-floor"),frame,new Vector3Int(0,1,0),0,false);
-            Check(paving.Supported,"Open sleepers falsely supply full paving bearing");s.Remove(paving.Id);
-            var deck=s.Add(c.Find("build.prototype.floor"),frame,default,0,false);
-            Check(deck.Supported,"Timber deck unsupported on sleepers");Check(basePiece.Resolved.mesh!=footing.mesh,"Sleeper top did not fit beneath floor");
+            var paving=s.Add(c.Find("build.stone.s04-flagstone-floor"),frame,new Vector3Int(0,1,0),0);
+            Check(s.Pieces.ContainsKey(paving.Id),"Placed construction missing from session: paving");s.Remove(paving.Id);
+            var deck=s.Add(c.Find("build.prototype.floor"),frame,default,0);
+            Check(s.Pieces.ContainsKey(deck.Id),"Placed construction missing from session: deck");Check(basePiece.Resolved.mesh!=footing.mesh,"Sleeper top did not fit beneath floor");
             Check(!BuildResolvedGeometry.Overlaps(basePiece,basePiece.Resolved,deck,deck.Resolved),"Sleeper and deck retain coincident occupied layers");
             foreach(var a in basePiece.Resolved.boxes)foreach(var b in deck.Resolved.boxes)
                 Check(!(Mathf.Abs(a.max.y-b.max.y)<.001f&&BuildResolution.PlanOverlap(a,b)),"Sleeper top is coplanar with floor top");
             s.Remove(deck.Id);Check(basePiece.Resolved.mesh==footing.mesh&&basePiece.Resolved.boxes.Length==10,"Sleeper does not restore after floor removal");
-            var wall=s.Add(narrow,frame,default,0,false);Check(wall.Supported,"Sleeper does not support narrow wall");
+            var wall=s.Add(narrow,frame,default,0);Check(s.Pieces.ContainsKey(wall.Id),"Placed construction missing from session: wall");
             var beamSnap=BuildPlacement.Solve(beam,wall.Origin+Vector3.up*3,Vector3.up,wall,s.Frame(wall.OwnFrameId),yaw,0,default);world.Validate(ref beamSnap);
             Near(beamSnap.Origin,wall.Origin+Vector3.up*3,"Beam top datum");Check(beamSnap.Valid,"Beam cannot attach to wall: "+beamSnap.Message);
-            var timber=world.Commit(beamSnap);Check(timber!=null&&timber.Supported,"Beam unsupported");
+            var timber=world.Commit(beamSnap);Check(timber!=null&&s.Pieces.ContainsKey(timber.Id),"Placed construction missing from session: timber");
             var extension=BuildPlacement.Solve(beam,timber.Origin+q*new Vector3(4,-.125f,0),q*Vector3.right,timber,s.Frame(timber.OwnFrameId),yaw,0,default);world.Validate(ref extension);
             Near(extension.Origin,timber.Origin+q*Vector3.right*4,"Beam endpoint extension");Check(extension.Valid,"Beam continuation rejected");
-            var extra=world.Commit(extension);Check(extra!=null&&extra.Supported,"Beam extension lost support");
+            var extra=world.Commit(extension);Check(extra!=null&&s.Pieces.ContainsKey(extra.Id),"Placed construction missing from session: extra");
             var roof=c.Find(ThatchRoofSetup.ContentId);
             var roofSnap=BuildPlacement.Solve(roof,timber.Origin+q*new Vector3(2,0,0),Vector3.up,timber,s.Frame(timber.OwnFrameId),yaw,0,default,timber.Origin+q*new Vector3(3,1,2));
             Near(roofSnap.Origin,timber.Origin,"Roof on beam datum");world.Validate(ref roofSnap);Check(roofSnap.Valid,"Roof cannot seat on beam: "+roofSnap.Message);
-            var covering=world.Commit(roofSnap);Check(covering!=null&&covering.Supported,"Roof lost beam bearing");
+            var covering=world.Commit(roofSnap);Check(covering!=null&&s.Pieces.ContainsKey(covering.Id),"Placed construction missing from session: covering");
             using(var gameplay=new BuildGameplay(s))
             {
                 gameplay.Update(basePiece.Origin,32,40,32);Physics.SyncTransforms();Check(gameplay.TryGetProxy(basePiece.Id,out var proxy),"Sleeper proxy missing");
                 var colliders=new List<Collider>();proxy.GetEnabledColliders(colliders);Check(colliders.Count==10,"Sleeper gaps filled by runtime collider");
                 var gap=new Ray(basePiece.Origin+q*new Vector3(.5f,1,.5f),Vector3.down);foreach(var col in colliders)Check(!col.Raycast(gap,out _,2),"Sleeper gap is blocked");
             }
-            var floor=s.Add(c.Find("build.prototype.floor"),frame,new Vector3Int(0,12,0),0,false);
+            var floor=s.Add(c.Find("build.prototype.floor"),frame,new Vector3Int(0,12,0),0);
             var underside=BuildPlacement.Solve(beam,floor.Origin+q*new Vector3(2,-.25f,2),Vector3.down,floor,s.Frame(floor.OwnFrameId),yaw,0,default);
             Check(Mathf.Abs(underside.Origin.y-(floor.Origin.y-.25f))<.001f,"Beam underside seating");s.Remove(floor.Id);
-            s.Remove(basePiece.Id);Check(wall.Supported&&timber.Supported&&extra.Supported&&covering.Supported,"Free placement unexpectedly depends on structural support");
+            s.Remove(basePiece.Id);Check(s.Pieces.ContainsKey(wall.Id)&&s.Pieces.ContainsKey(timber.Id)&&s.Pieces.ContainsKey(extra.Id)&&s.Pieces.ContainsKey(covering.Id),"Placed construction missing from session: wall, timber, extra, covering");
             using var mixed=new BuildSession();var mf=mixed.CreateFrame(origin,yaw);
-            var shortWall=mixed.Add(low,mf,default,0,true);var tallWall=mixed.Add(narrow,mf,default,2,false);
+            var shortWall=mixed.Add(low,mf,default,0);var tallWall=mixed.Add(narrow,mf,default,2);
             bool fullCover=false;foreach(var attachment in shortWall.Resolved.attachments)fullCover|=attachment.mesh.bounds.size.y>2.9f;foreach(var attachment in tallWall.Resolved.attachments)fullCover|=attachment.mesh.bounds.size.y>2.9f;
             Check(fullCover,"Mixed-height junction selected a short cover");
-            using var reverse=new BuildSession();var rf=reverse.CreateFrame(origin,yaw);var tallFirst=reverse.Add(narrow,rf,default,2,false);var shortSecond=reverse.Add(low,rf,default,0,true);
+            using var reverse=new BuildSession();var rf=reverse.CreateFrame(origin,yaw);var tallFirst=reverse.Add(narrow,rf,default,2);var shortSecond=reverse.Add(low,rf,default,0);
             Check(tallWall.Resolved.attachments.Length==tallFirst.Resolved.attachments.Length&&shortWall.Resolved.attachments.Length==shortSecond.Resolved.attachments.Length,"Mixed-height cover ownership depends on insertion order");
         }finally{Object.DestroyImmediate(host);Object.DestroyImmediate(ground);Physics.SyncTransforms();}
     }

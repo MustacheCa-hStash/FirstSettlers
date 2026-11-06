@@ -13,6 +13,7 @@ internal sealed class TerrainSculptMeshCache
     private readonly List<Key> recent=new List<Key>();
     private ITerrainDensityGenerator generator;
     private TerrainDensityProfile profile;
+    private readonly int reconstructionVersion=TerrainSourceSurfaceLayout.ReconstructionVersion;
     internal long Charge { get; private set; }
     internal readonly struct Key:IEquatable<Key>
     {
@@ -61,7 +62,7 @@ internal sealed class TerrainSculptMeshCache
         internal double ExtractMs { get; private set; }
         internal Builder(TerrainSculptMeshCache previous,TerrainDensitySnapshot snapshot,TerrainSculptBuildBudget budget,long limit)
         {
-            this.previous=previous!=null&&ReferenceEquals(previous.generator,snapshot.Generator)&&previous.profile.Equals(snapshot.Profile)?previous:null;
+            this.previous=previous!=null&&previous.reconstructionVersion==TerrainSourceSurfaceLayout.ReconstructionVersion&&ReferenceEquals(previous.generator,snapshot.Generator)&&previous.profile.Equals(snapshot.Profile)?previous:null;
             this.snapshot=snapshot;this.budget=budget;this.limit=limit;
             next.generator=snapshot.Generator;next.profile=snapshot.Profile;
         }

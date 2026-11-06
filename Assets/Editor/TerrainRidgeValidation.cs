@@ -33,7 +33,7 @@ public static class TerrainRidgeValidation
     };
     private static void Check(bool ok, string message) { checks++; if (!baseline && !ok) throw new Exception(message); }
     private static string Arg(string name) { var args=Environment.GetCommandLineArgs();int i=Array.IndexOf(args,name);return i<0?null:args[i+1]; }
-    private static WorldErosionSettings SceneSettings()
+    internal static WorldErosionSettings SceneSettings()
     {
         string path=Arg("-terrainIssueScene");
         var s=WorldErosionSettings.Default;
@@ -48,6 +48,16 @@ public static class TerrainRidgeValidation
             else if(field.FieldType==typeof(bool))field.SetValue(boxed,match.Groups[1].Value=="1");
             s=(WorldErosionSettings)boxed;
         }
+        object landforms=s.landforms;
+        foreach(var field in typeof(WorldLandformSettings).GetFields(System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic))
+        {
+            var match=Regex.Match(text,@"^      "+field.Name+@": ([^\r\n]+)",RegexOptions.Multiline);
+            if(!match.Success)continue;
+            if(field.FieldType==typeof(float))field.SetValue(landforms,float.Parse(match.Groups[1].Value,CultureInfo.InvariantCulture));
+            else if(field.FieldType==typeof(int))field.SetValue(landforms,int.Parse(match.Groups[1].Value));
+            else if(field.FieldType==typeof(bool))field.SetValue(landforms,match.Groups[1].Value=="1");
+        }
+        s.landforms=(WorldLandformSettings)landforms;
         return s.Sanitized();
     }
     public static void RunBatch()

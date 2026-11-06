@@ -78,7 +78,7 @@ SmearScene uses `chunkSize = 128`, `worldScale = 0.3`, so `C = 38.4 m`, and `R =
 
 Mesh LODGroup levels still change with apparent screen size and `QualitySettings.lodBias`. Adjacent levels dither; the last mesh level remains available until the world distance handoff. Billboards have their own outer fade/thinning. A missing resolved billboard uses instanced meshes as a fallback.
 
-`gameObjectTreeChunkRingRadius` is a retained serialized name; the Inspector calls it **Mesh Detail Radius (chunk widths)**. `treeGameObjectWarmRetainExtraRings` is legacy and does not control the current nearby proxy pool.
+`gameObjectTreeChunkRingRadius` is an active retained serialized name; the Inspector calls it **Mesh Detail Radius (chunk widths)**. The old visual-tree pool-retention and billboard-start fields were removed on November 6, 2026. The nearby physical/query proxy pool uses the separate gameplay settings below. `billboardTreeChunkRingRadius` still supplies the outer billboard range when distant trees are disabled.
 
 Gameplay scans normally refresh every 0.1 seconds, after one metre of focus movement, or after relevant registry changes. Activations are nearest first, defaulting to 8 per frame and an approximate 0.5 ms budget. Active proxies are checked each update for state changes and release distance. A proxy returns to the pool when neither physical nor canopy roles remain active; the default limit of 128 applies to **inactive pooled proxies**, not active trees.
 

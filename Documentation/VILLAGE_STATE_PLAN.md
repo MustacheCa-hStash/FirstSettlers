@@ -9,7 +9,7 @@ The village should be a persistent logical part of the active world. Procedural 
 - [BuildSession](../Assets/Scripts/Building/BuildSession.cs) already owns data-only BuildPieceRecord and BuildGridFrame objects, with separate derived geometry and spatial indexing. This is the starting point for piece authority.
 - BuildPieceRecord retains a definition content ID and grid pose, but current piece/frame IDs are session counters starting at one. They are not regeneration-safe world identities.
 - Add/Remove/Damage are natural mutation boundaries. Damage can remove a piece through the session directly, so changes must be recorded at the authoritative mutation layer, not solely in BuildWorld's input-facing methods.
-- Each current Add triggers resolution. PCG needs a batch insertion path so a whole village does not resolve once per piece.
+- Each current Add resolves a local neighbourhood and queues only affected render groups. PCG still needs a batch insertion path so overlapping neighbourhoods in a whole village are resolved once per batch.
 - [BuildWorld](../Assets/Scripts/Building/BuildWorld.cs) streams physical proxies around one Focus. Detailed NPC simulation needs collision/terrain/navigation coverage independent of the player's proximity.
 - [WorldFeaturePlanGenerator](../Assets/Scripts/TerrainGeneration/BiomeGeneration/WorldFeaturePlanGenerator.cs) currently prepares chunk-scale landscape/foliage plans. A village requires a higher-level plan owning the entire settlement across terrain chunks.
 - AI Navigation 2.0.12 is installed in Packages/manifest.json. No village/NPC navigation implementation was found in the runtime scripts inspected.

@@ -33,11 +33,10 @@ public static class BuildTopCourse
     public static bool Solve(BuildDefinition d,BuildPieceRecord target,Vector3Int nudge,int turn,out BuildPreview preview,int? lockedWorldYaw=null)
     {
         preview=default;if(d.topCourseDepth<=0)return false;
-        bool valid=target!=null&&Compatible(target.Definition,d);
-        if(!valid)return false; // Free placement uses the ordinary aimed world grid.
-        int yaw=lockedWorldYaw??target?.WorldYawStep??0;var b=target?.Definition.LocalBounds??default;var c=d.LocalBounds;
-        var origin=(target?.Origin??Vector3.zero)+BuildGeometry.Rotation(yaw)*(new Vector3(b.min.x-c.min.x,b.max.y-d.topCourseDepth-c.min.y,b.center.z-c.center.z)+(Vector3)nudge*BuildGeometry.Unit);
-        preview=new BuildPreview{Definition=d,Origin=origin,WorldYaw=yaw,Frame=new BuildGridFrame{Origin=origin,YawStep=(byte)yaw},InvalidAttachment=!valid,Hint="Replace wall top course"};return true;
+        if(target==null || !Compatible(target.Definition,d))return false; // Free placement uses the ordinary aimed world grid.
+        int yaw=lockedWorldYaw??target.WorldYawStep;var b=target.Definition.LocalBounds;var c=d.LocalBounds;
+        var origin=target.Origin+BuildGeometry.Rotation(yaw)*(new Vector3(b.min.x-c.min.x,b.max.y-d.topCourseDepth-c.min.y,b.center.z-c.center.z)+(Vector3)nudge*BuildGeometry.Unit);
+        preview=new BuildPreview{Definition=d,Origin=origin,WorldYaw=yaw,Frame=new BuildGridFrame{Origin=origin,YawStep=(byte)yaw},Hint="Replace wall top course"};return true;
     }
     // Clip triangles at a horizontal plane, retaining the authored UVs and normals.
     // Collision inputs are convex; their new cap is a sorted convex polygon.

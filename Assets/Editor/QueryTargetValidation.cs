@@ -138,7 +138,7 @@ public static class QueryTargetValidation
         };
         try
         {
-            runtime.RebuildRockGameObjects(placements, root.transform);
+            runtime.RebuildRocks(placements, root.transform);
             for (int frame = 0; frame < 4; frame++) rockPool.Update(root.transform.position, frame);
             var targets = Object.FindObjectsByType<RockQueryTarget>().Where(t => t.Data != null && t.Data.IsGenerated)
                 .OrderBy(t => t.Data.Placement.Value.localPosition.x).ToArray();

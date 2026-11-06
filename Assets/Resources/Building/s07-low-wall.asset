@@ -75,7 +75,6 @@ MonoBehaviour:
   wallEndInsetUnits: 0
   mesh: {fileID: 2654286005670702095, guid: 8418171ddb2e65044906e422eaa15bd9, type: 3}
   preserveAuthoredMesh: 1
-  requiresFullBearing: 0
   canGroundOnTerrain: 1
   solidBoxes: []
   wallOpenings: []

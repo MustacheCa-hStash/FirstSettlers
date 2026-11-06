@@ -75,7 +75,6 @@ public static class LimestoneKitExtensionValidation
             var solids = d.solidBoxes.Length > 0 ? d.solidBoxes : new[] { d.LocalBounds };
             Check(colliders.Length == solids.Length, "Authoring collider count");
             for (int i = 0; i < solids.Length; i++) Check(colliders[i].center == solids[i].center && colliders[i].size == solids[i].size, "Authoring solid mismatch");
-            Check(d.requiresFullBearing == (part == 1), "Paving bearing policy");
             Check(d.authoringPrefab.GetComponent<MeshFilter>().sharedMesh == d.mesh && d.authoringPrefab.GetComponent<MeshRenderer>().sharedMaterial == shared, "Prefab visual references mismatch");
             Check(BuildUiContent.Category(d) == new[] {4,3,1,2,2,2}[part] && !BuildUiContent.Description(d).StartsWith("Choose this component", StringComparison.Ordinal), "Component menu metadata missing: " + d.contentId);
             Check(Resources.Load<Texture2D>("Building/UI/Thumbnails/" + BuildUiContent.ThumbnailKey(d)) != null, "Actual-mesh icon missing");
@@ -186,36 +185,36 @@ public static class LimestoneKitExtensionValidation
         if(part==1)
         {
             var strip=catalog.Find(LimestoneKitExtensionSetup.Ids[2]);
-            for(int z=0;z<4;z++)bases.Add(session.Add(strip,frame,new Vector3Int(0,-1,z*4+2),0,true));
+            for(int z=0;z<4;z++)bases.Add(session.Add(strip,frame,new Vector3Int(0,-1,z*4+2),0));
         }
-        else bases.Add(session.Add(catalog.Find("build.prototype.foundation"),frame,default,0,true));
-        var first=session.Add(d,frame,part==2?new Vector3Int(0,2,0):default,0,false);
+        else bases.Add(session.Add(catalog.Find("build.prototype.foundation"),frame,default,0));
+        var first=session.Add(d,frame,part==2?new Vector3Int(0,2,0):default,0);
         if(part==1)
         {
             var target=bases[0];
             var preview=BuildPlacement.Solve(d,target.Origin+q*new Vector3(2,0,0),Vector3.up,target,session.Frame(target.OwnFrameId),yaw,0,default);
             Near(preview.Origin,origin,"Paving underside did not seat on authored footing top");
         }
-        Check(first.Supported,"Supported component rejected: "+d.contentId);
+        Check(session.Pieces.ContainsKey(first.Id),"Supported component rejected: "+d.contentId);
         Check(Array.IndexOf(d.uvVariants,first.Resolved.mesh)>=0,"Authored mesh/UV replaced: "+d.contentId);
         Check(first.Resolved.auxiliaryMesh==null&&first.Resolved.attachments.Length==0,"Unwanted timber fitting");
         if(part==1)
         {
             foreach(var support in bases)Check(Array.IndexOf(support.Definition.uvVariants,support.Resolved.mesh)>=0,"Paving remeshed its limestone footing");
             using var partial=new BuildSession();var pf=partial.CreateFrame(origin+Vector3.right*10,yaw);
-            partial.Add(catalog.Find(LimestoneKitExtensionSetup.Ids[2]),pf,new Vector3Int(0,-1,2),0,true);
-            var overhang=partial.Add(d,pf,default,0,false);Check(overhang.Supported,"Cantilevered paving accepted");
+            partial.Add(catalog.Find(LimestoneKitExtensionSetup.Ids[2]),pf,new Vector3Int(0,-1,2),0);
+            var overhang=partial.Add(d,pf,default,0);Check(partial.Pieces.ContainsKey(overhang.Id),"Placed construction missing from session: overhang");
         }
         if(d.kind is BuildPartKind.Wall or BuildPartKind.Corner)
         {
             var preview=BuildPlacement.Solve(d,first.Origin+q*new Vector3(d.LocalBounds.center.x,d.LocalBounds.max.y,0),Vector3.up,first,session.Frame(first.OwnFrameId),yaw,0,default);
             Near(preview.Origin,first.Origin+Vector3.up*d.StackRise,"Stack datum");
-            var upper=session.Add(d,frame,new Vector3Int(0,Mathf.RoundToInt(d.StackRise*4),0),0,false);
-            Check(upper.Supported,"Stack lost support");
+            var upper=session.Add(d,frame,new Vector3Int(0,Mathf.RoundToInt(d.StackRise*4),0),0);
+            Check(session.Pieces.ContainsKey(upper.Id),"Placed construction missing from session: upper");
             if(part==4)
             {
                 var wall=catalog.Find(LimestoneKitSetup.Ids[0]);
-                var raised=session.Add(wall,frame,new Vector3Int(0,2,0),0,false);
+                var raised=session.Add(wall,frame,new Vector3Int(0,2,0),0);
                 Near(raised.Origin,origin+Vector3.up*.5f,"Plinth did not raise full wall by 0.5 m");
             }
         }
@@ -238,7 +237,7 @@ public static class LimestoneKitExtensionValidation
                 try{Walk(origin,q,false);Walk(origin,q,true);}finally{Object.DestroyImmediate(pad);Physics.SyncTransforms();}
             }
         }
-        session.Remove(bases[0].Id);Check(first.Supported,"Free placement unexpectedly depends on structural support");
+        session.Remove(bases[0].Id);Check(session.Pieces.ContainsKey(first.Id),"Placed construction missing from session: first");
     }
 
     private static void Walk(Vector3 origin,Quaternion q,bool reverse)
@@ -268,10 +267,10 @@ public static class LimestoneKitExtensionValidation
         {
             var d=catalog.Find(LimestoneKitExtensionSetup.Ids[2]);
             var preview=BuildPlacement.Solve(d,origin+q*new Vector3(2,0,0),Vector3.up,null,null,yaw,0,default);
-            world.Validate(ref preview);Check(preview.Valid&&!preview.Grounded,"L06 cannot seat on TerrainCollider: "+preview.Message);
+            world.Validate(ref preview);Check(preview.Valid,"L06 cannot seat on TerrainCollider: "+preview.Message);
             Near(preview.Origin,origin+Vector3.up*.5f,"Footing bottom-contact datum");
-            var floating=preview;floating.Origin+=Vector3.up;world.Validate(ref floating);Check(floating.Valid&&!floating.Grounded,"Floating footing grounded");
-            var committed=world.Commit(preview);Check(committed!=null&&!committed.Grounded&&committed.Supported,"Grounded footing commit failed");
+            var floating=preview;floating.Origin+=Vector3.up;world.Validate(ref floating);Check(floating.Valid,"Floating footing grounded");
+            var committed=world.Commit(preview);Check(committed!=null&&world.Session.Pieces.ContainsKey(committed.Id),"Placed construction missing from session: committed");
         }
         finally{Object.DestroyImmediate(host);Object.DestroyImmediate(ground);Object.DestroyImmediate(data);Physics.SyncTransforms();}
     }
@@ -330,7 +329,7 @@ public static class LimestoneKitExtensionValidation
             foreach (var renderer in renderers) renderer.enabled = false;
             using var session = new BuildSession(); var frame = session.CreateFrame(Vector3.zero, 1);
             for (int row = 0; row < 2; row++) for (int col = 0; col < 3; col++)
-                session.Add(catalog.Find(LimestoneKitExtensionSetup.Ids[row * 3 + col]), frame, new Vector3Int(col * 24, 0, row * 20), 0, false);
+                session.Add(catalog.Find(LimestoneKitExtensionSetup.Ids[row * 3 + col]), frame, new Vector3Int(col * 24, 0, row * 20), 0);
             var buildingRenderer = new BuildRenderer(session);
             try
             {

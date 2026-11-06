@@ -16,6 +16,14 @@ This document is the reference for execution. Complete phases in order, recordin
 
 **P6 A/B checkpoint:** exposed surfaces now use independently replaceable stone settings with triplanar sampling, local two-sided ceiling shadows and per-fragment cascade selection. Grass/small-decoration consumers apply an immutable, committed density-derived suppression footprint to resident and pending representations, restoring it from existing saves. The persistent mask shares the derived budget with a 16 MiB conservative cap and survives render retirement; F3 reports its charge. Original biome/ecology maps, trees/large rocks and building support remain unchanged. See [checkpoint 6 A/B](TERRAIN_SCULPTING_CHECKPOINT_6_AB.md) for source settings, actual renders, limits and validation.
 
+**Implemented steep-surface follow-up:** the [modular cliff excavation and rendering design](TERRAIN_EXCAVATION_STEEP_SURFACES_DESIGN.md)
+addresses connected vertical seam contours, actual source collider layout, bounded
+planning and close-camera shader precision. Source collision now uses the current
+full-resolution layout, and excavation material coverage follows actual density
+removal. The density profile and session/brush scope remain unchanged. Native
+fixtures cover steep entrances, repeated cuts, capsule traversal, signed chunk
+seams, cache reuse and atomic publication.
+
 ## Assumptions for user review
 
 | ID | Decision | Status / implication |

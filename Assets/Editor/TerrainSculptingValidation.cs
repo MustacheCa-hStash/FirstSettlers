@@ -309,6 +309,21 @@ public static class TerrainSculptingValidation
         object boxed = g.Erosion;
         foreach (var field in typeof(WorldErosionSettings).GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
         {
+            if(field.FieldType==typeof(WorldLandformSettings))
+            {
+                object landforms=g.Erosion.landforms;
+                foreach(var nested in typeof(WorldLandformSettings).GetFields(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic))
+                {
+                    var nestedMatch=Regex.Match(erosion,@"(?m)^      "+Regex.Escape(nested.Name)+@": ([^\r\n]+)");
+                    if(!nestedMatch.Success)throw new InvalidOperationException("Scene fixture missing landform setting: "+nested.Name);
+                    string v=nestedMatch.Groups[1].Value;
+                    if(nested.FieldType==typeof(float))nested.SetValue(landforms,float.Parse(v,CultureInfo.InvariantCulture));
+                    else if(nested.FieldType==typeof(int))nested.SetValue(landforms,int.Parse(v,CultureInfo.InvariantCulture));
+                    else if(nested.FieldType==typeof(bool))nested.SetValue(landforms,v=="1");
+                    else throw new InvalidOperationException("Unsupported landform fixture field: "+nested.Name);
+                }
+                field.SetValue(boxed,landforms);continue;
+            }
             var match = Regex.Match(erosion, @"(?m)^    " + Regex.Escape(field.Name) + @": ([^\r\n]+)");
             if (!match.Success) throw new InvalidOperationException("Scene fixture missing erosion setting: " + field.Name);
             string value = match.Groups[1].Value;

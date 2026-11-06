@@ -1,12 +1,9 @@
 using System.Collections.Generic;
-using Unity.Profiling;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 /// <summary>One streamed chunk of immutable instance matrices. No per-rock visual GameObjects.</summary>
 public sealed class RockRenderSet
 {
-    private static readonly ProfilerMarker FinishBatchMarker = new("FS.Streaming.Foliage.Publication.Rock.FinishBatch");
     public readonly struct Visual
     {
         public readonly Mesh Mesh, DistantMesh;
@@ -35,16 +32,7 @@ public sealed class RockRenderSet
         public Vector3 Position, Scale;
         public Quaternion Rotation;
     }
-    private sealed class Batch
-    {
-        public Mesh Mesh;
-        public Material Material;
-        public int Submesh;
-        public Matrix4x4[] Matrices;
-    }
     public readonly List<Entry> Entries = new();
-    private readonly Dictionary<(Mesh, Material, int), List<Matrix4x4>> staging = new();
-    private readonly List<Batch> batches = new();
     public int InstanceCount => Entries.Count;
 
     public void Add(GameObject prefab, RockInstanceData placement, Transform chunk)
@@ -71,43 +59,11 @@ public sealed class RockRenderSet
                 var material = materials[Mathf.Min(sub, materials.Length - 1)];
                 if (material == null) continue;
                 material.enableInstancing = true;
-                var key = (filter.sharedMesh, material, sub);
-                if (!staging.TryGetValue(key, out var matrices)) staging.Add(key, matrices = new());
-                matrices.Add(matrix * local);
                 Visuals.Add(new Visual(filter.sharedMesh, filter.gameObject == prefab && preset != null ? preset.distantMesh : null,
                     material, sub, matrix * local, preset != null ? preset.lodDistance : float.PositiveInfinity,
                     preset != null ? preset.shadowDistance : float.PositiveInfinity));
             }
         }
-    }
-    public void Finish()
-    {
-        using var work = FinishIncrementally();
-        while (work.MoveNext()) { }
-    }
-    public IEnumerator<bool> FinishIncrementally()
-    {
-        foreach (var group in staging)
-            for (int start = 0; start < group.Value.Count; start += 1023)
-            {
-                using (FinishBatchMarker.Auto())
-                {
-                    int count = Mathf.Min(1023, group.Value.Count - start);
-                    var matrices = new Matrix4x4[count]; group.Value.CopyTo(start, matrices, 0, count);
-                    batches.Add(new Batch { Mesh = group.Key.Item1, Material = group.Key.Item2,
-                        Submesh = group.Key.Item3, Matrices = matrices });
-                }
-                yield return true;
-            }
-        staging.Clear();
-    }
-    public void Draw(bool visible, bool shadows)
-    {
-        if (!visible && !shadows) return;
-        foreach (var batch in batches)
-            Graphics.DrawMeshInstanced(batch.Mesh, batch.Submesh, batch.Material, batch.Matrices,
-                batch.Matrices.Length, null, visible ? (shadows ? ShadowCastingMode.On : ShadowCastingMode.Off)
-                    : ShadowCastingMode.ShadowsOnly, true, GameplayLayers.WorldSolid);
     }
     public void Accumulate(ref RenderGeometryStats stats)
     {

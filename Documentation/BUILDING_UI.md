@@ -1,6 +1,6 @@
 # Stone building catalog
 
-The building picker now uses the approved limestone-and-pillars style: three separate panels, serif headings, clear sans-serif body text, slate-blue selection, functional categories, actual-mesh thumbnails and a selected-piece detail view. The world stays visible between and around the panels. The placement HUD shares the limestone artwork and retains the existing placement messages and valid/warning/error states.
+The building picker uses the approved limestone-and-pillars style: three separate panels, serif headings, clear sans-serif body text, slate-blue selection, functional categories, actual-mesh thumbnails and a selected-piece detail view. The world stays visible between and around the panels. The placement HUD is currently hidden; its message data and valid/warning/error styling hooks remain available.
 
 October 12 compact layout: the normal catalog footprint is about 30% smaller through narrower bounds, tighter panel padding/category rows, shorter thumbnail tiles and a slimmer quick-piece strip. All text, content, font sizes and existing responsive font rules are retained. Catalog scrolling keeps every component reachable; the placement HUD is unchanged.
 
@@ -50,7 +50,7 @@ the picker. Installed-asset checks cover keyboard focus followed by Enter,
 double-click confirmation, preserved staged gable slopes and layouts at all four
 resolutions. Native Enter/held-key/menu guards passed separately.
 
-**Tools > Building > Validate Stone UI (synthetic)** tests the installed UI skin bindings, texture dimensions, all current thumbnails, category membership, staged versus committed selection, both gable variants, quick-strip clicks, keyboard submit with a focused canonical tile, passive HUD picking and contained controls. It renders real UI Toolkit output at 1280 × 720, 1920 × 1080, 3840 × 2160 and 1024 × 768, including placement and warning views. It uses temporary objects and a cloned PanelSettings; it does not inspect the saved world camera.
+**Tools > Building > Validate Stone UI (synthetic)** tests the installed UI skin bindings, texture dimensions, all current thumbnails, category membership for the expanded catalog, staged versus committed selection, both gable variants, quick-strip clicks, keyboard submit with a focused canonical tile, hidden HUD state and contained controls. It renders real catalog UI Toolkit output at 1280 × 720, 1920 × 1080, 3840 × 2160 and 1024 × 768. It uses temporary objects and a cloned PanelSettings; it does not inspect the saved world camera.
 
 Shell harness: `Tools/ValidateBuildingPrototype.ps1 -UiChecks`. To bake and validate assets in the isolated validation project, use `-UiAssets`; its generated assets live under `.utmp/building-prototype/unity-project/Assets/Resources/Building/UI`, so copy reviewed output back explicitly if using that authoring route. The Unity menu action bakes directly into the open project instead.
 

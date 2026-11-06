@@ -1,0 +1,35 @@
+TERRAIN SCULPTING FOUNDATION PASS: 8347 assertions across ownership, interpolation, real brush operations, snapshot reconstruction, halos and failure admission.
+SCULPT DEEP CAVITY PASS: 100 m below intact surface, 12 sampled bricks, 80 conservatively skipped, no internal open edges.
+SCULPT NATIVE COLLAR PASS: actual SmearScene profile, original 0.3 m render grid and 2.4 m collider grid both join the reconstructed surface without internal boundary edges.
+SCULPT TUNNEL PASS: exterior roof retained, separating wall removed, source collider masked; render patch 19948 triangles, collider patch 14236 triangles, 16 actual motor routes.
+TERRAIN SCULPTING P2 COMPLETE: 614508 assertions, 16 actual CharacterMotor traversals; meshing, explicit fine/coarse collars, roof retention and tunnel breakthrough passed.
+SCULPT P3 TRANSACTION PASS: roof, breakthrough, normal refresh ownership, four actual guarded motor routes; observed maximum isolated publication frame 15.903 ms (soft allowance, not live-world FPS).
+SCULPT P3 COVERAGE PASS: 192/256 render fade, 288/320 preparation/retention, 64/96 vertical fade, collision pins/retirement, unchanged-chunk reuse and low publication allowance convergence.
+SCULPT P3 EDITED AREA PASS: nine separated excavations inside the enlarged near radius; coverage sweep/return passed; isolated cold/warm mixed edit p95=171.696 ms, max publication frame=84.049 ms, density=73728 bytes, retained derived estimate=29861400 bytes. Not a live SmearScene frame-rate benchmark.
+SCULPT P3 SEAMS PASS: published render/collision topology and actual motor at source-chunk corners 0/+128/-128; ordinary handoff ownership/retirement passed.
+SCULPT SESSION PASS: actual WorldManager composition ignores disk persistence across seed changes; edits survive streaming only within one session and restart with empty terrain/foliage overrides.
+SCULPT ELEVATED SPAWN PASS: actual native ChunkManager and CharacterMotor fall from 8 m above terrain, land and walk 4.25 m with session-only terrain.
+SCULPT P3 HOST PASS: actual ChunkManager, native SmearScene generator/profile and shared streaming loop; first scoop 145.222 ms, five subsequent scoops 93.341-109.799 ms; last worker=59.575, mesh stage=2.685, cooking=0.035, commit=9.526 ms; live render/collision=53556/53556 triangles; original cached LOD asset retained. Fixture uses a small content-free coverage set; live scene activation/FPS gate remains outstanding.
+SCULPT P3 FAR HANDOFF PASS: outgoing far tile retained until normal coverage/collision readiness, then retired in the relocation frame; far mesh data unchanged.
+TERRAIN SCULPTING P3 COMPLETE: 3607332 assertions; asynchronous transactions, stale rejection, real motor/collision, coverage thresholds, pins, reuse, budget failure, teleport and shutdown passed.
+SCULPT P4 NATIVE RESTART PASS: actual ChunkManager and SmearScene generator, shutdown flush, fresh host rebuild, identical published Unity geometry and collider hit; disabled feature preserved sidecar files.
+TERRAIN SCULPTING P4 COMPLETE: 447902 assertions; real-file round trips, identical boundary geometry, atomic cross-brick recovery, corruption/mismatch blocking, resident dirty data, background debounce, shutdown and restored runtime collision passed. Isolated files: C:\Users\samee\GitProjects\FirstSettlers\.utmp\sculpt-p4\f508523a
+TERRAIN SCULPTING P5 INTERACTION PASS: 49 checks; real closest-solid targeting, default scoop, sphere/box size limits, dry bounds, collision readiness, repeat/backpressure, save commands and preview cleanup.
+SCULPT CACHE GEOMETRY PASS: cold/warm/edited/faded fine and coarse collars, changed coverage anchors, exact triangle positions/winding, normals and source-chunk windows match uncached extraction.
+SCULPT LOCAL REBUILD PASS: connected 80 m cave retains distant Unity meshes/colliders; source-border edit replaces both neighboring chunks and preserves the remote roof.
+SCULPT SUSTAINED: seeded=4, radius=0.5, coldWorker=97.69, total=107.83, worker=65.28, extract=43.79, assembly=19.99, bricks=48/22, stage=4.04, cook=0.02, commit=12.09, triangles=83664/83664
+SCULPT SUSTAINED: seeded=4, radius=0.5, coldWorker=97.69, total=111.15, worker=76.06, extract=45.95, assembly=28.69, bricks=48/22, stage=4.09, cook=0.03, commit=12.79, triangles=83820/83820
+SCULPT SUSTAINED: seeded=4, radius=2, coldWorker=97.69, total=108.76, worker=75.59, extract=51.89, assembly=20.58, bricks=52/18, stage=4.74, cook=0.03, commit=12.95, triangles=86436/86436
+SCULPT SUSTAINED: seeded=16, radius=0.5, coldWorker=192.85, total=143.49, worker=83.71, extract=47.61, assembly=34.67, bricks=48/104, stage=7.34, cook=0.03, commit=23.36, triangles=153164/153164
+SCULPT SUSTAINED: seeded=16, radius=0.5, coldWorker=192.85, total=126.73, worker=76.35, extract=48.32, assembly=26.57, bricks=48/104, stage=7.45, cook=0.03, commit=27.09, triangles=153320/153320
+SCULPT SUSTAINED: seeded=16, radius=2, coldWorker=192.85, total=170.44, worker=112.04, extract=77.80, assembly=30.61, bricks=64/88, stage=7.47, cook=0.05, commit=24.27, triangles=155936/155936
+SCULPT SUSTAINED: seeded=36, radius=0.5, coldWorker=277.19, total=333.62, worker=258.54, extract=104.39, assembly=152.44, bricks=58/156, stage=10.76, cook=0.03, commit=42.82, triangles=228776/228776
+SCULPT SUSTAINED: seeded=36, radius=0.5, coldWorker=277.19, total=173.41, worker=105.08, extract=62.87, assembly=40.81, bricks=58/156, stage=11.02, cook=0.03, commit=43.88, triangles=228932/228932
+SCULPT SUSTAINED: seeded=36, radius=2, coldWorker=277.19, total=221.01, worker=138.85, extract=94.23, assembly=41.44, bricks=74/140, stage=11.64, cook=0.04, commit=48.00, triangles=231548/231548
+TERRAIN SCULPTING PERFORMANCE PASS: growing connected rooms and successive small/large edits committed.
+CACHED SKY ACCESS PASS: 232 assertions; sealed/open chambers, distant opening dependencies, thin roofs/walls/internal floors, shared admission, live controls, streaming reconstruction, budget, stale work, capacity and teardown.
+TERRAIN SCULPTING P6 CONSUMERS PASS: 295356 checks; surface contact/retained roofs, tight borders, atomic publication, resident/late vegetation, CPU grass/fern caches, immutable masks, shutdown/reload, permissive buried builds, fresh cave footing, retained grounding, structural collapse and streaming retention. Cached sky access validated separately above.
+SCULPT P6 SHADER VARIANTS PASS: 98 forward/shadow variants, landscape/excavation, rock/grass modes, Forward/Forward+, shadows and fog.
+CACHED SKY GRAPHICS PASS: terrain ambient 0.2439->0.0161; opened shaft 0.0499; wood, live sliders, exterior and atlas coordinates passed.
+CAVE DIRECTIONAL OCCLUSION PASS: weak/strong sun shadows, opposing building faces, camera turns, outdoor artistic shadows and direct light through a real shaft.
+TERRAIN SCULPTING P6 GRAPHICS PASS: 52 checks; real URP cave/stone, independent texture, vertical projection, two-sided roof shadow occlusion (0.5216->0.2438), resident GPU grass/fern, cached cave ambient, live brightness, exterior preservation and building shading.

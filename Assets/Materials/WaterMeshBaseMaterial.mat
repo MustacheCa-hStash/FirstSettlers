@@ -121,14 +121,14 @@ Material:
     - _QueueOffset: 0
     - _ReceiveShadows: 0
     - _ReflectionBlur: 2
-    - _ReflectionDistortion: 0.012
+    - _ReflectionDistortion: 0.04
     - _ReflectionSharpDistance: 25
     - _ReflectionSoftDistance: 180
     - _ReflectionStrength: 0.5
     - _ReflectionTint: 0.12
     - _RefractionScale: 1
     - _RefractionSpeed: 0.05
-    - _RefractionStrength: 0.008
+    - _RefractionStrength: 0.014
     - _ShallowOpacity: 0.05
     - _Smoothness: 0.9
     - _SmoothnessTextureChannel: 0
@@ -138,12 +138,24 @@ Material:
     - _Surface: 1
     - _VisibilityDepth: 8
     - _WaterDepth: 5
-    - _WaveStrength: 0.18
+    - _WaveStrength: 0.34
+    - _FlowSpeed: 0.9
+    - _WaveAmplitude: 0.16
+    - _WaveSteepness: 0.6
+    - _WaveLengthScale: 1
+    - _WaveSpeed: 1
+    - _WaveFadeStart: 60
+    - _WaveFadeEnd: 120
+    - _SunGlintStrength: 0.65
+    - _SunGlintSharpness: 160
+    - _RippleScale: 0.08
+    - _DetailRippleStrength: 0.65
     - _WorkflowMode: 1
     - _ZTest: 4
     - _ZWrite: 0
     - _ZWriteControl: 0
     m_Colors:
+    - _FlowDirection: {r: 0.8, g: 0.6, b: 0, a: 0}
     - _BaseColor: {r: 0.25151289, g: 0.51959383, b: 0.98742133, a: 0.7490196}
     - _Color: {r: 0.25151286, g: 0.5195938, b: 0.98742133, a: 0.7490196}
     - _DeepWater: {r: 0.31039107, g: 0.7051613, b: 0.74213827, a: 1}

@@ -40,6 +40,9 @@ public static class TerrainDensityMesher
         var output = new TerrainSculptMeshBuffer(budget: budget);
         budget?.Charge(19 * 19 * 19 * sizeof(short) + 2048);
         var edges = new Dictionary<Edge, int>();
+        var boundaryIds=new Dictionary<int,TerrainSurfaceVertexId>();
+        var surfaceData=new List<float2>();
+        bool mayExpose=snapshot.HasOverrides(bounds.Min,bounds.Max);
         var input = new short[19 * 19 * 19];
         var values = new short[8]; var positions = new int3[8]; var local = new int3[8];
         var stone = new int[4]; var air = new int[4];
@@ -83,7 +86,15 @@ public static class TerrainDensityMesher
                         double fraction = (double)values[a] / ((int)values[a] - values[b]);
                         double3 p = ((double3)positions[a] + (double3)(positions[b] - positions[a]) * fraction) * snapshot.Profile.Spacing;
                         double3 normal = math.lerp(Gradient(input, local[a]), Gradient(input, local[b]), fraction);
-                        index = output.Add(p, normal); edges.Add(key, index); return index;
+                        index = output.Add(p, normal); edges.Add(key, index);
+                        budget?.Charge(32);
+                        // Compare encoded baseline on the exact interpolation edge. Height
+                        // error on an untouched, clamped steep wall is not excavation.
+                        double depth=mayExpose?-math.lerp((double)snapshot.ReadBaselineEncoded(positions[a]),snapshot.ReadBaselineEncoded(positions[b]),fraction)*snapshot.Profile.Band/32767d:0;
+                        surfaceData.Add(new float2(TerrainSculptSurfaceSettings.Exposure(depth,snapshot.Profile.Spacing),0));
+                        var id=new TerrainSurfaceVertexId(key.A,key.B);
+                        if(id.Faces(bounds)!=0){budget?.Charge(96);boundaryIds.Add(index,id);}
+                        return index;
                     }
                     if (ns == 1) output.Triangle(Vertex(stone[0],air[0]),Vertex(stone[0],air[1]),Vertex(stone[0],air[2]),toward);
                     else if (na == 1) output.Triangle(Vertex(air[0],stone[0]),Vertex(air[0],stone[1]),Vertex(air[0],stone[2]),toward);
@@ -96,7 +107,7 @@ public static class TerrainDensityMesher
                 }
             }
         }
-        var result=output.Finish(sampled,skipped);
+        var result=output.Finish(sampled,skipped,TerrainMeshBoundary.Extract(output,boundaryIds,bounds,budget),surfaceData.ToArray());
         budget?.CompleteScope(scopeStart,result.PayloadBytes*2,persistentStart);
         return result;
     }
@@ -111,38 +122,49 @@ public static class TerrainDensityMesher
     {
         private readonly double3 position;
         private readonly float3 normal;
-        internal CachedVertex(double3 p,float3 n){position=p;normal=n;}
-        public bool Equals(CachedVertex other)=>math.all(position==other.position)&&math.all(normal==other.normal);
+        private readonly float2 surface;
+        internal CachedVertex(double3 p,float3 n,float2 s){position=p;normal=n;surface=s;}
+        public bool Equals(CachedVertex other)=>math.all(position==other.position)&&math.all(normal==other.normal)&&math.all(surface==other.surface);
         public override bool Equals(object obj)=>obj is CachedVertex vertex&&Equals(vertex);
-        public override int GetHashCode()=>HashCode.Combine(position.GetHashCode(),normal.GetHashCode());
+        public override int GetHashCode()=>HashCode.Combine(position.GetHashCode(),normal.GetHashCode(),surface.GetHashCode());
     }
 
     internal static TerrainSculptMeshData BuildCached(ITerrainDensityField field,TerrainDensityCellBounds bounds,
         TerrainSculptBuildBudget budget,TerrainSculptMeshCache.Builder cache)
     {
-        if(cache==null)return Build(field,bounds,budget:budget);
-        long start=budget.ChargedBytes,persistent=budget.PersistentBytes;
+        long start=budget?.ChargedBytes??0,persistent=budget?.PersistentBytes??0;
         var output=new TerrainSculptMeshBuffer(budget:budget);
         var vertices=new Dictionary<CachedVertex,int>();
+        var surfaceData=new List<float2>();
+        var boundary=new TerrainMeshBoundary.Builder(budget);
         int3 first=TerrainDensityCoordinates.BrickOf(bounds.Min),last=TerrainDensityCoordinates.BrickOf(bounds.Max-1);
+        if(checked((long)(last.x-first.x+1)*(last.y-first.y+1)*(last.z-first.z+1))>TerrainSculptPatchPlanner.MaximumVisitedBricks)
+            throw new TerrainDensityCapacityException();
         int sampled=0,skipped=0;
+        long candidateCells=0;
         for(int z=first.z;z<=last.z;z++)for(int y=first.y;y<=last.y;y++)for(int x=first.x;x<=last.x;x++)
         {
-            budget.Check();int3 origin=TerrainDensityCoordinates.Origin(new int3(x,y,z));
-            var piece=cache.Get(field,new TerrainDensityCellBounds(math.max(bounds.Min,origin),math.min(bounds.Max,origin+16)));
+            budget?.Check();int3 origin=TerrainDensityCoordinates.Origin(new int3(x,y,z));
+            var window=new TerrainDensityCellBounds(math.max(bounds.Min,origin),math.min(bounds.Max,origin+16));
+            if(field.IsSurfaceFree(window)){skipped++;continue;}
+            candidateCells=checked(candidateCells+window.CellCount);
+            if(candidateCells>2000000)throw new TerrainDensityCapacityException();
+            var piece=cache!=null?cache.Get(field,window):Build(field,window,budget:budget);
             sampled+=piece.SampledBricks;skipped+=piece.SkippedBricks;
-            budget.Charge((long)piece.Positions.Length*sizeof(int));
+            budget?.Charge((long)piece.Positions.Length*sizeof(int));
             var remap=new int[piece.Positions.Length];
             for(int i=0;i<remap.Length;i++)
             {
-                var key=new CachedVertex(piece.Positions[i],piece.Normals[i]);
+                var key=new CachedVertex(piece.Positions[i],piece.Normals[i],piece.SurfaceData[i]);
                 if(!vertices.TryGetValue(key,out int index))
-                {index=output.AddStored(piece.Positions[i],piece.Normals[i]);vertices.Add(key,index);}
+                {index=output.AddStored(piece.Positions[i],piece.Normals[i]);vertices.Add(key,index);budget?.Charge(32);surfaceData.Add(piece.SurfaceData[i]);}
                 remap[i]=index;
             }
-            budget.Charge((long)piece.Triangles.Length*22);
+            budget?.Charge((long)piece.Triangles.Length*22);
             foreach(int index in piece.Triangles)output.Triangles.Add(remap[index]);
+            foreach(var edge in piece.Boundary.Edges)
+                boundary.Add(new TerrainBoundaryEdge(edge.A,edge.B,remap[edge.VertexA],remap[edge.VertexB],edge.A.Faces(bounds)&edge.B.Faces(bounds)));
         }
-        var result=output.Finish(sampled,skipped);budget.CompleteScope(start,result.PayloadBytes*2,persistent);return result;
+        var result=output.Finish(sampled,skipped,boundary.Finish(),surfaceData.ToArray());budget?.CompleteScope(start,result.PayloadBytes*2,persistent);return result;
     }
 }

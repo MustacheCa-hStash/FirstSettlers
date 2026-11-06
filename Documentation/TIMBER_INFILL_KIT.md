@@ -1,5 +1,7 @@
 # L25, L27, L28, L31, L33 and L35
 
+Current placement and lifetime follow [free building](BUILDING_FOLIAGE.md#free-building): pieces may float and remain after neighbouring pieces are removed. Earlier support, bedding and collapse requirements below are historical; geometric fitting and physical collision remain in use.
+
 Six additions to the [limestone and timber catalog](../ArtReferences/LimestoneBuildKit/TIMBER_EXTENSION.md), constructed from the supplied house reference. Use **B → Walls** for L25/L27/L28 and **B → Roofs** for L31/L33/L35. Restart Play mode after importing to refresh a running catalog.
 
 ![Unity component overview](../ArtReferences/LimestoneBuildKit/TimberInfill/timber-infill-unity-overview.png)

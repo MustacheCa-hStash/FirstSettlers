@@ -21,7 +21,9 @@ public sealed class BuildWorld : MonoBehaviour
     private Vector3 previewOrigin;
     private BuildDefinition previewDefinition;
     private Dictionary<ulong,BuildResolvedState> previewStates;
-    public bool PreviewUsedFullSupport { get; private set; }
+    private Dictionary<ulong,BuildResolvedState> previewVisualChanges;
+    private readonly BuildPieceRecord previewCandidate = new() { Id = ulong.MaxValue };
+    private readonly List<BuildPieceRecord> previewNeighbours = new();
     public BuildSession Session { get; private set; }
     public BuildCatalog Catalog => catalog;
     public Camera Camera { get; set; }
@@ -53,13 +55,13 @@ public sealed class BuildWorld : MonoBehaviour
         Session.Foliage.Tick(); buildingRenderer.Draw(Camera, renderRange, shadowRange);
         flameBridge.Update();
     }
-    private void OnDestroy() { flameBridge?.Dispose();gameplay?.Dispose();Session?.Dispose(); if (placementProbe != null) BuildLifetime.Destroy(placementProbe.gameObject);if(boxProbe!=null)BuildLifetime.Destroy(boxProbe.gameObject); }
+    private void OnDestroy() { flameBridge?.Dispose();gameplay?.Dispose();buildingRenderer?.Dispose();Session?.Dispose(); if (placementProbe != null) BuildLifetime.Destroy(placementProbe.gameObject);if(boxProbe!=null)BuildLifetime.Destroy(boxProbe.gameObject); }
     public BuildPieceRecord Commit(BuildPreview preview)
     {
         Validate(ref preview);
         if (!preview.Valid) return null;
         var frame = preview.Frame.Id == 0 ? Session.CreateFrame(preview.Frame.Origin, preview.Frame.YawStep) : preview.Frame;
-        var piece=Session.Add(preview.Definition, frame, preview.Anchor, preview.YawStep, preview.Grounded);ClearPreview();return piece;
+        var piece=Session.Add(preview.Definition, frame, preview.Anchor, preview.YawStep);ClearPreview();return piece;
     }
     public bool Remove(ulong id)
     {
@@ -78,7 +80,6 @@ public sealed class BuildWorld : MonoBehaviour
     {
         using var scope=PlacementMarker.Auto();
         // Keep the selected snap and manual nudge; clearance warnings never move the piece.
-        preview.FitStairContinuation=false;
         ValidateCore(ref preview);
         DebugPreview=preview;
     }
@@ -90,16 +91,30 @@ public sealed class BuildWorld : MonoBehaviour
         preview.Warning=BuildPlacementWarning.None;preview.WarningPieceId=0;preview.WarningMessage=null;
         buildingRenderer?.SetPreview(null);
         DebugPreview=preview;
-        preview.Grounded=false;
         Bounds terrainBounds=BuildGeometry.WorldBounds(preview.Definition.LocalBounds,preview.Origin,preview.WorldYaw);
         if(TerrainGuard!=null&&!TerrainGuard.CanMove((Unity.Mathematics.float3)terrainBounds.min,(Unity.Mathematics.float3)terrainBounds.max,0,0))
         {Reject(ref preview,BuildPlacementFailure.Terrain,"Waiting for current terrain collision");return;}
-        var candidate=new BuildPieceRecord{Id=ulong.MaxValue,Definition=preview.Definition,Origin=preview.Origin,
-            WorldYawStep=(byte)preview.WorldYaw,Grounded=preview.Grounded};
-        candidate.WorldBounds=BuildSession.IndexBounds(preview.Definition,candidate.Origin,candidate.WorldYawStep);
-        var nearby=Session.NeighboursFor(candidate);
-        bool cached=previewRevision==Session.Revision && previewDefinition==preview.Definition && previewOrigin==preview.Origin && previewYaw==preview.WorldYaw;
-        var states=cached?previewStates:Session.ResolvePreview(candidate);var state=states[candidate.Id];preview.Resolved=state;
+        var candidate=previewCandidate;
+        bool cached=previewRevision==Session.GeometryRevision && previewDefinition==preview.Definition && previewOrigin==preview.Origin && previewYaw==preview.WorldYaw;
+        if(!cached)
+        {
+            candidate.Definition=preview.Definition;
+            candidate.Origin=preview.Origin;
+            candidate.WorldYawStep=(byte)preview.WorldYaw;
+            candidate.WorldBounds=BuildSession.IndexBounds(preview.Definition,candidate.Origin,candidate.WorldYawStep);
+            Session.NeighboursFor(candidate,previewNeighbours);
+            previewStates=Session.ResolvePreview(candidate);
+            // Keep this dictionary immutable while the renderer retains its previous preview.
+            previewVisualChanges=new Dictionary<ulong,BuildResolvedState>();
+            foreach(var p in previewNeighbours)
+                if(!previewStates[p.Id].SameVisuals(p.Resolved))previewVisualChanges[p.Id]=previewStates[p.Id];
+            previewRevision=Session.GeometryRevision;
+            previewDefinition=preview.Definition;
+            previewOrigin=preview.Origin;
+            previewYaw=preview.WorldYaw;
+        }
+        var nearby=previewNeighbours;
+        var states=previewStates;var state=states[candidate.Id];preview.Resolved=state;
         DebugStates=states;
         if(state.boxes.Length+state.volumes.Length==0)
         {Reject(ref preview,BuildPlacementFailure.Joint,"No compatible floor joint at this orientation");return;}
@@ -115,9 +130,6 @@ public sealed class BuildWorld : MonoBehaviour
             var warning=BuildPlacementPolicy.Assess(candidate,state,piece,other);
             if(warning!=BuildPlacementWarning.None)Warn(ref preview,warning,piece);
         }
-        // Free building: fitting resolves geometry without a load/support solver.
-        PreviewUsedFullSupport=false;
-        previewStates=states;previewRevision=Session.Revision;previewDefinition=preview.Definition;previewOrigin=preview.Origin;previewYaw=preview.WorldYaw;
         Bounds local=state.Bounds;
         int count=Physics.OverlapBoxNonAlloc(preview.Origin+BuildGeometry.Rotation(preview.WorldYaw)*local.center,
             Vector3.Max(local.extents-Vector3.one*.003f,Vector3.one*.001f),overlaps,BuildGeometry.Rotation(preview.WorldYaw),
@@ -155,9 +167,7 @@ public sealed class BuildWorld : MonoBehaviour
             }
         }
         // The renderer receives only existing pieces whose appearance actually changes.
-        var visualChanges=new Dictionary<ulong,BuildResolvedState>();
-        foreach(var p in nearby)if(!states[p.Id].SameVisuals(p.Resolved))visualChanges[p.Id]=states[p.Id];
-        buildingRenderer?.SetPreview(visualChanges.Count>0?visualChanges:null);
+        buildingRenderer?.SetPreview(previewVisualChanges.Count>0?previewVisualChanges:null);
         preview.Valid=true;preview.Message=state.invalidJoint?"Ready to place · joint fitting unavailable; full shape retained":state.cuts.Length>0?"Ready to place · fitted opening":"Ready to place";
     }
     private static void Reject(ref BuildPreview preview,BuildPlacementFailure failure,string message,BuildPieceRecord piece=null)

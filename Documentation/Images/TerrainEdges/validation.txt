@@ -1,0 +1,10 @@
+LOD1: 474519 steep-face GPU pixels, normal deviation RMS 3.221 -> 3.220deg, max 10.39 -> 9.89deg; 25430 gentle pixels max change 0.105deg.
+  LOD1: 16641 vertices, 32768 triangles; identical mesh in every comparison.
+LOD2: 474587 steep-face GPU pixels, normal deviation RMS 6.512 -> 5.292deg, max 27.90 -> 10.83deg; 24817 gentle pixels max change 0.000deg.
+  LOD2: 4477 vertices, 8444 triangles; identical mesh in every comparison.
+LOD4: 475460 steep-face GPU pixels, normal deviation RMS 14.677 -> 5.146deg, max 73.07 -> 10.72deg; 23420 gentle pixels max change 0.000deg.
+  LOD4: 1461 vertices, 2420 triangles; identical mesh in every comparison.
+LOD8: 471343 steep-face GPU pixels, normal deviation RMS 30.501 -> 4.732deg, max 83.24 -> 10.77deg; 20714 gentle pixels max change 0.000deg.
+  LOD8: 709 vertices, 932 triangles; identical mesh in every comparison.
+Glacial edge seed43: observer (12304.70, 489.71, -11352.66), look at (12382.10, 409.71, -11363.10).
+TERRAIN EDGES PASS: 43 checks. Canonical C2 lips; mesh/collider topology unchanged; generator v7.

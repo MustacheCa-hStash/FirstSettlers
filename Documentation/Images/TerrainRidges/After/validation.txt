@@ -20,7 +20,7 @@ Soft upland profile: monotone, continuous terrace repeats, lowland/water bypass 
   LOD step 4: 0 vertical/reversed triangles; projected area 1474.560m2.
   LOD step 8: 0 vertical/reversed triangles; projected area 1474.560m2.
   LOD step 16: 0 vertical/reversed triangles; projected area 1474.560m2.
-68_GrasslandSplit, seed 68, world XZ (-261.91, 504.08): height 20.428m, base 57.891m, erosion delta -13.235m; max 0.3m edge rise 0.924m, second difference 0.336m, gentle <15deg 69.1%.
+68_GrasslandSplit, seed 68, world XZ (-261.91, 504.08): height 20.449m, base 57.891m, erosion delta -13.235m; max 0.3m edge rise 1.109m, second difference 0.395m, gentle <15deg 64.3%.
   LOD step 1: 0 vertical/reversed triangles; projected area 1474.560m2.
   PhysX collider: 16641 vertices, 0 missed rays, maximum surface error 0.000004m.
   LOD step 2: 0 vertical/reversed triangles; projected area 1474.560m2.

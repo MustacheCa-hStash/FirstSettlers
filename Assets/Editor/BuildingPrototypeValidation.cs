@@ -172,7 +172,7 @@ public static class BuildingPrototypeValidation
             foreach (int yaw in new[] { 0,1,7 })
             {
                 var frame = world.Session.CreateFrame(new Vector3(30000+yaw*20,30000,30000),yaw);
-                var foundation = world.Session.Add(catalog.presets[2],frame,default,0,true);
+                var foundation = world.Session.Add(catalog.presets[2],frame,default,0);
                 var ownFrame = world.Session.Frame(foundation.OwnFrameId);
                 Vector3 aim = BuildGeometry.WorldPoint(ownFrame,new Vector3Int(8,0,0));
                 var preview = BuildPlacement.Solve(wattle,aim,Vector3.up,foundation,ownFrame,0,0,default);
@@ -190,7 +190,7 @@ public static class BuildingPrototypeValidation
                     Check(Mathf.Abs(local.z - z) < .26f, "Wattle interior placement was forced to a perimeter edge.");
                     world.Validate(ref surface); Check(surface.Valid, "Wattle surface-grid placement failed support/collision: " + surface.Message);
                 }
-                var placed = world.Commit(preview); Check(placed != null && placed.Supported,"Wattle placement/support rejected.");
+                var placed = world.Commit(preview); Check(placed != null && world.Session.Pieces.ContainsKey(placed.Id),"Placed construction missing from session: placed");
                 world.Validate(ref preview); Check(!preview.Valid,"Overlapping wattle was accepted.");
                 gameplay?.Dispose(); gameplay = new BuildGameplay(world.Session); gameplay.Update(placed.Origin,32,40,8);
                 BuildGameplayProxy proxy = null;
@@ -202,8 +202,8 @@ public static class BuildingPrototypeValidation
                 var rotation = BuildGeometry.Rotation(placed.WorldYawStep);
                 var ray = new Ray(placed.Origin + rotation*new Vector3(1.5f,1,-1),rotation*Vector3.forward);
                 Check(proxy.Shape.Raycast(ray,out _,3),"Visual weave gaps incorrectly opened the physics wall.");
-                world.Remove(foundation.Id); Check(placed.Supported,"Free placement unexpectedly depends on structural support");
-                world.Session.Add(catalog.presets[2],frame,default,0,true); Check(placed.Supported,"Wattle did not reconnect to replacement support.");
+                world.Remove(foundation.Id); Check(world.Session.Pieces.ContainsKey(placed.Id),"Placed construction missing from session: placed");
+                world.Session.Add(catalog.presets[2],frame,default,0); Check(world.Session.Pieces.ContainsKey(placed.Id),"Placed construction missing from session: placed");
             }
         }
         finally { gameplay?.Dispose(); Object.DestroyImmediate(host); Physics.SyncTransforms(); }
@@ -235,15 +235,15 @@ public static class BuildingPrototypeValidation
         {
             var world = host.AddComponent<BuildWorld>(); if (world.Session == null) Call(world,"Awake");
             var frame = world.Session.CreateFrame(new Vector3(34000,34000,34000),0);
-            world.Session.Add(catalog.presets[2],frame,default,0,true);
-            world.Session.Add(catalog.presets[0],frame,new Vector3Int(1,0,0),0,false);
-            var roof = world.Session.Add(catalog.presets[1],frame,new Vector3Int(0,12,0),0,false);
-            Check(roof.Supported,"Underside roof fixture has no foundation path.");
+            world.Session.Add(catalog.presets[2],frame,default,0);
+            world.Session.Add(catalog.presets[0],frame,new Vector3Int(1,0,0),0);
+            var roof = world.Session.Add(catalog.presets[1],frame,new Vector3Int(0,12,0),0);
+            Check(world.Session.Pieces.ContainsKey(roof.Id),"Underside roof fixture has no foundation path.");
             var own = world.Session.Frame(roof.OwnFrameId);
             var wall = BuildPlacement.Solve(catalog.presets[0], own.Origin + new Vector3(2,-.25f,4), Vector3.down,
                 roof, own,0,0,default);
             Near(BuildGeometry.LocalPoint(frame,wall.Origin),new Vector3(3.75f,0,4),"Wall beneath a roof failed to bridge its underside to foundation height.");
-            var placed = world.Commit(wall); Check(placed != null && placed.Supported,"Wall attached beneath a roof was rejected.");
+            var placed = world.Commit(wall); Check(placed != null && world.Session.Pieces.ContainsKey(placed.Id),"Wall attached beneath a roof was rejected.");
         }
         finally { Object.DestroyImmediate(host); Physics.SyncTransforms(); }
     }
@@ -262,10 +262,10 @@ public static class BuildingPrototypeValidation
                 var frame = world.Session.CreateFrame(new Vector3(32000+yaw*20,32000,32000),yaw);
                 Quaternion rotation = BuildGeometry.Rotation(yaw);
                 Vector3 At(Vector3 p) => frame.Origin + rotation * p;
-                world.Session.Add(catalog.presets[2],frame,default,0,true);
-                var firstWall = world.Session.Add(catalog.presets[0],frame,new Vector3Int(1,0,0),0,false);
-                world.Session.Add(catalog.presets[0],frame,new Vector3Int(0,0,15),2,false);
-                var corner = world.Session.Add(catalog.presets[3],frame,default,0,false);
+                world.Session.Add(catalog.presets[2],frame,default,0);
+                var firstWall = world.Session.Add(catalog.presets[0],frame,new Vector3Int(1,0,0),0);
+                world.Session.Add(catalog.presets[0],frame,new Vector3Int(0,0,15),2);
+                var corner = world.Session.Add(catalog.presets[3],frame,default,0);
                 gameplay?.Dispose(); gameplay = new BuildGameplay(world.Session); gameplay.Update(frame.Origin,32,40,8);
                 controller.Select(catalog.presets[3]);
                 Vector3 viewer = At(new Vector3(.5f,1.6f,2));
@@ -319,10 +319,10 @@ public static class BuildingPrototypeValidation
             var session = new BuildSession(); var frame = session.CreateFrame(new Vector3(-12, 10, 20), yaw);
             Vector3 At(Vector3 p) => BuildGeometry.WorldPoint(frame, BuildGeometry.Ticks(p));
             Vector3 normal = BuildGeometry.Rotation(yaw) * Vector3.back;
-            session.Add(foundation, frame, default, 0, true);
-            var left = session.Add(wall, frame, new Vector3Int(1, 0, 0), 0, false);
-            var right = session.Add(wall, frame, new Vector3Int(17, 0, 0), 0, false);
-            Check(left.Supported && right.Supported, "Bridge fixture should have one anchored wall and one disconnected wall.");
+            session.Add(foundation, frame, default, 0);
+            var left = session.Add(wall, frame, new Vector3Int(1, 0, 0), 0);
+            var right = session.Add(wall, frame, new Vector3Int(17, 0, 0), 0);
+            Check(session.Pieces.ContainsKey(left.Id) && session.Pieces.ContainsKey(right.Id), "Bridge fixture should have one anchored wall and one disconnected wall.");
             var fromLeft = BuildPlacement.Solve(infill, At(new Vector3(3.74f, .5f, .125f)), normal,
                 left, session.Frame(left.OwnFrameId), yaw, 0, default);
             Near(fromLeft.Origin, At(new Vector3(3.75f, 0, 0)), "Infill did not snap directly after the full panel.");
@@ -339,11 +339,11 @@ public static class BuildingPrototypeValidation
             Check(!BuildGeometry.Overlaps(infill.LocalBounds, fromLeft.Origin, fromLeft.WorldYaw, wall.LocalBounds, left.Origin, left.WorldYawStep) &&
                 !BuildGeometry.Overlaps(infill.LocalBounds, fromLeft.Origin, fromLeft.WorldYaw, wall.LocalBounds, right.Origin, right.WorldYawStep),
                 "Infill overlaps a neighbouring full wall.");
-            var bridge = session.Add(infill, fromLeft.Frame, fromLeft.Anchor, fromLeft.YawStep, false);
-            Check(bridge.Connections.Contains(left.Id) && bridge.Connections.Contains(right.Id) && bridge.Supported && right.Supported,
+            var bridge = session.Add(infill, fromLeft.Frame, fromLeft.Anchor, fromLeft.YawStep);
+            Check(bridge.Connections.Contains(left.Id) && bridge.Connections.Contains(right.Id) && session.Pieces.ContainsKey(bridge.Id) && session.Pieces.ContainsKey(right.Id),
                 "Infill did not connect and support both adjacent wall panels.");
             session.Remove(bridge.Id);
-            Check(right.Supported && left.Supported, "Removing the infill did not revoke the disconnected wall's support.");
+            Check(session.Pieces.ContainsKey(right.Id) && session.Pieces.ContainsKey(left.Id), "Removing the infill did not revoke the disconnected wall's support.");
         }
     }
     private static void ValidateInfillDefaults(BuildCatalog catalog)
@@ -449,7 +449,7 @@ public static class BuildingPrototypeValidation
         foreach (int yaw in new[] { 0, 1, 3, 7 })
         {
             var session = new BuildSession(); var frame = session.CreateFrame(new Vector3(-12, 10, 20), yaw);
-            var basePiece = session.Add(foundation, frame, default, 0, true);
+            var basePiece = session.Add(foundation, frame, default, 0);
             var baseFrame = session.Frame(basePiece.OwnFrameId);
             Vector3 At(Vector3 p) => BuildGeometry.WorldPoint(baseFrame, BuildGeometry.Ticks(p));
             var pieces = new List<BuildPieceRecord>();
@@ -459,15 +459,15 @@ public static class BuildingPrototypeValidation
                 var preview = BuildPlacement.Solve(wall, At(aim), Vector3.up, basePiece, baseFrame, 0, 0, default);
                 foreach (var other in pieces) Check(!BuildGeometry.Overlaps(wall.LocalBounds, preview.Origin, preview.WorldYaw,
                     other.Definition.LocalBounds, other.Origin, other.WorldYawStep), "Perpendicular walls intersect.");
-                pieces.Add(session.Add(wall, baseFrame, preview.Anchor, preview.YawStep, false));
+                pieces.Add(session.Add(wall, baseFrame, preview.Anchor, preview.YawStep));
             }
             foreach (var aim in new[] { Vector3.zero, new Vector3(4,0,0), new Vector3(4,0,4), new Vector3(0,0,4) })
             {
                 var preview = BuildPlacement.Solve(corner, At(aim), Vector3.up, basePiece, baseFrame, 0, 0, default);
                 foreach (var other in pieces) Check(!BuildGeometry.Overlaps(corner.LocalBounds, preview.Origin, preview.WorldYaw,
                     other.Definition.LocalBounds, other.Origin, other.WorldYawStep), "Corner plug intersects another piece.");
-                var plug = session.Add(corner, baseFrame, preview.Anchor, preview.YawStep, false); pieces.Add(plug);
-                Check(plug.Supported && plug.Connections.Count == 3, "Corner did not touch its foundation and two walls.");
+                var plug = session.Add(corner, baseFrame, preview.Anchor, preview.YawStep); pieces.Add(plug);
+                Check(session.Pieces.ContainsKey(plug.Id) && plug.Connections.Count == 3, "Corner did not touch its foundation and two walls.");
             }
             foreach (var piece in pieces)
             {
@@ -504,13 +504,13 @@ public static class BuildingPrototypeValidation
         foreach (int yaw in new[] { 0, 1, 3, 7 })
         {
             var session = new BuildSession(); var frame = session.CreateFrame(new Vector3(-20,10,12), yaw);
-            var basePiece = session.Add(foundation, frame, default, 0, true); var baseFrame = session.Frame(basePiece.OwnFrameId);
+            var basePiece = session.Add(foundation, frame, default, 0); var baseFrame = session.Frame(basePiece.OwnFrameId);
             Vector3 World(Vector3 p) => baseFrame.Origin + BuildGeometry.Rotation(yaw) * p;
             var allWalls = new List<BuildPieceRecord>();
             foreach (var edge in new[] { new Vector3(2,0,0), new Vector3(0,0,2), new Vector3(2,0,4), new Vector3(4,0,2) })
             {
                 var initial = BuildPlacement.Solve(wall, World(edge), Vector3.up, basePiece, baseFrame, 0, 0, default);
-                allWalls.Add(session.Add(wall, baseFrame, initial.Anchor, initial.YawStep, false));
+                allWalls.Add(session.Add(wall, baseFrame, initial.Anchor, initial.YawStep));
             }
             foreach (var placed in allWalls)
             {
@@ -617,7 +617,7 @@ public static class BuildingPrototypeValidation
             var controller = host.AddComponent<BuildingController>(); var world = host.GetComponent<BuildWorld>();
             if (world.Session == null) Call(world, "Awake"); Call(controller, "Start"); controller.Toggle(); controller.Select(catalog.presets[1]);
             var frame = world.Session.CreateFrame(new Vector3(26000,26000,26000), 0);
-            var wall = world.Session.Add(catalog.presets[0], frame, default, 0, true);
+            var wall = world.Session.Add(catalog.presets[0], frame, default, 0);
             gameplay = new BuildGameplay(world.Session); gameplay.Update(frame.Origin, 32, 40, 8);
             var resolve = typeof(BuildingController).GetMethod("TryResolveAim", BindingFlags.Instance | BindingFlags.NonPublic);
             var targetField = typeof(BuildingController).GetField("target", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -651,7 +651,7 @@ public static class BuildingPrototypeValidation
             Check((bool)stacked[5] && stacked[4] == wall, "Wall preset could not use its taller sky guide.");
             controller.Select(catalog.presets[1]); Seed();
             world.Remove(wall.Id); Resolve(Aim(1.75f,3.25f), false);
-            var post = world.Session.Add(catalog.presets[3], frame, default, 0, true);
+            var post = world.Session.Add(catalog.presets[3], frame, default, 0);
             gameplay.Update(frame.Origin, 32, 40, 8);
             viewer = frame.Origin + new Vector3(.125f,1.6f,3);
             Ray PillarAim(float y) => new(viewer, (frame.Origin + new Vector3(.125f,y,.25f) - viewer).normalized);
@@ -692,7 +692,7 @@ public static class BuildingPrototypeValidation
             foreach (int yaw in new[] { 0, 1 })
             {
                 var frame = world.Session.CreateFrame(new Vector3(24000 + yaw * 20,24000,24000), yaw);
-                var foundation = world.Session.Add(catalog.presets[2], frame, default, 0, true);
+                var foundation = world.Session.Add(catalog.presets[2], frame, default, 0);
                 var baseFrame = world.Session.Frame(foundation.OwnFrameId);
                 var initial = BuildPlacement.Solve(catalog.presets[0], BuildGeometry.WorldPoint(baseFrame, new Vector3Int(8,0,0)),
                     Vector3.up, foundation, baseFrame, 0, 0, default);
@@ -707,12 +707,12 @@ public static class BuildingPrototypeValidation
                 var side = BuildPlacement.Solve(catalog.presets[1], At(new Vector3(2,2.5f,.25f)), rotation * Vector3.forward, lower, wallFrame, 0, 0, default);
                 world.Validate(ref side); Check(side.Valid, "Side platform was incorrectly blocked by a directly stacked wall: " + side.Message);
                 world.Remove(upper.Id);
-                var slab = world.Commit(roof); Check(slab != null && slab.Supported, "Seated floor failed after removing the upper wall.");
+                var slab = world.Commit(roof); Check(slab != null && world.Session.Pieces.ContainsKey(slab.Id), "Seated floor failed after removing the upper wall.");
                 var floorFrame = world.Session.Frame(slab.OwnFrameId);
                 var onFloor = BuildPlacement.Solve(catalog.presets[0], BuildGeometry.WorldPoint(floorFrame, new Vector3Int(8,0,0)),
                     Vector3.up, slab, floorFrame, 0, 0, default);
                 Near(BuildGeometry.LocalPoint(wallFrame, onFloor.Origin), new Vector3(0,3,0), "Wall on a floor ignored slab thickness.");
-                var nextWall = world.Commit(onFloor); Check(nextWall != null && nextWall.Supported, "Floor-bearing upper wall failed support/commit.");
+                var nextWall = world.Commit(onFloor); Check(nextWall != null && world.Session.Pieces.ContainsKey(nextWall.Id), "Floor-bearing upper wall failed support/commit.");
             }
         }
         finally { Object.DestroyImmediate(host); Physics.SyncTransforms(); }
@@ -750,7 +750,7 @@ public static class BuildingPrototypeValidation
                     {
                         var preview = BuildPlacement.Solve(catalog.presets[3], At(aim), Vector3.up, basePiece, frame, 0, 0, default);
                         world.Validate(ref preview); Check(preview.Valid, "Flush corner placement rejected: " + preview.Message);
-                        var piece = world.Commit(preview); Check(piece != null && piece.Supported, "Corner failed support/commit.");
+                        var piece = world.Commit(preview); Check(piece != null && world.Session.Pieces.ContainsKey(piece.Id), "Corner failed support/commit.");
                         world.Validate(ref preview); Check(!preview.Valid, "Duplicate corner was accepted.");
                     }
                 }
@@ -782,24 +782,24 @@ public static class BuildingPrototypeValidation
     {
         var session = new BuildSession(); var floor = catalog.presets[1]; var foundation = catalog.presets[2];
         var frame = session.CreateFrame(new Vector3(-4, 10, -4), 0);
-        var left = session.Add(foundation, frame, default, 0, true);
-        var middle = session.Add(floor, frame, new Vector3Int(16, 0, 0), 0, false);
-        var right = session.Add(foundation, frame, new Vector3Int(32, 0, 0), 0, true);
-        Check(middle.Supported && middle.Connections.Count == 2, "Bridge support connections are missing.");
-        session.Remove(left.Id); Check(middle.Supported, "Removing one of two roots collapsed a supported bridge.");
-        session.Remove(right.Id); Check(middle.Supported, "Detached bridge falsely supports itself.");
+        var left = session.Add(foundation, frame, default, 0);
+        var middle = session.Add(floor, frame, new Vector3Int(16, 0, 0), 0);
+        var right = session.Add(foundation, frame, new Vector3Int(32, 0, 0), 0);
+        Check(session.Pieces.ContainsKey(middle.Id) && middle.Connections.Count == 2, "Bridge support connections are missing.");
+        session.Remove(left.Id); Check(session.Pieces.ContainsKey(middle.Id), "Removing one of two roots collapsed a supported bridge.");
+        session.Remove(right.Id); Check(session.Pieces.ContainsKey(middle.Id), "Detached bridge falsely supports itself.");
         Near(session.Frame(left.OwnFrameId).Origin, left.Origin, "Removing an anchor discarded its grid frame.");
-        var restored = session.Add(foundation, frame, default, 0, true); Check(middle.Supported, "Replacement support did not restore a detached piece.");
+        var restored = session.Add(foundation, frame, default, 0); Check(session.Pieces.ContainsKey(middle.Id), "Replacement support did not restore a detached piece.");
         var result = new List<BuildPieceRecord>();
         session.Query(new Bounds(new Vector3(.01f, 9.9f, -2), new Vector3(.02f, .1f, .1f)), result);
         Check(result.Contains(middle), "Cross-cell piece indexing lost geometry at a boundary.");
         var loopFrame = session.CreateFrame(new Vector3(40, 10, 40), 0);
-        var loopA = session.Add(floor, loopFrame, default, 0, false);
-        var loopB = session.Add(floor, loopFrame, new Vector3Int(16, 0, 0), 0, false);
-        var loopC = session.Add(floor, loopFrame, new Vector3Int(16, 0, 16), 0, false);
-        var loopD = session.Add(floor, loopFrame, new Vector3Int(0, 0, 16), 0, false);
-        Check(loopA.Supported && loopB.Supported && loopC.Supported && loopD.Supported, "Disconnected cycle acquired support.");
-        Check(session.Damage(restored.Id, 100) && !session.TryGet(restored.Id, out _) && middle.Supported, "Damage did not update support and identity.");
+        var loopA = session.Add(floor, loopFrame, default, 0);
+        var loopB = session.Add(floor, loopFrame, new Vector3Int(16, 0, 0), 0);
+        var loopC = session.Add(floor, loopFrame, new Vector3Int(16, 0, 16), 0);
+        var loopD = session.Add(floor, loopFrame, new Vector3Int(0, 0, 16), 0);
+        Check(session.Pieces.ContainsKey(loopA.Id) && session.Pieces.ContainsKey(loopB.Id) && session.Pieces.ContainsKey(loopC.Id) && session.Pieces.ContainsKey(loopD.Id), "Disconnected cycle acquired support.");
+        Check(session.Damage(restored.Id, 100) && !session.TryGet(restored.Id, out _) && session.Pieces.ContainsKey(middle.Id), "Damage did not update support and identity.");
     }
     private static void ValidatePhysicsAndUI(BuildCatalog catalog)
     {
@@ -815,14 +815,14 @@ public static class BuildingPrototypeValidation
         {
             var world = host.AddComponent<BuildWorld>(); if (world.Session == null) Call(world, "Awake"); Physics.SyncTransforms();
             var foundation = BuildPlacement.Solve(catalog.presets[2], origin, Vector3.up, null, null, 1, 0, default);
-            world.Validate(ref foundation); Check(foundation.Valid && !foundation.Grounded, "Ground foundation was rejected: " + foundation.Message);
-            var first = world.Commit(foundation); Check(first != null && first.Supported, "Foundation commit failed.");
+            world.Validate(ref foundation); Check(foundation.Valid, "Ground foundation was rejected: " + foundation.Message);
+            var first = world.Commit(foundation); Check(first != null && world.Session.Pieces.ContainsKey(first.Id), "Foundation commit failed.");
             var unsupported = BuildPlacement.Solve(catalog.presets[0], origin + Vector3.right * 10, Vector3.up, null, null, 0, 0, default);
             world.Validate(ref unsupported); Check(unsupported.Valid, "Floating wall was rejected.");
             var wall = BuildPlacement.Solve(catalog.presets[0], first.Origin + BuildGeometry.Rotation(first.WorldYawStep) * new Vector3(2, 0, 0), Vector3.up,
                 first, world.Session.Frame(first.OwnFrameId), 0, 0, default);
             world.Validate(ref wall); Check(wall.Valid, "Supported wall was rejected: " + wall.Message);
-            var placedWall = world.Commit(wall); Check(placedWall != null && placedWall.Supported, "Wall commit failed.");
+            var placedWall = world.Commit(wall); Check(placedWall != null && world.Session.Pieces.ContainsKey(placedWall.Id), "Wall commit failed.");
             world.Validate(ref wall); Check(!wall.Valid, "Duplicate wall placement was accepted.");
             var blocked = BuildPlacement.Solve(catalog.presets[0], first.Origin + BuildGeometry.Rotation(first.WorldYawStep) * new Vector3(2, 0, 4), Vector3.up,
                 first, world.Session.Frame(first.OwnFrameId), 0, 0, default);
@@ -831,11 +831,11 @@ public static class BuildingPrototypeValidation
             blocker.AddComponent<BoxCollider>().size = Vector3.one * .1f; Physics.SyncTransforms();
             world.Validate(ref blocked); Check(!blocked.Valid && blocked.Failure==BuildPlacementFailure.External && blocked.BlockingCollider!=null && blocked.Message.StartsWith("Move clear of the preview"), "Player penetration is not blocked.");
             Object.DestroyImmediate(blocker);
-            world.Remove(first.Id); Check(placedWall.Supported, "Wall retained support after its last foundation was removed.");
+            world.Remove(first.Id); Check(world.Session.Pieces.ContainsKey(placedWall.Id), "Wall retained support after its last foundation was removed.");
             var repair = BuildPlacement.Solve(catalog.presets[2], placedWall.Origin, Vector3.up, placedWall,
                 world.Session.Frame(placedWall.OwnFrameId), 0, 0, default);
-            world.Validate(ref repair); Check(repair.Valid && !repair.Grounded, "Aiming at the detached wall could not replace its footing.");
-            first = world.Commit(repair); Check(first != null && placedWall.Supported, "Replacing the footing did not restore support.");
+            world.Validate(ref repair); Check(repair.Valid, "Aiming at the detached wall could not replace its footing.");
+            first = world.Commit(repair); Check(first != null && world.Session.Pieces.ContainsKey(placedWall.Id), "Replacing the footing did not restore support.");
             gameplay = new BuildGameplay(world.Session); gameplay.Update(first.Origin, 32, 40, 8);
             Check(gameplay.ActiveCount == 2, "Nearby pieces did not activate pooled colliders.");
             var proxies = Object.FindObjectsByType<BuildGameplayProxy>();

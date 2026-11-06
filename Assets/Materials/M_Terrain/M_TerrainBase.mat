@@ -107,6 +107,14 @@ Material:
         m_Texture: {fileID: 2800000, guid: e903d030d3ad8d64f84b8c91d570cb95, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _IceAlbedo:
+        m_Texture: {fileID: 2800000, guid: 32c17a72f32602a4b872421887b9bbc2, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _IceNormal:
+        m_Texture: {fileID: 2800000, guid: 8b8ef212726a42840ba31dc3d70ded4e, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _LeafLitterAO:
         m_Texture: {fileID: 2800000, guid: 690b30dcd36e8884ca1ca4e25c91f90b, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -248,6 +256,10 @@ Material:
     - _GrassTilingFarDistance: 300
     - _GrassTilingNear: 0.5
     - _GrassTilingNearDistance: 100
+    - _IceFadeEnd: 260
+    - _IceFadeStart: 90
+    - _IceNormalStrength: 0.12
+    - _IceTiling: 0.08
     - _LeafLitterAOStrength: 0.327
     - _LeafLitterHeightStrength: 0
     - _LeafLitterNormalFadeEnd: 45
@@ -265,12 +277,17 @@ Material:
     - _NoiseStrength: 1
     - _ReceiveShadows: 1
     - _RockDetail: 1
-    - _RockDetailFadeEnd: 450
-    - _RockDetailFadeStart: 100
+    - _RockDetailFadeEnd: 6000
+    - _RockDetailFadeStart: 2500
     - _RockDetailStrength: 0.65
+    - _RockFarMinMip: 3
+    - _RockFarMipBias: 1.5
+    - _RockFarTiling: 0.0025
     - _RockNormalFadeEnd: 110
     - _RockNormalFadeStart: 35
     - _RockNormalStrength: 0.45
+    - _RockScaleFadeEnd: 650
+    - _RockScaleFadeStart: 180
     - _RockTextureStrength: 1
     - _RockTiling: 0.01
     - _SandDetailStrength: 0.35
@@ -302,6 +319,8 @@ Material:
     - _GroundDarkGrassColor: {r: 0.09999997, g: 0.27999997, b: 0.089999996, a: 1}
     - _GroundLightGrassColor: {r: 0.24999997, g: 0.52, b: 0.18999997, a: 1}
     - _GroundMidGrassColor: {r: 0.15999997, g: 0.39999998, b: 0.12999997, a: 1}
+    - _IceAverageColor: {r: 0.5710561, g: 0.69929224, b: 0.7222605, a: 1}
+    - _IceColor: {r: 0.84, g: 0.92, b: 1, a: 1}
     - _LeafLitterColor: {r: 1, g: 1, b: 1, a: 1}
     - _LightGrassColor: {r: 0.2918464, g: 0.54088044, b: 0.18879783, a: 1}
     - _MidGrassColor: {r: 0.17862315, g: 0.38993704, b: 0.1459198, a: 1}

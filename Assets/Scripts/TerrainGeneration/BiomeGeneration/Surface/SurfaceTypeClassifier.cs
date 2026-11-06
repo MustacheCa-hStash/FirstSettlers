@@ -16,7 +16,7 @@ public static class SurfaceTypeClassifier
             return SurfaceType.Cliff;
 
         if (biome == BiomeType.Snow)
-            return SurfaceType.Snow;
+            return slope > TerrainSlopePolicy.GrassMaxDegrees ? SurfaceType.Rock : SurfaceType.Snow;
 
         if (slope > TerrainSlopePolicy.GrassMaxDegrees)
             return SurfaceType.Rock;
@@ -88,12 +88,16 @@ public static class SurfaceTypeClassifier
                 baseColor = new Color(0.1255f, 0.5451f, 0.1569f);
                 break;
 
+            case SurfaceType.Moraine:
             case SurfaceType.Rock:
                 baseColor = new Color(0.45f, 0.45f, 0.45f);
                 break;
 
             case SurfaceType.Snow:
                 baseColor = new Color(0.92f, 0.94f, 0.98f);
+                break;
+            case SurfaceType.Ice:
+                baseColor = new Color(0.55f,0.72f,0.76f);
                 break;
 
             case SurfaceType.Cliff:

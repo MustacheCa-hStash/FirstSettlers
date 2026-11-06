@@ -16,8 +16,8 @@ public sealed class LocalFlameBuildBridge : IDisposable
     public LocalFlameBuildBridge(BuildWorld world){this.world=world;}
     public void Update()
     {
-        if(world.Camera==null || Time.unscaledTime<nextUpdate && revision==world.Session.Revision)return;
-        revision=world.Session.Revision;
+        if(world.Camera==null || Time.unscaledTime<nextUpdate && revision==world.Session.GeometryRevision)return;
+        revision=world.Session.GeometryRevision;
         nextUpdate=Time.unscaledTime+.1f;
         Vector3 focus=world.Camera.transform.position;
         world.Session.Query(new Bounds(focus,Vector3.one*192),nearby);selected.Clear();

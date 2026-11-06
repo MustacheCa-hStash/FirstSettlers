@@ -14,7 +14,8 @@ public static class ClimateGenerator
             sampleScale * (temperature ? 12f : 10f), persistence, lacunarity, maxPossibleNoise, offsets);
         if (!s.enabled) return value;
         float dry = WorldLandforms.Desert(new float2(worldX, worldZ), seed, sampleScale, s.desertRegionScale).x;
-        return math.lerp(value, temperature ? 0.82f : 0.16f, dry);
+        value = math.lerp(value, temperature ? 0.82f : 0.16f, dry);
+        return WorldGlacialLandforms.Climate(value,temperature,new float2(worldX,worldZ),seed,sampleScale,s);
     }
 
     public static int GetClimateOctaveCount(int octaves)

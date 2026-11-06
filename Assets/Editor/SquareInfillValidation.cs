@@ -40,12 +40,12 @@ public static class SquareInfillValidation
             void Near(Vector3 a,Vector3 b,string msg)=>check((a-b).sqrMagnitude<.000001f,"Square "+msg+": "+a+" != "+b);
             try
             {
-                s.Add(c.presets[2],f,default,0,true);s.Add(c.presets[2],f,new Vector3Int(16,0,0),0,true);
+                s.Add(c.presets[2],f,default,0);s.Add(c.presets[2],f,new Vector3Int(16,0,0),0);
                 var wallA=w.Commit(At(c.presets[0],Vector3.zero));var wallB=w.Commit(At(c.presets[0],new Vector3(4,0,0)));
                 var left=w.Commit(Aim(rise,wallA,new Vector3(1,2.9f,0),Vector3.forward));check(left!=null,"Square adjacent gable rejected");
                 var side=Aim(d,left,new Vector3(1.99f,1.6f,0),Vector3.right);
                 Near(side.Origin,f.Origin+q*new Vector3(2,3,0),"panel beside rising triangle");
-                var a=w.Commit(side);check(a!=null && a.Supported,"Asymmetric single square rejected");
+                var a=w.Commit(side);check(a!=null && s.Pieces.ContainsKey(a.Id),"Asymmetric single square rejected");
                 check(a.Resolved.mesh==d.mesh && a.Resolved.boxes.Length==1,"Square authored body/collider changed");
                 var otherHalf=Aim(d,wallA,new Vector3(2.5f,3,0),Vector3.up);
                 Near(otherHalf.Origin,a.Origin,"right half of four-metre wall top");
@@ -75,7 +75,7 @@ public static class SquareInfillValidation
                 check(w.Commit(At(d,new Vector3(4,3,0)))!=null,"Square could not be restored independently");
                 // Isolated short corner: automatic cover must not project a third metre.
                 using var cornerSession=new BuildSession();var cf=cornerSession.CreateFrame(f.Origin+Vector3.up*20,yaw);
-                cornerSession.Add(d,cf,default,0,true);cornerSession.Add(d,cf,new Vector3Int(8,0,0),2,false);
+                cornerSession.Add(d,cf,default,0);cornerSession.Add(d,cf,new Vector3Int(8,0,0),2);
                 int coverCount=0;foreach(var piece in cornerSession.Pieces.Values)foreach(var attachment in piece.Resolved.attachments)
                 {coverCount++;check(attachment.mesh.bounds.size.y<2.01f,"Short square corner gained full-storey framing");}
                 check(coverCount==1,"Square corner missing shared cover");
