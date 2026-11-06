@@ -1,0 +1,22 @@
+#pragma kernel BuildOutlineRows
+Texture2D<float4> _OutlineAlbedo;
+Texture2D<float4> _OutlineIds;
+RWStructuredBuffer<int2> _OutlineRows;
+uint _OutlineFrames, _OutlineStride, _OutlinePadding, _OutlineTile;
+[numthreads(64,1,1)]
+void BuildOutlineRows(uint3 thread : SV_DispatchThreadID)
+{
+    uint index=thread.x;
+    if(index>=_OutlineFrames*_OutlineFrames*_OutlineTile)return;
+    uint frame=index/_OutlineTile,y=index%_OutlineTile;
+    int first=(int)_OutlineTile,last=-1;
+    for(uint x=0;x<_OutlineTile;x++)
+    {
+        int2 p=int2((frame%_OutlineFrames)*_OutlineStride+_OutlinePadding+x,
+            (frame/_OutlineFrames)*_OutlineStride+_OutlinePadding+y);
+        float4 id=_OutlineIds.Load(int3(p,0));
+        if(max(id.r,id.g)>=.01 || _OutlineAlbedo.Load(int3(p,0)).a>0)
+        {first=min(first,(int)x);last=(int)x;}
+    }
+    _OutlineRows[index]=int2(first,last);
+}

@@ -144,6 +144,8 @@ public class TreeSettings
     [Range(4, 64), Tooltip("Number of camera-depth bands per mesh/material. CPU batches use stable counting sort; compute uses stable GPU compaction into depth bands. Default 32.")]
     public int distantTreeDepthBands = 32;
     [Header("Distant Tree GPU Compaction")]
+    [Tooltip("Conservative per-view HQ impostor geometry. Quad keeps the original square; Four fits a rectangle without adding vertices. Outline data is baked offline; missing or incompatible data falls back to the original quad. Restart Play Mode after changing.")]
+    public TreeImpostorOutlineQuality distantTreeOutlineQuality = TreeImpostorOutlineQuality.Four;
     [Tooltip("Use resident tree buffers with GPU culling, thinning, fading and depth ordering for compatible distant billboard materials. Falls back to CPU instanced batches when unsupported or unassigned.")]
     public bool distantTreeGpuCompaction = true;
     [Tooltip("Compute shader used to compact visible distant tree billboard instances before indirect rendering.")]

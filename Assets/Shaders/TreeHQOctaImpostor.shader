@@ -73,6 +73,7 @@ Shader "Custom/TreeHQOctaImpostor"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma multi_compile_local_vertex _ TREE_IMPOSTOR_OUTLINE
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Fog.hlsl"
             #pragma instancing_options procedural:SetupDistantTree
@@ -85,6 +86,7 @@ Shader "Custom/TreeHQOctaImpostor"
             #include "Assets/Shaders/MapleLeafSeasonPalette.hlsl"
             #include "Assets/Shaders/OakLeafSeasonPalette.hlsl"
             #include "Assets/Shaders/TreeNightLighting.hlsl"
+            #include "Assets/Shaders/TreeImpostorOutline.hlsl"
 
             TEXTURE2D(_AlbedoCoverage); SAMPLER(sampler_AlbedoCoverage);
             TEXTURE2D(_SurfaceAtlas); SAMPLER(sampler_SurfaceAtlas);
@@ -108,7 +110,7 @@ Shader "Custom/TreeHQOctaImpostor"
 
             #include "Assets/Shaders/DistantTreeFade.hlsl"
 
-            struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; uint vertexID : SV_VertexID; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
@@ -204,6 +206,7 @@ Shader "Custom/TreeHQOctaImpostor"
                 float3 upWS = normalize(cross(rightWS, cameraDirectionWS));
                 float3 viewDirectionLS = normalize(mul((float3x3)worldToObject, cameraDirectionWS));
                 float2 frame = SelectAtlasFrame(viewDirectionLS);
+                float2 proxyUV = TreeOutlineUV(input.uv, input.vertexID, frame, _FramesPerAxis);
                 // Match PositionCameraForFrame in the atlas baker. The root is
                 // not at the bottom of the padded image, and its projected
                 // position changes with each captured direction.
@@ -213,7 +216,7 @@ Shader "Custom/TreeHQOctaImpostor"
                 float3 frameUpLS = normalize(cross(frameRightLS, frameDirectionLS));
                 float2 rootInFrame = float2(dot(-_CaptureCenterLS.xyz, frameRightLS), dot(-_CaptureCenterLS.xyz, frameUpLS));
                 float3 rootWS = mul(objectToWorld, float4(0,0,0,1)).xyz;
-                float2 billboard = input.uv * 2.0 - 1.0;
+                float2 billboard = proxyUV * 2.0 - 1.0;
                 float2 rootedBillboard = billboard * _CaptureRadius - rootInFrame;
                 // Keep this affine across the quad so interpolated movement is
                 // exactly zero at the root, including roots inside the image.
@@ -223,7 +226,7 @@ Shader "Custom/TreeHQOctaImpostor"
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.positionWS = positionWS;
                 output.atlasFrame = frame;
-                output.proxyUV = input.uv;
+                output.proxyUV = proxyUV;
                 output.rightWS = rightWS;
                 output.upWS = upWS;
                 output.scale = scale;

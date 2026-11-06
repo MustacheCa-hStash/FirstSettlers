@@ -1,0 +1,6 @@
+TREE_OUTLINE_COVERAGE_PASS: all six visuals, 64 frame centers, both sides of every octahedral frame boundary, 32/128 pixel cells, MSAA 1/4; zero geometric silhouette clipping; raster differences recorded separately.
+TREE_OUTLINE_INTEGRATION_PASS: six resolved visuals, four vertices/two triangles, unchanged source assets and culling bounds, incompatible-layout fallback.
+RESIDENT_TREE_PASS: 13597 checks; region submission, CPU/GPU handoff parity, sparse updates, residency, fallback and registry edits.
+SPATIAL_TREE_VALIDATION_PASS: shuffled chunks, negative/extreme coordinates, mixed per-instance attributes and fades, 1001 instances, frame reset and duplicate EndFrame.
+STANDING TREE PASS: registry state filtering, shared bark/foliage, instanced snow, wind, LOD mask partition, submeshes, bounded batches, unchanged prefab assets and scene shader variants.
+VEGETATION_REFRESH_PASS: retained far support, preferred replacement, negative coordinates, unpublished/hidden rejection, empty tree publication, canopy removal, prepopulated registry and stable ordering parity; existing GPU suite passed.

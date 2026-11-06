@@ -1442,6 +1442,7 @@ MonoBehaviour:
     distantTreeDepthOrdering: 1
     distantTreeDepthBands: 32
     distantTreeGpuCompaction: 1
+    distantTreeOutlineQuality: 4
     distantTreeCompactShader: {fileID: 7200000, guid: 6b8a0bb568794f44a9b2c8fb3c9d8a40, type: 3}
     distantTreeWorkerCount: 1
     distantTreeResultsPerFrame: 1

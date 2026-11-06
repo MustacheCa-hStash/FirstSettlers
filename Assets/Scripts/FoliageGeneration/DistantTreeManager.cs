@@ -49,6 +49,7 @@ public sealed class DistantTreeManager : IDisposable
         public float MinDepth, MaxDepth;
         public bool SupportsIndirect;
         public DistantTreeGpuBatch Gpu;
+        public TreeImpostorOutlineBinding Outline;
     }
     private struct OrderedInstance
     {
@@ -74,6 +75,7 @@ public sealed class DistantTreeManager : IDisposable
     private readonly Vector4[] gpuPlanes = new Vector4[6];
     private ComputeShader activeCompute;
     private bool gpuEnabled;
+    private TreeImpostorOutlineLibrary outlineLibrary;
     private ChunkCoord lastViewer;
     private int lastRadius = -1;
     private bool disposed;
@@ -129,12 +131,20 @@ public sealed class DistantTreeManager : IDisposable
         var mesh = UnityEngine.Object.Instantiate(filter.sharedMesh);
         mesh.name += " (Distant Tree Bounds)";
         mesh.bounds = DistantTreeGpuBatch.RenderingBounds(mesh.bounds, material);
+        TreeImpostorOutlineBinding outline = null;
+        if (settings.distantTreeOutlineQuality != TreeImpostorOutlineQuality.Quad &&
+            (material.shader.name == "Custom/TreeHQOctaImpostor" || material.shader.name == "Custom/SpruceOctaImpostor"))
+        {
+            outlineLibrary ??= Resources.Load<TreeImpostorOutlineLibrary>("Foliage/TreeImpostorOutlines");
+            outline = TreeImpostorOutlineBinding.Apply(material, mesh, outlineLibrary, settings.distantTreeOutlineQuality);
+        }
         var batch = new Batch
         {
             Mesh = mesh,
             SourceMesh = filter.sharedMesh,
             Material = material,
             SourceMaterial = renderer.sharedMaterial,
+            Outline = outline,
             SupportsIndirect = string.Equals(material.GetTag("DistantTreeIndirect", false, "False"),
                 "True", StringComparison.OrdinalIgnoreCase)
         };
@@ -688,6 +698,7 @@ public sealed class DistantTreeManager : IDisposable
         jobs.Clear(); cache.Clear();
         foreach (var batch in uniqueBatches)
         {
+            batch.Outline?.Dispose();
             if (Application.isPlaying)
             {
                 UnityEngine.Object.Destroy(batch.Material);
