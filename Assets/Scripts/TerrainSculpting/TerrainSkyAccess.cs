@@ -35,6 +35,7 @@ public sealed class TerrainSkyAccess:IDisposable
     private int3 tableOrigin,lastFocus=new int3(int.MinValue);
     private long revision=-1;
     private bool running,disposed;
+    private IReadOnlyDictionary<int3,float> naturalFallback;
     public bool Busy { get { lock(gate)return running||completed!=null||Pending>0; } }
     public int Pending { get { int n=0;foreach(var key in wanted)if(!pages.TryGetValue(key,out var p)||p.Revision!=revision)n++;return n; } }
     public int ResidentPages=>pages.Count;
@@ -75,20 +76,25 @@ public sealed class TerrainSkyAccess:IDisposable
     /// <summary>Do not let optional lighting snapshots consume an edit's density
     /// headroom, even when the host admits several mesh workers concurrently.</summary>
     public bool YieldToTerrain(){Cancel();lock(gate)return !running;}
-    public void Update(double3 focus,long publishedRevision,bool terrainBusy,bool canPublish=true)
+    public void Update(double3 focus,long publishedRevision,bool terrainBusy,bool canPublish=true,IReadOnlyDictionary<int3,float> natural=null)
     {
         if(disposed)return;
         if(settings==null||!settings.enabled){Cancel();Disable();Status="Disabled";return;}
+        int3 focusTile=Tile(focus);
+        bool fallbackChanged=!ReferenceEquals(naturalFallback,natural);
+        naturalFallback=natural;
+        if(naturalFallback?.Count>0&&(fallbackChanged||!math.all(tableOrigin==focusTile-TableSize/2)))
+        {tableOrigin=focusTile-TableSize/2;Allocate();RebuildTable();}
         if(terrainBusy||publishedRevision!=world.Revision){Cancel();Bind();Status="Waiting for terrain";return;}
         if(!canPublish){Bind();return;}
-        int3 focusTile=Tile(focus);
-        if(revision!=publishedRevision||!math.all(focusTile==lastFocus))
+        if(revision!=publishedRevision||!math.all(focusTile==lastFocus)||fallbackChanged)
         {
             if(!YieldToTerrain()){Bind();Status="Waiting for sky worker to yield";return;}
             try
             {
                 using var snapshot=world.CaptureSnapshot();
                 var candidates=new HashSet<int3>();tableOrigin=focusTile-TableSize/2;
+                if(naturalFallback!=null)foreach(var key in naturalFallback.Keys)if(InTable(key,tableOrigin))candidates.Add(key);
                 foreach(var key in snapshot.Bricks.Keys)
                 {
                     double3 minimum=(double3)TerrainDensityCoordinates.Origin(key)*snapshot.Profile.Spacing-Spacing;
@@ -151,7 +157,7 @@ public sealed class TerrainSkyAccess:IDisposable
         for(int z=0;z<Width;z++)for(int y=0;y<Width;y++)for(int x=0;x<Width;x++)
         {
             int a=AtlasIndex(slot,x,y,z),b=Index(x,y,z);var value=result.Sky[b];var old=sky[a];
-            value.r=exists?(byte)Mathf.RoundToInt(Mathf.Lerp(old.r,old.g,blend)):(byte)255;
+            value.r=exists?(byte)Mathf.RoundToInt(Mathf.Lerp(old.r,old.g,blend)):(byte)(naturalFallback?.ContainsKey(result.Key)==true?0:255);
             sky[a]=value;visibility[a]=result.Visibility[b];result.Sky[b]=value;
         }
         for(int z=0;z<Width;z++)for(int x=0;x<Width;x++)heights[HeightIndex(slot,x,z)]=result.Height[x+Width*z];
@@ -165,18 +171,25 @@ public sealed class TerrainSkyAccess:IDisposable
     private void RebuildTable()
     {
         if(!Allocated)return;Array.Clear(table,0,table.Length);
-        foreach(var pair in pages)if(InTable(pair.Key,tableOrigin))table[TableIndex(pair.Key-tableOrigin)]=new Color32((byte)(pair.Value.Slot+1),0,0,255);
+        if(naturalFallback!=null)foreach(var pair in naturalFallback)if(InTable(pair.Key,tableOrigin))
+        {
+            int encoded=(int)Math.Floor(math.clamp((pair.Value-pair.Key.y*TileMetres+128)/256,0,1)*65535);
+            table[TableIndex(pair.Key-tableOrigin)]=new Color32(0,(byte)(encoded&255),(byte)(encoded>>8),255);
+        }
+        foreach(var pair in pages)if(InTable(pair.Key,tableOrigin))
+        {int index=TableIndex(pair.Key-tableOrigin);var value=table[index];value.r=(byte)(pair.Value.Slot+1);table[index]=value;}
         tableTexture.SetPixels32(table);tableTexture.Apply(false,false);
     }
     private void Bind()
     {
         active=this;
-        Shader.SetGlobalFloat("_TerrainSkyEnabled",Allocated&&pages.Count>0&&settings.enabled?1:0);
+        Shader.SetGlobalFloat("_TerrainSkyEnabled",Allocated&&(pages.Count>0||naturalFallback?.Count>0)&&settings.enabled?1:0);
         if(!Allocated)return;
         Shader.SetGlobalTexture("_TerrainSkyData",skyTexture);Shader.SetGlobalTexture("_TerrainSkyVisibility",visibilityTexture);
         Shader.SetGlobalTexture("_TerrainSkyHeight",heightTexture);Shader.SetGlobalTexture("_TerrainSkyTable",tableTexture);
         Shader.SetGlobalVector("_TerrainSkyOrigin",new Vector4(tableOrigin.x,tableOrigin.y,tableOrigin.z,0));
         Shader.SetGlobalVector("_TerrainSkyControls",new Vector4(Mathf.Clamp01(settings.caveAmbientMultiplier),Mathf.Clamp(settings.skyResponse,.25f,4),Mathf.Max(0,settings.blendSeconds),Time.realtimeSinceStartup));
+        Shader.SetGlobalFloat("_TerrainSkyNaturalAmbient",Mathf.Clamp01(settings.naturalCaveAmbientMultiplier));
         Shader.SetGlobalFloatArray("_TerrainSkyTimes",times);
     }
     private void Disable(){if(active==this){Shader.SetGlobalFloat("_TerrainSkyEnabled",0);active=null;}}
@@ -184,7 +197,9 @@ public sealed class TerrainSkyAccess:IDisposable
     public float SampleExposure(double3 position,bool targetValue=false)
     {
         int3 key=Tile(position);
-        if(disposed||!Allocated||settings==null||!settings.enabled||!pages.TryGetValue(key,out var page))return 1;
+        if(disposed||!Allocated||settings==null||!settings.enabled)return 1;
+        if(!InTable(key,tableOrigin))return 1;
+        if(!pages.TryGetValue(key,out var page))return naturalFallback!=null&&naturalFallback.TryGetValue(key,out float h)&&position.y<h-.025?0:1;
         double3 grid=math.clamp((position-(double3)key*TileMetres)/Spacing,0,15.9999);
         int3 cell=(int3)math.floor(grid);double3 f=grid-cell;
         double Height(int x,int z)

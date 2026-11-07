@@ -20,6 +20,13 @@ public interface ITerrainDensityBounds
     bool TryGetDensityBounds(double3 minimum, double3 maximum, out double low, out double high);
 }
 
+/// <summary>Column batching without claiming that underground density is height-only.</summary>
+public interface ITerrainColumnDensityGenerator
+{
+    double SampleSurfaceHeight(double x,double z);
+    double SampleDensityWithSurface(double3 position,double surfaceHeight);
+}
+
 /// <summary>
 /// Canonical full-resolution heightfield adapter. Cold reads generate native/Burst height maps,
 /// not the slightly different managed point evaluator. Use cold sampling on a producer thread.

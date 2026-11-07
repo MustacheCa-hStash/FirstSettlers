@@ -9,7 +9,7 @@ internal static class WorldManagerInspectorRules
     private static readonly (string parent, string toggle)[] Features = {
         ("flowerSettings", "enableFlowers"), ("cloverSettings", "enableClover"), ("dandelionSettings", "enableDandelions"),
         ("lilyPadSettings", "enableLilyPads"), ("cattailSettings", "enableCattails"),
-        ("butterflySettings", "enabled"), ("beeSettings", "enabled"), ("leafClusterSettings", "enabled"), ("fernSettings", "enabled") };
+        ("butterflySettings", "enabled"), ("beeSettings", "enabled"), ("leafClusterSettings", "enabled"), ("fernSettings", "enabled"), ("caveGeneration", "enabled") };
     private static readonly string[] ScatterParents = { "leafClusterSettings", "fernSettings" };
     private static readonly string[] ErosionOnly = { "amplitude", "wavelength", "octaves", "lacunarity", "persistence", "minimumWavelength", "stretch", "rotation", "offset", "seedOffset", "gullyWeight", "branching", "cellSize", "normalization", "ridgeRounding", "valleyRounding", "directionSmoothing", "slopeResponse", "heightScale", "fadeTarget", "reliefRadius", "reliefContrast", "valleyAndPeakHeights", "gentleMountainErosion" };
 

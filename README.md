@@ -1,5 +1,22 @@
 # FirstSettlers Work Notes
 
+## November 6: procedural caves
+
+Added seeded regional cave systems with connected passages, broad chambers, side
+loops, controlled walking floors and terrain openings. Underground shells use
+19.2 m mesh tiles; exterior apertures reuse terrain replacement and collision.
+Procedural cave generation is paused and disabled in SmearScene.
+
+When caves are enabled, select World Manager in Play Mode and use **Find and travel to nearest cave
+entrance**. F3 reports progress; **T** equips the existing carried torch. Natural
+ambient is independently adjustable in `Resources/TerrainSculpting/CaveLighting`
+(default 0.10; excavation ambient remains 0.025). The cave-enabled derived cap is
+256 MiB; edits retain their separate 64 MiB cap and session-only lifecycle.
+
+See [phase results, evidence, playtest steps and limits](Documentation/PROCEDURAL_CAVES.md).
+Validate with `Tools/ValidateProceduralCaves.ps1` and
+`Tools/ValidateProceduralCaveGraphics.ps1`.
+
 ## November 5: cliff and ice edge gilling
 
 Resolved the narrow cap/toe profiles on the canonical height grid, locally rounded

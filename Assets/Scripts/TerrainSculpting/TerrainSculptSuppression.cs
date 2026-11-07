@@ -10,11 +10,12 @@ public sealed class TerrainSculptSuppression
     private const long TileCharge=384;
     private readonly Dictionary<int2,ulong[]> tiles;
     private readonly double spacing;
+    private readonly TerrainSculptFootprint[] naturalFootprints;
     public long DensityRevision { get; }
     public long PayloadCharge=>(tiles.Count+1)*TileCharge;
     public int TileCount=>tiles.Count;
-    private TerrainSculptSuppression(Dictionary<int2,ulong[]> tiles,double spacing,long revision)
-    {this.tiles=tiles;this.spacing=spacing;DensityRevision=revision;}
+    private TerrainSculptSuppression(Dictionary<int2,ulong[]> tiles,double spacing,long revision,TerrainSculptFootprint[] natural=null)
+    {this.tiles=tiles;this.spacing=spacing;DensityRevision=revision;naturalFootprints=natural??Array.Empty<TerrainSculptFootprint>();}
     public bool Contains(double x,double z)
     {
         int sx=TerrainDensityCoordinates.FloorIndex(x/spacing),sz=TerrainDensityCoordinates.FloorIndex(z/spacing);
@@ -39,11 +40,15 @@ public sealed class TerrainSculptSuppression
         return false;
     }
     internal static TerrainSculptSuppression Build(TerrainDensitySnapshot snapshot,TerrainDensityEdit edit,
-        TerrainSculptSuppression previous,TerrainSculptBuildBudget budget,long maximumBytes,Func<double,double,double> surfaceHeight)
+        TerrainSculptSuppression previous,TerrainSculptBuildBudget budget,long maximumBytes,Func<double,double,double> surfaceHeight,IReadOnlyList<TerrainSculptGroup> naturalGroups=null)
     {
         if(surfaceHeight==null)throw new ArgumentNullException(nameof(surfaceHeight));
         bool incremental=previous!=null&&previous.spacing==snapshot.Profile.Spacing*.5&&previous.DensityRevision==snapshot.Revision;
-        if(incremental&&(edit==null||edit.ChangedSamples==0))return previous;
+        var natural=new TerrainSculptFootprint[naturalGroups?.Count??0];
+        for(int i=0;i<natural.Length;i++)natural[i]=naturalGroups[i].Footprint;
+        bool sameNatural=previous!=null&&previous.naturalFootprints.Length==natural.Length;
+        if(sameNatural)for(int i=0;i<natural.Length;i++)sameNatural&=math.all(natural[i].Min==previous.naturalFootprints[i].Min)&&math.all(natural[i].Max==previous.naturalFootprints[i].Max);
+        if(incremental&&(edit==null||edit.ChangedSamples==0)&&sameNatural)return previous;
         long revision=snapshot.Revision+(edit!=null&&edit.ChangedSamples>0?1:0);
         long scopeStart=budget.ChargedBytes,persistentStart=budget.PersistentBytes;
         var old=incremental?previous.tiles:null;
@@ -67,10 +72,10 @@ public sealed class TerrainSculptSuppression
             if(samples.TryGetValue(sample,out var values))return values;
             budget.Charge(96);
             double3 p=TerrainDensityCoordinates.ToWorld(sample,snapshot.Profile);
-            short original=snapshot.Profile.Encode(snapshot.Generator is ITerrainHeightDensityGenerator?
+            short original=snapshot.Profile.Encode(snapshot.Generator is ITerrainSurfaceReference reference?reference.SampleSurfaceDensity(p):snapshot.Generator is ITerrainHeightDensityGenerator?
                 p.y-Height(sample.x,sample.z):snapshot.Generator.SampleDensity(p));
             short edited=snapshot.Bricks.TryGetValue(TerrainDensityCoordinates.BrickOf(sample),out var brick)?
-                brick.Read(TerrainDensityCoordinates.Index(TerrainDensityCoordinates.LocalOf(sample))):original;
+                brick.Read(TerrainDensityCoordinates.Index(TerrainDensityCoordinates.LocalOf(sample))):snapshot.Generator is ITerrainSurfaceReference?snapshot.Profile.Encode(snapshot.Generator.SampleDensity(p)):original;
             values=new int2(original,edited);samples.Add(sample,values);return values;
         }
         bool RemovedSurface(double x,double z)
@@ -108,7 +113,7 @@ public sealed class TerrainSculptSuppression
             }
             bits[i>>6]|=bit;
         }
-        IEnumerable<int3> keys=incremental?(IEnumerable<int3>)edit.ChangedBricks:snapshot.Bricks.Keys;
+        IEnumerable<int3> keys=incremental?(IEnumerable<int3>)(edit?.ChangedBricks??Array.Empty<int3>()):snapshot.Bricks.Keys;
         foreach(var key in keys)
         {
             budget.Check();
@@ -131,8 +136,21 @@ public sealed class TerrainSculptSuppression
                 }
             }
         }
+        if(!sameNatural)foreach(var footprint in natural)
+        {
+            for(int z=footprint.Min.y;z<footprint.Max.y;z++)for(int x=footprint.Min.x;x<footprint.Max.x;x++)
+            {
+                budget.Check();var column=new int2(x,z);if(!visited.Add(column))continue;budget.Charge(64);
+                for(int sz=0;sz<2;sz++)for(int sx=0;sx<2;sx++)
+                {
+                    int mx=x*2+sx,mz=z*2+sz;if(!RemovedSurface((mx+.5)*maskSpacing,(mz+.5)*maskSpacing))continue;
+                    for(int dz=-margin;dz<=margin;dz++)for(int dx=-margin;dx<=margin;dx++)
+                        if((dx*dx+dz*dz)*maskSpacing*maskSpacing<=BorderPadding*BorderPadding+1e-8)Mark(mx+dx,mz+dz);
+                }
+            }
+        }
         if((result.Count+1)*TileCharge>maximumBytes)throw new TerrainDensityCapacityException("Terrain foliage mask budget is full.");
         budget.CompleteScope(scopeStart,0,persistentStart);
-        return new TerrainSculptSuppression(result,maskSpacing,revision);
+        return new TerrainSculptSuppression(result,maskSpacing,revision,natural);
     }
 }

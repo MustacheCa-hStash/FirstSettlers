@@ -891,7 +891,10 @@ Shader "Custom/StylizedTerrainURP"
                 half3 color=albedo*(diffuse+ambient);
                 half tintWeight=saturate(1.0h-terrainVisibility)*saturate(_TerrainHorizonParams.z)*saturate(_ReceiveShadows);
                 color*=lerp(half3(1,1,1),_TerrainHorizonTint.rgb,tintWeight);
-                color+=albedo*FSLocalFlameDiffuse(surface.positionWS,normalWS);
+                // Stable derivatives and the mesher's 2.5 cm normal-displacement
+                // tolerance keep PCF samples on curved stone from shadowing themselves.
+                float3 flamePlaneNormal=normalize(cross(surface.dpdxWS,surface.dpdyWS));
+                color+=albedo*FSLocalFlameDiffuse(surface.positionWS,normalWS,flamePlaneNormal,.025*saturate(IN.exposure));
                 return half4(MixFogColor(color,unity_FogColor.rgb*caveAmbient,IN.fogFactor),1);
             }
 
@@ -905,11 +908,21 @@ Shader "Custom/StylizedTerrainURP"
                 #endif
                 // Terrain edge diagnostic insertion point.
                 half3 normalWS = baseNormalWS;
+                half3 baseColor = 0;
+                half terrainVisibility = 1;
                 #if defined(_TERRAIN_EXCAVATION)
                 float exposure=saturate(IN.exposure);
                 float3 excavationDx=surfaceDx,excavationDy=surfaceDy;
+                // Underground-only tiles have no exterior control maps. Their complete
+                // stone surface bypasses outdoor layer evaluation, including normalization
+                // of an empty weighted normal that would poison subsequent light response.
+                [branch] if(exposure>=.999)
+                {
+                    SampleExcavation(surface.positionWS,baseNormalWS,excavationDx,excavationDy,baseColor,normalWS);
+                }
+                else
                 #endif
-
+                {
                 // Control pixels represent mesh samples, including the endpoints of each chunk.
                 float2 controlUV = IN.uv * (1.0 - _ControlMap0_TexelSize.xy) + 0.5 * _ControlMap0_TexelSize.xy;
                 float4 control0 = SAMPLE_TEXTURE2D(_ControlMap0, sampler_ControlMap0, controlUV);
@@ -1012,7 +1025,6 @@ Shader "Custom/StylizedTerrainURP"
                     surface.positionWS.xz
                 );
 
-                half3 baseColor = 0;
                 float3 weightedNormal = baseNormalWS * (sandWeight + mudWeight + rockWeight + cliffWeight + riverbedWeight);
 
                 half3 regionalSandTint = 1.0h;
@@ -1303,7 +1315,7 @@ Shader "Custom/StylizedTerrainURP"
                 {
                     weightedNormal += baseNormalWS * snowWeight;
                 }
-                normalWS = normalize(weightedNormal);
+                normalWS = dot(weightedNormal,weightedNormal)>1e-8?normalize(weightedNormal):baseNormalWS;
 
                 // Independent cover on the finished substrate. Leave grass/rock/litter
                 // control interpolation unchanged; only actual moss patches take priority.
@@ -1360,7 +1372,7 @@ Shader "Custom/StylizedTerrainURP"
                 }
 
 
-                half terrainVisibility = TerrainHorizonVisibility(surface.positionWS, IN.horizonLight);
+                terrainVisibility = TerrainHorizonVisibility(surface.positionWS, IN.horizonLight);
                 #if defined(_TERRAIN_EXCAVATION)
                 [branch] if(exposure>0)
                 {
@@ -1370,6 +1382,7 @@ Shader "Custom/StylizedTerrainURP"
                     terrainVisibility=lerp(terrainVisibility,1,exposure);
                 }
                 #endif
+                }
                 return ShadeTerrainSurface(baseColor,normalWS,IN,surface,terrainVisibility);
             }
             ENDHLSL

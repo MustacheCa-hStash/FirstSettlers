@@ -42,7 +42,7 @@ public static class TerrainDensityMesher
         var edges = new Dictionary<Edge, int>();
         var boundaryIds=new Dictionary<int,TerrainSurfaceVertexId>();
         var surfaceData=new List<float2>();
-        bool mayExpose=snapshot.HasOverrides(bounds.Min,bounds.Max);
+        bool mayExpose=snapshot.HasOverrides(bounds.Min,bounds.Max)||snapshot is TerrainDensitySnapshot natural&&natural.Generator is ITerrainSurfaceReference;
         var input = new short[19 * 19 * 19];
         var values = new short[8]; var positions = new int3[8]; var local = new int3[8];
         var stone = new int[4]; var air = new int[4];

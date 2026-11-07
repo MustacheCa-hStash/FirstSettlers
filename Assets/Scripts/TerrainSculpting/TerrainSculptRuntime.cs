@@ -34,6 +34,15 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
     private readonly double publicationMs;
     private readonly bool ownsWorld;
     private readonly TerrainSculptSurfaceSettings surfaceAppearance;
+    private readonly TerrainCaveDensityGenerator caves;
+    private readonly Material caveMaterial;
+    private readonly Dictionary<int3,TerrainCaveTileSurface> caveTiles=new Dictionary<int3,TerrainCaveTileSurface>();
+    private readonly Dictionary<int3,TerrainCaveTileSurface> stagedCaveTiles=new Dictionary<int3,TerrainCaveTileSurface>();
+    private readonly List<int3> caveStagingOrder=new List<int3>();
+    private HashSet<int3> caveCandidates=new HashSet<int3>();
+    private IReadOnlyDictionary<int3,float> caveSky;
+    private int caveStagingCursor;
+    public int LiveCaveTiles=>caveTiles.Count;
     private readonly object resultGate = new object();
     private readonly ManualResetEventSlim drained = new ManualResetEventSlim(true);
     private readonly List<TerrainSculptPin> pins = new List<TerrainSculptPin>();
@@ -51,6 +60,8 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
     private long coverageRevision, requestIdentity, liveCharge, reservedCharge;
     private long failedDensityRevision=-1,failedCoverageRevision=-1;
     private long editStarted;
+    private long workerStartedAt;
+    private volatile string workerStage;
     private int stagingCursor;
     private double3? destination;
     public TerrainDensityWorld Density => world;
@@ -81,11 +92,17 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
     public int CachePressureRetries { get; private set; }
     public double LastExtractMs { get; private set; }
     public double LastAssemblyMs { get; private set; }
-    public string Status { get; private set; } = "Ready";
+    private string status="Ready";
+    public string Status
+    {
+        get => ActiveJobs!=0 ? $"{workerStage} ({(Stopwatch.GetTimestamp()-Interlocked.Read(ref workerStartedAt))/(double)Stopwatch.Frequency:0.0}s)" : status;
+        private set => status=value;
+    }
     private bool HasOperation
     { get { lock(resultGate)return pendingBrush.HasValue||workerRunning||completed!=null||preparing!=null||destination.HasValue; } }
     public bool Busy => !disposed && (Persistence != null && !Persistence.Ready && !Persistence.FailedToLoad || dirty || HasOperation);
     public double3? PendingDestination => destination;
+    public string TeleportFailure { get; private set; }
     public double3 CoverageAnchor => anchor;
     public IEnumerable<ChunkCoord> PendingSourceChunks => preparing==null ? Array.Empty<ChunkCoord>() : (IEnumerable<ChunkCoord>)preparing.Chunks.Keys;
     public IEnumerable<ChunkCoord> PendingRenderChunks
@@ -98,7 +115,7 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
     public TerrainSculptRuntime(TerrainDensityWorld world, Func<double,double,double> baselineHeight, int chunkSize,
         TerrainRequestManager requests, Func<ChunkCoord,ChunkRuntime> findRuntime, Transform viewer,
         TerrainSculptConfiguration configuration, bool ownsWorld = false, Func<double3,bool> destinationReady = null, Func<bool> hostReady = null,
-        TerrainEditPersistence persistence = null,TerrainSourceSurfaceLayout? sourceLayout=null,bool useDefaultSkyAccess=true)
+        TerrainEditPersistence persistence = null,TerrainSourceSurfaceLayout? sourceLayout=null,bool useDefaultSkyAccess=true,Material naturalMaterial=null)
     {
         this.world=world??throw new ArgumentNullException(nameof(world));height=baselineHeight??throw new ArgumentNullException(nameof(baselineHeight));
         this.sourceLayout=sourceLayout??TerrainSourceSurfaceLayout.Current(world.Profile);
@@ -114,6 +131,8 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
         this.hostReady=hostReady;
         Persistence=persistence;
         surfaceAppearance=configuration.SurfaceAppearance!=null?configuration.SurfaceAppearance:Resources.Load<TerrainSculptSurfaceSettings>("TerrainSculpting/ExcavatedStone");
+        caves=world.Generator as TerrainCaveDensityGenerator;
+        if(caves!=null&&naturalMaterial!=null){caveMaterial=new Material(naturalMaterial){name="Natural cave stone"};caveMaterial.EnableKeyword("_TERRAIN_EXCAVATION");}
         var skySettings=configuration.SkyAccess!=null?configuration.SkyAccess:useDefaultSkyAccess?Resources.Load<TerrainSkyAccessSettings>("TerrainSculpting/CaveLighting"):null;
         // Reserve lighting inside the existing derived cap, including readable Unity
         // copies/GPU storage and bounded tracing scratch. Tiny synthetic hosts opt out.
@@ -124,19 +143,26 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
 
     public bool TryExcavate(TerrainDensityBrush brush)
     {
-        if(disposed||HasOperation||Persistence!=null&&!Persistence.CanExcavate)return false;
-        brush.Validate();pendingBrush=brush;dirty=true;editStarted=Stopwatch.GetTimestamp();Status="Preparing excavation";return true;
+        if(!CanRequestExcavation)return false;
+        brush.Validate();pendingBrush=brush;
+        if(caves!=null){InvalidateCoverage();if(preparing!=null)DiscardPrepared();}else dirty=true;
+        editStarted=Stopwatch.GetTimestamp();Status="Preparing excavation";return true;
     }
+    // A foreground cut may supersede an ordinary coverage refresh. Another edit
+    // or a teleport still owns its transaction and cannot be interrupted.
+    public bool CanRequestExcavation=>!disposed&&!pendingBrush.HasValue&&!destination.HasValue&&(caves!=null||!HasOperation)&&(Persistence==null||Persistence.CanExcavate);
 
     /// <summary>Prepares destination terrain before moving the local viewer in the final swap.
     /// Direct transform teleports bypass this contract and must not be used by gameplay.</summary>
     public bool RequestTeleport(double3 target)
     {
         if(disposed||HasOperation||Persistence!=null&&!Persistence.Ready||!math.all(math.isfinite(target)))return false;
-        destination=target;InvalidateCoverage();Status="Preparing destination";return true;
+        TeleportFailure=null;destination=target;InvalidateCoverage();Status="Preparing destination";return true;
     }
     public void CancelTeleport()
-    { if(!destination.HasValue)return;destination=null;InvalidateCoverage(); }
+    { if(!destination.HasValue)return;FailTeleport("Travel canceled");InvalidateCoverage(); }
+    private void FailTeleport(string reason)
+    {if(destination.HasValue)TeleportFailure=reason;destination=null;}
 
     public IDisposable PinCollision(TerrainSculptPin pin)
     {
@@ -150,7 +176,13 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
         public void Dispose(){var old=Interlocked.Exchange(ref owner,null);if(old==null||old.disposed)return;old.pins.Remove(pin);old.InvalidateCoverage();}
     }
     private void InvalidateCoverage()
-    { coverageRevision++;dirty=true;cancellation?.Cancel(); }
+    {
+        coverageRevision++;dirty=true;
+        // A large immutable natural shell remains useful after the player walks a few
+        // metres. Finish it, then refresh collision membership; otherwise walking could
+        // continually cancel initial cave generation. Edits retain strict cancellation.
+        if(caves==null||pendingBrush.HasValue||destination.HasValue)cancellation?.Cancel();
+    }
     public bool OwnsRuntime(ChunkCoord coord) => live.ContainsKey(coord) || (preparing!=null&&preparing.Chunks.ContainsKey(coord));
     public bool OwnsRenderIn(FarTerrainPatchKey patch)
     {
@@ -161,14 +193,14 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
     public void RejectPreparation(string reason)
     {
         if(preparing==null)return;
-        DiscardPrepared();pendingBrush=null;destination=null;dirty=false;Status=reason;
+        DiscardPrepared();pendingBrush=null;FailTeleport(reason);dirty=false;Status=reason;
         failedDensityRevision=world.Revision;failedCoverageRevision=coverageRevision;
     }
 
     public void Update(WorldStreamingBudget shared = null)
     {
         UpdateTerrain(shared);
-        if(!disposed)SkyAccess?.Update((float3)viewer.position,PublishedDensityRevision,Busy,shared==null||shared.HasRemaining);
+        if(!disposed)SkyAccess?.Update((float3)viewer.position,PublishedDensityRevision,Busy,shared==null||shared.HasRemaining,caveSky);
     }
     private void UpdateTerrain(WorldStreamingBudget shared)
     {
@@ -206,7 +238,7 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
                     liveCharge-=meshCache?.Charge??0;meshCache=null;buildWithoutCache=true;CachePressureRetries++;
                     Status="Reclaiming terrain cache; prioritizing nearby collision";
                 }
-                else if(!cancelled){pendingBrush=null;destination=null;failedDensityRevision=world.Revision;failedCoverageRevision=coverageRevision;}
+                else if(!cancelled){pendingBrush=null;FailTeleport(Status);failedDensityRevision=world.Revision;failedCoverageRevision=coverageRevision;}
             }
             else
             {
@@ -215,11 +247,13 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
                 LastExtractMs=result.ExtractMs;LastAssemblyMs=result.AssemblyMs;
                 preparing=result;reservedCharge=result.Charge;stagingCursor=0;stagingOrder.Clear();
                 stagingOrder.AddRange(result.Chunks.Keys);Status="Staging terrain";
+                caveStagingCursor=0;caveStagingOrder.Clear();caveStagingOrder.AddRange(result.CaveTiles.Keys);
             }
         }
         if(preparing!=null&&!Current(preparing)) { DiscardPrepared();StaleDiscards++;dirty=true; }
         if(preparing!=null)
         {
+            Status=$"Preparing terrain collision {stagingCursor+caveStagingCursor}/{stagingOrder.Count+caveStagingOrder.Count}";
             // No replacement assets are allocated until every source runtime exists.
             foreach(var coord in stagingOrder)
             {
@@ -252,7 +286,24 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
                     }
                     stagingCursor++;
                 }
-                if(stagingCursor==stagingOrder.Count&&(!didWork||CanWork()))
+                while(stagingCursor==stagingOrder.Count&&caveStagingCursor<caveStagingOrder.Count&&(!didWork||CanWork()))
+                {
+                    var key=caveStagingOrder[caveStagingCursor];
+                    if(!stagedCaveTiles.TryGetValue(key,out var tile))
+                    {
+                        long operationStarted=Stopwatch.GetTimestamp();tile=new TerrainCaveTileSurface(key,preparing.CaveTiles[key],caveMaterial,surfaceAppearance);
+                        LastMeshStageMs+=(Stopwatch.GetTimestamp()-operationStarted)*1000d/Stopwatch.Frequency;
+                        stagedCaveTiles.Add(key,tile);didWork=true;madeProgress=true;if(!CanWork())break;
+                    }
+                    if(!tile.CollisionPrepared)
+                    {
+                        using var admission=requests.TryAcquireSculptCooking();if(admission==null)return;
+                        long operationStarted=Stopwatch.GetTimestamp();using(CookMarker.Auto())tile.PrepareCollision();didWork=true;madeProgress=true;
+                        LastCookMs+=(Stopwatch.GetTimestamp()-operationStarted)*1000d/Stopwatch.Frequency;
+                    }
+                    caveStagingCursor++;
+                }
+                if(stagingCursor==stagingOrder.Count&&caveStagingCursor==caveStagingOrder.Count&&(!didWork||CanWork()))
                 {
                     if(hostReady!=null&&!hostReady()){Status="Waiting for complete terrain handoff";return;}
                     if(destination.HasValue&&destinationReady!=null&&!destinationReady(destination.Value))
@@ -262,27 +313,27 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
             }
             catch(Exception ex)
             {
-                Status="Terrain staging failed: "+ex.Message;DiscardPrepared();pendingBrush=null;destination=null;dirty=false;
+                Status="Terrain staging failed: "+ex.Message;DiscardPrepared();pendingBrush=null;FailTeleport(Status);dirty=false;
                 failedDensityRevision=world.Revision;failedCoverageRevision=coverageRevision;
                 Debug.LogException(ex);
             }
             return;
         }
         if(!dirty||ActiveJobs!=0||!CanWork())return;
-        if(world.ModifiedBrickCount==0&&!pendingBrush.HasValue&&!destination.HasValue)
+        if(caves==null&&world.ModifiedBrickCount==0&&!pendingBrush.HasValue&&!destination.HasValue)
         { dirty=false;PublishedDensityRevision=world.Revision;PublishedCoverageRevision=coverageRevision;Status="Ready";return; }
         if(SkyAccess!=null&&!SkyAccess.YieldToTerrain()){Status="Waiting for sky worker to yield";return;}
         Dispatch(focus,occupied);
     }
 
     private bool Current(TerrainSculptBatch batch) => !disposed&&batch.Epoch==epoch&&batch.Request==requestIdentity&&
-        batch.Coverage==coverageRevision&&batch.BaseRevision==world.Revision&&batch.Layout.Equals(sourceLayout)&&
+        (batch.Coverage==coverageRevision||caves!=null&&!pendingBrush.HasValue&&!destination.HasValue)&&batch.BaseRevision==world.Revision&&batch.Layout.Equals(sourceLayout)&&
         batch.ReconstructionVersion==TerrainSourceSurfaceLayout.ReconstructionVersion;
 
     private void Dispatch(double3 focus,double3 occupied)
     {
         long capacity=derivedLimit-liveCharge;
-        if(capacity<=0){Status="Derived terrain budget is full";dirty=false;pendingBrush=null;destination=null;return;}
+        if(capacity<=0){Status="Derived terrain budget is full";dirty=false;pendingBrush=null;FailTeleport(Status);return;}
         cancellation?.Dispose();cancellation=new CancellationTokenSource();
         var token=cancellation.Token;var brush=pendingBrush;
         var batch=new TerrainSculptBatch{Epoch=epoch,Request=++requestIdentity,Coverage=coverageRevision,BaseRevision=world.Revision,Anchor=anchor,Layout=sourceLayout};
@@ -295,6 +346,8 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
         long cacheLimit=buildWithoutCache?0:consumerCacheLimit;
         bool prioritizeCollision=buildWithoutCache;
         var oldSuppression=Suppression;
+        var oldCaveTiles=new Dictionary<int3,TerrainCaveTileState>();foreach(var pair in caveTiles)oldCaveTiles.Add(pair.Key,pair.Value.State);
+        workerStage="Starting terrain worker";Interlocked.Exchange(ref workerStartedAt,Stopwatch.GetTimestamp());
         lock(resultGate){workerRunning=true;drained.Reset();}
         reservedCharge=capacity;
         bool submitted;
@@ -308,9 +361,19 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
                     using var marker=MeshMarker.Auto();token.ThrowIfCancellationRequested();
                     if(brush.HasValue)using(EditMarker.Auto())batch.Edit=world.StageExcavation(brush.Value);
                     using var snapshot=batch.Edit!=null?world.CaptureMeshingSnapshot(batch.Edit):world.CaptureSnapshot();
-                    var budget=new TerrainSculptBuildBudget(capacity,token);
-                    using(SuppressionMarker.Auto())batch.Suppression=TerrainSculptSuppression.Build(snapshot,batch.Edit,oldSuppression,budget,consumerCacheLimit,height);
-                    using(CoverageMarker.Auto())TerrainSculptBatchBuilder.Build(batch,snapshot,height,chunkSize,focus,oldGroups,capturedPins,budget,oldAnchor,oldDensityRevision,oldChunks,oldCache,cacheLimit,prioritizeCollision,sourceLayout);
+                    var budget=new TerrainSculptBuildBudget(capacity,token,stage=>workerStage=stage);
+                    if(caves==null)using(SuppressionMarker.Auto())batch.Suppression=TerrainSculptSuppression.Build(snapshot,batch.Edit,oldSuppression,budget,consumerCacheLimit,height);
+                    using(CoverageMarker.Auto())
+                    {
+                        if(caves!=null)TerrainCaveBatchBuilder.Build(batch,snapshot,height,chunkSize,focus,oldGroups,capturedPins,budget,oldAnchor,oldDensityRevision,oldChunks,oldCache,cacheLimit,sourceLayout,oldCaveTiles);
+                        else TerrainSculptBatchBuilder.Build(batch,snapshot,height,chunkSize,focus,oldGroups,capturedPins,budget,oldAnchor,oldDensityRevision,oldChunks,oldCache,cacheLimit,prioritizeCollision,sourceLayout);
+                    }
+                    if(caves!=null)
+                    {
+                        budget.Report("Preparing cave foliage mask");
+                        using(SuppressionMarker.Auto())batch.Suppression=TerrainSculptSuppression.Build(snapshot,batch.Edit,oldSuppression,budget,consumerCacheLimit,height,batch.Groups);
+                        batch.Charge=budget.PeakBytes;
+                    }
                     token.ThrowIfCancellationRequested();
                 }
                 catch(Exception ex){batch.Error=ex;}
@@ -350,11 +413,14 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
         {
             foreach(var pair in touched)pair.Key.SetSculptSurface(null);
             foreach(var pair in staged)findRuntime(pair.Key).SetSculptSurface(pair.Value);
+            foreach(var pair in caveTiles)if(!preparing.ReuseCaveTiles.Contains(pair.Key))pair.Value.Hide();
+            foreach(var tile in stagedCaveTiles.Values)tile.Publish();
             if(preparing.Edit!=null&&!world.TryCommit(preparing.Edit))throw new InvalidOperationException("Density changed during terrain publication.");
         }
         catch
         {
             foreach(var pair in touched)pair.Key.SetSculptSurface(pair.Value);
+            foreach(var tile in stagedCaveTiles.Values)tile.Hide();foreach(var tile in caveTiles.Values)tile.Publish();
             throw;
         }
         bool edited=preparing.Edit!=null;TerrainDensityBrush brush=edited?preparing.Edit.Brush:default;
@@ -362,16 +428,23 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
         foreach(var pair in live)if(!preparing.Reuse.Contains(pair.Key)){pair.Value.Dispose();retired.Add(pair.Key);}
         foreach(var coord in retired)live.Remove(coord);
         foreach(var pair in staged)live.Add(pair.Key,pair.Value);staged.Clear();
-        groups=preparing.Groups;meshCache=preparing.MeshCache;buildWithoutCache=false;Suppression=preparing.Suppression;liveCharge=(meshCache?.Charge??0)+SuppressionBytes;
+        var retiredTiles=new List<int3>();foreach(var pair in caveTiles)if(!preparing.ReuseCaveTiles.Contains(pair.Key)){pair.Value.Dispose();retiredTiles.Add(pair.Key);}
+        foreach(var key in retiredTiles)caveTiles.Remove(key);
+        foreach(var pair in stagedCaveTiles)caveTiles.Add(pair.Key,pair.Value);stagedCaveTiles.Clear();
+        caveCandidates=preparing.CaveCandidates??new HashSet<int3>();
+        caveSky=preparing.CaveSky;
+        groups=preparing.Groups;meshCache=preparing.MeshCache;buildWithoutCache=false;Suppression=preparing.Suppression;liveCharge=(meshCache?.Charge??0)+SuppressionBytes+(caveSky?.Count??0)*48L;
         LiveRenderTriangles=0;LiveCollisionTriangles=0;
         foreach(var surface in live.Values)
         {liveCharge+=surface.PayloadBytes*2+4096;LiveRenderTriangles+=surface.RenderTriangles;LiveCollisionTriangles+=surface.CollisionTriangles;}
+        foreach(var tile in caveTiles.Values){liveCharge+=tile.Charge;LiveRenderTriangles+=tile.Triangles;if(tile.State.Collision)LiveCollisionTriangles+=tile.Triangles;}
         PreparedGroupCount=0;RetainedGroupCount=0;
         foreach(var group in groups){if(group.Prepared)PreparedGroupCount++;if(group.Retained)RetainedGroupCount++;}
         PublishedDensityRevision=world.Revision;PublishedCoverageRevision=preparing.Coverage;
         publishedAnchor=preparing.Anchor;
+        bool refreshCoverage=caves!=null&&preparing.Coverage!=coverageRevision;
         // Release caller-owned CPU arrays once Unity has copied/cooked them.
-        preparing.Groups=null;preparing.Dispose();preparing=null;reservedCharge=0;pendingBrush=null;dirty=false;Status="Ready";
+        preparing.Groups=null;preparing.Dispose();preparing=null;reservedCharge=0;pendingBrush=null;dirty=refreshCoverage;Status="Ready";
         if(destination.HasValue)
         {
             var controller=viewer.GetComponent<CharacterController>();bool enabled=controller!=null&&controller.enabled;
@@ -396,6 +469,7 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
     private void DiscardPrepared()
     {
         foreach(var surface in staged.Values)surface.Dispose();staged.Clear();
+        foreach(var tile in stagedCaveTiles.Values)tile.Dispose();stagedCaveTiles.Clear();caveStagingOrder.Clear();caveStagingCursor=0;
         preparing?.Dispose();preparing=null;stagingOrder.Clear();stagingCursor=0;reservedCharge=0;
     }
 
@@ -403,11 +477,13 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
     {
         if(disposed || Persistence!=null&&!Persistence.Ready || world.Revision!=PublishedDensityRevision)return false;
         if(world.ModifiedBrickCount>0&&PublishedCoverageRevision<0)return false;
+        if(caves!=null&&PublishedCoverageRevision<0)return false;
+        if(!CaveTilesReady(center-new double3(radius),center+new double3(radius),false))return false;
         var coverage=new TerrainSculptCoveragePolicy(publishedAnchor);
         foreach(var group in groups)
         {
             if(TerrainSculptCoveragePolicy.Distance(center,group.Minimum,group.Maximum)>radius)continue;
-            if(!group.Render || coverage.Weight(center-new double3(0,radius,0))<1 || coverage.Weight(center+new double3(0,radius,0))<1)return false;
+            if(!group.Render || !group.Natural&&(coverage.Weight(center-new double3(0,radius,0))<1 || coverage.Weight(center+new double3(0,radius,0))<1))return false;
             int x0=TerrainDensityCoordinates.FloorDiv(TerrainDensityCoordinates.FloorIndex(group.Footprint.Min.x),chunkSize);
             int z0=TerrainDensityCoordinates.FloorDiv(TerrainDensityCoordinates.FloorIndex(group.Footprint.Min.y),chunkSize);
             int x1=TerrainDensityCoordinates.FloorDiv(group.Footprint.Max.x-1,chunkSize),z1=TerrainDensityCoordinates.FloorDiv(group.Footprint.Max.y-1,chunkSize);
@@ -425,11 +501,12 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
         if(!math.all(math.isfinite(from))||!math.all(math.isfinite(to)))return false;
         double3 min=math.min(from,to)-new double3(radius,1,radius);
         double3 max=math.max(from,to)+new double3(radius,height,radius);
+        if(!CaveTilesReady(min,max,true))return false;
         var visual=new TerrainSculptCoveragePolicy(publishedAnchor);
         foreach(var group in groups)
         {
             if(math.length(math.max(math.max(group.Minimum-max,min-group.Maximum),0))>TerrainSculptCoveragePolicy.CollisionRadius)continue;
-            if(visual.Weight(to)<1||visual.Weight(to+new double3(0,height,0))<1)return false;
+            if(!group.Natural&&(visual.Weight(to)<1||visual.Weight(to+new double3(0,height,0))<1))return false;
             if(!group.Collision||PublishedDensityRevision!=world.Revision)return false;
             // Pressure recovery may leave distant edits on the baseline renderer. Allow
             // approach through air, but never enter the edited volume before its visible
@@ -446,6 +523,18 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
         return true;
     }
 
+    private bool CaveTilesReady(double3 min,double3 max,bool collision)
+    {
+        if(caves==null)return true;
+        int3 lo=TerrainCaveBatchBuilder.Tile(min),hi=TerrainCaveBatchBuilder.Tile(max);
+        for(int z=lo.z;z<=hi.z;z++)for(int y=lo.y;y<=hi.y;y++)for(int x=lo.x;x<=hi.x;x++)
+        {
+            var key=new int3(x,y,z);if(!caveCandidates.Contains(key))continue;
+            if(!caveTiles.TryGetValue(key,out var tile)||collision&&!tile.State.Collision)return false;
+        }
+        return true;
+    }
+
     public void Dispose()
     {
         lock(resultGate){if(disposed)return;disposed=true;}
@@ -453,6 +542,8 @@ public sealed class TerrainSculptRuntime : IDisposable, ITerrainMovementGuard, I
         SkyAccess?.Dispose();
         lock(resultGate){completed?.Dispose();completed=null;}
         DiscardPrepared();foreach(var surface in live.Values)surface.Dispose();live.Clear();groups.Clear();pins.Clear();meshCache=null;
+        foreach(var tile in caveTiles.Values)tile.Dispose();caveTiles.Clear();caveCandidates.Clear();TerrainAssetOwner.Destroy(caveMaterial);
+        caveSky=null;
         Suppression=null;liveCharge=reservedCharge=0;cancellation?.Dispose();drained.Dispose();
         // Pending batches have been cancelled; only the last published density may flush.
         Persistence?.Dispose();

@@ -98,6 +98,7 @@ public class WorldManager : MonoBehaviour
     [SerializeField] TerrainSculptSurfaceSettings excavationAppearance;
     [Tooltip("Live cave ambient controls. Empty uses Resources/TerrainSculpting/CaveLighting. Probe spacing is 2 m.")]
     [SerializeField] TerrainSkyAccessSettings caveLighting;
+    [SerializeField] TerrainCaveSettings caveGeneration=TerrainCaveSettings.Default;
 
     private ChunkManager chunkManager;
     private TerrainSculptController sculptController;
@@ -109,6 +110,9 @@ public class WorldManager : MonoBehaviour
     public Transform Viewer => viewer;
     public float GlobalWaterHeight => globalWaterY;
     public TreeRegistry Trees => chunkManager?.Trees;
+    public bool CanFindCave=>chunkManager?.Caves!=null;
+    public string CaveDiscoveryStatus=>chunkManager==null?"World not running":!CanFindCave?"Enable Procedural Caves and regenerate terrain to find a cave.":chunkManager.CaveDiscoveryStatus;
+    public bool FindAndTravelToCave()=>chunkManager!=null&&chunkManager.RequestCaveSearch();
     public bool ShowTreeExclusionRadiusGizmos => showTreeExclusionRadiusGizmos;
     public TreeGameplayManager TreeGameplay => chunkManager?.TreeGameplay;
     public string StreamingBudgetSummary => chunkManager?.StreamingBudgetSummary ?? "Streaming: world not running";
@@ -206,7 +210,7 @@ public class WorldManager : MonoBehaviour
     private void ConfigureSculptController()
     {
         if(sculptController!=null)sculptController.Configure(null,null);
-        if(chunkManager.Sculpting==null||viewer==null)return;
+        if(!enableTerrainSculpting||chunkManager.Sculpting==null||viewer==null)return;
         var localInput=viewer.GetComponentInChildren<LocalPlayerInput>(true);
         if(localInput==null)return;
         sculptController=localInput.GetComponent<TerrainSculptController>()??localInput.gameObject.AddComponent<TerrainSculptController>();
@@ -228,6 +232,7 @@ public class WorldManager : MonoBehaviour
             MountainHorizontalScale = mountainWidth,
             MountainSnowRenderCoverageGamma = mountainSnowBlendGamma,
             Erosion = erosion.Sanitized(),
+            Caves = caveGeneration.Sanitized(),
             Water = new TerrainWaterSettings(globalWaterY, meshHeightMultiplier, worldScale)
         },
         Coverage = new TerrainCoverageConfiguration

@@ -15,6 +15,7 @@ public sealed class TerrainSculptGroup
     internal long ContentRevision;
     internal int VisualClass;
     internal TerrainSourceSurfaceLayout SourceLayout;
+    internal bool Natural;
 }
 
 internal sealed class TerrainSculptChunkBuild
@@ -31,6 +32,10 @@ internal sealed class TerrainSculptBatch : IDisposable
     internal List<TerrainSculptGroup> Groups;
     internal readonly Dictionary<ChunkCoord, TerrainSculptChunkBuild> Chunks = new Dictionary<ChunkCoord, TerrainSculptChunkBuild>();
     internal readonly HashSet<ChunkCoord> Reuse = new HashSet<ChunkCoord>();
+    internal readonly Dictionary<int3,TerrainCaveTileBuild> CaveTiles = new Dictionary<int3,TerrainCaveTileBuild>();
+    internal readonly HashSet<int3> ReuseCaveTiles = new HashSet<int3>();
+    internal HashSet<int3> CaveCandidates;
+    internal Dictionary<int3,float> CaveSky;
     internal Exception Error;
     internal TerrainSculptMeshCache MeshCache;
     internal TerrainSculptSuppression Suppression;
@@ -38,7 +43,7 @@ internal sealed class TerrainSculptBatch : IDisposable
     internal double ExtractMs,AssemblyMs;
     internal TerrainSourceSurfaceLayout Layout;
     internal int ReconstructionVersion=TerrainSourceSurfaceLayout.ReconstructionVersion;
-    public void Dispose() { Edit?.Dispose(); Edit = null; Chunks.Clear(); Reuse.Clear(); Groups = null; MeshCache=null;Suppression=null; }
+    public void Dispose() { Edit?.Dispose(); Edit = null; Chunks.Clear(); Reuse.Clear(); CaveTiles.Clear();ReuseCaveTiles.Clear();CaveCandidates=null;CaveSky=null; Groups = null; MeshCache=null;Suppression=null; }
 }
 
 /// <summary>Producer-thread batch planning and extraction. No Unity objects are read here.</summary>
@@ -80,7 +85,7 @@ internal static class TerrainSculptBatchBuilder
         int chunkSize, double3 focus, IReadOnlyList<TerrainSculptGroup> previous, IReadOnlyList<TerrainSculptPin> pins,
         TerrainSculptBuildBudget budget, double3 previousAnchor, long previousDensityRevision, ISet<ChunkCoord> previousChunks,
         TerrainSculptMeshCache previousCache=null,long cacheLimit=16L*1024*1024,bool prioritizeCollision=false,
-        TerrainSourceSurfaceLayout? sourceLayout=null)
+        TerrainSourceSurfaceLayout? sourceLayout=null,List<TerrainSculptGroup> suppliedGroups=null)
     {
         var layout=sourceLayout??TerrainSourceSurfaceLayout.Current(snapshot.Profile);batch.Layout=layout;
         if(layout.Spacing!=snapshot.Profile.Spacing||layout.BoundaryStep!=1)throw new ArgumentException("Excavation requires the canonical full-resolution source layout.");
@@ -89,13 +94,14 @@ internal static class TerrainSculptBatchBuilder
         long assemblyStarted=System.Diagnostics.Stopwatch.GetTimestamp();
         var cache=new TerrainSculptMeshCache.Builder(previousCache,snapshot,budget,cacheLimit);
         var heightCache=new HeightCache(height,snapshot.Profile.Spacing,budget);height=heightCache.Read;
-        batch.Groups = Group(snapshot);
+        batch.Groups = suppliedGroups??Group(snapshot);
         bool Relevant(TerrainSculptGroup group)
         {
             if(policy.Prepare(group.Minimum,group.Maximum)||TerrainSculptCoveragePolicy.Distance(focus,group.Minimum,group.Maximum)<=TerrainSculptCoveragePolicy.CollisionRelease)return true;
             if(pins!=null)foreach(var pin in pins)if(math.all(pin.Minimum<=group.Maximum)&&math.all(pin.Maximum>=group.Minimum))return true;
             return false;
         }
+        budget.Report("Resolving terrain surface boundaries");
         TerrainSculptPatchPlanner.PrepareGroups(snapshot,batch.Groups,height,layout,budget,Relevant);
         var chunkCoords = new HashSet<ChunkCoord>();
         double s = snapshot.Profile.Spacing;
@@ -117,11 +123,11 @@ internal static class TerrainSculptBatchBuilder
                 if(math.all(p<group.Footprint.Max)&&math.all(p+16>group.Footprint.Min))changed=true;
             }
             group.ContentRevision=changed?batch.Request:exactOld.ContentRevision;
-            group.Prepared = policy.Prepare(group.Minimum,group.Maximum);
+            group.Prepared = group.Natural||policy.Prepare(group.Minimum,group.Maximum);
             group.Retained = group.Prepared || (wasPrepared && policy.Retain(group.Minimum,group.Maximum));
-            group.Render = group.Retained && policy.Visible(group.Minimum,group.Maximum);
+            group.Render = group.Retained && (group.Natural||policy.Visible(group.Minimum,group.Maximum));
             double distance = TerrainSculptCoveragePolicy.Distance(focus,group.Minimum,group.Maximum);
-            group.Collision = distance <= TerrainSculptCoveragePolicy.CollisionPrepare ||
+            group.Collision = distance <= (group.Natural?TerrainCaveBatchBuilder.CollisionLead:TerrainSculptCoveragePolicy.CollisionPrepare) ||
                 (wasCollision && distance <= TerrainSculptCoveragePolicy.CollisionRelease);
             if (pins != null) foreach (var pin in pins)
                 if (math.all(pin.Minimum <= group.Maximum) && math.all(pin.Maximum >= group.Minimum)) group.Collision = true;
@@ -133,7 +139,7 @@ internal static class TerrainSculptBatchBuilder
             group.Render &= !prioritizeCollision||pressureRender;
             double2 furthest=math.max(math.abs(group.Minimum.xz-policy.Anchor.xz),math.abs(group.Maximum.xz-policy.Anchor.xz));
             double vertical=Math.Max(Math.Abs(group.Minimum.y-policy.Anchor.y),Math.Abs(group.Maximum.y-policy.Anchor.y));
-            group.VisualClass=!group.Render?0:math.length(furthest)<=TerrainSculptCoveragePolicy.FullRadius&&vertical<=TerrainSculptCoveragePolicy.FullVertical?1:2;
+            group.VisualClass=!group.Render?0:group.Natural||math.length(furthest)<=TerrainSculptCoveragePolicy.FullRadius&&vertical<=TerrainSculptCoveragePolicy.FullVertical?1:2;
             if (!group.Render && !group.Collision)
             {
                 if(group.Prepared)
@@ -182,8 +188,10 @@ internal static class TerrainSculptBatchBuilder
         }
         var ordered = new List<ChunkCoord>(chunkCoords);
         ordered.Sort((a,b) => a.x != b.x ? a.x.CompareTo(b.x) : a.z.CompareTo(b.z));
+        int chunkIndex=0;
         foreach (var coord in ordered)
         {
+            budget.Report($"Building terrain surface chunks {++chunkIndex}/{ordered.Count}");
             if(batch.Reuse.Contains(coord))continue;
             budget.Check();
             long chunkStart=budget.ChargedBytes,chunkPersistent=budget.PersistentBytes;
@@ -208,6 +216,17 @@ internal static class TerrainSculptBatchBuilder
             var output = new TerrainSculptChunkBuild();
             output.Render = BuildChunk(snapshot.Profile,domain,height,render,layout.BoundaryStep,budget,true);
             output.Collision = BuildChunk(snapshot.Profile,domain,height,collision,layout.BoundaryStep,budget,false);
+            if(suppliedGroups!=null)
+            {
+                if(output.Render!=null)output.Render=TerrainCaveMeshSimplifier.Simplify(output.Render,snapshot,budget);
+                if(output.Collision!=null)
+                {
+                    // In natural mode every selected exterior patch is canonical. The same
+                    // simplified mesh supplies collision wherever render/collision agree.
+                    bool identical=render.Count==collision.Count;foreach(var group in render.Keys)identical&=collision.ContainsKey(group);
+                    output.Collision=identical?output.Render:TerrainCaveMeshSimplifier.Simplify(output.Collision,snapshot,budget);
+                }
+            }
             batch.Chunks.Add(coord,output);
             budget.CompleteScope(chunkStart,((output.Render?.PayloadBytes??0)+(output.Collision?.PayloadBytes??0))*2,chunkPersistent);
         }

@@ -36,7 +36,7 @@ int FSFlameHead(float3 p)
 }
 // Receiver-plane comparison evaluates each sample on the receiver plane, avoiding
 // the concentric self-shadow bands caused by comparing all samples to one distance.
-half FSFlameVisibility(uint index,float3 positionWS,float3 delta,half3 normalWS,bool moving)
+half FSFlameVisibility(uint index,float3 positionWS,float3 delta,float3 normalWS,bool moving,float receiverBias)
 {
     uint face=FSFlameFace(delta),slice=index*6+face;
     float4 clip=mul(_FSFlameShadowVP[slice],float4(positionWS,1));
@@ -55,7 +55,10 @@ half FSFlameVisibility(uint index,float3 positionWS,float3 delta,half3 normalWS,
         float3 ray=normalize(forward+right*(sampleUV.x*2-1)+up*(sampleUV.y*2-1));
         float denominator=dot(normalWS,ray);
         float distance=abs(denominator)>.0001?dot(normalWS,delta)/denominator:length(delta);
-        float compare=(max(0,distance)-.006)/_FSFlamePositions[index].w;
+        // Convert the optional normal displacement into radial depth. A fixed
+        // radial tolerance becomes too small along grazing rays on curved stone.
+        float bias=.006+receiverBias/max(.2,abs(denominator));
+        float compare=(max(0,distance)-bias)/_FSFlamePositions[index].w;
         float depth;
         if(moving)depth=LOAD_TEXTURE2D_ARRAY_LOD(_FSFlameDynamicDepth,pixel,slice,0).r;
         else depth=LOAD_TEXTURE2D_ARRAY_LOD(_FSFlameStaticDepth,pixel,slice,0).r;
@@ -63,33 +66,39 @@ half FSFlameVisibility(uint index,float3 positionWS,float3 delta,half3 normalWS,
     }
     return visibility;
 }
+half FSFlameVisibility(uint index,float3 positionWS,float3 delta,float3 normalWS,bool moving)
+{return FSFlameVisibility(index,positionWS,delta,normalWS,moving,0);}
 float FSFlameAttenuation(float distanceSquared,float rangeSquared)
 {
     float ratio=distanceSquared/rangeSquared;
     float edge=saturate(1-ratio*ratio);
     return edge*edge/(1+distanceSquared*.2);
 }
-half3 FSFlameUnit(uint i,float3 positionWS,half3 normalWS,half3 planeNormal)
+half3 FSFlameUnit(uint i,float3 positionWS,half3 normalWS,float3 planeNormal,float receiverBias)
 {
     float3 delta=positionWS-_FSFlamePositions[i].xyz;float d2=dot(delta,delta),r=_FSFlamePositions[i].w;
     if(d2>=r*r || _FSFlameColors[i].a<.5h)return 0;
     half ndotl=saturate(dot(normalWS,-delta*rsqrt(max(d2,.0001))));
     if(ndotl<=0)return 0;
-    return (ndotl*FSFlameAttenuation(d2,r*r)*FSFlameVisibility(i,positionWS,delta,planeNormal,false)).xxx;
+    return (ndotl*FSFlameAttenuation(d2,r*r)*FSFlameVisibility(i,positionWS,delta,planeNormal,false,receiverBias)).xxx;
 }
-half3 FSFlameDirect(float3 positionWS,half3 normalWS,bool average,half3 planeNormal)
+half3 FSFlameUnit(uint i,float3 positionWS,half3 normalWS,float3 planeNormal)
+{return FSFlameUnit(i,positionWS,normalWS,planeNormal,0);}
+half3 FSFlameDirect(float3 positionWS,half3 normalWS,bool average,float3 planeNormal,float receiverBias)
 {
     half3 result=0;int head=FSFlameHead(positionWS);
     [loop]for(uint visit=0;head!=0 && visit<FS_FLAME_CAPACITY;visit++)
     {
         int2 link=_FSFlameLinks[head-1];uint i=link.x;head=link.y;
         if(average && _FSFlameAverageColors[i].a<.5h)continue;
-        half3 unit=FSFlameUnit(i,positionWS,normalWS,planeNormal);
+        half3 unit=FSFlameUnit(i,positionWS,normalWS,planeNormal,receiverBias);
         if(average)result+=unit*_FSFlameAverageColors[i].rgb;
-        else if(any(unit>0))result+=unit*_FSFlameColors[i].rgb*FSFlameVisibility(i,positionWS,positionWS-_FSFlamePositions[i].xyz,planeNormal,true);
+        else if(any(unit>0))result+=unit*_FSFlameColors[i].rgb*FSFlameVisibility(i,positionWS,positionWS-_FSFlamePositions[i].xyz,planeNormal,true,receiverBias);
     }
     return result;
 }
+half3 FSFlameDirect(float3 positionWS,half3 normalWS,bool average,float3 planeNormal)
+{return FSFlameDirect(positionWS,normalWS,average,planeNormal,0);}
 bool FSFlameCacheWorthwhile(float3 p,half3 n)
 {
     if(_FSSurfaceAdaptive==0)return true;
@@ -143,16 +152,15 @@ bool FSFlameSurface(float3 p,half3 n,out half3 irradiance,out int usedMip)
     }
     return false;
 }
-half3 FSLocalFlameDiffuse(float3 positionWS,half3 normalWS)
+half3 FSLocalFlameDiffuse(float3 positionWS,half3 normalWS,float3 planeNormal,float receiverBias)
 {
     if(_FSFlameCount==0)return 0;
-    half3 planeNormal=normalize(cross(ddx(positionWS),ddy(positionWS)));
     planeNormal*=dot(planeNormal,normalWS)<0?-1:1;
     half3 result;
     int usedMip;bool cached=FSFlameSurface(positionWS,normalWS,result,usedMip);
     if(_FSSurfaceDebug==1)return cached?half3(0,1,0):half3(1,0,0);
     if(_FSSurfaceDebug==2)return cached?half3(usedMip/3.0,1,0):half3(1,0,0);
-    if(!cached)return FSFlameDirect(positionWS,normalWS,false,planeNormal);
+    if(!cached)return FSFlameDirect(positionWS,normalWS,false,planeNormal,receiverBias);
     // Cache contains average stationary illumination. Apply only the difference
     // for nearby flicker and moving blockers; carried lights add their full result.
     int head=FSFlameHead(positionWS);
@@ -160,16 +168,22 @@ half3 FSLocalFlameDiffuse(float3 positionWS,half3 normalWS)
     {
         int2 link=_FSFlameLinks[head-1];uint i=link.x;head=link.y;
         if(_FSFlameColors[i].a<1.5h)continue;
-        half3 unit=FSFlameUnit(i,positionWS,normalWS,planeNormal);
+        half3 unit=FSFlameUnit(i,positionWS,normalWS,planeNormal,receiverBias);
         if(!any(unit>0))continue;
         // A moving blocker or carried source makes this receiver use exact live
         // evaluation. Subtracting an interpolated aggregate would leave residual
         // light when a door blocks every contributor. The stored cache stays valid.
-        if(_FSFlameColors[i].a>2.5h)return FSFlameDirect(positionWS,normalWS,false,planeNormal);
-        half dynamicVisibility=FSFlameVisibility(i,positionWS,positionWS-_FSFlamePositions[i].xyz,planeNormal,true);
+        if(_FSFlameColors[i].a>2.5h)return FSFlameDirect(positionWS,normalWS,false,planeNormal,receiverBias);
+        half dynamicVisibility=FSFlameVisibility(i,positionWS,positionWS-_FSFlamePositions[i].xyz,planeNormal,true,receiverBias);
         half3 average=_FSFlameAverageColors[i].a>.5h?_FSFlameAverageColors[i].rgb:0;
         result+=unit*(_FSFlameColors[i].rgb*dynamicVisibility-average);
     }
     return max(result,0);
+}
+half3 FSLocalFlameDiffuse(float3 positionWS,half3 normalWS,float3 planeNormal)
+{return FSLocalFlameDiffuse(positionWS,normalWS,planeNormal,0);}
+half3 FSLocalFlameDiffuse(float3 positionWS,half3 normalWS)
+{
+    return FSLocalFlameDiffuse(positionWS,normalWS,normalize(cross(ddx(positionWS),ddy(positionWS))));
 }
 #endif

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// <summary>World-aligned far patch policy; contains no runtimes, rendering or request queues.</summary>
@@ -6,8 +7,10 @@ public sealed class TerrainCoveragePolicy
     public const int FarTerrainMaxPatchSizeInChunks = 32;
     private readonly bool enableFarTerrain;
     private readonly int farTerrainStartRing, farTerrainMacroTileSize;
-    public TerrainCoveragePolicy(TerrainCoverageConfiguration configuration)
+    private readonly Func<FarTerrainPatchKey,bool> refine;
+    public TerrainCoveragePolicy(TerrainCoverageConfiguration configuration,Func<FarTerrainPatchKey,bool> refine=null)
     {
+        this.refine=refine;
         enableFarTerrain = configuration.EnableFarTerrain;
         farTerrainStartRing = Mathf.Max(1, configuration.FarTerrainStartRing);
         farTerrainMacroTileSize = Mathf.Max(1, configuration.FarTerrainMacroTileSize);
@@ -43,6 +46,9 @@ public sealed class TerrainCoveragePolicy
             if (minRing >= GetFarPatchStartRing(size))
             {
                 patch = new FarTerrainPatchKey(origin, size);
+                // Keep the ordinary aligned leaf rules, but descend around source
+                // replacements instead of expanding them to a whole coarse patch.
+                if(size>farTerrainMacroTileSize&&refine?.Invoke(patch)==true)continue;
                 return true;
             }
         }

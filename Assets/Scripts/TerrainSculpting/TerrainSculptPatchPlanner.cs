@@ -47,7 +47,7 @@ internal static class TerrainSculptPatchPlanner
                 catch(TerrainSculptGuardException ex) when(attempt<MaximumReplans)
                 {
                     if(ex.Outcome==TerrainSculptBuildOutcome.NeedsHorizontalGuard)
-                    { group.Footprint=new TerrainSculptFootprint(checked(f.Min-16),checked(f.Max+16));expanded=true; }
+                    { int expansion=group.Natural?TerrainCaveBatchBuilder.TileCells:16;group.Footprint=new TerrainSculptFootprint(checked(f.Min-expansion),checked(f.Max+expansion));expanded=true; }
                     else if(ex.Outcome==TerrainSculptBuildOutcome.NeedsVerticalGuard)
                     {
                         // Persist the validated expansion in the group's planning bounds.

@@ -93,13 +93,15 @@ public sealed class TerrainSculptVisualField : ITerrainDensityField
 public sealed class TerrainSculptBuildBudget
 {
     private readonly System.Threading.CancellationToken cancellation;
+    private readonly Action<string> progress;
     public long Capacity { get; }
     public long ChargedBytes { get; private set; }
     public long PeakBytes { get; private set; }
     public long PersistentBytes { get; private set; }
-    public TerrainSculptBuildBudget(long capacity, System.Threading.CancellationToken cancellation = default)
-    { if (capacity < 0) throw new ArgumentOutOfRangeException(nameof(capacity)); Capacity = capacity; this.cancellation = cancellation; }
+    public TerrainSculptBuildBudget(long capacity, System.Threading.CancellationToken cancellation = default, Action<string> progress = null)
+    { if (capacity < 0) throw new ArgumentOutOfRangeException(nameof(capacity)); Capacity = capacity; this.cancellation = cancellation; this.progress=progress; }
     public void Check() => cancellation.ThrowIfCancellationRequested();
+    internal void Report(string stage) { Check();progress?.Invoke(stage); }
     public void Charge(long bytes)
     {
         Check();

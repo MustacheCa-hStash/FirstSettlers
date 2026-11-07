@@ -55,12 +55,13 @@ public static class TerrainSculptPatchBuilder
         double spacing = snapshot.Profile.Spacing;
         double ix0 = bounds.Min.x * spacing, ix1 = bounds.Max.x * spacing;
         double iz0 = bounds.Min.z * spacing, iz1 = bounds.Max.z * spacing;
+        bool natural=snapshot is TerrainDensitySnapshot naturalSnapshot&&naturalSnapshot.Generator is TerrainCaveDensityGenerator;
         // Interior source-chunk boundaries are ordinary shared volume faces, including cave
         // openings. Only the excavation group's actual outside edges get baseline collars.
-        var west = bounds.Min.x==global.Min.x?TerrainBoundaryTracer.Trace(interior,0,2,iz0,iz1,budget):null;
-        var east = bounds.Max.x==global.Max.x?TerrainBoundaryTracer.Trace(interior,1,2,iz0,iz1,budget):null;
-        var south = bounds.Min.z==global.Min.z?TerrainBoundaryTracer.Trace(interior,4,0,ix0,ix1,budget):null;
-        var north = bounds.Max.z==global.Max.z?TerrainBoundaryTracer.Trace(interior,5,0,ix0,ix1,budget):null;
+        var west = bounds.Min.x==global.Min.x?TerrainBoundaryTracer.Trace(interior,0,2,iz0,iz1,budget,natural):null;
+        var east = bounds.Max.x==global.Max.x?TerrainBoundaryTracer.Trace(interior,1,2,iz0,iz1,budget,natural):null;
+        var south = bounds.Min.z==global.Min.z?TerrainBoundaryTracer.Trace(interior,4,0,ix0,ix1,budget,natural):null;
+        var north = bounds.Max.z==global.Max.z?TerrainBoundaryTracer.Trace(interior,5,0,ix0,ix1,budget,natural):null;
         var outerVertices = new Dictionary<int2,int>();
         int Outer(int x, int z)
         {
@@ -92,6 +93,35 @@ public static class TerrainSculptPatchBuilder
         if(e!=null&&n!=null){RequireSameCorner(interior,e[e.Count-1],n[n.Count-1]);Corner(footprint.Max.x,footprint.Max.y,bounds.Max.x,bounds.Max.z,e[e.Count-1]);}
         budget?.Charge((long)output.Positions.Count*16);
         var surfaceData=new float2[output.Positions.Count];Array.Copy(interior.SurfaceData,surfaceData,interior.SurfaceData.Length);
+        if(natural)
+        {
+            // Preserve underground surfaces through the one-cell exterior collar. Only
+            // unchanged original skin is replaced by the explicit stitched surface strip.
+            var ring=new List<TerrainDensityCellBounds>();
+            if(west!=null)ring.Add(new TerrainDensityCellBounds(new int3(domain.Min.x,minY,domain.Min.y),new int3(bounds.Min.x,maxY,domain.Max.y)));
+            if(east!=null)ring.Add(new TerrainDensityCellBounds(new int3(bounds.Max.x,minY,domain.Min.y),new int3(domain.Max.x,maxY,domain.Max.y)));
+            if(south!=null)ring.Add(new TerrainDensityCellBounds(new int3(bounds.Min.x,minY,domain.Min.y),new int3(bounds.Max.x,maxY,bounds.Min.z)));
+            if(north!=null)ring.Add(new TerrainDensityCellBounds(new int3(bounds.Min.x,minY,bounds.Max.z),new int3(bounds.Max.x,maxY,domain.Max.y)));
+            var allSurface=new List<float2>(surfaceData);
+            foreach(var cells in ring)
+            {
+                if(cells.CellCount<=0)continue;
+                var piece=TerrainDensityMesher.BuildCached(snapshot,cells,budget,cache);
+                var remap=new Dictionary<int,int>();
+                int Vertex(int source)
+                {
+                    if(remap.TryGetValue(source,out int index))return index;
+                    index=output.AddStored(piece.Positions[source],piece.Normals[source]);allSurface.Add(piece.SurfaceData[source]);remap.Add(source,index);return index;
+                }
+                for(int i=0;i<piece.Triangles.Length;i+=3)
+                {
+                    int a=piece.Triangles[i],b=piece.Triangles[i+1],c=piece.Triangles[i+2];
+                    if(Math.Max(piece.SurfaceData[a].x,Math.Max(piece.SurfaceData[b].x,piece.SurfaceData[c].x))<.999f)continue;
+                    output.TriangleOriented(Vertex(a),Vertex(b),Vertex(c));
+                }
+            }
+            surfaceData=allSurface.ToArray();
+        }
         var result=output.Finish(interior.SampledBricks,interior.SkippedBricks,surfaceData:surfaceData);
         budget?.CompleteScope(scopeStart,result.PayloadBytes*2,persistentStart);
         return result;
@@ -145,6 +175,15 @@ public static class TerrainSculptPatchBuilder
             if(snapshot.ReadEncoded(new int3(x,inner.Min.y,z))>=0 || snapshot.ReadEncoded(new int3(x,inner.Max.y,z))<0)
                 throw new TerrainSculptGuardException(TerrainSculptBuildOutcome.NeedsVerticalGuard,"Vertical envelope must have solid lower and air upper guards.");
             if(x>collarInner.Min.x && x<collarInner.Max.x && z>collarInner.Min.z && z<collarInner.Max.z)continue;
+            if(snapshot is TerrainDensitySnapshot natural&&natural.Generator is TerrainCaveDensityGenerator)
+            {
+                double surface=height(x*s,z*s);
+                int near=TerrainDensityCoordinates.FloorIndex(surface/s);
+                for(int y=near-2;y<=near+2;y++)
+                    if(snapshot.ReadEncoded(new int3(x,y,z))!=snapshot.Profile.Encode(y*s-surface))
+                        throw new TerrainSculptGuardException(TerrainSculptBuildOutcome.NeedsHorizontalGuard,"Natural opening reaches the exterior collar.");
+                continue;
+            }
             if(!snapshot.HasOverrides(new int3(x,inner.Min.y,z),new int3(x,inner.Max.y,z)))continue;
             double h=height(x*s,z*s);
             for(int y=inner.Min.y;y<=inner.Max.y;y++)

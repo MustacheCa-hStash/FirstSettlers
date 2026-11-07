@@ -19,7 +19,7 @@ internal sealed class TerrainBoundaryChain
 internal static class TerrainBoundaryTracer
 {
     internal static TerrainBoundaryChain Trace(TerrainSculptMeshData mesh,int face,int along,double from,double to,
-        TerrainSculptBuildBudget budget)
+        TerrainSculptBuildBudget budget,bool surfaceOnly=false)
     {
         if(mesh.Boundary==null)throw new TerrainSculptTopologyException("Volume boundary provenance is missing.");
         var edges=new List<TerrainBoundaryEdge>();
@@ -27,6 +27,9 @@ internal static class TerrainBoundaryTracer
         TerrainSculptTopologyException Failure(string message)=>new TerrainSculptTopologyException($"{message} Face {face}; {edges.Count} edges, {adjacent.Count} geometric vertices.");
         foreach(var edge in mesh.Boundary.Edges)if((edge.Faces&(1<<face))!=0)
         {
+            // Natural passages may cross a surface patch boundary below an intact roof.
+            // Those closed contours join adjacent volume tiles, not the exterior collar.
+            if(surfaceOnly&&(mesh.SurfaceData[edge.VertexA].x>.001f||mesh.SurfaceData[edge.VertexB].x>.001f))continue;
             budget?.Charge(128);int i=edges.Count;edges.Add(edge);Link(edge.A,i);Link(edge.B,i);
         }
         void Link(TerrainSurfaceVertexId id,int i)

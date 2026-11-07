@@ -107,7 +107,7 @@ public sealed class TerrainSculptController : MonoBehaviour
         if(Preview.Minimum.y<runtime.Density.MinimumRemovalY)
         {Status=$"Below dry excavation limit ({runtime.Density.MinimumRemovalY:0.00} m); brush bottom {Preview.Minimum.y:0.00} m";return;}
         if(runtime.Persistence!=null&&!runtime.Persistence.CanExcavate){Status=PersistenceBlockReason();return;}
-        if(runtime.Busy){Status=runtime.Status;return;}
+        if(!runtime.CanRequestExcavation){Status=runtime.Status;return;}
         CanExcavate=true;Status="Ready to excavate";
     }
     private string PersistenceBlockReason()

@@ -46,6 +46,7 @@ public sealed class TerrainDensityWorld : IDisposable
     private readonly object gate = new object();
     private Dictionary<int3, TerrainDensityBrick> bricks = new Dictionary<int3, TerrainDensityBrick>();
     private readonly ITerrainDensityGenerator generator;
+    internal ITerrainDensityGenerator Generator=>generator;
     private readonly long budgetBytes;
     private readonly double minimumExcavationY;
     private long residentBytes, reservedBytes, revision;
@@ -360,7 +361,10 @@ public sealed class TerrainDensitySnapshot : IDisposable, ITerrainDensityField
     }
     public IDisposable ReserveScratch(long bytes) { RequireAlive();return owner.ReserveScratch(bytes); }
     public short ReadBaselineEncoded(int3 sample)
-    { RequireAlive();return Profile.Encode(Generator.SampleDensity(TerrainDensityCoordinates.ToWorld(sample,Profile))); }
+    {
+        RequireAlive();double3 p=TerrainDensityCoordinates.ToWorld(sample,Profile);
+        return Profile.Encode(Generator is ITerrainSurfaceReference surface?surface.SampleSurfaceDensity(p):Generator.SampleDensity(p));
+    }
     public void FillMeshHalo(int3 first,short[] destination) => FillMeshHalo(first,destination,null);
     internal void FillMeshHalo(int3 first,short[] destination,TerrainSculptCoveragePolicy? visual)
     {
@@ -368,12 +372,13 @@ public sealed class TerrainDensitySnapshot : IDisposable, ITerrainDensityField
         if(destination==null||destination.Length!=width*width*width||math.any(first<int.MinValue+32)||math.any(first>int.MaxValue-32))
             throw new ArgumentException("A mesh halo needs exactly 19 cubed samples and valid addresses.");
         var height=Generator as ITerrainHeightDensityGenerator;
+        var columns=Generator as ITerrainColumnDensityGenerator;
         double spacing=Profile.Spacing;
         for(int z=0;z<width;z++)for(int x=0;x<width;x++)
         {
             int sx=first.x+x,sz=first.z+z;
             double wx=sx*spacing,wz=sz*spacing;
-            double column=height!=null?height.SampleHeight(wx,wz):0;
+            double column=height!=null?height.SampleHeight(wx,wz):columns!=null?columns.SampleSurfaceHeight(wx,wz):0;
             int bx=TerrainDensityCoordinates.FloorDiv(sx,16),bz=TerrainDensityCoordinates.FloorDiv(sz,16),lastY=int.MinValue;
             TerrainDensityBrick brick=null;
             for(int y=0;y<width;y++)
@@ -382,7 +387,7 @@ public sealed class TerrainDensitySnapshot : IDisposable, ITerrainDensityField
                 if(by!=lastY){Bricks.TryGetValue(new int3(bx,by,bz),out brick);lastY=by;}
                 double3 p=new double3(wx,sy*spacing,wz);
                 short original=0;
-                if(brick==null||visual.HasValue)original=Profile.Encode(height!=null?p.y-column:Generator.SampleDensity(p));
+                if(brick==null||visual.HasValue)original=Profile.Encode(height!=null?p.y-column:columns!=null?columns.SampleDensityWithSurface(p,column):Generator.SampleDensity(p));
                 short value=brick==null?original:brick.Read(TerrainDensityCoordinates.Index(new int3(sx-bx*16,sy-by*16,sz-bz*16)));
                 if(visual.HasValue)value=(short)Math.Round(math.lerp((double)original,value,visual.Value.Weight(p)),MidpointRounding.AwayFromZero);
                 destination[x+width*(y+width*z)]=value;

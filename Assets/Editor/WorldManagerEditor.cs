@@ -6,6 +6,8 @@ using UnityEngine;
 [CustomEditor(typeof(WorldManager)), CanEditMultipleObjects]
 public class WorldManagerEditor : Editor
 {
+    public override bool RequiresConstantRepaint()=>Application.isPlaying&&targets.Length==1&&((WorldManager)target).CanFindCave;
+
     [InitializeOnLoadMethod]
     private static void InitializeTreeSeasonPreview()
     {
@@ -30,7 +32,8 @@ public class WorldManagerEditor : Editor
         new[] { "Terrain Shape and Climate", "sampleScale", "mountainWidth", "worldScale", "meshHeightMultiplier", "erosion", "octaves", "persistence", "lacunarity" },
         new[] { "Terrain Rendering and Lighting", "terrainMaterial", "mountainSnowBlendGamma", "terrainReceiveShadows", "terrainHorizonShadows" },
         new[] { "Terrain Streaming", "viewDistance", "colliderDistance", "enableFarTerrain", "farTerrainStartRing", "farTerrainMacroTileSize", "farTerrainHeightGridResolution", "farTerrainControlMapResolution", "farTerrainSkirtDepth" },
-        new[] { "Terrain Sculpting", "enableTerrainSculpting", "excavationAppearance", "caveLighting" },
+        new[] { "Terrain Sculpting", "enableTerrainSculpting", "excavationAppearance" },
+        new[] { "Procedural Caves", "caveGeneration", "caveLighting" },
         new[] { "Grass and Forest Ground Cover", "grassSettings", "leafClusterSettings", "fernSettings" },
         new[] { "Trees, Bushes and Rocks", "treeSettings", "showTreeExclusionRadiusGizmos" },
         new[] { "Tree Season Preview", "simulateTreeSeason", "treeSeasonAutumnAmount" },
@@ -102,6 +105,9 @@ public class WorldManagerEditor : Editor
         using (new EditorGUI.DisabledScope(!canRegenerate))
             if (GUILayout.Button("Regenerate Terrain"))
                 foreach (UnityEngine.Object o in targets) ((WorldManager)o).RegenerateTerrain();
+        using(new EditorGUI.DisabledScope(!canRegenerate||targets.Length!=1||!((WorldManager)target).CanFindCave))
+            if(GUILayout.Button("Find and travel to nearest cave entrance"))((WorldManager)target).FindAndTravelToCave();
+        if(Application.isPlaying&&targets.Length==1)EditorGUILayout.HelpBox(((WorldManager)target).CaveDiscoveryStatus,MessageType.Info);
     }
 
     private void DrawTreeSeasonPresets()

@@ -1603,6 +1603,16 @@ MonoBehaviour:
   enableTerrainSculpting: 1
   excavationAppearance: {fileID: 0}
   caveLighting: {fileID: 0}
+  caveGeneration:
+    enabled: 0
+    cellSize: 768
+    probability: 0.65
+    systemLength: 420
+    passageWidth: 8
+    passageHeight: 6
+    chamberWidth: 36
+    minimumCover: 8
+    derivedMemoryMiB: 256
 --- !u!4 &830849844
 Transform:
   m_ObjectHideFlags: 0

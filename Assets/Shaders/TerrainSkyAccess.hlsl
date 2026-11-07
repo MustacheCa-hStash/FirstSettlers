@@ -6,18 +6,24 @@ TEXTURE2D(_TerrainSkyVisibility);
 TEXTURE2D(_TerrainSkyHeight); SAMPLER(sampler_TerrainSkyHeight);
 TEXTURE2D(_TerrainSkyTable);
 float _TerrainSkyEnabled;
+float _TerrainSkyNaturalAmbient;
 float4 _TerrainSkyOrigin, _TerrainSkyControls;
 float _TerrainSkyTimes[128];
 
 // x: ambient sky exposure; y: confidence that this sample is below the original
 // surface in a resident edited tile. The latter is independent of sky brightness.
-float2 TerrainSkySample(float3 positionWS)
+float3 TerrainSkySampleDetailed(float3 positionWS)
 {
-    if (_TerrainSkyEnabled < .5) return float2(1,0);
+    if (_TerrainSkyEnabled < .5) return float3(1,0,0);
     float3 tile=floor(positionWS/32), key=tile-_TerrainSkyOrigin.xyz;
-    if(any(key<0)||any(key>=float3(16,8,16)))return float2(1,0);
-    float index=round(SAMPLE_TEXTURE2D_LOD(_TerrainSkyTable,sampler_TerrainSkyData,(float2(key.x,key.y+8*key.z)+.5)/float2(16,128),0).r*255)-1;
-    if(index<0)return float2(1,0);
+    if(any(key<0)||any(key>=float3(16,8,16)))return float3(1,0,0);
+    float4 page=SAMPLE_TEXTURE2D_LOD(_TerrainSkyTable,sampler_TerrainSkyData,(float2(key.x,key.y+8*key.z)+.5)/float2(16,128),0);
+    float index=round(page.r*255)-1;
+    if(index<0)
+    {
+        float minimumHeight=dot(page.gb,float2(255,65280))/65535*256-128+tile.y*32;
+        return page.a>.5&&positionWS.y<minimumHeight-.025?float3(0,1,1):float3(1,0,0);
+    }
     float2 slot=float2(fmod(index,16),floor(index/16));
     float3 grid=clamp((positionWS-tile*32)/2,0,15.9999);
     float2 heightUV=(slot*17+grid.xz+.5)/float2(272,136);
@@ -25,7 +31,7 @@ float2 TerrainSkySample(float3 positionWS)
     float height=dot(encoded,float2(255,65280))/65535*256-128+tile.y*32;
     // Exterior skin remains unchanged. Below the baseline, natural-air probes above
     // an intact roof cannot illuminate the cave through interpolation.
-    if(positionWS.y>=height-.025)return float2(1,0);
+    if(positionWS.y>=height-.025)return float3(1,0,0);
     float3 cell=floor(grid),fraction=grid-cell;
     float blend=_TerrainSkyControls.z<=0?1:saturate((_TerrainSkyControls.w-_TerrainSkyTimes[(int)index])/_TerrainSkyControls.z);
     float total=0,exposure=0;
@@ -48,13 +54,18 @@ float2 TerrainSkySample(float3 positionWS)
         if(dot(negative+positive,1)<.001||tile.y*32+corner.y*2>=cornerHeight-.025)weight=0;
         exposure+=lerp(data.r,data.g,blend)*weight;total+=weight;
     }
-    return float2(total>.0001?saturate(exposure/total):0,saturate((height-.025-positionWS.y)/.3));
+    return float3(total>.0001?saturate(exposure/total):0,saturate((height-.025-positionWS.y)/.3),page.a);
 }
+float2 TerrainSkySample(float3 positionWS){return TerrainSkySampleDetailed(positionWS).xy;}
 float TerrainSkyExposure(float3 positionWS){return TerrainSkySample(positionWS).x;}
 half2 TerrainCaveLighting(float3 positionWS,float3 normalWS)
 {
-    float2 sample=TerrainSkySample(positionWS+normalWS*.15);
-    return half2(lerp(saturate(_TerrainSkyControls.x),1,pow(sample.x,max(.25,_TerrainSkyControls.y))),sample.y);
+    float3 sample=TerrainSkySampleDetailed(positionWS+normalWS*.15);
+    float ambient=lerp(saturate(_TerrainSkyControls.x),saturate(_TerrainSkyNaturalAmbient),sample.z);
+    // Restrained hemispherical contrast keeps a deep natural chamber readable when
+    // direct sky access is zero. It does not add direct light or alter outdoor shading.
+    ambient*=lerp(1,lerp(.65,1.15,saturate(normalWS.y*.5+.5)),sample.z);
+    return half2(lerp(ambient,1,pow(sample.x,max(.25,_TerrainSkyControls.y))),sample.y);
 }
 half TerrainCaveAmbient(float3 positionWS,float3 normalWS){return TerrainCaveLighting(positionWS,normalWS).x;}
 half TerrainCaveDirectionalShadow(half attenuation,half lightShadowStrength,half underground)

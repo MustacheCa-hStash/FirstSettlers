@@ -46,6 +46,7 @@ public struct WorldGenerationConfiguration
     public float SampleScale, WorldScale, Persistence, Lacunarity, MeshHeightMultiplier;
     public float MountainHorizontalScale, MountainSnowRenderCoverageGamma;
     public WorldErosionSettings Erosion;
+    public TerrainCaveSettings Caves;
     public TerrainWaterSettings Water;
     public static WorldGenerationConfiguration Default => new()
     {

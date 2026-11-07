@@ -14,5 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   enabled: 1
   caveAmbientMultiplier: 0.025
+  naturalCaveAmbientMultiplier: 0.1
   skyResponse: 1.5
   blendSeconds: 0.35
