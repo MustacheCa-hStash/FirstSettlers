@@ -5,6 +5,7 @@
 #include "Assets/Shaders/TreeSeasonSimulation.hlsl"
 #include "Assets/Shaders/TreeNightLighting.hlsl"
 #include "Assets/Shaders/LocalFlameLighting.hlsl"
+#include "Assets/Shaders/ForestCanopyLighting.hlsl"
 
 InputData InitializeTreeSimpleLitInputData(
     float3 positionWS,
@@ -69,7 +70,7 @@ half3 EvaluateTreeLeafBacklighting(
         ? saturate(abs(normalDotLight))
         : saturate(-normalDotLight);
     return albedo * tint * sun.color * transmission *
-        sun.distanceAttenuation * sun.shadowAttenuation * strength;
+        sun.distanceAttenuation * sun.shadowAttenuation * strength * FSForestCrownFill(normalWS, .7h);
 }
 
 half4 ShadeDistantAwareTree(InputData inputData, SurfaceData surfaceData)

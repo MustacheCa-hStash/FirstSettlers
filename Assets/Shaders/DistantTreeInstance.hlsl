@@ -35,7 +35,7 @@ void SetupDistantTree()
 
 half4 GetDistantTreeTint(half4 fallbackTint)
 {
-#if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+#if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED) && !defined(STANDING_TREE_GPU_SUPPORT)
     return _DistantTreeInstances[unity_InstanceID].tint;
 #else
     #if defined(STANDING_TREE_INSTANCE_INCLUDED)

@@ -15,7 +15,7 @@ UNITY_INSTANCING_BUFFER_END(DistantTreeInstances)
 
 float4 GetDistantTreeFade()
 {
-#if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
+#if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED) && !defined(STANDING_TREE_GPU_SUPPORT)
     return _DistantTreeInstances[unity_InstanceID].fade;
 #else
     return UNITY_ACCESS_INSTANCED_PROP(DistantTreeInstances, _DistantTreeFade);

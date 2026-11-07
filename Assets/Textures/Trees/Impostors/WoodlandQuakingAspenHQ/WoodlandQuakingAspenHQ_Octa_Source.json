@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/WoodlandQuakingAspen.prefab",
+    "prefabGuid": "49030c7472962824085fb57e2daa4aab",
+    "dependencyHash": "b350227d6bbce9967a63e61f297e6652",
+    "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.4000000059604645
+}

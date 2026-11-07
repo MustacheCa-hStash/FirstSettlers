@@ -5,6 +5,7 @@ Shader "Hidden/TreeImpostor/OakSemanticCapture"
         _BaseMap("Base Map", 2D) = "white" {}
         _BaseColor("Bark Tint", Color) = (1,1,1,1)
         _Cutoff("Cutoff", Float) = .5
+        _AuthoredSummer("Use Authored Summer Albedo", Float) = 0
         _Smoothness("Smoothness", Float) = .08
         _BacklightingStrength("Backlighting Strength", Float) = .72
         _BacklightingEnabled("Backlighting Enabled", Float) = 1
@@ -39,7 +40,7 @@ Shader "Hidden/TreeImpostor/OakSemanticCapture"
                 half _Cutoff, _Smoothness, _BacklightingStrength, _BacklightingEnabled;
                 half _LeafDetailStrength, _LeafGradientContrast, _LeafGradientMidpoint, _ColorVariationStrength;
                 half _VerticalGradientStrength, _ColorHeightMin, _ColorHeightMax, _Brightness;
-                half _CaptureMaterialKind, _CaptureOutput;
+                half _CaptureMaterialKind, _CaptureOutput, _AuthoredSummer;
             CBUFFER_END
             struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; };
             struct Varyings
@@ -87,6 +88,7 @@ Shader "Hidden/TreeImpostor/OakSemanticCapture"
                 half noise = Noise(input.positionOS.xz*.7 + input.uv*4.7);
                 if (_CaptureOutput < .5h)
                 {
+                    if (leaf && _AuthoredSummer > .5h) return half4(sample.rgb, sample.a);
                     half luma = dot(sample.rgb,half3(.299h,.587h,.114h));
                     half detail = lerp(1.0h,clamp(1+(luma-_LeafGradientMidpoint)*_LeafGradientContrast,.25h,1.5h),_LeafDetailStrength);
                     detail *= lerp(1-_ColorVariationStrength,1+_ColorVariationStrength,noise);

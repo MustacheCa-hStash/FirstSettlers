@@ -41,7 +41,7 @@ Shader "Custom/WhitePineNeedleSimpleLitCutout"
             "RenderType" = "TransparentCutout"
             "RenderPipeline" = "UniversalPipeline"
             "Queue" = "AlphaTest"
-            "IgnoreProjector" = "True"
+            "IgnoreProjector" = "True" "StandingTreeIndirect"="True"
         }
 
         LOD 100
@@ -56,10 +56,13 @@ Shader "Custom/WhitePineNeedleSimpleLitCutout"
             Tags { "LightMode" = "UniversalForwardOnly" }
 
             HLSLPROGRAM
+            #define STANDING_TREE_GPU_SUPPORT
             #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fog
@@ -212,12 +215,14 @@ Shader "Custom/WhitePineNeedleSimpleLitCutout"
                 // Evergreen palette: location changes its tint, autumn does not.
                 needleColor *= StandingTreeLeafTint(_TreeLeafTint).rgb;
                 half3 needleNormal = NormalizeNormalPerPixel(IN.normalWS);
+                needleColor = FSForestLeafColor(needleColor);
                 needleColor = lerp(needleColor, _SnowColor.rgb,
                     saturate(StandingTreeSnow(_SnowCoverage) * smoothstep(.2h, .8h, needleNormal.y)));
                 InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);
                 inputData.normalWS = normalize(lerp(inputData.normalWS, half3(0.0h, 1.0h, 0.0h), _LightWrap * 0.22h));
 
                 inputData.vertexLighting = IN.vertexLighting;
+                inputData.bakedGI *= FSForestCrownFill(inputData.normalWS, 0.0h);
                 SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(needleColor, atlas.a, _Smoothness, _SpecularStrength);
                 half4 color = ShadeDistantAwareTree(inputData, surfaceData);
                 color.rgb += EvaluateTreeLeafBacklighting(inputData, needleColor, needleNormal,
@@ -240,10 +245,13 @@ Shader "Custom/WhitePineNeedleSimpleLitCutout"
             Cull Off
 
             HLSLPROGRAM
+            #define STANDING_TREE_GPU_SUPPORT
             #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW

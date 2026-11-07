@@ -8,7 +8,7 @@ LOGS=ROOT/'Logs/TreeHQ'
 SPECS=[
  ('RedMaple','RedMaple_LOD0_v03','M_RedMaple_Leaf','M_RedMapleBark_Stylized',0,'mapleTreePrefab',['mapleTreeBillboardPrefab','grasslandMapleTreeBillboardPrefab'],'MapleTree'),
  ('SugarMaple','SugarMaple_LOD0_v04','M_SugarMapleLeaf','M_SugarMapleBark_Stylized',1,'sugarMapleTreePrefab',['sugarMapleTreeBillboardPrefab'],'SugarMapleTree'),
- ('Oak','Oak_LOD0_v03','M_Oak_Leaf','M_Oak_Bark',2,'oakTreePrefab',['oakTreeBillboardPrefab','grasslandOakTreeBillboardPrefab'],'OakTree'),
+ ('Oak','OakCrown_v04','M_Oak_Leaf','M_Oak_Bark',2,'oakTreePrefab',['oakTreeBillboardPrefab','grasslandOakTreeBillboardPrefab'],'OakTree'),
  ('Birch','Birch_LOD0_v04','M_Birch_Leaf','M_Birch_Bark',3,'birchAspenTreePrefab',['birchAspenTreeBillboardPrefab','grasslandBirchAspenTreeBillboardPrefab'],'BirchAspenTree'),
  ('WhitePine','WhitePine_LOD0_v01','M_WhitePineLeaves','M_WhitePineBark',-1,'whitePineTreePrefab',['whitePineTreeBillboardPrefab','grasslandWhitePineTreeBillboardPrefab'],'WhitePineTree'),
 ]
@@ -20,6 +20,17 @@ def copy(path):
  meta=Path(str(src)+'.meta')
  if meta.exists():shutil.copy2(meta,Path(str(dst)+'.meta'))
 def guid(path):return re.search(r'^guid: (\w+)',Path(str(ROOT/path)+'.meta').read_text(),re.M)[1]
+def uses_source(assigned, source, paths):
+ while assigned != source:
+  path=paths.get(assigned)
+  if path is None or path.suffix!='.prefab':return False
+  # The parent-zero PrefabInstance is the variant's base, rather than a nested LOD mesh.
+  base=next((section for section in path.read_text().split('--- !u!1001 &')[1:]
+             if 'm_TransformParent: {fileID: 0}' in section), '')
+  match=re.search(r'm_SourcePrefab: \{[^}]*guid: (\w+)',base)
+  if not match:return False
+  assigned=match[1]
+ return True
 def map_guid():
  paths=subprocess.check_output(['rg','--files','Assets','-g','*.meta'],cwd=ROOT,text=True).splitlines()
  result={}
@@ -97,12 +108,14 @@ def install():
  cs=json.loads((ROOT/'Tools/TreeHQSpecies.json').read_text())['species']
  scene_path=ROOT/'Assets/Scenes/SmearScene.unity';scene=scene_path.read_text()
  # Verify every record and source assignment before changing the scene.
+ prefab_paths={guid(path):path for path in (ROOT/'Assets/Prefabs').rglob('*.prefab')}
  for c in cs:
   n=c['species']+'HQ';record=json.loads((PROJECT/f'Assets/Textures/Trees/Impostors/{n}/{n}_Octa_Validation.json').read_text())
   assert json.loads(record['configuration'])==c,'Configuration changed after validation: '+c['species']
   for sig in record['inputs']:assert digest(ROOT/sig['path'])==sig['sha256'],'Input changed: '+sig['path']
   for sig in record['outputs']:assert digest(PROJECT/sig['path'])==sig['sha256'],'Output changed: '+sig['path']
-  assert re.search(c['sourceSlot']+r': \{[^}]*guid: '+guid(c['sourcePrefab']),scene),c['sourceSlot']
+  assignment=re.search(c['sourceSlot']+r': \{[^}]*guid: (\w+)',scene)
+  assert assignment and uses_source(assignment[1],guid(c['sourcePrefab']),prefab_paths),c['sourceSlot']
  for c in cs:
   n=c['species']+'HQ'
   for rel in [f'Assets/Textures/Trees/Impostors/{n}',f'Assets/Materials/M_Trees/{n}',f'Assets/Models/Trees/{n}_OctaImpostor_Runtime.mesh',f'Assets/Prefabs/{n}_OctaImpostor_Runtime.prefab']:

@@ -35,7 +35,7 @@
     },
     {
       "species": "Oak",
-      "sourcePrefab": "Assets/Prefabs/Oak_LOD0_v03.prefab",
+        "sourcePrefab": "Assets/Prefabs/OakCrown_v04.prefab",
       "leafPath": "Assets/Materials/M_Trees/Oak/M_Oak_Leaf.mat",
       "barkPath": "Assets/Materials/M_Trees/Oak/M_Oak_Bark.mat",
       "leafTexture": "Assets/Textures/Trees/Oak/T_OakLeafCard.png",

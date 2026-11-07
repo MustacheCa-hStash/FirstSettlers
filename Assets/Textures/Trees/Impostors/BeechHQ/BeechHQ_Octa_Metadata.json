@@ -1,0 +1,10 @@
+{
+  "framesPerAxis": 8,
+  "tileResolution": 504,
+  "paddingPixels": 4,
+  "captureCenterLocal": [-1.20744038, 8.606518, 0.9256766],
+  "captureRadius": 13.82308,
+  "viewDirectionConvention": "tree local center to camera",
+  "surfaceEncoding": "RG octahedral local normal; B roughness; A leaf transmission",
+  "materialIdEncoding": "R leaf; G bark"
+}

@@ -124,10 +124,12 @@ half4 RedMapleLeafFragment(RedMapleLeafVaryings input, FRONT_FACE_TYPE facing : 
     leaf *= lerp(half3(1,1,1), input.color.rgb, _UseVertexColor);
     half3 normal = RedMapleLeafNormal(input, facing);
     half snow = StandingTreeSnow(_SnowCoverage) * smoothstep(.05h, .7h, normal.y);
+    leaf = FSForestLeafColor(leaf);
     leaf = lerp(leaf, _SnowColor.rgb * detail, saturate(snow));
     InputData data = InitializeTreeSimpleLitInputData(input.positionWS, normal, input.positionCS,
         input.shadowCoord, _AmbientStrength);
     data.vertexLighting = input.vertexLighting;
+    data.bakedGI *= FSForestCrownFill(data.normalWS, 0.0h);
     SurfaceData surface = InitializeTreeSimpleLitSurfaceData(leaf, atlas.a, _Smoothness, _SpecularStrength);
     half4 color = ShadeDistantAwareTree(data, surface);
     Light sun = GetMainLight(data.shadowCoord);

@@ -43,7 +43,7 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
             "RenderType" = "TransparentCutout"
             "RenderPipeline" = "UniversalPipeline"
             "Queue" = "AlphaTest"
-            "IgnoreProjector" = "True"
+            "IgnoreProjector" = "True" "StandingTreeIndirect"="True"
         }
 
         LOD 100
@@ -58,10 +58,13 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
+            #define STANDING_TREE_GPU_SUPPORT
             #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
@@ -231,7 +234,8 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
                 InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);
                 inputData.normalWS = normalize(lerp(inputData.normalWS, half3(0.0h, 1.0h, 0.0h), _LightWrap * 0.22h));
 
-                SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(leafColor, atlas.a, _Smoothness, _SpecularStrength);
+                inputData.bakedGI *= FSForestCrownFill(inputData.normalWS, 0.0h);
+                SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(FSForestLeafColor(leafColor), atlas.a, _Smoothness, _SpecularStrength);
                 // Face the transmission normal toward the viewer on either side of the card.
                 half3 transmissionNormal = NormalizeNormalPerPixel(IN.normalWS) * IS_FRONT_VFACE(facing, 1, -1);
                 surfaceData.emission = EvaluateTreeLeafBacklighting(inputData, surfaceData.albedo, transmissionNormal,
@@ -253,10 +257,13 @@ Shader "Custom/SugarMapleLeafSimpleLitCutout"
             Cull Off
 
             HLSLPROGRAM
+            #define STANDING_TREE_GPU_SUPPORT
             #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
 

@@ -1,0 +1,74 @@
+{
+  "RedMaple": {
+    "heightMeters": 19.9,
+    "barkTriangles": 1773,
+    "foliageTriangles": 2584,
+    "sprays": 323,
+    "areaSavedVsTightRect": 0.174,
+    "alphaCoverageOfFittedArea": 0.481
+  },
+  "SugarMaple": {
+    "heightMeters": 24.1,
+    "barkTriangles": 1961,
+    "foliageTriangles": 2920,
+    "sprays": 365,
+    "areaSavedVsTightRect": 0.169,
+    "alphaCoverageOfFittedArea": 0.539
+  },
+  "PaperBirch": {
+    "heightMeters": 17.0,
+    "barkTriangles": 1834,
+    "foliageTriangles": 2584,
+    "sprays": 323,
+    "areaSavedVsTightRect": 0.171,
+    "alphaCoverageOfFittedArea": 0.503
+  },
+  "QuakingAspen": {
+    "heightMeters": 21.0,
+    "barkTriangles": 1585,
+    "foliageTriangles": 2248,
+    "sprays": 281,
+    "areaSavedVsTightRect": 0.174,
+    "alphaCoverageOfFittedArea": 0.564
+  },
+  "AmericanBeech": {
+    "heightMeters": 22.1,
+    "barkTriangles": 2055,
+    "foliageTriangles": 3520,
+    "sprays": 440,
+    "areaSavedVsTightRect": 0.15,
+    "alphaCoverageOfFittedArea": 0.477
+  },
+  "WhiteOak": {
+    "heightMeters": 22.7,
+    "barkTriangles": 2055,
+    "foliageTriangles": 3520,
+    "sprays": 440,
+    "areaSavedVsTightRect": 0.166,
+    "alphaCoverageOfFittedArea": 0.503
+  },
+  "WeepingWillow": {
+    "heightMeters": 14.6,
+    "barkTriangles": 2583,
+    "foliageTriangles": 2976,
+    "sprays": 372,
+    "areaSavedVsTightRect": 0.194,
+    "alphaCoverageOfFittedArea": 0.377
+  },
+  "NorwaySpruce": {
+    "heightMeters": 21.0,
+    "barkTriangles": 1659,
+    "foliageTriangles": 3552,
+    "sprays": 444,
+    "areaSavedVsTightRect": 0.116,
+    "alphaCoverageOfFittedArea": 0.564
+  },
+  "EasternWhitePine": {
+    "heightMeters": 25.1,
+    "barkTriangles": 1515,
+    "foliageTriangles": 2400,
+    "sprays": 300,
+    "areaSavedVsTightRect": 0.107,
+    "alphaCoverageOfFittedArea": 0.589
+  }
+}

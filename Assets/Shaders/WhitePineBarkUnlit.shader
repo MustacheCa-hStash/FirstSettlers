@@ -19,11 +19,12 @@ Shader "Custom/WhitePineBarkSimpleLit"
     }
     SubShader
     {
-        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" }
+        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" "StandingTreeIndirect"="True" }
         Cull Back
         ZWrite On
         ZTest LEqual
         HLSLINCLUDE
+        #define STANDING_TREE_GPU_SUPPORT
         #include "Assets/Shaders/SugarMapleStylizedBarkCommon.hlsl"
         ENDHLSL
         Pass
@@ -35,6 +36,8 @@ Shader "Custom/WhitePineBarkSimpleLit"
             #pragma vertex SugarMapleBarkVertex
             #pragma fragment SugarMapleBarkFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fog
@@ -54,6 +57,8 @@ Shader "Custom/WhitePineBarkSimpleLit"
             #pragma vertex SugarMapleBarkShadowVertex
             #pragma fragment SugarMapleBarkDepthFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
@@ -69,6 +74,8 @@ Shader "Custom/WhitePineBarkSimpleLit"
             #pragma vertex SugarMapleBarkVertex
             #pragma fragment SugarMapleBarkDepthFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             ENDHLSL
@@ -82,6 +89,8 @@ Shader "Custom/WhitePineBarkSimpleLit"
             #pragma vertex SugarMapleBarkVertex
             #pragma fragment SugarMapleBarkNormalsFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT

@@ -26,6 +26,7 @@ Shader "FirstSettlers/Forest Grass Instanced"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
         #include "Assets/Shaders/LocalFlameLighting.hlsl"
+        #include "Assets/Shaders/ForestCanopyLighting.hlsl"
         #include "Assets/Shaders/GrassIndirectInstance.hlsl"
         CBUFFER_START(UnityPerMaterial)
             half4 _BaseColor, _DryColor, _RootColor;
@@ -100,6 +101,7 @@ Shader "FirstSettlers/Forest Grass Instanced"
             half shadow = lerp(1, light.shadowAttenuation, saturate(_ReceiveShadows));
             half3 lighting = max(SampleSH(normal), _AmbientStrength.xxx) + light.color *
                 (0.35h + saturate(dot(normal,light.direction)) * 0.65h) * shadow * light.distanceAttenuation;
+            lighting *= FSForestGroundLight(input.positionWS);
             lighting+=FSLocalFlameDiffuse(input.positionWS,normal);
             return half4(MixFog(albedo * lighting,InitializeInputDataFog(float4(input.positionWS,1),input.fog)),1);
         }

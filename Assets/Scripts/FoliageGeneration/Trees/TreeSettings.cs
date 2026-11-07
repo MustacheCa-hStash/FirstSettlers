@@ -110,6 +110,13 @@ public class TreeSettings
     [Range(1, 8), Tooltip("World-aligned chunk widths grouped into each standing-tree draw region. 1 keeps per-chunk draws; larger regions reduce submissions with broader camera/shadow culling bounds. Does not change tree detail or coverage.")]
     public int standingTreeBatchSizeChunks = 4;
 
+    [Tooltip("Allow reduced meshes for standing trees. When off, trees use LOD0 up to the same billboard handoff.")]
+    public bool enableStandingTreeMeshLods = true;
+
+    [Tooltip("Use compute-selected LODs and indirect draws for compatible standing trees. Unsupported shaders and devices use CPU batching.")]
+    public StandingTreeGpuMode standingTreeGpuMode;
+    public ComputeShader standingTreeCompactShader;
+
     [Tooltip("Maximum chunk-ring radius for billboard trees.")]
     public int billboardTreeChunkRingRadius = 8;
 
@@ -146,6 +153,8 @@ public class TreeSettings
     [Header("Distant Tree GPU Compaction")]
     [Tooltip("Conservative per-view HQ impostor geometry. Quad keeps the original square; Four fits a rectangle without adding vertices. Outline data is baked offline; missing or incompatible data falls back to the original quad. Restart Play Mode after changing.")]
     public TreeImpostorOutlineQuality distantTreeOutlineQuality = TreeImpostorOutlineQuality.Four;
+    [Tooltip("Optional scene-specific fitted impostor outlines. Uses the default foliage resource when empty.")]
+    public TreeImpostorOutlineLibrary distantTreeOutlineLibrary;
     [Tooltip("Use resident tree buffers with GPU culling, thinning, fading and depth ordering for compatible distant billboard materials. Falls back to CPU instanced batches when unsupported or unassigned.")]
     public bool distantTreeGpuCompaction = true;
     [Tooltip("Compute shader used to compact visible distant tree billboard instances before indirect rendering.")]

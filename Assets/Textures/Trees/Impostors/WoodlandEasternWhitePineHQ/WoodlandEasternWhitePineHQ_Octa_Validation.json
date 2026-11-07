@@ -1,0 +1,91 @@
+{
+    "configuration": "{\"species\":\"WoodlandEasternWhitePine\",\"sourcePrefab\":\"Assets/Prefabs/WoodlandEasternWhitePine.prefab\",\"leafPath\":\"Assets/Materials/M_Trees/Woodland/EasternWhitePine_Leaf.mat\",\"barkPath\":\"Assets/Materials/M_Trees/Woodland/EasternWhitePine_Bark.mat\",\"leafTexture\":\"Assets/Textures/Trees/Woodland/EasternWhitePine_Foliage.png\",\"barkTexture\":\"Assets/Textures/Trees/Woodland/EasternWhitePine_Bark.png\",\"sourceSlot\":\"\",\"variant\":\"WhitePineTree\",\"shaderName\":\"Hidden/TreeImpostor/OakSemanticCapture\",\"billboardSlots\":[],\"paletteMode\":-1,\"expansion\":0.4000000059604645}",
+    "inputs": [
+        {
+            "path": "Assets/Shaders/OakLeafTintCutout.shader",
+            "sha256": "80CB1CEE174AB37AA0D4127FB8AD6573F744CD257B448B3B6E2C7ED93369CB01"
+        },
+        {
+            "path": "Assets/Textures/Trees/Woodland/EasternWhitePine_Foliage.png",
+            "sha256": "E5BC3F326B7CFA13F8CD68AC5B3410599881C0C61C27502DFFBFC1ADF2F0C90F"
+        },
+        {
+            "path": "Assets/Scripts/FoliageGeneration/Trees/TreeGameplayAuthoring.cs",
+            "sha256": "8BC346EFA8C5C84AC80740666AC5CC348840765480FE0DE053560FB1DC0F3CDD"
+        },
+        {
+            "path": "Assets/Shaders/OakBarkUnlit.shader",
+            "sha256": "E5E95183F96D8CB4F605A0C830299E16E51F7F5DC0880DA6384314BE867C9A6A"
+        },
+        {
+            "path": "Assets/Models/Trees/Woodland/EasternWhitePine.fbx",
+            "sha256": "85CB5BE9FA034BF4F63DE0A36FB77C31F3957096CC84E18C8792507F469771FD"
+        },
+        {
+            "path": "Assets/Textures/Trees/Woodland/EasternWhitePine_Bark.png",
+            "sha256": "6DB6FDC2095C44FE3B6DEEE6B8786F30E876E5BB1AF624894FDB8ABB434384B1"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Woodland/EasternWhitePine_Bark.mat",
+            "sha256": "53F5289901515163AD49B65D630D788A2620E84C14B247BBD63F0E4FED374F5B"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Woodland/EasternWhitePine_Leaf.mat",
+            "sha256": "4AFCF9157E0D9876E0ADA5735AE7FBD81ED1FDA4FEF0A39440A0B7F1733DFCDC"
+        },
+        {
+            "path": "Assets/Prefabs/WoodlandEasternWhitePine.prefab",
+            "sha256": "79B9594F97EB009093A2552746BDB112EED42BE4EFA5584BCDBFF105F5AA4FAA"
+        },
+        {
+            "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
+            "sha256": "BC89A29E0CA7A1E73CCAD2ADF148D4EA8AFD40800B6AFEE1D47B7B963928957C"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
+            "sha256": "84B0720B90AAD407CD3C5772FABB6EF3CE108E0232BBC8FDD07B10E7631EE9BD"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAmbientAtlasBakerWindow.cs",
+            "sha256": "D4BC380FD35CCD293B11A6FA75345E545C66FEB3DA58B16E0750DEF105EC1796"
+        },
+        {
+            "path": "Assets/Shaders/TreeHQOctaImpostor.shader",
+            "sha256": "6004850135B00F01D2309339ED601485A4D092F247E71CEB56435E9FD0754A0F"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandEasternWhitePineHQ/WoodlandEasternWhitePineHQ_Octa_AlbedoCoverage.png",
+            "sha256": "5CC381345C8001140394D73AFE41F6BA54D3D90BB48BFBDD6AE496F9455A1A28"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandEasternWhitePineHQ/WoodlandEasternWhitePineHQ_Octa_Surface.png",
+            "sha256": "8DF54623DF09DB682D57200A5D91D0091C4122E8696B0875A786156637B0D926"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandEasternWhitePineHQ/WoodlandEasternWhitePineHQ_Octa_Depth.png",
+            "sha256": "1B2C0BC3A46B25D7A9811E2B85C56D1001D2632DA30D1606B97DEDD8D2C3805C"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandEasternWhitePineHQ/WoodlandEasternWhitePineHQ_Octa_MaterialId.png",
+            "sha256": "AD187110803CBD81B09365BFCB7156597D3BC41C479DED5B2B790A58BFE8D63E"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandEasternWhitePineHQ/WoodlandEasternWhitePineHQ_Octa_Ambient.png",
+            "sha256": "8F1D90D0B3E67FB43AB04AE703AFE521B8DF32E3694D7D853846FFE2E34863B0"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/WoodlandEasternWhitePineHQ/WoodlandEasternWhitePineHQ_OctaImpostor_M.mat",
+            "sha256": "AF3B6FA8F39B2EB30B3A77FBA5FBA990FBE0D6021AB9316EE65943E04E76E6B9"
+        },
+        {
+            "path": "Assets/Models/Trees/WoodlandEasternWhitePineHQ_OctaImpostor_Runtime.mesh",
+            "sha256": "8FF9B5C3E2C999C63FF2606CB26359B8BBB208638AD43D61AABE9905A2D4E234"
+        },
+        {
+            "path": "Assets/Prefabs/WoodlandEasternWhitePineHQ_OctaImpostor_Runtime.prefab",
+            "sha256": "0F6662F33BCFD61560C99339EC168F1924677A101B36F1FF338597272AF8192E"
+        }
+    ]
+}

@@ -74,7 +74,7 @@ public static class TreeHQImpostorBaker
         catch(Exception ex){Debug.LogException(ex);EditorApplication.Exit(1);}
     }
 
-    public static void Bake(GameObject source)
+    public static void Bake(GameObject source, int atlasSize = 8192)
     {
         if (!source) throw new InvalidOperationException("Missing assigned HQ source prefab.");
         var leafInput=AssetDatabase.LoadAssetAtPath<Material>(LeafPath);
@@ -125,7 +125,7 @@ public static class TreeHQImpostorBaker
             EnsureFolders();
             if (!AssetDatabase.LoadAssetAtPath<Material>(MaterialPath))
                 AssetDatabase.CreateAsset(new Material(Shader.Find("Custom/TreeHQOctaImpostor")) { name=Current.species+"HQ_OctaImpostor_M", enableInstancing=true }, MaterialPath);
-            Require(TreeImpostorAtlasCaptureWindow.CaptureTreeHQ(setup,Current.species,Current.shaderName,Current.expansion), "SpruceHQ semantic capture failed.");
+            Require(TreeImpostorAtlasCaptureWindow.CaptureTreeHQ(setup,Current.species,Current.shaderName,Current.expansion,atlasSize), "Tree HQ semantic capture failed.");
             Debug.Log("TREE HQ: semantic capture complete; starting ambient visibility.");
             Require(TreeImpostorAmbientAtlasBakerWindow.BakeTreeHQ(setup,Current.species), "SpruceHQ ambient bake failed.");
             CreateOrUpdate();
@@ -238,11 +238,13 @@ public static class TreeHQImpostorBaker
     // Preserve 8K detail without quadrupling the old four-map RGBA32 GPU cost.
     public static void ConfigureRuntimeImports()
     {
+        var metadata = JsonUtility.FromJson<Metadata>(File.ReadAllText(AtlasFolder + "/" + Prefix + "_Metadata.json"));
+        int atlasSize = metadata.framesPerAxis * (metadata.tileResolution + 2 * metadata.paddingPixels);
         foreach(string map in new[]{"AlbedoCoverage","Surface","Depth","MaterialId","Ambient"})
         {
             string path=AtlasFolder+"/"+Prefix+"_"+map+".png";
             var importer=(TextureImporter)AssetImporter.GetAtPath(path);
-            importer.maxTextureSize=map=="Ambient"?2048:8192;
+            importer.maxTextureSize=map=="Ambient"?2048:Mathf.NextPowerOfTwo(atlasSize);
             importer.npotScale=TextureImporterNPOTScale.None;
             importer.filterMode=FilterMode.Trilinear; importer.anisoLevel=4;
             importer.wrapMode=TextureWrapMode.Clamp; importer.isReadable=false;

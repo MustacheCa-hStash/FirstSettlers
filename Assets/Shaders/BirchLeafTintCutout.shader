@@ -39,11 +39,12 @@ Shader "Custom/BirchLeafSimpleLitCutout"
     }
     SubShader
     {
-        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="TransparentCutout" "Queue"="AlphaTest" }
+        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="TransparentCutout" "Queue"="AlphaTest" "StandingTreeIndirect"="True" }
         Cull Off
         ZWrite On
         ZTest LEqual
         HLSLINCLUDE
+        #define STANDING_TREE_GPU_SUPPORT
         #include "Assets/Shaders/BirchStylizedLeafCommon.hlsl"
         ENDHLSL
 
@@ -57,6 +58,8 @@ Shader "Custom/BirchLeafSimpleLitCutout"
             #pragma vertex BirchLeafVertex
             #pragma fragment BirchLeafFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fog
@@ -76,6 +79,8 @@ Shader "Custom/BirchLeafSimpleLitCutout"
             #pragma vertex BirchLeafShadowVertex
             #pragma fragment BirchLeafShadowFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
@@ -92,6 +97,8 @@ Shader "Custom/BirchLeafSimpleLitCutout"
             #pragma vertex BirchLeafVertex
             #pragma fragment BirchLeafDepthFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             ENDHLSL
@@ -105,6 +112,8 @@ Shader "Custom/BirchLeafSimpleLitCutout"
             #pragma vertex BirchLeafVertex
             #pragma fragment BirchLeafNormalsFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT

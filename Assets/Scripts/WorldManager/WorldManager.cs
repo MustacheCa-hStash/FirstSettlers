@@ -31,6 +31,8 @@ public class WorldManager : MonoBehaviour
     [SerializeField] LeafClusterSettings leafClusterSettings = new LeafClusterSettings();
     [SerializeField] FernSettings fernSettings = new FernSettings();
     [SerializeField] TreeSettings treeSettings;
+    [SerializeField, Tooltip("Live palette and soft canopy shade for trees, terrain and grass.")]
+    ForestLightingSettings forestLighting = new();
     [Tooltip("Draw each registered standing tree's applied exclusion radius in Play Mode. Enable Gizmos in the Scene or Game view. Uses the generation snapshot, including the habitat-specific range; no regeneration is needed to toggle this display.")]
     [SerializeField] bool showTreeExclusionRadiusGizmos;
     [Tooltip("Live preview of summer-to-autumn colors on season-capable tree leaf shaders. Turn off to restore each material's authored season. Does not regenerate the world.")]
@@ -103,6 +105,12 @@ public class WorldManager : MonoBehaviour
     private ChunkManager chunkManager;
     private TerrainSculptController sculptController;
     private PlanarWaterReflection planarWaterReflection;
+    private ForestCanopyShade forestCanopyShade;
+    private static WorldManager forestLightingOwner;
+    private static readonly int ForestLeafId = Shader.PropertyToID("_FSForestLeaf");
+    private static readonly int ForestBarkId = Shader.PropertyToID("_FSForestBark");
+    private static readonly int ForestDarknessId = Shader.PropertyToID("_FSForestDarkness");
+    private Vector4 appliedForestLeaf, appliedForestBark, appliedForestDarkness;
     private static readonly int TreeSeasonEnabledId = Shader.PropertyToID("_TreeSeasonSimulationEnabled");
     private static readonly int TreeSeasonAutumnId = Shader.PropertyToID("_TreeSeasonSimulationAutumnAmount");
     private static WorldManager treeSeasonOwner;
@@ -117,6 +125,11 @@ public class WorldManager : MonoBehaviour
     public TreeGameplayManager TreeGameplay => chunkManager?.TreeGameplay;
     public string StreamingBudgetSummary => chunkManager?.StreamingBudgetSummary ?? "Streaming: world not running";
     public int TerrainGenerationRevision { get; private set; }
+    public bool StandingTreeMeshLodsEnabled
+    {
+        get => treeSettings.enableStandingTreeMeshLods;
+        set => treeSettings.enableStandingTreeMeshLods = value;
+    }
     public TerrainSculptRuntime Sculpting => chunkManager?.Sculpting;
     public bool SimulateTreeSeason => simulateTreeSeason;
     public float TreeSeasonAutumnAmount => treeSeasonAutumnAmount;
@@ -174,7 +187,42 @@ public class WorldManager : MonoBehaviour
     }
 
     void OnEnable() { ApplyTreeSeasonSimulation(); }
-    void OnDisable() { ReleaseTreeSeasonSimulation(); }
+    void OnDisable() { ReleaseTreeSeasonSimulation(); ReleaseForestLighting(); }
+
+    void ApplyForestLighting()
+    {
+        if (forestLighting == null || !forestLighting.enabled || Trees == null || viewer == null)
+        {
+            ReleaseForestLighting();
+            return;
+        }
+        if (forestLighting.groundDarkness > 0f && SystemInfo.SupportsTextureFormat(TextureFormat.R8))
+        {
+            forestCanopyShade ??= new ForestCanopyShade(Trees, treeSettings);
+            forestCanopyShade.Update(viewer.position);
+        }
+        var leaf = (Vector4)forestLighting.leafColor.linear;
+        var bark = (Vector4)forestLighting.barkColor.linear;
+        leaf.w = forestLighting.leafPaletteBlend;
+        bark.w = forestLighting.barkPaletteBlend;
+        var darkness = new Vector4(forestLighting.crownDarkness, forestCanopyShade != null ? forestLighting.groundDarkness : 0f, 0f, 0f);
+        if (forestLightingOwner == this && leaf == appliedForestLeaf && bark == appliedForestBark && darkness == appliedForestDarkness) return;
+        forestLightingOwner = this;
+        Shader.SetGlobalVector(ForestLeafId, appliedForestLeaf = leaf);
+        Shader.SetGlobalVector(ForestBarkId, appliedForestBark = bark);
+        Shader.SetGlobalVector(ForestDarknessId, appliedForestDarkness = darkness);
+    }
+
+    void ReleaseForestLighting()
+    {
+        forestCanopyShade?.Dispose();
+        forestCanopyShade = null;
+        if (forestLightingOwner != this) return;
+        forestLightingOwner = null;
+        Shader.SetGlobalVector(ForestLeafId, Vector4.zero);
+        Shader.SetGlobalVector(ForestBarkId, Vector4.zero);
+        Shader.SetGlobalVector(ForestDarknessId, Vector4.zero);
+    }
 
     void Awake()
     {
@@ -330,6 +378,7 @@ public class WorldManager : MonoBehaviour
     public void RegenerateTerrain()
     {
         if (!Application.isPlaying || !isActiveAndEnabled) return;
+        ReleaseForestLighting();
         chunkManager?.Dispose();
         chunkManager = null;
         Awake();
@@ -347,6 +396,7 @@ public class WorldManager : MonoBehaviour
         {
         ApplyTreeSeasonSimulation();
         chunkManager.UpdateActiveChunks();
+        ApplyForestLighting();
         TerrainGenerationProfiler.LogSummaryIfDue(
             Time.unscaledTime,
             terrainGenerationProfileLogInterval,

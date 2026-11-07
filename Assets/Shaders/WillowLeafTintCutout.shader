@@ -197,7 +197,8 @@ Shader "Custom/WillowLeafSimpleLitCutout"
                 InputData inputData = InitializeTreeSimpleLitInputData(IN.positionWS, IN.normalWS, IN.positionCS, IN.shadowCoord, _AmbientStrength);
                 inputData.normalWS = normalize(lerp(inputData.normalWS, half3(0.0h, 1.0h, 0.0h), _LightWrap * 0.24h));
 
-                SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(leafColor, mask, _Smoothness, _SpecularStrength);
+                inputData.bakedGI *= FSForestCrownFill(inputData.normalWS, 0.0h);
+                SurfaceData surfaceData = InitializeTreeSimpleLitSurfaceData(FSForestLeafColor(leafColor), mask, _Smoothness, _SpecularStrength);
                 half4 color = ShadeDistantAwareTree(inputData, surfaceData);
                 return half4(saturate(color.rgb), mask);
             }

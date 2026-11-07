@@ -17,6 +17,8 @@ public static class VegetationPerformanceInvestigation
 {
     const string Pending = "FS.VegetationInvestigation";
     const string CompareBatches = "FS.VegetationInvestigation.CompareBatches";
+    const string CompareStandingGpu = "FS.VegetationInvestigation.CompareStandingGpu";
+    const string DenseStandingGpu = "FS.VegetationInvestigation.DenseStandingGpu";
     const string Folder = ".utmp/vegetation-performance";
     static readonly BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
     static IEnumerator routine;
@@ -66,6 +68,16 @@ public static class VegetationPerformanceInvestigation
         SessionState.SetBool(CompareBatches, true);
         RunBatch();
     }
+    public static void RunStandingTreeGpuBatch()
+    {
+        SessionState.SetBool(CompareStandingGpu, true);
+        RunBatch();
+    }
+    public static void RunDenseStandingTreeGpuBatch()
+    {
+        SessionState.SetBool(DenseStandingGpu, true);
+        RunStandingTreeGpuBatch();
+    }
     static void Tick()
     {
         if (lastFrame == Time.frameCount) return;
@@ -110,7 +122,8 @@ public static class VegetationPerformanceInvestigation
                 }
                 long bytes = textures.Sum(t => UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(t));
                 foreach (var texture in textures) allTextures.Add(texture);
-                writer.WriteLine($"{species.Variant},{(far ? "far" : filter.name)},{mesh.name},{mesh.vertexCount},{mesh.triangles.Length / 3},{string.Join("|", renderer.sharedMaterials.Where(m => m != null).Select(m => m.shader.name))},{bytes / 1048576.0:F2},{string.Join("|", textures.Select(t => t.width + "x" + t.height))},{string.Join("|", textures.Select(t => t.graphicsFormat.ToString()))},{prefab.GetComponentInChildren<LODGroup>(true)?.GetLODs().Length ?? 0}");
+                long triangles = Enumerable.Range(0, mesh.subMeshCount).Sum(i => (long)mesh.GetIndexCount(i) / 3);
+                writer.WriteLine($"{species.Variant},{(far ? "far" : filter.name)},{mesh.name},{mesh.vertexCount},{triangles},{string.Join("|", renderer.sharedMaterials.Where(m => m != null).Select(m => m.shader.name))},{bytes / 1048576.0:F2},{string.Join("|", textures.Select(t => t.width + "x" + t.height))},{string.Join("|", textures.Select(t => t.graphicsFormat.ToString()))},{prefab.GetComponentInChildren<LODGroup>(true)?.GetLODs().Length ?? 0}");
             }
         }
         File.WriteAllText(Folder + "/environment.txt", $"{SystemInfo.graphicsDeviceName}; {SystemInfo.graphicsDeviceType}; {SystemInfo.graphicsMemorySize} MiB VRAM\nUnique tree texture runtime memory: {allTextures.Sum(t => UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(t)) / 1048576.0:F2} MiB\n");
@@ -118,7 +131,11 @@ public static class VegetationPerformanceInvestigation
     static IEnumerator ProfileWorld()
     {
         bool compareBatches = SessionState.GetBool(CompareBatches, false);
+        bool compareStandingGpu = SessionState.GetBool(CompareStandingGpu, false);
+        bool denseStandingGpu = SessionState.GetBool(DenseStandingGpu, false);
         SessionState.SetBool(CompareBatches, false);
+        SessionState.SetBool(CompareStandingGpu, false);
+        SessionState.SetBool(DenseStandingGpu, false);
         Application.logMessageReceived += (message, stack, type) =>
         {
             if (type is LogType.Exception or LogType.Error) { errors++; File.AppendAllText(Folder + "/errors.txt", message + "\n" + stack + "\n"); }
@@ -132,7 +149,7 @@ public static class VegetationPerformanceInvestigation
         var viewer = manager.Viewer;
         foreach (var script in viewer.GetComponentsInChildren<MonoBehaviour>())
             if (script != manager && script is not BuildWorld) script.enabled = false;
-        var target = new RenderTexture(1280, 720, 24);
+        var target = new RenderTexture(denseStandingGpu ? 2560 : 1280, denseStandingGpu ? 1440 : 720, 24);
         target.Create(); camera.targetTexture = target;
         var chunks = (ChunkManager)Field(manager, "chunkManager");
         var trees = (DistantTreeManager)Field(chunks, "distantTrees");
@@ -168,6 +185,13 @@ public static class VegetationPerformanceInvestigation
                 }
                 if (!found) throw new Exception("No representative " + biome + " point found");
             }
+        }
+        if (compareStandingGpu)
+        {
+            foreach (var step in ProfileStandingGpu(treeSettings, viewer, camera, sourceObject, trees,
+                manager.Trees, points, denseStandingGpu))
+                yield return step;
+            yield break;
         }
         Quaternion rotation = Quaternion.Euler(0, 0, 0);
         using var writer = new StreamWriter(Folder + (compareBatches ? "/world-spatial.csv" : "/world-frames.csv"));
@@ -208,5 +232,111 @@ public static class VegetationPerformanceInvestigation
         }
         writer.Flush();
         yield return null;
+    }
+
+    static IEnumerable ProfileStandingGpu(TreeSettings settings, Transform viewer, Camera camera, GameObject torch,
+        DistantTreeManager trees, TreeRegistry registry, List<(string name, Vector3 point)> points, bool dense)
+    {
+        if (settings.standingTreeCompactShader == null || !settings.standingTreeCompactShader.HasKernel("SelectStandingTreeLods"))
+            throw new InvalidOperationException("The world is missing the standing-tree compute shader.");
+        var modes = new[] { StandingTreeGpuMode.Disabled, StandingTreeGpuMode.RedMaple, StandingTreeGpuMode.All,
+            StandingTreeGpuMode.All, StandingTreeGpuMode.RedMaple, StandingTreeGpuMode.Disabled };
+        var timings = new FrameTiming[1];
+        using var renderCounter = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "CPU Render Thread Frame Time", 1);
+        using var gpuCounter = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "GPU Frame Time", 1);
+        ulong lastTimestamp = 0;
+        using var writer = new StreamWriter(Folder + (dense ? "/standing-gpu-dense.csv" : "/standing-gpu-world.csv"));
+        writer.WriteLine("biome,pass,mode,frameMs,renderThreadMs,gpuMs,treeUpdateMs,meshDraws,indirectDraws,gpuCandidates,vertices");
+        Debug.Log($"STANDING GPU WORLD {SystemInfo.graphicsDeviceName} {SystemInfo.graphicsDeviceType} quality={QualitySettings.names[QualitySettings.GetQualityLevel()]} {camera.pixelWidth}x{camera.pixelHeight} shadows={settings.castTreeShadows} timings={FrameTimingManager.IsFeatureEnabled()}");
+        foreach (var sample in points)
+        {
+            if (dense && sample.name != "Forest") continue;
+            var point = sample;
+            viewer.position = point.point;
+            camera.transform.position = point.point;
+            torch.transform.position = point.point;
+            settings.standingTreeGpuMode = StandingTreeGpuMode.All;
+            float start = Time.realtimeSinceStartup;
+            Debug.Log($"STANDING GPU WORLD WARMUP {point.name} {point.point}");
+            while (Time.realtimeSinceStartup - start < 45)
+            {
+                FrameTimingManager.CaptureFrameTimings();
+                yield return null;
+            }
+            if (dense)
+            {
+                point = ("DenseForest", FindDenseTreeView(registry, point.point,
+                    (settings.gameObjectTreeChunkRingRadius + 2) * registry.ChunkWorldSize));
+                viewer.position = point.point;
+                camera.transform.position = point.point;
+                torch.transform.position = point.point;
+                start = Time.realtimeSinceStartup;
+                while (Time.realtimeSinceStartup - start < 45)
+                {
+                    FrameTimingManager.CaptureFrameTimings();
+                    yield return null;
+                }
+            }
+            for (int pass = 0; pass < modes.Length; ++pass)
+            {
+                settings.standingTreeGpuMode = modes[pass];
+                start = Time.realtimeSinceStartup;
+                while (Time.realtimeSinceStartup - start < 9)
+                {
+                    float elapsed = Time.realtimeSinceStartup - start;
+                    float route = Mathf.Max(0, elapsed - 2);
+                    viewer.position = point.point + Vector3.right * (2.5f * Mathf.Sin(route));
+                    camera.transform.position = viewer.position;
+                    camera.transform.rotation = Quaternion.Euler(0, 25 * Mathf.Sin(route * .8f), 0);
+                    FrameTimingManager.CaptureFrameTimings();
+                    yield return null;
+                    if (elapsed < 2) continue;
+                    double renderThread = 0, gpu = 0;
+                    if (FrameTimingManager.GetLatestTimings(1, timings) > 0 && timings[0].frameStartTimestamp != lastTimestamp)
+                    {
+                        lastTimestamp = timings[0].frameStartTimestamp;
+                        renderThread = timings[0].cpuRenderThreadFrameTime;
+                        gpu = timings[0].gpuFrameTime;
+                    }
+                    if (renderThread <= 0 && renderCounter.Valid) renderThread = renderCounter.LastValue / 1000000.0;
+                    if (gpu <= 0 && gpuCounter.Valid) gpu = gpuCounter.LastValue / 1000000.0;
+                    writer.WriteLine(FormattableString.Invariant($"{point.name},{pass},{modes[pass]},{Time.unscaledDeltaTime * 1000:F3},{renderThread:F3},{gpu:F3},{recorders[1].LastValue / 1000000.0:F4},{trees.MeshDrawCalls},{trees.GpuMeshDrawCalls},{trees.GpuMeshCandidates},{trees.MeshRenderStats.vertices}"));
+                }
+                writer.Flush();
+                if (modes[pass] == StandingTreeGpuMode.All && trees.MeshDrawCalls > 0 &&
+                    trees.GpuMeshDrawCalls != trees.MeshDrawCalls)
+                    throw new InvalidOperationException("At least one standing-tree draw did not use the GPU path.");
+                Debug.Log($"STANDING GPU WORLD PASS {point.name} {pass} {modes[pass]} draws={trees.MeshDrawCalls} indirect={trees.GpuMeshDrawCalls} candidates={trees.GpuMeshCandidates}");
+            }
+        }
+    }
+
+    static Vector3 FindDenseTreeView(TreeRegistry registry, Vector3 forest, float meshRadius)
+    {
+        static float DistanceSquaredXZ(Vector3 a, Vector3 b)
+        {
+            float x = a.x - b.x, z = a.z - b.z;
+            return x * x + z * z;
+        }
+        var standing = registry.Records.Where(tree => tree.State == TreeState.Standing).ToArray();
+        var candidates = standing.Where(tree => DistanceSquaredXZ(tree.WorldPosition, forest) < 350 * 350 &&
+            !TreeSpeciesCatalog.IsGrassland(tree.Placement.variant))
+            .GroupBy(tree => tree.Chunk).Select(chunk => chunk.First()).ToArray();
+        if (candidates.Length == 0) throw new InvalidOperationException("No loaded forest stands to compare.");
+        int bestCount = -1;
+        Vector3 best = forest;
+        foreach (var tree in candidates)
+        {
+            Vector3 position = tree.WorldPosition + new Vector3(7, 2.4f, -7);
+            int count = 0;
+            foreach (var neighbor in standing)
+                if (DistanceSquaredXZ(neighbor.WorldPosition, position) < meshRadius * meshRadius)
+                    ++count;
+            if (count <= bestCount) continue;
+            best = position;
+            bestCount = count;
+        }
+        Debug.Log($"STANDING GPU DENSE TARGET {best} registryNear={bestCount} radius={meshRadius}");
+        return best;
     }
 }

@@ -208,6 +208,7 @@ Shader "Custom/StylizedTerrainURP"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Assets/Shaders/TerrainSkyAccess.hlsl"
             #include "Assets/Shaders/LocalFlameLighting.hlsl"
+            #include "Assets/Shaders/ForestCanopyLighting.hlsl"
             #include "Assets/Shaders/WorldLandformFields.hlsl"
             #include "Assets/Shaders/HeightfieldCliffNormal.hlsl"
             #include "Assets/Shaders/TerrainSurfaceFrame.hlsl"
@@ -889,6 +890,9 @@ Shader "Custom/StylizedTerrainURP"
                 half caveAmbient=caveLighting.x;
                 half3 ambient=max(SampleSH(normalWS),half3(_AmbientStrength,_AmbientStrength,_AmbientStrength))*caveAmbient;
                 half3 color=albedo*(diffuse+ambient);
+                #if !defined(_TERRAIN_EXCAVATION)
+                    color *= FSForestGroundLight(surface.positionWS);
+                #endif
                 half tintWeight=saturate(1.0h-terrainVisibility)*saturate(_TerrainHorizonParams.z)*saturate(_ReceiveShadows);
                 color*=lerp(half3(1,1,1),_TerrainHorizonTint.rgb,tintWeight);
                 // Stable derivatives and the mesher's 2.5 cm normal-displacement

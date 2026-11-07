@@ -1,0 +1,87 @@
+{
+    "configuration": "{\"species\":\"Willow\",\"sourcePrefab\":\"Assets/Prefabs/Willow_River_v01.prefab\",\"leafPath\":\"Assets/Materials/M_Trees/ForestVariety/M_Willow_Leaf.mat\",\"barkPath\":\"Assets/Materials/M_Trees/ForestVariety/M_Willow_Bark.mat\",\"leafTexture\":\"Assets/Textures/Trees/leafClumpAtlas_Willow.png\",\"barkTexture\":\"Assets/Textures/Trees/Bark/OakBarkTextureSeamless.png\",\"sourceSlot\":\"\",\"variant\":\"GrasslandWillowTree\",\"shaderName\":\"Hidden/TreeImpostor/BirchSemanticCapture\",\"billboardSlots\":[],\"paletteMode\":3,\"expansion\":0.6000000238418579}",
+    "inputs": [
+        {
+            "path": "Assets/Textures/Trees/Bark/OakBarkTextureSeamless.png",
+            "sha256": "D4A60817B4529D7EC03EB77F430BE2BAA2E2B181E1BA556E29D4DFD7014A8F73"
+        },
+        {
+            "path": "Assets/Shaders/BirchLeafTintCutout.shader",
+            "sha256": "C1E4F00A32EE1A6DFD8A74E2DAE2291122D25041768B06FD9913CEB8A47A78C1"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/ForestVariety/M_Willow_Leaf.mat",
+            "sha256": "958071DF72C81AF46E8C5FE9D0270882A5313BB6E67C13153FFDD9EA61B1BE13"
+        },
+        {
+            "path": "Assets/Models/Trees/ForestVariety/Willow_River_v01.fbx",
+            "sha256": "65C6AB09E2C1BAC7C07B6B43EF8F1CAF32509DC2F7D7A4C17EDA8EAB99BA2912"
+        },
+        {
+            "path": "Assets/Shaders/BirchBarkUnlit.shader",
+            "sha256": "6F7AC365237143D2AE7F816D31D5A2FA69258F109E21358AFE27050EA86C6282"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/ForestVariety/M_Willow_Bark.mat",
+            "sha256": "B7CD44A42E38C9F444BE7FA957EC55C6F16FCC2A007A45F5D971CD0CE8C9BF44"
+        },
+        {
+            "path": "Assets/Prefabs/Willow_River_v01.prefab",
+            "sha256": "449023F61007D425CA05472C4FB2B1BA8D1EF27DCA61648DD8266D5652B0612E"
+        },
+        {
+            "path": "Assets/Textures/Trees/leafClumpAtlas_Willow.png",
+            "sha256": "A1B9E2B356201B5FC71831542AABEABE21311DA9BFA4FD34758D5EFBCFFBA6F1"
+        },
+        {
+            "path": "Assets/Shaders/BirchImpostorSemanticCapture.shader",
+            "sha256": "DD2C5A2BDCA0E5F3E427C57FB7A4A33387C9645EA5EBBC8400978B851CAC7E0B"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
+            "sha256": "84B0720B90AAD407CD3C5772FABB6EF3CE108E0232BBC8FDD07B10E7631EE9BD"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAmbientAtlasBakerWindow.cs",
+            "sha256": "D4BC380FD35CCD293B11A6FA75345E545C66FEB3DA58B16E0750DEF105EC1796"
+        },
+        {
+            "path": "Assets/Shaders/TreeHQOctaImpostor.shader",
+            "sha256": "6004850135B00F01D2309339ED601485A4D092F247E71CEB56435E9FD0754A0F"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/WillowHQ/WillowHQ_Octa_AlbedoCoverage.png",
+            "sha256": "42CA1F06E6550D286CD35685ABC8FC0B17D511B7610BBD24ABB62A5DF441641B"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WillowHQ/WillowHQ_Octa_Surface.png",
+            "sha256": "A15FEB385B9735AD64057C13F12040F2BC1B7CB6E1B6458B662CC9B6C5477713"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WillowHQ/WillowHQ_Octa_Depth.png",
+            "sha256": "1ADBF41383B0E44DD289D282D4E80FA6FD7F8BE90BC66C69371CBF55ACAA1C67"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WillowHQ/WillowHQ_Octa_MaterialId.png",
+            "sha256": "0BCF12C6372394F0739912BF6DCAE4214E683D5131FFA40032EBB553C85B78C9"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WillowHQ/WillowHQ_Octa_Ambient.png",
+            "sha256": "DBF8103DD900078B2BD91C199D3DD9197097E8877DF70B1428C64C9911F86E0E"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/WillowHQ/WillowHQ_OctaImpostor_M.mat",
+            "sha256": "B6CAB3298F0C31866723F0E1164FEBAE4B962FDE7AD575A99F4E4E5F73896DCD"
+        },
+        {
+            "path": "Assets/Models/Trees/WillowHQ_OctaImpostor_Runtime.mesh",
+            "sha256": "C15785F12701F889997E1BC9FA7127C94F9AF59072E8338D76525470141597EB"
+        },
+        {
+            "path": "Assets/Prefabs/WillowHQ_OctaImpostor_Runtime.prefab",
+            "sha256": "20E8AF54AB83F883FDB20BA43D48A62C93E0F258F001ACE84531A7C80B9B2265"
+        }
+    ]
+}

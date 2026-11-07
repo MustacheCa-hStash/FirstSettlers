@@ -2,6 +2,7 @@ Shader "Custom/OakLeafSimpleLitCutout"
 {
     Properties
     {
+        [Toggle] _AuthoredSummer("Use Authored Summer Albedo", Float) = 0
         [MainTexture] _BaseMap("Leaf Clump / Alpha", 2D) = "white" {}
         [MainColor] _SummerLeafColor("Summer Leaf Color", Color) = (0.20, 0.42, 0.16, 1)
         _AutumnOchreColor("Autumn Ochre", Color) = (0.68, 0.43, 0.16, 1)
@@ -39,11 +40,12 @@ Shader "Custom/OakLeafSimpleLitCutout"
     }
     SubShader
     {
-        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="TransparentCutout" "Queue"="AlphaTest" }
+        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="TransparentCutout" "Queue"="AlphaTest" "StandingTreeIndirect"="True" }
         Cull Off
         ZWrite On
         ZTest LEqual
         HLSLINCLUDE
+        #define STANDING_TREE_GPU_SUPPORT
         #include "Assets/Shaders/OakStylizedLeafCommon.hlsl"
         ENDHLSL
 
@@ -57,6 +59,8 @@ Shader "Custom/OakLeafSimpleLitCutout"
             #pragma vertex OakLeafVertex
             #pragma fragment OakLeafFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fog
@@ -76,6 +80,8 @@ Shader "Custom/OakLeafSimpleLitCutout"
             #pragma vertex OakLeafShadowVertex
             #pragma fragment OakLeafShadowFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
@@ -92,6 +98,8 @@ Shader "Custom/OakLeafSimpleLitCutout"
             #pragma vertex OakLeafVertex
             #pragma fragment OakLeafDepthFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             ENDHLSL
@@ -105,6 +113,8 @@ Shader "Custom/OakLeafSimpleLitCutout"
             #pragma vertex OakLeafVertex
             #pragma fragment OakLeafNormalsFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT

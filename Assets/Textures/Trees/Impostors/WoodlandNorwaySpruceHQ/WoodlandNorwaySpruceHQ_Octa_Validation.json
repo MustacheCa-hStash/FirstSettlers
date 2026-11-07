@@ -1,0 +1,91 @@
+{
+    "configuration": "{\"species\":\"WoodlandNorwaySpruce\",\"sourcePrefab\":\"Assets/Prefabs/WoodlandNorwaySpruce.prefab\",\"leafPath\":\"Assets/Materials/M_Trees/Woodland/NorwaySpruce_Leaf.mat\",\"barkPath\":\"Assets/Materials/M_Trees/Woodland/NorwaySpruce_Bark.mat\",\"leafTexture\":\"Assets/Textures/Trees/Woodland/NorwaySpruce_Foliage.png\",\"barkTexture\":\"Assets/Textures/Trees/Woodland/NorwaySpruce_Bark.png\",\"sourceSlot\":\"\",\"variant\":\"SpruceTree\",\"shaderName\":\"Hidden/TreeImpostor/OakSemanticCapture\",\"billboardSlots\":[],\"paletteMode\":-1,\"expansion\":0.4000000059604645}",
+    "inputs": [
+        {
+            "path": "Assets/Shaders/OakLeafTintCutout.shader",
+            "sha256": "80CB1CEE174AB37AA0D4127FB8AD6573F744CD257B448B3B6E2C7ED93369CB01"
+        },
+        {
+            "path": "Assets/Textures/Trees/Woodland/NorwaySpruce_Bark.png",
+            "sha256": "CB20FA513332C31F0C553CD8287ECF9C08355A447285D63BCCB84DC8BDA5AC0F"
+        },
+        {
+            "path": "Assets/Prefabs/WoodlandNorwaySpruce.prefab",
+            "sha256": "81533462E4D9F1D88FCEF30E0A35C2E81FCF97C6F23F43791A4BC97101CB3B2D"
+        },
+        {
+            "path": "Assets/Scripts/FoliageGeneration/Trees/TreeGameplayAuthoring.cs",
+            "sha256": "8BC346EFA8C5C84AC80740666AC5CC348840765480FE0DE053560FB1DC0F3CDD"
+        },
+        {
+            "path": "Assets/Models/Trees/Woodland/NorwaySpruce.fbx",
+            "sha256": "2338CD1A7BF81AB11618A52BEC0E5F7B6B3D5D776740CB74746900F355E73095"
+        },
+        {
+            "path": "Assets/Shaders/OakBarkUnlit.shader",
+            "sha256": "E5E95183F96D8CB4F605A0C830299E16E51F7F5DC0880DA6384314BE867C9A6A"
+        },
+        {
+            "path": "Assets/Textures/Trees/Woodland/NorwaySpruce_Foliage.png",
+            "sha256": "F36BD70D7B274946E6BC12BDDC06C040D2915925FD51097EB1E46276125C27CD"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Woodland/NorwaySpruce_Leaf.mat",
+            "sha256": "96AC927914576D499515BDAA6523A5B82224EED911BB06A3A179D27327A1DB2F"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Woodland/NorwaySpruce_Bark.mat",
+            "sha256": "65D06F8A12CD804FAAE1B560A230190D9CEE87F4A0B55E7C15B916680C9344F9"
+        },
+        {
+            "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
+            "sha256": "BC89A29E0CA7A1E73CCAD2ADF148D4EA8AFD40800B6AFEE1D47B7B963928957C"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
+            "sha256": "84B0720B90AAD407CD3C5772FABB6EF3CE108E0232BBC8FDD07B10E7631EE9BD"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAmbientAtlasBakerWindow.cs",
+            "sha256": "D4BC380FD35CCD293B11A6FA75345E545C66FEB3DA58B16E0750DEF105EC1796"
+        },
+        {
+            "path": "Assets/Shaders/TreeHQOctaImpostor.shader",
+            "sha256": "6004850135B00F01D2309339ED601485A4D092F247E71CEB56435E9FD0754A0F"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandNorwaySpruceHQ/WoodlandNorwaySpruceHQ_Octa_AlbedoCoverage.png",
+            "sha256": "635896C63B9A568568709F9FEE0E66812409FE03005A4669A7E8B7791AA9CB9B"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandNorwaySpruceHQ/WoodlandNorwaySpruceHQ_Octa_Surface.png",
+            "sha256": "EC3E765E2E041572FCD014640BA6A7F01DB5512898F665D35D3F7EEA9D047C06"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandNorwaySpruceHQ/WoodlandNorwaySpruceHQ_Octa_Depth.png",
+            "sha256": "CB683654B2CABA8A1689DE6E1C79ABEFC7F004A8F5BBE5F5F2DF4BB98E42F00B"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandNorwaySpruceHQ/WoodlandNorwaySpruceHQ_Octa_MaterialId.png",
+            "sha256": "C2B6003912900359931A0C536C5F11F44E04E44402F20C1E98038EA5FFA2F695"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandNorwaySpruceHQ/WoodlandNorwaySpruceHQ_Octa_Ambient.png",
+            "sha256": "B88FF9425B99926ABD60D52B1FF09B6C4B00FE1CD3DF632216AA441E20D8B5AB"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/WoodlandNorwaySpruceHQ/WoodlandNorwaySpruceHQ_OctaImpostor_M.mat",
+            "sha256": "48275F356AF0779FAE7D38C6B7FABC3FA71022590ADE16A831CCEBB5C1445ED7"
+        },
+        {
+            "path": "Assets/Models/Trees/WoodlandNorwaySpruceHQ_OctaImpostor_Runtime.mesh",
+            "sha256": "8B1B7D5E82E81FB3C3BE41F48FA8D2CD51128726800814C2AA740768542FB7CF"
+        },
+        {
+            "path": "Assets/Prefabs/WoodlandNorwaySpruceHQ_OctaImpostor_Runtime.prefab",
+            "sha256": "3AB4B7F2AE6CCF25C1C021133E08316A6EBACE99AC914F3F1524A593904FCE3A"
+        }
+    ]
+}

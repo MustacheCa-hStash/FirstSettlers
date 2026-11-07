@@ -18,7 +18,7 @@ CBUFFER_START(UnityPerMaterial)
     half _ColorVariationStrength, _LeafDetailStrength, _LeafGradientContrast, _LeafGradientMidpoint;
     half _Cutoff, _AlphaCutoutShadows;
     half _AmbientStrength, _LightWrap, _BacklightingEnabled, _StableBacklighting, _BacklightingStrength, _Smoothness, _SpecularStrength;
-    half _UseVertexColor, _SnowCoverage;
+    half _UseVertexColor, _SnowCoverage, _AuthoredSummer;
     float4 _WindDirection;
     half _WindStrength, _WindSpeed, _WindFlutterStrength, _WindFlutterSpeed, _WindGustScale;
     half _WindHeightMin, _WindHeightMax;
@@ -110,6 +110,11 @@ half4 OakLeafFragment(OakLeafVaryings input, FRONT_FACE_TYPE facing : FRONT_FACE
     UNITY_SETUP_INSTANCE_ID(input);
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
     half4 atlas = OakLeafSample(input);
+    half3 leaf = atlas.rgb;
+    half detail = 1.0h;
+    UNITY_BRANCH
+    if (_AuthoredSummer < .5h)
+    {
     half noise = OakLeafNoise(input.positionOS.xz * .7 + input.uv * 4.7);
     half season = TreeSeasonAutumnAmount(_SeasonAutumnAmount);
     half4 treeTint = StandingTreeLeafTint(_TreeLeafTint);
@@ -119,7 +124,7 @@ half4 OakLeafFragment(OakLeafVaryings input, FRONT_FACE_TYPE facing : FRONT_FACE
         if (_StandingTreeEnabled > .5)
             treeTint.rgb = SRGBToLinear(treeTint.rgb);
     #endif
-    half3 leaf = OakSeasonLeafColor(noise, _AutumnVariationStrength, season,
+    leaf = OakSeasonLeafColor(noise, _AutumnVariationStrength, season,
         _SummerLeafColor.rgb, _AutumnOchreColor.rgb, _AutumnRussetColor.rgb, _AutumnWineColor.rgb,
         treeTint, _TreeTintStrength);
     // Center the subtle source gradient around neutral brightness, then amplify
@@ -127,15 +132,18 @@ half4 OakLeafFragment(OakLeafVaryings input, FRONT_FACE_TYPE facing : FRONT_FACE
     // leaf and compressed its shading into a narrow, uniformly green band.
     half luma = dot(atlas.rgb, half3(.299h,.587h,.114h));
     half gradedDetail = clamp(1.0h + (luma - _LeafGradientMidpoint) * _LeafGradientContrast, .25h, 1.5h);
-    half detail = lerp(1.0h, gradedDetail, _LeafDetailStrength);
+    detail = lerp(1.0h, gradedDetail, _LeafDetailStrength);
     leaf *= detail * lerp(1 - _ColorVariationStrength, 1 + _ColorVariationStrength, noise);
+    }
     leaf *= lerp(half3(1,1,1), input.color.rgb, _UseVertexColor);
     half3 normal = OakLeafNormal(input, facing);
     half snow = StandingTreeSnow(_SnowCoverage) * smoothstep(.05h, .7h, normal.y);
+    leaf = FSForestLeafColor(leaf);
     leaf = lerp(leaf, _SnowColor.rgb * detail, saturate(snow));
     InputData data = InitializeTreeSimpleLitInputData(input.positionWS, normal, input.positionCS,
         input.shadowCoord, _AmbientStrength);
     data.vertexLighting = input.vertexLighting;
+    data.bakedGI *= FSForestCrownFill(data.normalWS, 0.0h);
     SurfaceData surface = InitializeTreeSimpleLitSurfaceData(leaf, atlas.a, _Smoothness, _SpecularStrength);
     // Match the maples' camera-stable, two-sided transmission and shared night lighting.
     half3 transmissionNormal = NormalizeNormalPerPixel(input.normalWS) * IS_FRONT_VFACE(facing, 1, -1);

@@ -17,6 +17,10 @@ public sealed class TreeDistributionProfile : ScriptableObject
     [Header("Placement")]
     [Min(2f)] public float candidateCellSize = 4.8f;
     [Range(1, 3)] public int competitionCohorts = 2;
+    [Range(0f, .5f), Tooltip("Share of the forest and meadow grove planting budget assigned to more evenly spaced young trees. Regenerate to apply.")]
+    public float youngTreeShare;
+    [Tooltip("Use beech–oak woodland, sparse meadow trees and cooler conifer stands. Requires the Woodland pilot tree set.")]
+    public bool useWoodlandSpeciesMix;
     [Min(16), Tooltip("Exceptional per-chunk guard, not a population target. Grassland also respects its existing count guard.")]
     public int maxTreesPerChunk = 64;
 
@@ -34,6 +38,8 @@ public sealed class TreeDistributionProfile : ScriptableObject
             ForestBackground=Safe(forestBackground,12f,0f,300f), ForestStand=Safe(forestStand,90f,0f,300f),
             MeadowBackground=Safe(grasslandBackground,.8f,0f,100f), MeadowGrove=Safe(grasslandGrove,26f,0f,200f),
             SnowStand=Safe(snowStand,12f,0f,100f), CandidateCell=Safe(candidateCellSize,4.8f,2f,32f),
+            YoungTreeShare=Safe(youngTreeShare,0f,0f,.5f),
+            UseWoodlandSpeciesMix=useWoodlandSpeciesMix,
             Cohorts=Mathf.Clamp(competitionCohorts,1,3), MaxTrees=Mathf.Clamp(maxTreesPerChunk,16,256)
         };
     }
@@ -43,8 +49,10 @@ public sealed class TreeDistributionProfile : ScriptableObject
 public struct TreeDistributionParameters
 {
     public bool Enabled;
+    public bool UseWoodlandSpeciesMix;
     public float WorldScale, StandCell, GroveFraction, CandidateCell;
     public Vector2 StandRadius;
     public float ForestBackground, ForestStand, MeadowBackground, MeadowGrove, SnowStand;
+    public float YoungTreeShare;
     public int Cohorts, MaxTrees;
 }

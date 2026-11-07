@@ -1,0 +1,91 @@
+{
+    "configuration": "{\"species\":\"WoodlandSugarMaple\",\"sourcePrefab\":\"Assets/Prefabs/WoodlandSugarMaple.prefab\",\"leafPath\":\"Assets/Materials/M_Trees/Woodland/SugarMaple_Leaf.mat\",\"barkPath\":\"Assets/Materials/M_Trees/Woodland/SugarMaple_Bark.mat\",\"leafTexture\":\"Assets/Textures/Trees/Woodland/SugarMaple_Foliage.png\",\"barkTexture\":\"Assets/Textures/Trees/Woodland/SugarMaple_Bark.png\",\"sourceSlot\":\"\",\"variant\":\"SugarMapleTree\",\"shaderName\":\"Hidden/TreeImpostor/OakSemanticCapture\",\"billboardSlots\":[],\"paletteMode\":-1,\"expansion\":0.4000000059604645}",
+    "inputs": [
+        {
+            "path": "Assets/Models/Trees/Woodland/SugarMaple.fbx",
+            "sha256": "C64E2D40164471B964B0D353DD14DCD3DF9ADED259D717E9386E3B665E272913"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Woodland/SugarMaple_Leaf.mat",
+            "sha256": "38083B2F4A30E060876E7BFDEE72DAB3FA4CBF6475E2C49BA4C22A3404633709"
+        },
+        {
+            "path": "Assets/Shaders/OakLeafTintCutout.shader",
+            "sha256": "80CB1CEE174AB37AA0D4127FB8AD6573F744CD257B448B3B6E2C7ED93369CB01"
+        },
+        {
+            "path": "Assets/Prefabs/WoodlandSugarMaple.prefab",
+            "sha256": "3E4A59B7607215A98C7F628B797B4A060B12A026DACC40EC730C66863935F711"
+        },
+        {
+            "path": "Assets/Textures/Trees/Woodland/SugarMaple_Bark.png",
+            "sha256": "F7CC506E57E52B0346EF7EAA39BB16C437CE82FF7A3C1084DD9FEDF433C21D55"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Woodland/SugarMaple_Bark.mat",
+            "sha256": "0FE9EC440E0E7E886C43507F21F1CE5BE9025454CA9F897A76DB2E444EC7E200"
+        },
+        {
+            "path": "Assets/Scripts/FoliageGeneration/Trees/TreeGameplayAuthoring.cs",
+            "sha256": "8BC346EFA8C5C84AC80740666AC5CC348840765480FE0DE053560FB1DC0F3CDD"
+        },
+        {
+            "path": "Assets/Textures/Trees/Woodland/SugarMaple_Foliage.png",
+            "sha256": "AEB6EEA15721889927C65323FF77598A9C0E8034C3C3FB2AC33EE0266B764741"
+        },
+        {
+            "path": "Assets/Shaders/OakBarkUnlit.shader",
+            "sha256": "E5E95183F96D8CB4F605A0C830299E16E51F7F5DC0880DA6384314BE867C9A6A"
+        },
+        {
+            "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
+            "sha256": "BC89A29E0CA7A1E73CCAD2ADF148D4EA8AFD40800B6AFEE1D47B7B963928957C"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
+            "sha256": "84B0720B90AAD407CD3C5772FABB6EF3CE108E0232BBC8FDD07B10E7631EE9BD"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAmbientAtlasBakerWindow.cs",
+            "sha256": "D4BC380FD35CCD293B11A6FA75345E545C66FEB3DA58B16E0750DEF105EC1796"
+        },
+        {
+            "path": "Assets/Shaders/TreeHQOctaImpostor.shader",
+            "sha256": "6004850135B00F01D2309339ED601485A4D092F247E71CEB56435E9FD0754A0F"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandSugarMapleHQ/WoodlandSugarMapleHQ_Octa_AlbedoCoverage.png",
+            "sha256": "27114B3FCFC81EE2D8F2DD9C8EE6D406569DA7F9055C48AAE9057509E9D0FE93"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandSugarMapleHQ/WoodlandSugarMapleHQ_Octa_Surface.png",
+            "sha256": "5C407C4FDFBEDC98D0DC0787B4B016A631D55DDBDD698AE80B47DE9D9E8AFF76"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandSugarMapleHQ/WoodlandSugarMapleHQ_Octa_Depth.png",
+            "sha256": "A0902C85414CCF01DDD2841AA5A1D8E63C975F0F303709085853B611FB0C67EA"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandSugarMapleHQ/WoodlandSugarMapleHQ_Octa_MaterialId.png",
+            "sha256": "E893C665774A3D6E003961CD82AD04763215C1A9D4E0B17E4D80B6E4C35E0DC9"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandSugarMapleHQ/WoodlandSugarMapleHQ_Octa_Ambient.png",
+            "sha256": "E6F391B44D0924C18F1B1ECBE6DB66A488C89431950905E6B230815ED40EA536"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/WoodlandSugarMapleHQ/WoodlandSugarMapleHQ_OctaImpostor_M.mat",
+            "sha256": "98DAC589A000940CE2BEFB7BDCD3BCADB3D83EBE54A5F22F58E4DBF628DD05CD"
+        },
+        {
+            "path": "Assets/Models/Trees/WoodlandSugarMapleHQ_OctaImpostor_Runtime.mesh",
+            "sha256": "F4FE997948F1C29A490569A2787C73CAFDD150E316F93E21E20AA433B705E677"
+        },
+        {
+            "path": "Assets/Prefabs/WoodlandSugarMapleHQ_OctaImpostor_Runtime.prefab",
+            "sha256": "CCEE27F6050E66325C1FC6C320134BE7EC15C9F1F8FE857152F97AF64CB0D1E8"
+        }
+    ]
+}

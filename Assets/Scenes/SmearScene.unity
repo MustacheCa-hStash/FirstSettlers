@@ -1235,7 +1235,7 @@ MonoBehaviour:
     colonyNoiseScale: 0.045
     colonyThreshold: 0.46
     seedOffset: 83000
-    uniformScaleRange: {x: 0.82, y: 1.18}
+    uniformScaleRange: {x: 0.6, y: 0.9}
   cloverSettings:
     enableClover: 1
     cloverClumpPrefab: {fileID: 2522059427205176057, guid: 34276995c6e0cb44b90eb27277ebdff7, type: 3}
@@ -1369,20 +1369,20 @@ MonoBehaviour:
     whitePineTreeDefinition: {fileID: 11400000, guid: 4f9049ed763a4e879326463ff3b4cac9, type: 2}
     oakTreeDefinition: {fileID: 11400000, guid: 38f488f4b3b54476b57a80413f914d29, type: 2}
     willowTreeDefinition: {fileID: 11400000, guid: 5fdc7bacacca4b369ee3428be4fa1296, type: 2}
-    mapleTreePrefab: {fileID: 7061684082089613672, guid: 6ab64d9769b56e9499c1190271e4079b, type: 3}
-    sugarMapleTreePrefab: {fileID: 8969898117860906858, guid: 6377fe2b33afae54cafea770d5e136c6, type: 3}
-    birchAspenTreePrefab: {fileID: 8943178363089886256, guid: fe4a12ed830904b42abf5a9d5b7572d0, type: 3}
+    mapleTreePrefab: {fileID: 5689874911952668969, guid: 7db3966ecd6a23545af93f26c7c54088, type: 3}
+    sugarMapleTreePrefab: {fileID: 8124156082241404492, guid: 3551ffb7f5983a04d86d2b48eee41911, type: 3}
+    birchAspenTreePrefab: {fileID: 1691991799813173471, guid: a291cb6ac863b2c43a4601301c9d6098, type: 3}
     beechTreePrefab: {fileID: 0}
-    spruceTreePrefab: {fileID: 8923281884864634577, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-    whitePineTreePrefab: {fileID: 9167976221399298968, guid: 272060f130eda5545b5b78e8a9ef33d1, type: 3}
-    oakTreePrefab: {fileID: 4140730282945426296, guid: 8f20ef2fc57ded44fa9708e329628678, type: 3}
-    treeLOD0GameObjectPrefab: {fileID: 8923281884864634577, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
-    grasslandMapleTreePrefab: {fileID: 7061684082089613672, guid: 6ab64d9769b56e9499c1190271e4079b, type: 3}
-    grasslandBirchAspenTreePrefab: {fileID: 8943178363089886256, guid: fe4a12ed830904b42abf5a9d5b7572d0, type: 3}
-    grasslandWhitePineTreePrefab: {fileID: 9167976221399298968, guid: 272060f130eda5545b5b78e8a9ef33d1, type: 3}
-    grasslandOakTreePrefab: {fileID: 4140730282945426296, guid: 8f20ef2fc57ded44fa9708e329628678, type: 3}
+    spruceTreePrefab: {fileID: 5797252565840948109, guid: d50edcd03669d42468f5187bb51d9b8b, type: 3}
+    whitePineTreePrefab: {fileID: 7885203113008791233, guid: cf8e5349dbecb7a429285b391578ade8, type: 3}
+    oakTreePrefab: {fileID: 3947356295120545747, guid: d249a08b1bc250e4ba1aeb95f3fcc8b8, type: 3}
+    treeLOD0GameObjectPrefab: {fileID: 5797252565840948109, guid: d50edcd03669d42468f5187bb51d9b8b, type: 3}
+    grasslandMapleTreePrefab: {fileID: 5689874911952668969, guid: 7db3966ecd6a23545af93f26c7c54088, type: 3}
+    grasslandBirchAspenTreePrefab: {fileID: 1691991799813173471, guid: a291cb6ac863b2c43a4601301c9d6098, type: 3}
+    grasslandWhitePineTreePrefab: {fileID: 7885203113008791233, guid: cf8e5349dbecb7a429285b391578ade8, type: 3}
+    grasslandOakTreePrefab: {fileID: 3947356295120545747, guid: d249a08b1bc250e4ba1aeb95f3fcc8b8, type: 3}
     grasslandWillowTreePrefab: {fileID: 0}
-    grasslandTreeFallbackPrefab: {fileID: 8923281884864634577, guid: 74d9d3c86f2b17b448d206d6c4a1ae02, type: 3}
+    grasslandTreeFallbackPrefab: {fileID: 5797252565840948109, guid: d50edcd03669d42468f5187bb51d9b8b, type: 3}
     blueberryBushPrefab: {fileID: 2095120421312505866, guid: 90b14277c549b58408d186345b97dfbe, type: 3}
     raspberryBushPrefab: {fileID: 0}
     strawberryBushPrefab: {fileID: 6447866110754163726, guid: 083081802f30fd149b46c7105b9698ba, type: 3}
@@ -1426,6 +1426,9 @@ MonoBehaviour:
     seedOffset: 12000
     gameObjectTreeChunkRingRadius: 3
     standingTreeBatchSizeChunks: 4
+    enableStandingTreeMeshLods: 0
+    standingTreeGpuMode: 2
+    standingTreeCompactShader: {fileID: 7200000, guid: bb26dec695a34649929204bf48ee2d5a, type: 3}
     billboardTreeChunkRingRadius: 18
     enableDistantTrees: 1
     distantTreeDistanceChunks: 15
@@ -1441,8 +1444,9 @@ MonoBehaviour:
     distantTreeHeightBlendSpeed: 20
     distantTreeDepthOrdering: 1
     distantTreeDepthBands: 32
-    distantTreeGpuCompaction: 1
     distantTreeOutlineQuality: 4
+    distantTreeOutlineLibrary: {fileID: 0}
+    distantTreeGpuCompaction: 1
     distantTreeCompactShader: {fileID: 7200000, guid: 6b8a0bb568794f44a9b2c8fb3c9d8a40, type: 3}
     distantTreeWorkerCount: 1
     distantTreeResultsPerFrame: 1

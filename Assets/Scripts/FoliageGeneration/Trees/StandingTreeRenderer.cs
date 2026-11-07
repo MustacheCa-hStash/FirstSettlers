@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
+public enum StandingTreeGpuMode { Disabled, RedMaple, All }
+
 /// <summary>Shared prefab render definitions and reusable instanced draws. Never creates tree GameObjects.</summary>
 public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProvider
 {
@@ -43,7 +45,11 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
     {
         public Part[][] Levels;
         public float[] Thresholds;
+        public float[] BlendHalfWidths;
+        public float ReferenceScale;
         public Bounds Bounds;
+        public StandingTreeGpuBatch Gpu;
+        public bool? GpuCompatible;
     }
     private readonly TreeSettings settings;
     private readonly Dictionary<GameObject, Definition> definitions = new();
@@ -52,6 +58,10 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
     private readonly Dictionary<Mesh, Mesh> meshes = new();
     private readonly List<Batch> batches = new(), touched = new();
     private readonly List<SpatialTree> spatialTrees = new();
+    private readonly List<StandingTreeGpuBatch> gpuBatches = new();
+    private readonly Plane[] cullingPlanes = new Plane[6];
+    private readonly Vector4[] gpuPlanes = new Vector4[6];
+    private readonly bool gpuSupported;
     private Camera camera;
     private Vector3 cameraPosition;
     private float screenHeightScale;
@@ -61,10 +71,13 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
     private readonly Dictionary<ChunkCoord, Bounds> flameChunkBounds = new();
     public RenderGeometryStats RenderStats { get; private set; }
     public int DrawCalls { get; private set; }
+    public int GpuDrawCalls { get; private set; }
+    public int GpuCandidateCount { get; private set; }
 
     public StandingTreeRenderer(TreeSettings settings,TreeRegistry registry=null)
     {
         this.settings = settings;
+        gpuSupported = StandingTreeGpuBatch.IsSupported(settings.standingTreeCompactShader);
         flameRegistry=registry;
         if(registry!=null){registry.ChunkChanged+=FlameChunkChanged;LocalFlameGeometry.RegisterProvider(this);}
         foreach (var species in TreeSpeciesCatalog.All)
@@ -122,7 +135,11 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
             var group = prefab.GetComponentInChildren<LODGroup>(true);
             var lods = group != null ? group.GetLODs() : Array.Empty<LOD>();
             int count = Mathf.Max(1, lods.Length);
-            definition = new Definition { Levels = new Part[count][], Thresholds = new float[count] };
+            definition = new Definition
+            {
+                Levels = new Part[count][], Thresholds = new float[count], BlendHalfWidths = new float[count],
+                ReferenceScale = prefab.TryGetComponent<StandingTreeLodReference>(out var reference) ? reference.Scale : 1f
+            };
             bool bounded = false;
             for (int level = 0; level < count; level++)
             {
@@ -174,6 +191,15 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
                 }
                 definition.Levels[level] = parts.ToArray();
                 definition.Thresholds[level] = lods.Length > 0 ? lods[level].screenRelativeTransitionHeight : 0f;
+                if (level + 1 < count)
+                {
+                    float fade = lods[level].fadeTransitionWidth;
+                    // Centre the authored fraction of this level's screen-size span on the switch.
+                    // A zero width keeps the historical default used by existing tree prefabs.
+                    float span = definition.Thresholds[level] - lods[level + 1].screenRelativeTransitionHeight;
+                    definition.BlendHalfWidths[level] = Mathf.Max(.001f,
+                        fade > 0f ? span * fade * .5f : definition.Thresholds[level] * .1f);
+                }
             }
             definitions.Add(prefab, definition);
         }
@@ -212,7 +238,8 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
     public void BeginFrame(Camera camera)
     {
         spatialTrees.Clear();
-        this.camera = camera; RenderStats = default; DrawCalls = 0;
+        this.camera = camera; RenderStats = default; DrawCalls = GpuDrawCalls = GpuCandidateCount = 0;
+        foreach (var batch in gpuBatches) batch.BeginFrame();
         if (camera == null) return;
         cameraPosition = camera.transform.position;
         orthographic = camera.orthographic;
@@ -220,15 +247,52 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
             Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * .5f)));
     }
 
-    public void SubmitSpatial(ChunkCoord chunk, TreeInstanceData tree, Matrix4x4 matrix, float billboardFade, float loadFade)
+    public void SubmitSpatial(ChunkCoord chunk, TreeInstanceData tree, Matrix4x4 matrix, float billboardFade, float loadFade,
+        Bounds? regionBounds = null)
     {
-        if (billboardFade >= 1f || loadFade <= 0f || !variants.ContainsKey(tree.variant)) return;
+        if (billboardFade >= 1f || loadFade <= 0f || !variants.TryGetValue(tree.variant, out var definition)) return;
+        if (camera != null && gpuSupported && (settings.standingTreeGpuMode == StandingTreeGpuMode.All ||
+            settings.standingTreeGpuMode == StandingTreeGpuMode.RedMaple &&
+            (tree.variant == WorldFeatureVariant.MapleTree || tree.variant == WorldFeatureVariant.GrasslandMapleTree)) &&
+            (definition.GpuCompatible ??= SupportsGpu(definition)))
+        {
+            if (definition.Gpu == null)
+            {
+                var draws = new List<StandingTreeGpuBatch.Draw>();
+                for (int level = 0; level < definition.Levels.Length; ++level)
+                    foreach (var part in definition.Levels[level])
+                        draws.Add(new StandingTreeGpuBatch.Draw
+                        {
+                            Mesh = part.Batch.Mesh, Material = part.Batch.Material, Submesh = part.Batch.Submesh,
+                            Trunk = part.Batch.Trunk, Local = part.Local, Level = level
+                        });
+                definition.Gpu = new StandingTreeGpuBatch(settings.standingTreeCompactShader, definition.Bounds,
+                    definition.ReferenceScale, definition.Thresholds, definition.BlendHalfWidths, draws.ToArray());
+                gpuBatches.Add(definition.Gpu);
+            }
+            definition.Gpu.Submit(chunk, tree, matrix, billboardFade, loadFade, regionBounds);
+            return;
+        }
         int span = Mathf.Clamp(settings.standingTreeBatchSizeChunks, 1, 8);
         spatialTrees.Add(new SpatialTree
         {
             Region = new ChunkCoord(FloorRegion(chunk.x, span), FloorRegion(chunk.z, span)),
             Sequence = spatialTrees.Count, Tree = tree, Matrix = matrix, Handoff = billboardFade, Load = loadFade
         });
+    }
+
+    private static bool SupportsGpu(Definition definition)
+    {
+        if (definition.Levels.Length > 4) return false;
+        foreach (var level in definition.Levels)
+        {
+            if (level.Length == 0) return false;
+            foreach (var part in level)
+                if (!string.Equals(part.Batch.Material.GetTag("StandingTreeIndirect", false, "False"),
+                    "True", StringComparison.OrdinalIgnoreCase))
+                    return false;
+        }
+        return true;
     }
 
     private static int FloorRegion(int coordinate, int span) => coordinate >= 0 ? coordinate / span : (coordinate + 1) / span - 1;
@@ -244,18 +308,51 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
         }
         EndChunk();
         spatialTrees.Clear();
+        if (settings.standingTreeGpuMode == StandingTreeGpuMode.Disabled || gpuBatches.Count == 0) return;
+        Vector4[] frustum = null;
+        if (camera != null && !settings.castTreeShadows)
+        {
+            GeometryUtility.CalculateFrustumPlanes(camera, cullingPlanes);
+            frustum = gpuPlanes;
+            for (int i = 0; i < cullingPlanes.Length; ++i)
+            {
+                var plane = cullingPlanes[i];
+                frustum[i] = new Vector4(plane.normal.x, plane.normal.y, plane.normal.z, plane.distance);
+            }
+        }
+        foreach (var batch in gpuBatches)
+        {
+            int candidates = batch.CandidateCount;
+            if (candidates == 0) continue;
+            int draws = batch.Render(camera, cameraPosition, screenHeightScale, orthographic,
+                settings.castTreeShadows, settings.receiveTreeShadows, frustum, settings.enableStandingTreeMeshLods);
+            GpuCandidateCount += candidates;
+            GpuDrawCalls += draws;
+            DrawCalls += draws;
+            var stats = RenderStats;
+            var gpu = batch.SampledStats;
+            stats.instances += gpu.instances;
+            stats.vertices += gpu.vertices;
+            stats.triangles += gpu.triangles;
+            RenderStats = stats;
+        }
     }
 
     // A distance handoff is supplied by the world renderer. Prefab LODs remain screen-size based.
     public void Submit(TreeInstanceData tree, Matrix4x4 matrix, float billboardFade, float loadFade)
     {
         if (billboardFade >= 1f || loadFade <= 0f || !variants.TryGetValue(tree.variant, out var definition)) return;
+        if (!settings.enableStandingTreeMeshLods)
+        {
+            SubmitLevel(definition.Levels[0], tree, matrix, billboardFade, loadFade, 0f, 1f);
+            return;
+        }
         float screenHeight = float.MaxValue;
         if (camera != null && definition.Levels.Length > 1)
         {
             float size = definition.Bounds.size.y * Mathf.Max(Mathf.Abs(tree.localScale.x), Mathf.Abs(tree.localScale.y), Mathf.Abs(tree.localScale.z));
             Vector3 center = matrix.MultiplyPoint3x4(definition.Bounds.center);
-            screenHeight = size * screenHeightScale;
+            screenHeight = size * screenHeightScale * definition.ReferenceScale;
             if (!orthographic) screenHeight /= Mathf.Max(.01f, Vector3.Distance(cameraPosition, center));
         }
         int level = 0;
@@ -264,7 +361,7 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
         for (int boundary = Mathf.Max(0, level - 1); boundary <= level && boundary < definition.Levels.Length - 1; boundary++)
         {
             float threshold = definition.Thresholds[boundary];
-            float width = Mathf.Max(.001f, threshold * .1f);
+            float width = definition.BlendHalfWidths[boundary];
             if (Mathf.Abs(screenHeight - threshold) < width)
             {
                 float coarse = 1f - Mathf.InverseLerp(threshold - width, threshold + width, screenHeight);
@@ -318,6 +415,8 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
     public void Dispose()
     {
         if(flameRegistry!=null){flameRegistry.ChunkChanged-=FlameChunkChanged;LocalFlameGeometry.RemoveProvider(this);}
+        foreach (var batch in gpuBatches) batch.Dispose();
+        gpuBatches.Clear();
         foreach (var material in materials.Values) DestroyOwned(material);
         foreach (var mesh in meshes.Values) DestroyOwned(mesh);
         materials.Clear(); meshes.Clear(); variants.Clear(); definitions.Clear(); batches.Clear(); touched.Clear(); flameChunkBounds.Clear(); spatialTrees.Clear();

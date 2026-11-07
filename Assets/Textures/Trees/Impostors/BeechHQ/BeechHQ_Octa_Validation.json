@@ -1,0 +1,87 @@
+{
+    "configuration": "{\"species\":\"Beech\",\"sourcePrefab\":\"Assets/Prefabs/Beech_Stand_v01.prefab\",\"leafPath\":\"Assets/Materials/M_Trees/ForestVariety/M_Beech_Leaf.mat\",\"barkPath\":\"Assets/Materials/M_Trees/ForestVariety/M_Beech_Bark.mat\",\"leafTexture\":\"Assets/Textures/Trees/ForestVariety/T_BeechLeafCard.png\",\"barkTexture\":\"Assets/Textures/Trees/ForestVariety/T_BeechBark.png\",\"sourceSlot\":\"\",\"variant\":\"BeechTree\",\"shaderName\":\"Hidden/TreeImpostor/BirchSemanticCapture\",\"billboardSlots\":[],\"paletteMode\":3,\"expansion\":0.6000000238418579}",
+    "inputs": [
+        {
+            "path": "Assets/Materials/M_Trees/ForestVariety/M_Beech_Leaf.mat",
+            "sha256": "C25C23E0AA738C140EDD292CFFD11BA2E2F73D9A00754BF45CECA1FF7E43E38B"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/ForestVariety/M_Beech_Bark.mat",
+            "sha256": "68CEEAEE4F6EA500B3596595AF5C876062A22F8C9C772CB9A8C52136C97FC6C4"
+        },
+        {
+            "path": "Assets/Shaders/BirchLeafTintCutout.shader",
+            "sha256": "C1E4F00A32EE1A6DFD8A74E2DAE2291122D25041768B06FD9913CEB8A47A78C1"
+        },
+        {
+            "path": "Assets/Models/Trees/ForestVariety/Beech_Stand_v01.fbx",
+            "sha256": "DFD101766B84596AC1D5B585F3B71C896428C76B20785AA0AF193CC2AC31EBA5"
+        },
+        {
+            "path": "Assets/Textures/Trees/ForestVariety/T_BeechBark.png",
+            "sha256": "FD393674AC91711BC77E2BD2E179635FBF1F3A4EF1921A30E8B977D477CA0112"
+        },
+        {
+            "path": "Assets/Shaders/BirchBarkUnlit.shader",
+            "sha256": "6F7AC365237143D2AE7F816D31D5A2FA69258F109E21358AFE27050EA86C6282"
+        },
+        {
+            "path": "Assets/Prefabs/Beech_Stand_v01.prefab",
+            "sha256": "CD53408B759B3FBD56C139F0487144FCE3042DCFFED8A10DE01E8BCADB20E93F"
+        },
+        {
+            "path": "Assets/Textures/Trees/ForestVariety/T_BeechLeafCard.png",
+            "sha256": "E0F27BC589ACA4E3E1BBDA20353DCB1FBB28D8F79F3736C8C017D029B0512114"
+        },
+        {
+            "path": "Assets/Shaders/BirchImpostorSemanticCapture.shader",
+            "sha256": "DD2C5A2BDCA0E5F3E427C57FB7A4A33387C9645EA5EBBC8400978B851CAC7E0B"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
+            "sha256": "84B0720B90AAD407CD3C5772FABB6EF3CE108E0232BBC8FDD07B10E7631EE9BD"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAmbientAtlasBakerWindow.cs",
+            "sha256": "D4BC380FD35CCD293B11A6FA75345E545C66FEB3DA58B16E0750DEF105EC1796"
+        },
+        {
+            "path": "Assets/Shaders/TreeHQOctaImpostor.shader",
+            "sha256": "6004850135B00F01D2309339ED601485A4D092F247E71CEB56435E9FD0754A0F"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/BeechHQ/BeechHQ_Octa_AlbedoCoverage.png",
+            "sha256": "5CAA37EE64ADFFB51CF25BCCBF4BFB9C1FCAA77CAB77BECE179B36C6AB5E73F7"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/BeechHQ/BeechHQ_Octa_Surface.png",
+            "sha256": "480599CEB5933FB9E82DA1F2DAA29AC97E824F2E81096B3C0A0832A7F60A4F99"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/BeechHQ/BeechHQ_Octa_Depth.png",
+            "sha256": "73A654D28307BF1412471B2861851FCFFF90DA77B375AA35C0145C39D09BC863"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/BeechHQ/BeechHQ_Octa_MaterialId.png",
+            "sha256": "3A62F217D22D19C21BF78C0F8C8F70DC8A0AFC33E90102632F600C86F5030EA9"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/BeechHQ/BeechHQ_Octa_Ambient.png",
+            "sha256": "16D809BD7C898FBCE394CC9BE6A9CBA5AC8A1E3443E2F0FB07240650BC30210B"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/BeechHQ/BeechHQ_OctaImpostor_M.mat",
+            "sha256": "A348A9A972B1597DC97B7D14F888315896FCD4EBDBC0BDB03267C984EDEE1202"
+        },
+        {
+            "path": "Assets/Models/Trees/BeechHQ_OctaImpostor_Runtime.mesh",
+            "sha256": "C88CDB73A3349E222FE45D068D8621BB74F17B72ED098AB7418BA3727E08A6F8"
+        },
+        {
+            "path": "Assets/Prefabs/BeechHQ_OctaImpostor_Runtime.prefab",
+            "sha256": "A11BDA9F75D5D42D1BB61D89DD4E371F2826CAEFEB6F778F6D650391FC3AAF1C"
+        }
+    ]
+}

@@ -31,7 +31,7 @@ public static class TreeHQImpostorValidation
         }
         catch(Exception ex){Debug.LogException(ex);EditorApplication.Exit(1);}
     }
-    public static void Run()
+    public static void Run(string comparisonPrefab = null, bool calibrateFoliage = true)
     {
         QualitySettings.globalTextureMipmapLimit=0;
         ShaderUtil.allowAsyncCompilation=false;
@@ -41,13 +41,17 @@ public static class TreeHQImpostorValidation
         var needleTexture=AssetDatabase.LoadAssetAtPath<Texture2D>(TreeHQImpostorBaker.Current.leafTexture);
         Require(needleTexture&&leafInput.GetTexture("_BaseMap")==needleTexture,"Missing assigned source needle card.");
         var material=prefab.GetComponent<MeshRenderer>().sharedMaterial;
+        int frames = Mathf.RoundToInt(material.GetFloat("_FramesPerAxis"));
+        int padding = Mathf.RoundToInt(material.GetFloat("_AtlasPadding"));
+        int tile = Mathf.RoundToInt(material.GetFloat("_AtlasTileResolution"));
+        int stride = tile + 2 * padding;
         Require(material.enableInstancing&&material.GetFloat("_UseSeasonPalette")== (TreeHQImpostorBaker.Current.paletteMode<0?0:1),"Evergreen/instancing settings.");
         long bytes=0;
         foreach(string map in new[]{"AlbedoCoverage","Surface","Depth","MaterialId","Ambient"})
         {
             string path=TreeHQImpostorBaker.AtlasFolder+"/"+TreeHQImpostorBaker.Prefix+"_"+map+".png";
             var texture=AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-            int expected=map=="Ambient"?1088:8192;
+            int expected=map=="Ambient"?1088:frames*stride;
             Require(texture&&texture.width==expected&&texture.height==expected,"Atlas was resized: "+map);
             var importer=(TextureImporter)AssetImporter.GetAtPath(path);
             Require(importer.npotScale==TextureImporterNPOTScale.None&&importer.filterMode==FilterMode.Trilinear&&
@@ -57,13 +61,13 @@ public static class TreeHQImpostorValidation
             if(map=="AlbedoCoverage")Require(importer.mipMapsPreserveCoverage&&Mathf.Abs(importer.alphaTestReferenceValue-material.GetFloat("_Cutoff"))<.0001f,"Coverage mip cutoff mismatch.");
             bytes+=UnityEngine.Profiling.Profiler.GetRuntimeMemorySizeLong(texture);
         }
-        Debug.Log("TREE HQ "+Name+" STORAGE: "+(bytes/(1024*1024))+" MiB for all five runtime textures; 1016px per view, 64 views.");
-        ValidateAtlas();
+        Debug.Log($"TREE HQ {Name} STORAGE: {bytes/(1024*1024)} MiB for all five runtime textures; {tile}px per view, {frames*frames} views.");
+        ValidateAtlas(frames, stride, padding);
         SpruceImpostorGpuValidation.ValidateAdditionalSpecies(TreeHQImpostorBaker.PrefabPath);
         TreeImpostorGroundingValidation.RunSpecies(Name+"HQ");
-        RenderComparisons(prefab);
+        RenderComparisons(prefab, comparisonPrefab ?? OldPrefab, calibrateFoliage);
         WriteRecord();
-        Debug.Log("TREE HQ IMPOSTOR PASS: 8K atlases, coverage mipmaps, CPU/GPU routing and pixels, bounds, fades, root anchoring and near/old/new distance comparisons.");
+        Debug.Log("TREE HQ IMPOSTOR PASS: atlases, coverage mipmaps, CPU/GPU routing and pixels, bounds, fades, root anchoring and distance comparisons.");
     }
     static Color32[] Readback(Texture2D source)
     {
@@ -73,7 +77,7 @@ public static class TreeHQImpostorValidation
         try{Graphics.Blit(source,rt);RenderTexture.active=rt;pixels.ReadPixels(new Rect(0,0,source.width,source.height),0,0);pixels.Apply();return pixels.GetPixels32();}
         finally{RenderTexture.active=previous;RenderTexture.ReleaseTemporary(rt);Object.DestroyImmediate(pixels);}
     }
-    static void ValidateAtlas()
+    static void ValidateAtlas(int frames, int stride, int padding)
     {
         // Validate capture alignment before independently compressing the maps.
         // Compressed borders may have faint coverage or attenuated IDs; the
@@ -85,12 +89,14 @@ public static class TreeHQImpostorValidation
         var albedo=Readback(AssetDatabase.LoadAssetAtPath<Texture2D>(TreeHQImpostorBaker.AtlasFolder+"/"+TreeHQImpostorBaker.Prefix+"_AlbedoCoverage.png"));
         var ids=Readback(AssetDatabase.LoadAssetAtPath<Texture2D>(TreeHQImpostorBaker.AtlasFolder+"/"+TreeHQImpostorBaker.Prefix+"_MaterialId.png"));
         int leaves=0,bark=0;
-        for(int fy=0;fy<8;fy++)for(int fx=0;fx<8;fx++)
+        int width = stride * frames;
+        int step = Mathf.Max(1, stride / 256);
+        for(int fy=0;fy<frames;fy++)for(int fx=0;fx<frames;fx++)
         {
             int count=0;
-            for(int y=4;y<1020;y+=4)for(int x=4;x<1020;x+=4)
+            for(int y=padding;y<stride-padding;y+=step)for(int x=padding;x<stride-padding;x+=step)
             {
-                int i=(fy*1024+y)*8192+fx*1024+x;
+                int i=(fy*stride+y)*width+fx*stride+x;
                 if(albedo[i].a<20)continue;
                 count++;
                 if(Math.Max(ids[i].r,ids[i].g)<3)continue; // Explicitly discarded by the HQ shader.
@@ -113,7 +119,7 @@ public static class TreeHQImpostorValidation
     }
     [Serializable] sealed class Metric{public float season;public string kind;public int size,yaw,covered,crownHoles;}
     [Serializable] sealed class Comparison{public Metric[] views;}
-    static void RenderComparisons(GameObject prefab)
+    static void RenderComparisons(GameObject prefab, string comparisonPrefab, bool calibrateFoliage)
     {
         var previousScene=SceneManager.GetActiveScene();
         var scene=EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Additive);
@@ -127,9 +133,11 @@ public static class TreeHQImpostorValidation
             SceneManager.SetActiveScene(scene);GraphicsSettings.defaultRenderPipeline=pipeline;QualitySettings.renderPipeline=pipeline;
             RenderSettings.fog=false;RenderSettings.skybox=null;RenderSettings.ambientMode=AmbientMode.Flat;RenderSettings.ambientLight=new Color(.35f,.35f,.35f);
             var source=(GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(TreeHQImpostorBaker.SourcePrefab),scene);
-            var old=(GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(OldPrefab),scene);
+            var previous = AssetDatabase.LoadAssetAtPath<GameObject>(comparisonPrefab);
+            var old=previous ? (GameObject)PrefabUtility.InstantiatePrefab(previous,scene) : null;
             var proxy=(GameObject)PrefabUtility.InstantiatePrefab(prefab,scene);
-            var roots=new[]{source,old,proxy};var names=new[]{"source","old","hq"};
+            var roots=old ? new[]{source,old,proxy} : new[]{source,proxy};
+            var names=old ? new[]{"source","old","hq"} : new[]{"source","hq"};
             foreach(var root in roots)
             {
                 root.transform.SetPositionAndRotation(Vector3.zero,Quaternion.identity);root.transform.localScale=Vector3.one;
@@ -169,7 +177,7 @@ public static class TreeHQImpostorValidation
             {
                 // A compressed border with coverage but no semantic donor must
                 // remain transparent in the actual runtime shader.
-                for(int i=0;i<3;i++)roots[i].SetActive(i==2);
+                for(int i=0;i<roots.Length;i++)roots[i].SetActive(i==roots.Length-1);
                 camera.transform.position=center+Vector3.back*radius*3;camera.transform.LookAt(center);
                 var identityMaterial=proxy.GetComponent<MeshRenderer>().sharedMaterial;
                 var savedIdentity=identityMaterial.GetTexture("_MaterialIdAtlas");
@@ -183,7 +191,7 @@ public static class TreeHQImpostorValidation
                 finally{identityMaterial.SetTexture("_MaterialIdAtlas",savedIdentity);}
                 foreach(int yaw in new[]{0,45,90})for(int sample=0;sample<2;sample++)
                 {
-                    for(int i=0;i<3;i++)roots[i].SetActive(i==(sample==0?0:2));
+                    for(int i=0;i<roots.Length;i++)roots[i].SetActive(i==(sample==0?0:roots.Length-1));
                     camera.transform.position=center+Quaternion.Euler(-8,yaw,0)*Vector3.back*radius*3;camera.transform.LookAt(center);
                     for(int i=0;i<2;i++)RenderPipeline.SubmitRenderRequest(camera,new UniversalRenderPipeline.SingleCameraRequest{destination=fitTarget});
                     RenderTexture.active=fitTarget;fitPixels.ReadPixels(new Rect(0,0,256,256),0,0);fitPixels.Apply();
@@ -191,11 +199,16 @@ public static class TreeHQImpostorValidation
                     Require(foliage.Length>20,"Source/target green foliage missing from calibration: "+Name);
                     sums[sample]+=foliage.Average(c=>c.g);
                 }
-                float before=material.GetFloat("_FoliageBrightness");
-                float fitted=Mathf.Clamp(before*(float)(sums[0]/sums[1]),.25f,2f);
-                material.SetFloat("_FoliageBrightness",fitted);EditorUtility.SetDirty(material);AssetDatabase.SaveAssets();
-                proxy.GetComponent<MeshRenderer>().sharedMaterial.SetFloat("_FoliageBrightness",fitted);
-                Debug.Log($"TREE HQ {Name} LIGHTING: foliage brightness {before:F3} -> {fitted:F3}; source green={sums[0]/3:F4}, initial HQ={sums[1]/3:F4}.");
+                if (calibrateFoliage)
+                {
+                    float before=material.GetFloat("_FoliageBrightness");
+                    float fitted=Mathf.Clamp(before*(float)(sums[0]/sums[1]),.25f,2f);
+                    material.SetFloat("_FoliageBrightness",fitted);
+                    EditorUtility.SetDirty(material);
+                    AssetDatabase.SaveAssetIfDirty(material);
+                    proxy.GetComponent<MeshRenderer>().sharedMaterial.SetFloat("_FoliageBrightness",fitted);
+                    Debug.Log($"TREE HQ {Name} LIGHTING: foliage brightness {before:F3} -> {fitted:F3}; source green={sums[0]/3:F4}, initial HQ={sums[1]/3:F4}.");
+                }
             }
             finally{RenderTexture.active=oldTarget;fitTarget.Release();Object.DestroyImmediate(fitTarget);Object.DestroyImmediate(fitPixels);}
             foreach(float season in new[]{0f,1f})

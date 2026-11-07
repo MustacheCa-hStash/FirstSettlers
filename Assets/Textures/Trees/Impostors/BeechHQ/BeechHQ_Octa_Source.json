@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/Beech_Stand_v01.prefab",
+    "prefabGuid": "90fd7f4cf37c94c4abbf0e30460699c8",
+    "dependencyHash": "81cd1c8e00a4a198585a205ad36de293",
+    "albedoEncoding": "sRGB half-range neutral detail; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.6000000238418579
+}

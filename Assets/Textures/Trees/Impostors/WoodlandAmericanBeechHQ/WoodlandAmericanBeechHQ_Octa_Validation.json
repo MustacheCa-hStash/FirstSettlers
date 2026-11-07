@@ -1,0 +1,91 @@
+{
+    "configuration": "{\"species\":\"WoodlandAmericanBeech\",\"sourcePrefab\":\"Assets/Prefabs/WoodlandAmericanBeech.prefab\",\"leafPath\":\"Assets/Materials/M_Trees/Woodland/AmericanBeech_Leaf.mat\",\"barkPath\":\"Assets/Materials/M_Trees/Woodland/AmericanBeech_Bark.mat\",\"leafTexture\":\"Assets/Textures/Trees/Woodland/AmericanBeech_Foliage.png\",\"barkTexture\":\"Assets/Textures/Trees/Woodland/AmericanBeech_Bark.png\",\"sourceSlot\":\"\",\"variant\":\"BeechTree\",\"shaderName\":\"Hidden/TreeImpostor/OakSemanticCapture\",\"billboardSlots\":[],\"paletteMode\":-1,\"expansion\":0.4000000059604645}",
+    "inputs": [
+        {
+            "path": "Assets/Textures/Trees/Woodland/AmericanBeech_Foliage.png",
+            "sha256": "7B2BA8E7F205EDD83DF3E426829594E887C0E6E6BC463267F771F40B6EF2578B"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Woodland/AmericanBeech_Bark.mat",
+            "sha256": "93468FBB10E87F12F9034BD99B016CC4D89B6D0EBAD827A28E23397189FC422C"
+        },
+        {
+            "path": "Assets/Shaders/OakLeafTintCutout.shader",
+            "sha256": "80CB1CEE174AB37AA0D4127FB8AD6573F744CD257B448B3B6E2C7ED93369CB01"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Woodland/AmericanBeech_Leaf.mat",
+            "sha256": "87C92A0F03910E4EC0B58349E9772CCD71739D68064011C798643463912C5CC4"
+        },
+        {
+            "path": "Assets/Textures/Trees/Woodland/AmericanBeech_Bark.png",
+            "sha256": "BEFCDD931569382FB615D23510D20F861FB570460AF9160C49BBD9A28091971D"
+        },
+        {
+            "path": "Assets/Prefabs/WoodlandAmericanBeech.prefab",
+            "sha256": "E470AD938DD7AECF6A8D79799184714B9F909B48BFE13A22659ABF13FBE07DE0"
+        },
+        {
+            "path": "Assets/Scripts/FoliageGeneration/Trees/TreeGameplayAuthoring.cs",
+            "sha256": "8BC346EFA8C5C84AC80740666AC5CC348840765480FE0DE053560FB1DC0F3CDD"
+        },
+        {
+            "path": "Assets/Shaders/OakBarkUnlit.shader",
+            "sha256": "E5E95183F96D8CB4F605A0C830299E16E51F7F5DC0880DA6384314BE867C9A6A"
+        },
+        {
+            "path": "Assets/Models/Trees/Woodland/AmericanBeech.fbx",
+            "sha256": "9FD79CF2089B0C0D357FCAFCF0F45E9567E3474A0474A9E51876C261D008F2F3"
+        },
+        {
+            "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
+            "sha256": "BC89A29E0CA7A1E73CCAD2ADF148D4EA8AFD40800B6AFEE1D47B7B963928957C"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
+            "sha256": "84B0720B90AAD407CD3C5772FABB6EF3CE108E0232BBC8FDD07B10E7631EE9BD"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAmbientAtlasBakerWindow.cs",
+            "sha256": "D4BC380FD35CCD293B11A6FA75345E545C66FEB3DA58B16E0750DEF105EC1796"
+        },
+        {
+            "path": "Assets/Shaders/TreeHQOctaImpostor.shader",
+            "sha256": "6004850135B00F01D2309339ED601485A4D092F247E71CEB56435E9FD0754A0F"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandAmericanBeechHQ/WoodlandAmericanBeechHQ_Octa_AlbedoCoverage.png",
+            "sha256": "DC0547260F78B91F03CCC62123B174D1A06FAEA5B01200344CF681F459D86EE3"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandAmericanBeechHQ/WoodlandAmericanBeechHQ_Octa_Surface.png",
+            "sha256": "316702EF7822488913F1AFEDA46F51974D2BD6854444B2CB4EDDF2FAB05AB700"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandAmericanBeechHQ/WoodlandAmericanBeechHQ_Octa_Depth.png",
+            "sha256": "522F8891A43E68BECE4F785F39743FFD95135788EEAEC3F42FB442FEA2DB68CA"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandAmericanBeechHQ/WoodlandAmericanBeechHQ_Octa_MaterialId.png",
+            "sha256": "EA2E0C3E6F40814A23424CE75BBBB257064A6150C4EF227252CB69B43E0CBEE7"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandAmericanBeechHQ/WoodlandAmericanBeechHQ_Octa_Ambient.png",
+            "sha256": "C85EBC09A377EB697004A05D0789F3F815F02DE2893308CD71DD767740F90EEC"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/WoodlandAmericanBeechHQ/WoodlandAmericanBeechHQ_OctaImpostor_M.mat",
+            "sha256": "19647648282DFF934C289E162CCE1BFC359E6F23961480AF616A6D4AC6B51DE3"
+        },
+        {
+            "path": "Assets/Models/Trees/WoodlandAmericanBeechHQ_OctaImpostor_Runtime.mesh",
+            "sha256": "930413BB9389669D8D540D3620B5D7291A2AB41CC1410CFF35B76C7120448229"
+        },
+        {
+            "path": "Assets/Prefabs/WoodlandAmericanBeechHQ_OctaImpostor_Runtime.prefab",
+            "sha256": "35C5E09EE19BE42A53CBE8B34FD200BC51F0C525A99E706001F0E4EADF77DB5E"
+        }
+    ]
+}

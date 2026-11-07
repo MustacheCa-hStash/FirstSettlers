@@ -31,6 +31,20 @@ public static class TreeGenerationSnapshot
                     ? definition.GrasslandTreeExclusionRadiusRange : definition.ForestTreeExclusionRadiusRange;
                 scaleRanges[(int)variant] = definition.TreeUniformScaleRange;
             }
+            if (settings.treeDistribution.UseWoodlandSpeciesMix)
+            {
+                // These models were authored in metres. The legacy ranges
+                // compensate for the scales of a different set of meshes.
+                scaleRanges[(int)variant] = new Vector2(.76f, 1.13f);
+                Vector2 meters = variant switch
+                {
+                    WorldFeatureVariant.OakTree or WorldFeatureVariant.GrasslandOakTree => new Vector2(4.0f, 5.6f),
+                    WorldFeatureVariant.BeechTree or WorldFeatureVariant.SugarMapleTree => new Vector2(3.0f, 4.5f),
+                    WorldFeatureVariant.BirchAspenTree or WorldFeatureVariant.GrasslandBirchAspenTree => new Vector2(2.2f, 3.4f),
+                    _ => new Vector2(2.8f, 4.2f)
+                };
+                range = meters / settings.treeDistribution.WorldScale;
+            }
             radiusRanges[(int)variant] = range;
         }
         settings.treeExclusionRadiusRanges = radiusRanges;

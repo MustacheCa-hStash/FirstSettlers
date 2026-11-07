@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/Oak_OpenCrown_v05.prefab",
+    "prefabGuid": "0dd9503c4b5398c4c805fcaa63a8408b",
+    "dependencyHash": "a81647cc30aa79d3911dd57a75cd7271",
+    "albedoEncoding": "sRGB half-range neutral detail; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.5
+}

@@ -83,6 +83,8 @@ public sealed class DistantTreeManager : IDisposable
     public RenderGeometryStats RenderStats { get; private set; }
     public RenderGeometryStats MeshRenderStats => standingTrees.RenderStats;
     public int MeshDrawCalls => standingTrees.DrawCalls;
+    public int GpuMeshDrawCalls => standingTrees.GpuDrawCalls;
+    public int GpuMeshCandidates => standingTrees.GpuCandidateCount;
     public int CpuTreeSubmissions { get; private set; }
     public int GpuSourceUploads { get; private set; }
     public int GpuRegionUploads { get; private set; }
@@ -135,7 +137,8 @@ public sealed class DistantTreeManager : IDisposable
         if (settings.distantTreeOutlineQuality != TreeImpostorOutlineQuality.Quad &&
             (material.shader.name == "Custom/TreeHQOctaImpostor" || material.shader.name == "Custom/SpruceOctaImpostor"))
         {
-            outlineLibrary ??= Resources.Load<TreeImpostorOutlineLibrary>("Foliage/TreeImpostorOutlines");
+            outlineLibrary ??= settings.distantTreeOutlineLibrary != null ? settings.distantTreeOutlineLibrary :
+                Resources.Load<TreeImpostorOutlineLibrary>("Foliage/TreeImpostorOutlines");
             outline = TreeImpostorOutlineBinding.Apply(material, mesh, outlineLibrary, settings.distantTreeOutlineQuality);
         }
         var batch = new Batch
@@ -331,7 +334,7 @@ public sealed class DistantTreeManager : IDisposable
                 matrix.m13 = renderHeight;
                 float meshCoverage = hasBillboard ? manifest.LoadFade :
                     Mathf.Min(manifest.LoadFade, Mathf.Clamp01((maxDistance - distance) / outerWidth));
-                standingTrees.SubmitSpatial(coord, tree, matrix, billboardTransition, meshCoverage);
+                standingTrees.SubmitSpatial(coord, tree, matrix, billboardTransition, meshCoverage, bounds);
                 if (!hasBillboard || billboardTransition <= 0f || !billboardVisible) continue;
                 if (gpuEnabled && batch.Gpu != null)
                 {

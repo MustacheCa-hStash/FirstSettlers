@@ -16,6 +16,7 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
     [SerializeField, Range(0.01f, 1f)] private float coverageExpansionStrength = 0.75f;
     [SerializeField] private bool encodeAlbedoSrgb;
     private int atlasImportMaxSize = 4096;
+    private bool importRawForAmbientBake;
     [Header("Species output")]
     [SerializeField] private string speciesName = "Spruce";
     [SerializeField] private string atlasPrefix = "Spruce_Octa";
@@ -116,11 +117,11 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
         => CaptureSpecies(source, "SpruceHQ", "Assets/Textures/Trees/Impostors/SpruceHQ", "Assets/Materials/M_Trees/SpruceHQ/SpruceHQ_OctaImpostor_M.mat",
             "Hidden/TreeImpostor/SpruceHQSemanticCapture", true);
 
-    public static bool CaptureTreeHQ(TreeImpostorCaptureSetup source, string species, string shader, float expansion)
+    public static bool CaptureTreeHQ(TreeImpostorCaptureSetup source, string species, string shader, float expansion, int atlasSize = 8192)
         => CaptureSpecies(source, species+"HQ", "Assets/Textures/Trees/Impostors/"+species+"HQ",
-            "Assets/Materials/M_Trees/"+species+"HQ/"+species+"HQ_OctaImpostor_M.mat",shader,true,expansion);
+            "Assets/Materials/M_Trees/"+species+"HQ/"+species+"HQ_OctaImpostor_M.mat",shader,true,expansion,atlasSize);
 
-    static bool CaptureSpecies(TreeImpostorCaptureSetup source, string species, string folder, string materialPath, string shader, bool highQualityNeedles = false, float expansion = .75f)
+    static bool CaptureSpecies(TreeImpostorCaptureSetup source, string species, string folder, string materialPath, string shader, bool highQualityNeedles = false, float expansion = .75f, int atlasSize = 8192)
     {
         var window = CreateInstance<TreeImpostorAtlasCaptureWindow>();
         try
@@ -138,9 +139,11 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
             window.encodeAlbedoSrgb = true;
             if (highQualityNeedles)
             {
-                window.tileResolution = 1016; window.paddingPixels = 4;
+                window.paddingPixels = 4;
+                window.tileResolution = atlasSize / window.framesPerAxis - window.paddingPixels * 2;
                 window.coverageExpansionPixels = 2; window.coverageExpansionStrength = expansion;
-                window.atlasImportMaxSize = 8192;
+                window.atlasImportMaxSize = atlasSize;
+                window.importRawForAmbientBake = true;
             }
             return window.CaptureAll();
         }
@@ -581,7 +584,7 @@ public sealed class TreeImpostorAtlasCaptureWindow : EditorWindow
             importer.npotScale = TextureImporterNPOTScale.None;
             importer.alphaIsTransparency = false;
             importer.textureCompression = TextureImporterCompression.Uncompressed;
-            if (atlasImportMaxSize > 4096)
+            if (importRawForAmbientBake)
             {
                 // A rebake must restore alpha-bearing readable data before the
                 // ambient stage; runtime BC7/R8 imports are applied afterwards.

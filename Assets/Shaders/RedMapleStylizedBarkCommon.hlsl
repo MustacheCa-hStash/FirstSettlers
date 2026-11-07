@@ -81,6 +81,7 @@ half4 RedMapleBarkFragment(RedMapleBarkVaryings input) : SV_Target
     bark *= StandingTreeBarkTint(_TreeBarkTint).rgb;
     bark *= lerp(half3(1,1,1), input.color.rgb, _UseVertexColor);
     half3 normal = NormalizeNormalPerPixel(input.normalWS);
+    bark = FSForestBarkColor(bark);
     bark = lerp(bark, _SnowColor.rgb, saturate(StandingTreeSnow(_SnowCoverage) * smoothstep(.2h,.8h,normal.y)));
     InputData data = InitializeTreeSimpleLitInputData(input.positionWS, normal, input.positionCS,
         input.shadowCoord, _AmbientStrength);

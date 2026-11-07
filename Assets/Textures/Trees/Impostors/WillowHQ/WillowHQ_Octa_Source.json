@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/Willow_River_v01.prefab",
+    "prefabGuid": "feeaa6b7e1ca5564bb177cb4775c9a73",
+    "dependencyHash": "6a2537d7c1aeed00e6564df0fea52e08",
+    "albedoEncoding": "sRGB half-range neutral detail; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.6000000238418579
+}

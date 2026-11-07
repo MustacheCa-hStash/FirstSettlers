@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/WoodlandRedMaple.prefab",
+    "prefabGuid": "a06c6b7b1e0bfae489edb2cb2b2d5bdc",
+    "dependencyHash": "6c3ef9beb2bbc018aaa8afe9be846d52",
+    "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.4000000059604645
+}

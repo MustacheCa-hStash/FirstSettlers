@@ -132,10 +132,12 @@ half4 BirchLeafFragment(BirchLeafVaryings input, FRONT_FACE_TYPE facing : FRONT_
     leaf *= lerp(half3(1,1,1), input.color.rgb, _UseVertexColor);
     half3 normal = BirchLeafNormal(input, facing);
     half snow = StandingTreeSnow(_SnowCoverage) * smoothstep(.05h, .7h, normal.y);
+    leaf = FSForestLeafColor(leaf);
     leaf = lerp(leaf, _SnowColor.rgb * detail, saturate(snow));
     InputData data = InitializeTreeSimpleLitInputData(input.positionWS, normal, input.positionCS,
         input.shadowCoord, _AmbientStrength);
     data.vertexLighting = input.vertexLighting;
+    data.bakedGI *= FSForestCrownFill(data.normalWS, 0.0h);
     SurfaceData surface = InitializeTreeSimpleLitSurfaceData(leaf, atlas.a, _Smoothness, _SpecularStrength);
     // Match the maples' camera-stable, two-sided transmission and shared night lighting.
     half3 transmissionNormal = NormalizeNormalPerPixel(input.normalWS) * IS_FRONT_VFACE(facing, 1, -1);

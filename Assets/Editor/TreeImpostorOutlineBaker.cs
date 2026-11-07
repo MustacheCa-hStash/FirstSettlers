@@ -19,15 +19,18 @@ public static class TreeImpostorOutlineBaker
     }
 
     [MenuItem("Tools/Impostors/Bake Conservative Tree Outlines")]
-    public static void Bake()
+    public static void Bake() => BakeSelected(AssetPath, Array.Empty<TreeImpostorOutlineLibrary.Entry>(),
+        "RedMaple", "SugarMaple", "Oak", "Birch", "WhitePine", "Spruce");
+
+    public static void BakeSelected(string assetPath, IEnumerable<TreeImpostorOutlineLibrary.Entry> baseEntries, params string[] names)
     {
         Directory.CreateDirectory(Output);
-        var library = AssetDatabase.LoadAssetAtPath<TreeImpostorOutlineLibrary>(AssetPath);
-        if (library == null) { library = ScriptableObject.CreateInstance<TreeImpostorOutlineLibrary>(); AssetDatabase.CreateAsset(library, AssetPath); }
-        var entries = new List<TreeImpostorOutlineLibrary.Entry>();
+        var library = AssetDatabase.LoadAssetAtPath<TreeImpostorOutlineLibrary>(assetPath);
+        if (library == null) { library = ScriptableObject.CreateInstance<TreeImpostorOutlineLibrary>(); AssetDatabase.CreateAsset(library, assetPath); }
+        var entries = new List<TreeImpostorOutlineLibrary.Entry>(baseEntries);
         using var csv = new StreamWriter(Output + "/areas.csv");
         csv.WriteLine("species,frame,vertices,areaFraction");
-        foreach (string name in new[] { "RedMaple", "SugarMaple", "Oak", "Birch", "WhitePine", "Spruce" })
+        foreach (string name in names)
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>($"Assets/Materials/M_Trees/{name}HQ/{name}HQ_OctaImpostor_M.mat");
             if (material == null) throw new InvalidOperationException("Missing HQ material: " + name);
@@ -82,7 +85,7 @@ public static class TreeImpostorOutlineBaker
             Debug.Log($"OUTLINE_BAKE {name}: area 4={entry.shapes[0].meanArea:F3}, 8={entry.shapes[1].meanArea:F3}, 12={entry.shapes[2].meanArea:F3}, 16={entry.shapes[3].meanArea:F3}");
         }
         library.entries = entries.ToArray(); EditorUtility.SetDirty(library); AssetDatabase.SaveAssets();
-        Debug.Log("TREE_OUTLINE_BAKE_PASS: all imported coverage cells enclosed in all 64 directions, four vertex budgets, six HQ visuals.");
+        Debug.Log($"TREE_OUTLINE_BAKE_PASS: all imported coverage cells enclosed across four vertex budgets for {string.Join(", ", names)}.");
     }
 
 

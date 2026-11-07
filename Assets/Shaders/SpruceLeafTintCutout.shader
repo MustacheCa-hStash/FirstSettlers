@@ -46,6 +46,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
             "RenderPipeline" = "UniversalPipeline"
             "Queue" = "AlphaTest"
             "IgnoreProjector" = "True"
+            "StandingTreeIndirect" = "True"
         }
 
         LOD 100
@@ -59,10 +60,13 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
+            #define STANDING_TREE_GPU_SUPPORT
             #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
@@ -70,6 +74,7 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Assets/Shaders/LocalFlameLighting.hlsl"
+            #include "Assets/Shaders/ForestCanopyLighting.hlsl"
             #include "Assets/Shaders/DistantTreeFade.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
 
@@ -294,8 +299,9 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
                 // transparent needle texels. Blend after tinting to keep snow white.
                 half snowBlend = saturate(snowAlpha / max(alpha, 0.0001h));
                 half3 needleAlbedo = atlas.rgb * lerp(leafColor, _CoolNeedleColor.rgb, coverage * 0.28h);
-                half3 albedo = lerp(needleAlbedo, snowyCard.rgb, snowBlend);
+                half3 albedo = lerp(FSForestLeafColor(needleAlbedo), snowyCard.rgb, snowBlend);
                 inputData.normalWS = normalize(lerp(litNormal, half3(0.0h, 1.0h, 0.0h), snowBlend * 0.65h));
+                inputData.bakedGI *= FSForestCrownFill(inputData.normalWS, 0.0h);
                 SurfaceData surfaceData = InitializeSpruceLeafSurfaceData(albedo, alpha);
                 half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
                 color.rgb+=surfaceData.albedo*FSLocalFlameDiffuse(inputData.positionWS,inputData.normalWS);
@@ -320,10 +326,13 @@ Shader "Custom/SpruceLeafSimpleLitCutout"
             Cull Off
 
             HLSLPROGRAM
+            #define STANDING_TREE_GPU_SUPPORT
             #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
 

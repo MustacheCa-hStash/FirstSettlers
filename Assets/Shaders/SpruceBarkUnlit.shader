@@ -28,7 +28,7 @@ Shader "Custom/SpruceBarkSimpleLit"
         {
             "RenderType" = "Opaque"
             "RenderPipeline" = "UniversalPipeline"
-            "Queue" = "Geometry"
+            "Queue" = "Geometry" "StandingTreeIndirect"="True"
         }
 
         LOD 100
@@ -42,16 +42,20 @@ Shader "Custom/SpruceBarkSimpleLit"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
+            #define STANDING_TREE_GPU_SUPPORT
             #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Assets/Shaders/LocalFlameLighting.hlsl"
+            #include "Assets/Shaders/ForestCanopyLighting.hlsl"
             #include "Assets/Shaders/DistantTreeFade.hlsl"
 
             TEXTURE2D(_BaseMap);
@@ -153,7 +157,7 @@ Shader "Custom/SpruceBarkSimpleLit"
             SurfaceData InitializeSpruceBarkSurfaceData(half3 barkColor)
             {
                 SurfaceData surfaceData = (SurfaceData)0;
-                surfaceData.albedo = saturate(barkColor);
+                surfaceData.albedo = saturate(FSForestBarkColor(barkColor));
                 surfaceData.alpha = 1.0h;
                 surfaceData.specular = _SpecularStrength.xxx;
                 surfaceData.smoothness = _Smoothness;
@@ -217,10 +221,13 @@ Shader "Custom/SpruceBarkSimpleLit"
             Cull Back
 
             HLSLPROGRAM
+            #define STANDING_TREE_GPU_SUPPORT
             #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"

@@ -35,7 +35,13 @@ public class PcgDebugOverlay : MonoBehaviour
     void Update()
     {
         HandleToggleInput();
-        if (Keyboard.current?.f7Key.wasPressedThisFrame == true) ResetPerformanceSample();
+        var keyboard = Keyboard.current;
+        if (worldManager != null && keyboard?.f5Key.wasPressedThisFrame == true)
+        {
+            worldManager.StandingTreeMeshLodsEnabled = !worldManager.StandingTreeMeshLodsEnabled;
+            ResetPerformanceSample();
+        }
+        if (keyboard?.f7Key.wasPressedThisFrame == true) ResetPerformanceSample();
 
         if (!isVisible || Time.unscaledTime < nextRefreshTime)
             return;
@@ -138,7 +144,13 @@ public class PcgDebugOverlay : MonoBehaviour
         performanceBuilder.Append("Average FPS: "); performanceBuilder.AppendLine(frameTimes.Count > 0 ? average.ToString("0.0") : "warming up");
         performanceBuilder.Append("1% low FPS: "); performanceBuilder.AppendLine(frameTimes.Count >= 100 ? low.ToString("0.0") : "warming up");
         performanceBuilder.Append("Sample: "); performanceBuilder.Append(frameTimes.SampleSeconds.ToString("0.0")); performanceBuilder.AppendLine(" s");
-        if (worldManager != null) performanceBuilder.AppendLine(worldManager.StreamingBudgetSummary);
+        if (worldManager != null)
+        {
+            performanceBuilder.Append("Tree mesh LODs · ")
+                .Append(worldManager.StandingTreeMeshLodsEnabled ? "B · On" : "A · LOD0 only")
+                .AppendLine(" (F5 switch)");
+            performanceBuilder.AppendLine(worldManager.StreamingBudgetSummary);
+        }
         var flames=LocalFlameLighting.Instance;
         if(flames!=null)
         {

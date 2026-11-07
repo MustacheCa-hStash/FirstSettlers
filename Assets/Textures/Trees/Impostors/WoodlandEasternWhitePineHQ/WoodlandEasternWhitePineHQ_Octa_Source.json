@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/WoodlandEasternWhitePine.prefab",
+    "prefabGuid": "77e1c93165b863243a0845c5f287ae04",
+    "dependencyHash": "96ac268ed41efdd810f8fe93acd6f0f6",
+    "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.4000000059604645
+}

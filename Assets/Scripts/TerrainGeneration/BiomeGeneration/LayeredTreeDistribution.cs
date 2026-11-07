@@ -48,7 +48,10 @@ public sealed class LayeredTreeDistribution
         candidates.Add(key,candidate);Stats.Candidates++;
         var stand=stands.Evaluate(candidate.XZx,candidate.XZz);
         float rank=Roll(Hash(x,z,88005)),area=settings.CandidateCell*settings.CandidateCell/10000f;
-        float upper=Mathf.Max(settings.ForestBackground+settings.ForestStand*stand.Forest,
+        float share=settings.YoungTreeShare;
+        float forestMature=settings.ForestBackground+settings.ForestStand*stand.Forest;
+        float forestYoung=(settings.ForestBackground+settings.ForestStand*.33f)*share;
+        float upper=Mathf.Max(forestMature*(1f-share)+forestYoung,
             Mathf.Max(settings.MeadowBackground+settings.MeadowGrove,settings.SnowStand));
         if(rank>=Mathf.Min(1f,upper*area))return candidate; // No erosion/climate sample for most lattice cells.
         Stats.HabitatQueries++;
@@ -56,7 +59,7 @@ public sealed class LayeredTreeDistribution
         if(site.Height<=water || site.Surface!=SurfaceType.Grass && site.Surface!=SurfaceType.Snow)return candidate;
         if(site.Biome!=BiomeType.Snow && site.Mountain>.30f && site.Height>
             Mathf.Lerp(.8f,.62f,Mathf.InverseLerp(.30f,.45f,site.Mountain)))return candidate;
-        float density;
+        float density, youngDensity=0f;
         if(site.Biome==BiomeType.Snow && site.Surface==SurfaceType.Snow)
         {
             if(site.Height>=.8f || site.Slope>=35f || site.River>=.32f)return candidate;
@@ -78,9 +81,12 @@ public sealed class LayeredTreeDistribution
             if(useForest)
             {
                 if(site.River>=.64f)return candidate;
-                density=(settings.ForestBackground+settings.ForestStand*stand.Forest)*(1f-stand.Clearing)*slope;
-                density*=1f-Mathf.SmoothStep(0f,1f,Mathf.InverseLerp(.52f,.64f,site.River));
-                candidate.Variant=taiga?WorldFeatureVariant.SpruceTree:ForestSpecies(stand.Palette,Roll(Hash(x,z,88007)));
+                float riverWeight=1f-Mathf.SmoothStep(0f,1f,Mathf.InverseLerp(.52f,.64f,site.River));
+                density=forestMature*(1f-stand.Clearing)*slope*riverWeight;
+                youngDensity=forestYoung*(1f-stand.Clearing)*slope*riverWeight;
+                float speciesRoll=Roll(Hash(x,z,88007));
+                candidate.Variant=settings.UseWoodlandSpeciesMix ? WoodlandForest(site,stand,speciesRoll) :
+                    taiga?WorldFeatureVariant.SpruceTree:ForestSpecies(stand.Palette,speciesRoll);
                 // The grassland side of an ecotone never admits forest white pine either.
                 if(site.Biome==BiomeType.Grassland && candidate.Variant==WorldFeatureVariant.WhitePineTree)
                     candidate.Variant=WorldFeatureVariant.MapleTree;
@@ -90,15 +96,77 @@ public sealed class LayeredTreeDistribution
                 if(site.River>=.86f || features.maxGrasslandTreesPerChunk<=0)return candidate;
                 float riparian=Mathf.SmoothStep(0f,1f,Mathf.InverseLerp(.50f,.82f,site.River));
                 density=(settings.MeadowBackground+settings.MeadowGrove*Mathf.Max(stand.Meadow,riparian*.7f))*slope*(1f-stand.Clearing);
-                candidate.Variant=MeadowSpecies(stand.Palette,Roll(Hash(x,z,88007)),riparian,site.Moisture);
+                float youngGrove=Mathf.Max(Mathf.Sqrt(stand.Meadow)*.55f,riparian*.55f);
+                youngDensity=share*(settings.MeadowBackground+settings.MeadowGrove*youngGrove)*slope*(1f-stand.Clearing);
+                float speciesRoll=Roll(Hash(x,z,88007));
+                candidate.Variant=settings.UseWoodlandSpeciesMix ? WoodlandMeadow(speciesRoll,riparian,false) :
+                    MeadowSpecies(stand.Palette,speciesRoll,riparian,site.Moisture);
             }
         }
-        if(rank>=Mathf.Min(1f,density*area))return candidate;
+        float matureDensity=site.Biome==BiomeType.Snow ? density : density*(1f-share);
+        if(rank>=Mathf.Min(1f,(matureDensity+youngDensity)*area))return candidate;
+        bool young=rank>=matureDensity*area;
+        if(young)
+        {
+            float mix=Roll(Hash(x,z,88012));
+            bool meadow=TreeSpeciesCatalog.IsGrassland(candidate.Variant);
+            candidate.Variant=settings.UseWoodlandSpeciesMix
+                ? meadow ? WoodlandMeadow(mix,Mathf.InverseLerp(.50f,.82f,site.River),true) : WoodlandYoung(site,candidate.Variant,mix)
+                : meadow
+                ? candidate.Variant==WorldFeatureVariant.GrasslandWillowTree ? candidate.Variant :
+                    mix<.65f ? WorldFeatureVariant.GrasslandMapleTree : WorldFeatureVariant.GrasslandBirchAspenTree
+                : site.Biome==BiomeType.Taiga || mix<.55f ? WorldFeatureVariant.SpruceTree : WorldFeatureVariant.BeechTree;
+        }
         candidate.Radius=features.GetTreeExclusionRadius(candidate.Variant,Roll(Hash(x,z,88008)));
         var range=features.GetTreeUniformScaleRange(candidate.Variant);
         candidate.Scale=Mathf.Lerp(range.x,range.y,Mathf.Clamp01(stand.Age*.6f+Roll(Hash(x,z,88009))*.4f));
+        if(young)
+        {
+            candidate.Scale*=Mathf.Lerp(.23f,.38f,Roll(Hash(x,z,88013)));
+            candidate.Radius=Mathf.Min(candidate.Radius,3f/settings.WorldScale);
+        }
         candidate.Eligible=true;
         return candidate;
+    }
+
+    static WorldFeatureVariant WoodlandForest(TreeHabitatSample site, TreeStandField.Sample stand, float roll)
+    {
+        if(site.Biome==BiomeType.Taiga)
+            return roll<.79f ? WorldFeatureVariant.SpruceTree :
+                roll<.94f ? WorldFeatureVariant.WhitePineTree : WorldFeatureVariant.BirchAspenTree;
+        float upland=Mathf.InverseLerp(.25f,.62f,site.Mountain)*
+            (1f-Mathf.InverseLerp(.40f,.64f,site.Temperature));
+        float coolTrees=.19f*upland;
+        if(roll<coolTrees)
+            return roll<coolTrees*.65f ? WorldFeatureVariant.SpruceTree : WorldFeatureVariant.WhitePineTree;
+        roll=(roll-coolTrees)/(1f-coolTrees);
+        // A shared stand palette favors cohorts, with oak stronger on warm,
+        // drier ground and beech stronger in the cooler, mesic interiors.
+        float dryWarm=Mathf.Clamp01((site.Temperature-site.Moisture)*1.6f+.40f);
+        float oak=Mathf.Lerp(.18f,.46f,dryWarm)*Mathf.Lerp(.70f,1.35f,Roll(stand.Palette));
+        float pioneer=Mathf.Lerp(.10f,.025f,stand.Forest);
+        if(roll<oak)return WorldFeatureVariant.OakTree;
+        if(roll<oak+pioneer)return WorldFeatureVariant.BirchAspenTree;
+        if(roll<oak+pioneer+.10f)return WorldFeatureVariant.SugarMapleTree;
+        if(roll<oak+pioneer+.18f)return WorldFeatureVariant.MapleTree;
+        return WorldFeatureVariant.BeechTree;
+    }
+
+    static WorldFeatureVariant WoodlandMeadow(float roll, float riparian, bool young)
+    {
+        // Aspen uses the existing grassland birch/aspen slot. Keep waterways
+        // within the same woodland palette and meadows predominantly open.
+        float aspen=Mathf.Lerp(.14f,.38f,Mathf.Clamp01(riparian));
+        if(roll<aspen)return WorldFeatureVariant.GrasslandBirchAspenTree;
+        if(!young && roll>.42f)return WorldFeatureVariant.GrasslandOakTree;
+        return WorldFeatureVariant.GrasslandMapleTree;
+    }
+
+    static WorldFeatureVariant WoodlandYoung(TreeHabitatSample site, WorldFeatureVariant mature, float roll)
+    {
+        if(site.Biome==BiomeType.Taiga)return mature;
+        if(roll<.65f)return WorldFeatureVariant.BeechTree;
+        return roll<.83f ? WorldFeatureVariant.SugarMapleTree : WorldFeatureVariant.MapleTree;
     }
     private static WorldFeatureVariant ForestSpecies(uint palette,float rank)
     {

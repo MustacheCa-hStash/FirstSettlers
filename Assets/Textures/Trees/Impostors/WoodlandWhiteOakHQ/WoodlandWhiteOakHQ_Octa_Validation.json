@@ -1,0 +1,91 @@
+{
+    "configuration": "{\"species\":\"WoodlandWhiteOak\",\"sourcePrefab\":\"Assets/Prefabs/WoodlandWhiteOak.prefab\",\"leafPath\":\"Assets/Materials/M_Trees/Woodland/WhiteOak_Leaf.mat\",\"barkPath\":\"Assets/Materials/M_Trees/Woodland/WhiteOak_Bark.mat\",\"leafTexture\":\"Assets/Textures/Trees/Woodland/WhiteOak_Foliage.png\",\"barkTexture\":\"Assets/Textures/Trees/Woodland/WhiteOak_Bark.png\",\"sourceSlot\":\"\",\"variant\":\"OakTree\",\"shaderName\":\"Hidden/TreeImpostor/OakSemanticCapture\",\"billboardSlots\":[],\"paletteMode\":-1,\"expansion\":0.4000000059604645}",
+    "inputs": [
+        {
+            "path": "Assets/Models/Trees/Woodland/WhiteOak.fbx",
+            "sha256": "FE5FBF9609BF91D9CF1FDB6A7BE0EBA8A63A9E73C3608DF39F04E8C1B09CC168"
+        },
+        {
+            "path": "Assets/Shaders/OakLeafTintCutout.shader",
+            "sha256": "80CB1CEE174AB37AA0D4127FB8AD6573F744CD257B448B3B6E2C7ED93369CB01"
+        },
+        {
+            "path": "Assets/Textures/Trees/Woodland/WhiteOak_Bark.png",
+            "sha256": "762319AFA688AF17D271F081CE9AECE754A796D20A41545564F769BD9A5B9EA6"
+        },
+        {
+            "path": "Assets/Prefabs/WoodlandWhiteOak.prefab",
+            "sha256": "B68835442D079631DA7E8EC3D0E85A3E17DA05C7C96157E7F7AFFCDAF60391E3"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Woodland/WhiteOak_Leaf.mat",
+            "sha256": "A3C8C74978487DEBF54DF9704139B9B393F187632F0FC129C76927DF9BC46669"
+        },
+        {
+            "path": "Assets/Scripts/FoliageGeneration/Trees/TreeGameplayAuthoring.cs",
+            "sha256": "8BC346EFA8C5C84AC80740666AC5CC348840765480FE0DE053560FB1DC0F3CDD"
+        },
+        {
+            "path": "Assets/Shaders/OakBarkUnlit.shader",
+            "sha256": "E5E95183F96D8CB4F605A0C830299E16E51F7F5DC0880DA6384314BE867C9A6A"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/Woodland/WhiteOak_Bark.mat",
+            "sha256": "F19FDBC568469A46E391BC4EC8ECB6EF9C8B66FEC86C880972B86AF293367976"
+        },
+        {
+            "path": "Assets/Textures/Trees/Woodland/WhiteOak_Foliage.png",
+            "sha256": "2FD3A34AA4D43B5A49BE1E40BA139B4E6247182525A4F5A9F41E7CA9F2E468D3"
+        },
+        {
+            "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
+            "sha256": "BC89A29E0CA7A1E73CCAD2ADF148D4EA8AFD40800B6AFEE1D47B7B963928957C"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
+            "sha256": "84B0720B90AAD407CD3C5772FABB6EF3CE108E0232BBC8FDD07B10E7631EE9BD"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAmbientAtlasBakerWindow.cs",
+            "sha256": "D4BC380FD35CCD293B11A6FA75345E545C66FEB3DA58B16E0750DEF105EC1796"
+        },
+        {
+            "path": "Assets/Shaders/TreeHQOctaImpostor.shader",
+            "sha256": "6004850135B00F01D2309339ED601485A4D092F247E71CEB56435E9FD0754A0F"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandWhiteOakHQ/WoodlandWhiteOakHQ_Octa_AlbedoCoverage.png",
+            "sha256": "B0C66E6BD0C74418E88D6A2A6104AD26063B9BB58B3C82D82B46BD7D74CA0788"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandWhiteOakHQ/WoodlandWhiteOakHQ_Octa_Surface.png",
+            "sha256": "CB20D6745A7B74F9C276D315A95F220773C07DCE6BA00FF4B37C08258575B8E4"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandWhiteOakHQ/WoodlandWhiteOakHQ_Octa_Depth.png",
+            "sha256": "2BF956FA616528DF459736EFF227F6DE7CE44290BA682943AD28AAE690702ADC"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandWhiteOakHQ/WoodlandWhiteOakHQ_Octa_MaterialId.png",
+            "sha256": "CCD8FC796A3B0384A53E0AF7C6A8F883C8A16CA9BB6F09D3A764C64CF643095F"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/WoodlandWhiteOakHQ/WoodlandWhiteOakHQ_Octa_Ambient.png",
+            "sha256": "65B168542E0721A8C8B47E83640AD6FB98F3EC91BC9A70A2088B280A58B05A6C"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/WoodlandWhiteOakHQ/WoodlandWhiteOakHQ_OctaImpostor_M.mat",
+            "sha256": "317D823DBD55A3E0A5BD87FEF43D4ABFDBEF26F12EC7289FD4692FB392D0B077"
+        },
+        {
+            "path": "Assets/Models/Trees/WoodlandWhiteOakHQ_OctaImpostor_Runtime.mesh",
+            "sha256": "3D1A0A96BADC81786A560E5FF2AF294D3DA040161F8F1576293EAEDCA6D82F65"
+        },
+        {
+            "path": "Assets/Prefabs/WoodlandWhiteOakHQ_OctaImpostor_Runtime.prefab",
+            "sha256": "25CC0D898B08FB8B977238A49A6B20A2378928F7B55829E8ED69AC01FA9696BE"
+        }
+    ]
+}

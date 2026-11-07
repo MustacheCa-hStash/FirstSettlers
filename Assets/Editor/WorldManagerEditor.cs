@@ -37,6 +37,7 @@ public class WorldManagerEditor : Editor
         new[] { "Grass and Forest Ground Cover", "grassSettings", "leafClusterSettings", "fernSettings" },
         new[] { "Trees, Bushes and Rocks", "treeSettings", "showTreeExclusionRadiusGizmos" },
         new[] { "Tree Season Preview", "simulateTreeSeason", "treeSeasonAutumnAmount" },
+        new[] { "Forest Palette and Shade", "forestLighting" },
         new[] { "Flowers and Shore Plants", "flowerSettings", "cloverSettings", "dandelionSettings", "lilyPadSettings", "cattailSettings" },
         new[] { "Ambient Life", "butterflySettings", "beeSettings" },
         new[] { "Water", "waterMaterial", "globalWaterY", "waterReflectionResolution", "waterReflectionUpdatesPerSecond", "waterReflectionMovingUpdatesPerSecond", "waterReflectionDistance" },
@@ -67,7 +68,7 @@ public class WorldManagerEditor : Editor
     {
         serializedObject.Update();
         using (new EditorGUI.DisabledScope(true)) EditorGUILayout.PropertyField(serializedObject.FindProperty("m_Script"));
-        EditorGUILayout.HelpBox("Terrain and cached placement settings apply on regeneration. During Play mode, use Regenerate Terrain after editing those settings. Tree Season Preview updates live. Greyed controls are inactive under the selected options; hover for the reason.", MessageType.Info);
+        EditorGUILayout.HelpBox("Terrain and cached placement settings apply on regeneration. During Play mode, use Regenerate Terrain after editing those settings. Tree Season Preview and Forest Palette and Shade update live. Greyed controls are inactive under the selected options; hover for the reason.", MessageType.Info);
         var drawn = new HashSet<string> { "m_Script" };
         foreach (var section in Sections)
         {

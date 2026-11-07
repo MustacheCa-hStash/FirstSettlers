@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/WoodlandPaperBirch.prefab",
+    "prefabGuid": "25c9d94bf0cb91f48ac1c43e62a89b10",
+    "dependencyHash": "6f9d188a561df0ea65c74d2b10680941",
+    "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.4000000059604645
+}

@@ -19,11 +19,12 @@ Shader "Custom/SugarMapleStylizedBark"
     }
     SubShader
     {
-        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" }
+        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" "StandingTreeIndirect"="True" }
         Cull Back
         ZWrite On
         ZTest LEqual
         HLSLINCLUDE
+        #define STANDING_TREE_GPU_SUPPORT
         #include "Assets/Shaders/SugarMapleStylizedBarkCommon.hlsl"
         ENDHLSL
         Pass
@@ -35,6 +36,8 @@ Shader "Custom/SugarMapleStylizedBark"
             #pragma vertex SugarMapleBarkVertex
             #pragma fragment SugarMapleBarkFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fog
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
@@ -53,6 +56,8 @@ Shader "Custom/SugarMapleStylizedBark"
             #pragma vertex SugarMapleBarkShadowVertex
             #pragma fragment SugarMapleBarkDepthFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
             ENDHLSL
@@ -67,6 +72,8 @@ Shader "Custom/SugarMapleStylizedBark"
             #pragma vertex SugarMapleBarkVertex
             #pragma fragment SugarMapleBarkDepthFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             ENDHLSL
         }
@@ -79,6 +86,8 @@ Shader "Custom/SugarMapleStylizedBark"
             #pragma vertex SugarMapleBarkVertex
             #pragma fragment SugarMapleBarkNormalsFragment
             #pragma multi_compile_instancing
+            #pragma instancing_options procedural:SetupStandingTree
+            #pragma require compute : PROCEDURAL_INSTANCING_ON
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
             ENDHLSL
