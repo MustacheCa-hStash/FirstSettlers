@@ -64,6 +64,7 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
     private readonly bool gpuSupported;
     private Camera camera;
     private Vector3 cameraPosition;
+    private float forestAlphaShadowDistanceSquared;
     private float screenHeightScale;
     private bool orthographic;
     private readonly TreeRegistry flameRegistry;
@@ -240,6 +241,8 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
         spatialTrees.Clear();
         this.camera = camera; RenderStats = default; DrawCalls = GpuDrawCalls = GpuCandidateCount = 0;
         foreach (var batch in gpuBatches) batch.BeginFrame();
+        float radius = camera != null ? Mathf.Max(0f, settings.forestAlphaShadowDistance) : 0f;
+        forestAlphaShadowDistanceSquared = radius * radius;
         if (camera == null) return;
         cameraPosition = camera.transform.position;
         orthographic = camera.orthographic;
@@ -324,7 +327,7 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
         {
             int candidates = batch.CandidateCount;
             if (candidates == 0) continue;
-            int draws = batch.Render(camera, cameraPosition, screenHeightScale, orthographic,
+            int draws = batch.Render(camera, cameraPosition, screenHeightScale, orthographic, forestAlphaShadowDistanceSquared,
                 settings.castTreeShadows, settings.receiveTreeShadows, frustum, settings.enableStandingTreeMeshLods);
             GpuCandidateCount += candidates;
             GpuDrawCalls += draws;
@@ -373,9 +376,26 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
         SubmitLevel(definition.Levels[level], tree, matrix, billboardFade, loadFade, 0f, 1f);
     }
 
+    internal static bool AlwaysUsesAlphaShadows(TreeInstanceData tree) =>
+        tree.snowCoverage > 0f || tree.id.Source == TreePlacementSource.Grassland || TreeSpeciesCatalog.IsGrassland(tree.variant);
+
+    internal static float AlphaShadowRadiusScaleSquared(TreeId id)
+    {
+        // Stagger nearby thresholds per tree to avoid a ring changing all at once.
+        uint hash = unchecked((uint)id.GetHashCode() * 2654435761u);
+        float scale = Mathf.Lerp(.83f, 1.17f, (hash >> 24) / 255f);
+        return scale * scale;
+    }
+
     private void SubmitLevel(Part[] parts, TreeInstanceData tree, Matrix4x4 matrix, float handoff, float load, float lower, float upper)
     {
-        bool alphaShadows = tree.snowCoverage > 0f || TreeSpeciesCatalog.IsGrassland(tree.variant);
+        bool alphaShadows = AlwaysUsesAlphaShadows(tree);
+        if (!alphaShadows && forestAlphaShadowDistanceSquared > 0f)
+        {
+            float dx = matrix.m03 - cameraPosition.x;
+            float dz = matrix.m23 - cameraPosition.z;
+            alphaShadows = dx * dx + dz * dz < forestAlphaShadowDistanceSquared * AlphaShadowRadiusScaleSquared(tree.id);
+        }
         foreach (var part in parts)
         {
             var b = part.Batch;

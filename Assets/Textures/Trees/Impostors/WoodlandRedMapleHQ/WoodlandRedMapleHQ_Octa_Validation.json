@@ -3,7 +3,7 @@
     "inputs": [
         {
             "path": "Assets/Shaders/OakLeafTintCutout.shader",
-            "sha256": "80CB1CEE174AB37AA0D4127FB8AD6573F744CD257B448B3B6E2C7ED93369CB01"
+            "sha256": "81CE85A5C750EE06842E959AA5D3DEF9EAD7134DD384A07056A9E459AC69CB90"
         },
         {
             "path": "Assets/Prefabs/WoodlandRedMaple.prefab",
@@ -11,7 +11,7 @@
         },
         {
             "path": "Assets/Models/Trees/Woodland/RedMaple.fbx",
-            "sha256": "DFBDBE7836B6E58385480A5D3BA9FE08C645D5348D1C9ADF45CDED837E7D1349"
+            "sha256": "1D331211FDEE12C43AFC8D221B5EFFC45E0EA2050401017F8FA6F33DDAA0FF2C"
         },
         {
             "path": "Assets/Scripts/FoliageGeneration/Trees/TreeGameplayAuthoring.cs",
@@ -27,11 +27,11 @@
         },
         {
             "path": "Assets/Textures/Trees/Woodland/RedMaple_Foliage.png",
-            "sha256": "B10AE949BBACAD22128D02C5F7A7FE4EFFDD61E91FFE2A78E004433A5FC10FB1"
+            "sha256": "38FAFEE6E82679AE7C49D9F0391316AABD7FDE5994AD12FBEA3936BF2315B33A"
         },
         {
             "path": "Assets/Materials/M_Trees/Woodland/RedMaple_Leaf.mat",
-            "sha256": "90397D3850E67DEBE9286A6461EEA1DFA499AE43740E70FFFD049858974E332B"
+            "sha256": "E67C214DCBE9AF364FD8EEE9EEF0865F6CC39E0C0892EA9063702D7E5B9ED33E"
         },
         {
             "path": "Assets/Materials/M_Trees/Woodland/RedMaple_Bark.mat",
@@ -39,7 +39,7 @@
         },
         {
             "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
-            "sha256": "BC89A29E0CA7A1E73CCAD2ADF148D4EA8AFD40800B6AFEE1D47B7B963928957C"
+            "sha256": "33FABBF2E4CBED11F45B3AB20F0DE71464817982F8C94C4C0E1E3E5114742059"
         },
         {
             "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
@@ -57,11 +57,11 @@
     "outputs": [
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandRedMapleHQ/WoodlandRedMapleHQ_Octa_AlbedoCoverage.png",
-            "sha256": "26091D98491542E8B375A30954BAE6332448851D93CBB6CA1EA046A9D239DAAB"
+            "sha256": "6B5C5FEFD9278F53CF13EF313D1FA01D70BB6B287218DBA7883EA15DB5DC4D2C"
         },
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandRedMapleHQ/WoodlandRedMapleHQ_Octa_Surface.png",
-            "sha256": "3C4A5CC0479A636734416369A0BAE88E463F8EDEF6D3433A2F3B634C0950A4AB"
+            "sha256": "C46CC659B50B3B34C07F59CF92A7199A6738E5E7E8B6BF2580D9B46531E466FE"
         },
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandRedMapleHQ/WoodlandRedMapleHQ_Octa_Depth.png",
@@ -73,11 +73,11 @@
         },
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandRedMapleHQ/WoodlandRedMapleHQ_Octa_Ambient.png",
-            "sha256": "8A6677B1EAAF2FBD395C49860285AB36C467503AC760285F02737733EBE36DF7"
+            "sha256": "3AA170506D0E23CC4EB1888A04AACED77E721BC111E828C17F9A4D47B03EA224"
         },
         {
             "path": "Assets/Materials/M_Trees/WoodlandRedMapleHQ/WoodlandRedMapleHQ_OctaImpostor_M.mat",
-            "sha256": "D3CC1C962B39301BEC751B4A12E21024F85603610B8DC73307EAC7834CADD942"
+            "sha256": "2B92398B1D297B6428EDB720A6173A018CDC745E5933BCF61BA42F69863A08AD"
         },
         {
             "path": "Assets/Models/Trees/WoodlandRedMapleHQ_OctaImpostor_Runtime.mesh",

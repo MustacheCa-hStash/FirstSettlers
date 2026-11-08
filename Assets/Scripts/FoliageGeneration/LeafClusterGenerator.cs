@@ -88,10 +88,13 @@ public sealed class LeafClusterGeneration
         countX = Mathf.CeilToInt((record.ChunkCoord.x + 1) * size * scale / spacing)+halo - minX;
         countZ = Mathf.CeilToInt((record.ChunkCoord.z + 1) * size * scale / spacing)+halo - minZ;
         Complete = heights == null || slopes == null || biomes == null || surfaces == null ||
-            floor == null || countX <= 0 || countZ <= 0;
+            plan == null || (floor == null && settings.woodlandKind != WoodlandScatterKind.HabitatShrub) ||
+            countX <= 0 || countZ <= 0;
         if (!Complete && plan != null)
             foreach (WorldFeaturePlacement feature in plan.Placements)
             {
+                if (settings.woodlandKind == WoodlandScatterKind.Deadwood && feature.featureType == WorldFeatureType.Tree)
+                    TryAddRoot(feature);
                 // Litter can approach trunks; bushes and boulders need their whole footprint clear.
                 float radius = feature.featureType == WorldFeatureType.Tree
                     ? Mathf.Max(0.25f, feature.exclusionRadius * scale * 0.18f)
@@ -117,7 +120,8 @@ public sealed class LeafClusterGeneration
         ReferenceEquals(slopes, current.SlopeMap) && ReferenceEquals(biomes, current.BiomeMap) &&
         ReferenceEquals(surfaces, current.SurfaceTypeMap) && ReferenceEquals(rivers, current.RiverMaskMap) &&
         ReferenceEquals(plan, current.WorldFeaturePlan) && ReferenceEquals(floor, current.WorldFeaturePlan?.ForestStructure.FloorEcologyMap) &&
-        (!settings.IsFern || ReferenceEquals(moisture,current.MoistureMap));
+        (!(settings.IsFern || settings.woodlandKind is WoodlandScatterKind.Groundcover or WoodlandScatterKind.HabitatShrub) ||
+            ReferenceEquals(moisture,current.MoistureMap));
 
     public void Step(int budget)
     {
@@ -152,14 +156,17 @@ public sealed class LeafClusterGeneration
     {
         int x = Mathf.Clamp(Mathf.RoundToInt(sample.x) + 1, 0, biomes.GetLength(0) - 1);
         int z = Mathf.Clamp(Mathf.RoundToInt(sample.y) + 1, 0, biomes.GetLength(1) - 1);
-        float forest = BiomeTransitionPolicy.ForestWeight(plan, biomes[x,z], x,z);
-        if (forest <= 0f || surfaces[x, z] != SurfaceType.Grass) return;
+        BiomeType biome = biomes[x,z];
+        float forest = BiomeTransitionPolicy.ForestWeight(plan, biome, x,z);
+        bool habitatShrub = settings.woodlandKind == WoodlandScatterKind.HabitatShrub;
+        if (surfaces[x,z] != SurfaceType.Grass) return;
+        if (habitatShrub ? biome is not (BiomeType.Grassland or BiomeType.Forest or BiomeType.Taiga) : forest <= 0f) return;
         float slope = Sample(slopes, sample);
         if (slope >= Mathf.Max(0.01f, settings.maxSlope)) return;
         Vector3 normal = TerrainNormal(sample);
         if (Vector3.Angle(normal, Vector3.up) >= Mathf.Max(0.01f, settings.maxSlope)) return;
         float river = rivers == null ? 0 : Sample(rivers, sample);
-        float4 ecology = SampleFloor(sample);
+        float4 ecology = floor == null ? default : SampleFloor(sample);
         float colony = Mathf.Lerp(0.35f, 1f, Mathf.SmoothStep(0, 1,
             (noise.snoise(new float2(world.x, world.y) * 0.12f + seed * 0.0013f) + 1) * 0.5f));
         float keep = Mathf.Clamp01(settings.density) * colony * (1 - ecology.x * 0.75f) *
@@ -168,7 +175,7 @@ public sealed class LeafClusterGeneration
             (1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.15f, 0.5f, river)));
         if (settings is FernSettings fern)
         {
-            if (ForestFloorPolicy.MossBlocksVegetation(ecology.z)) return;
+            if (!fern.gradualMossFalloff && ForestFloorPolicy.MossBlocksVegetation(ecology.z)) return;
             float dampness = moisture == null ? 0 : Sample(moisture,sample);
             float shade = plan.ForestStructure.CanopyIntentMap == null ? 0 : Sample(plan.ForestStructure.CanopyIntentMap,sample);
             float clearing = plan.ForestStructure.ClearingMap == null ? 0 : Sample(plan.ForestStructure.ClearingMap,sample);
@@ -176,8 +183,43 @@ public sealed class LeafClusterGeneration
                 Mathf.Lerp(.25f,1,shade) * (1-clearing*.85f) * (1-ecology.y) *
                 (1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.15f,.5f,river))) *
                 (1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(10,settings.maxSlope,slope)));
+            if (fern.gradualMossFalloff) keep *= WoodlandMossRetention(ecology.z);
         }
-        keep *= forest;
+        else if (habitatShrub)
+        {
+            float damp = moisture == null ? .5f : Sample(moisture,sample);
+            var canopyMap = plan.ForestStructure.CanopyIntentMap;
+            var clearingMap = plan.ForestStructure.ClearingMap;
+            float canopy = canopyMap == null ? 0 : Sample(canopyMap,sample);
+            float clearing = clearingMap == null ? 0 : Sample(clearingMap,sample);
+            float pockets = (noise.snoise(new float2(world.x,world.y)*.085f + seed*.0081f)+1)*.5f;
+            float meadow = .62f * Mathf.SmoothStep(0,1,Mathf.InverseLerp(.59f,.83f,pockets)) *
+                Mathf.Lerp(.28f,1f,Mathf.InverseLerp(.35f,.65f,damp));
+            float woodland = Mathf.Lerp(.23f,.95f,pockets) *
+                Mathf.Lerp(1f,.60f,canopy) * Mathf.Lerp(1f,.70f,clearing) *
+                Mathf.Lerp(.65f,1f,Mathf.InverseLerp(.31f,.66f,damp));
+            float edge = 4f*forest*(1f-forest);
+            keep = settings.density * (Mathf.Lerp(meadow,woodland,forest) + edge * .23f * pockets) *
+                (1f-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.22f,.52f,river)));
+        }
+        else if (settings.woodlandKind != WoodlandScatterKind.Litter)
+        {
+            float clearing = plan.ForestStructure.ClearingMap == null ? 0 : Sample(plan.ForestStructure.ClearingMap,sample);
+            float damp = moisture == null ? .5f : Sample(moisture,sample);
+            float patches = (noise.snoise(new float2(world.x,world.y) * .22f + seed*.0021f) + 1f) * .5f;
+            float drift = Mathf.SmoothStep(0,1,Mathf.InverseLerp(.30f,.72f,patches));
+            float habitat = settings.woodlandKind switch
+            {
+                WoodlandScatterKind.Groundcover => Mathf.Lerp(.06f,1f,drift) *
+                    Mathf.Lerp(.55f,1f,Mathf.InverseLerp(.27f,.62f,damp)) *
+                    Mathf.Lerp(1f,.45f,clearing) * Mathf.Lerp(.18f,1f,WoodlandMossRetention(ecology.z)),
+                WoodlandScatterKind.Shrub => Mathf.Lerp(.26f,1f,drift) *
+                    Mathf.Lerp(.66f,1f,clearing) * Mathf.Lerp(1f,.65f,ForestFloorPolicy.MossDominance(ecology.z)),
+                _ => Mathf.Lerp(.40f,.95f,colony) * (1f-clearing*.66f)
+            };
+            keep = settings.density * habitat * (1f-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.17f,.55f,river)));
+        }
+        if (!habitatShrub) keep *= forest;
         if (Unit(rank, 59) >= keep || Blocked(sample * scale)) return;
         float y = SampleTerrain(heights, sample) * heightMultiplier * scale;
         float s = Mathf.Lerp(Mathf.Max(0.1f, Mathf.Min(settings.scaleRange.x, settings.scaleRange.y)),
@@ -189,6 +231,37 @@ public sealed class LeafClusterGeneration
             position = new Vector3(world.x, y, world.y) + normal * (settings.IsFern?-0.006f:0.006f),
             rotation = rotation, scale = s, rank = rank,
             tint = new Vector4(tone, tone * Mathf.Lerp(0.95f, 1.02f, Unit(rank, 151)), tone * 0.94f, 1)
+        });
+    }
+
+    private static float WoodlandMossRetention(float moss) =>
+        1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(.12f, .56f, moss));
+
+    private void TryAddRoot(WorldFeaturePlacement tree)
+    {
+        var treeSample = new Vector2(tree.sampleX, tree.sampleZ);
+        var origin = new Vector2(record.ChunkCoord.x, record.ChunkCoord.z) * size;
+        var local = treeSample - origin;
+        if (local.x < 0 || local.y < 0 || local.x >= size || local.y >= size) return;
+        int x = Mathf.Clamp(Mathf.RoundToInt(local.x) + 1, 0, biomes.GetLength(0) - 1);
+        int z = Mathf.Clamp(Mathf.RoundToInt(local.y) + 1, 0, biomes.GetLength(1) - 1);
+        if (BiomeTransitionPolicy.ForestWeight(plan, biomes[x,z], x,z) < .48f) return;
+        uint rank = math.hash(new int4(seed, settings.seedOffset, Mathf.RoundToInt(tree.sampleX * 32), Mathf.RoundToInt(tree.sampleZ * 32)));
+        if (Unit(rank, 306) > .70f) return;
+        float angle = Unit(rank, 325) * Mathf.PI * 2f;
+        Vector2 outward = new Vector2(Mathf.Sin(angle), Mathf.Cos(angle));
+        Vector2 sample = local + outward * Mathf.Clamp(tree.exclusionRadius * .10f, .15f / scale, .48f / scale);
+        if (sample.x < 0 || sample.y < 0 || sample.x >= size || sample.y >= size) return;
+        Vector3 normal = TerrainNormal(sample);
+        if (Vector3.Angle(normal, Vector3.up) > settings.maxSlope) return;
+        Vector2 world = (origin + sample) * scale;
+        Instances.Add(new LeafClusterInstance
+        {
+            position = new Vector3(world.x, SampleTerrain(heights, sample) * heightMultiplier * scale, world.y) - normal * .026f,
+            rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(new Vector3(outward.x,0,outward.y), normal), normal),
+            scale = Mathf.Lerp(.69f, 1.24f, Unit(rank, 344)),
+            tint = new Vector4(.80f,.77f,.68f,1),
+            rank = rank
         });
     }
 

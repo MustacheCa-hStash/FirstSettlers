@@ -56,13 +56,14 @@ Material:
     - _BarkRemapBlackPoint: 0.08
     - _BarkRemapWhitePoint: 0.9
     - _CaptureRadius: 17.94169
+    - _CrownTransmission: 1
     - _ColorVariationStrength: 0.62
     - _Cutoff: 0.012
     - _DebugFrameX: 0
     - _DebugFrameY: 0
     - _DebugView: 0
     - _DepthParallax: 0.45
-    - _FoliageBrightness: 1.3331523
+    - _FoliageBrightness: 1.0595672
     - _FramesPerAxis: 8
     - _LeafLightWrap: 0.35
     - _LegacyMaplePalette: 0

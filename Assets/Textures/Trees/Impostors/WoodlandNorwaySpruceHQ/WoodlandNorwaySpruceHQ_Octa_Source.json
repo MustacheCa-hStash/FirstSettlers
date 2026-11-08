@@ -1,7 +1,7 @@
 {
     "prefab": "Assets/Prefabs/WoodlandNorwaySpruce.prefab",
     "prefabGuid": "14b7b483328594d448114dac4608ccc6",
-    "dependencyHash": "da70ac8e7435f1d38405fb8a0299ebe5",
+    "dependencyHash": "1d7a24cee3c0bf9a5fcf3c2b03474f12",
     "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
     "supersample": 2,
     "voxelResolution": 128,

@@ -1,0 +1,70 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: AmericanBeech_LegacyLeaves
+  m_Shader: {fileID: 4800000, guid: 6a2678f3b56b41c18a9662c4fe293417, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _ALPHACUTOUTSHADOWS_ON
+  - _AUTHOREDSUMMER_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: 34e7d7dc94953644491e9b33849327f4, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AlphaCutoutShadows: 1
+    - _AmbientStrength: 0.2
+    - _AuthoredSummer: 1
+    - _AutumnVariationStrength: 0.65
+    - _BacklightingEnabled: 1
+    - _BacklightingStrength: 0.17
+    - _ColorVariationStrength: 0.06
+    - _Cutoff: 0.32
+    - _LeafDetailStrength: 1
+    - _LeafGradientContrast: 1.4
+    - _LeafGradientMidpoint: 0.85
+    - _LightWrap: 0.35
+    - _SeasonAutumnAmount: 1
+    - _Smoothness: 0.08
+    - _SnowCoverage: 0
+    - _SpecularStrength: 0.025
+    - _StableBacklighting: 0
+    - _TreeTintStrength: 0.7
+    - _UseVertexColor: 0
+    - _WindFlutterSpeed: 4.8
+    - _WindFlutterStrength: 0
+    - _WindGustScale: 0.18
+    - _WindHeightMax: 7
+    - _WindHeightMin: 0
+    - _WindSpeed: 1.15
+    - _WindStrength: 0
+    m_Colors:
+    - _AutumnOchreColor: {r: 0.68, g: 0.42999998, b: 0.15999997, a: 1}
+    - _AutumnRussetColor: {r: 0.47999996, g: 0.23999995, b: 0.11999995, a: 1}
+    - _AutumnWineColor: {r: 0.39999998, g: 0.15999997, b: 0.17999998, a: 1}
+    - _BacklightingColor: {r: 1, g: 0.97999996, b: 0.92, a: 1}
+    - _SnowColor: {r: 0.9, g: 0.94, b: 0.96999997, a: 1}
+    - _SummerLeafColor: {r: 0.19999996, g: 0.41999996, b: 0.15999997, a: 1}
+    - _TreeLeafTint: {r: 1, g: 1, b: 1, a: 1}
+    - _WindDirection: {r: 1, g: 0, b: 0.35, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

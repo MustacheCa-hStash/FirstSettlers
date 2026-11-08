@@ -85,8 +85,21 @@ void SampleGrassGround(float3 positionWS, float3 baseNormalWS, float cameraDista
     half4 surface;
     [branch] if (scaleBlend >= 0.999)
     {
-        surface = GrassGroundLattice(positionWS.xz * _GrassGroundFarTiling,
-            dx * _GrassGroundFarTiling, dy * _GrassGroundFarTiling, 0.0, false);
+        float2 uv = positionWS.xz * _GrassGroundFarTiling;
+        float2 farDx = dx * _GrassGroundFarTiling, farDy = dy * _GrassGroundFarTiling;
+        float single = _GrassGroundSingleSample.x > 0
+            ? smoothstep(_GrassGroundSingleSample.x, _GrassGroundSingleSample.y, cameraDistance) : 0.0;
+        surface = half4(0.5h, 0.5h, 0.5h, 0);
+        [branch] if (single < 0.999)
+            surface = GrassGroundLattice(uv, farDx, farDy, 0.0, false);
+        [branch] if (single > 0.001)
+        {
+            // Gentle world-space distortion breaks up tile alignment. A filtered
+            // tap retains clump tone where blade normals are already faded out.
+            uv += .24 * sin(positionWS.zx * float2(.088, .075));
+            half farTone = SAMPLE_TEXTURE2D_GRAD(_GrassSurfaceMap, sampler_GrassSurfaceMap, uv, farDx, farDy).r;
+            surface = lerp(surface, half4(farTone, 0.5h, 0.5h, 0), single);
+        }
     }
     else
     {

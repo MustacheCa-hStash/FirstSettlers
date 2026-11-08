@@ -5,6 +5,7 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/LODCrossFade.hlsl"
 #include "Assets/Shaders/TreeSimpleLitCommon.hlsl"
 #include "Assets/Shaders/OakLeafSeasonPalette.hlsl"
+#include "Assets/Shaders/WoodlandCanopyNormals.hlsl"
 
 
 TEXTURE2D(_BaseMap);
@@ -18,7 +19,7 @@ CBUFFER_START(UnityPerMaterial)
     half _ColorVariationStrength, _LeafDetailStrength, _LeafGradientContrast, _LeafGradientMidpoint;
     half _Cutoff, _AlphaCutoutShadows;
     half _AmbientStrength, _LightWrap, _BacklightingEnabled, _StableBacklighting, _BacklightingStrength, _Smoothness, _SpecularStrength;
-    half _UseVertexColor, _SnowCoverage, _AuthoredSummer;
+    half _UseVertexColor, _SnowCoverage, _AuthoredSummer, _CrownNormalBlend, _CrownTransmission;
     float4 _WindDirection;
     half _WindStrength, _WindSpeed, _WindFlutterStrength, _WindFlutterSpeed, _WindGustScale;
     half _WindHeightMin, _WindHeightMax;
@@ -30,6 +31,7 @@ struct OakLeafAttributes
     float4 positionOS : POSITION;
     float3 normalOS : NORMAL;
     float2 uv : TEXCOORD0;
+    float2 canopyNormal : TEXCOORD1;
     half4 color : COLOR;
     UNITY_VERTEX_INPUT_INSTANCE_ID
 };
@@ -43,6 +45,7 @@ struct OakLeafVaryings
     float4 shadowCoord : TEXCOORD4;
     half fogFactor : TEXCOORD5;
     half3 vertexLighting : TEXCOORD6;
+    half3 canopyNormalWS : TEXCOORD7;
     half4 color : COLOR;
     UNITY_VERTEX_INPUT_INSTANCE_ID
     UNITY_VERTEX_OUTPUT_STEREO
@@ -83,6 +86,8 @@ OakLeafVaryings OakLeafVertex(OakLeafAttributes input)
     output.positionWS = OakLeafWind(TransformObjectToWorld(input.positionOS.xyz), input.positionOS.xyz, input.uv);
     output.positionCS = TransformWorldToHClip(output.positionWS);
     output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+    if (_CrownNormalBlend > 0)
+        output.canopyNormalWS = WoodlandCanopyNormalWS(input.canopyNormal);
     output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
     output.shadowCoord = TransformWorldToShadowCoord(output.positionWS);
     output.fogFactor = ComputeFogFactor(output.positionCS.z);
@@ -103,7 +108,10 @@ half4 OakLeafSample(OakLeafVaryings input)
 half3 OakLeafNormal(OakLeafVaryings input, FRONT_FACE_TYPE facing)
 {
     half3 n = NormalizeNormalPerPixel(input.normalWS) * IS_FRONT_VFACE(facing, 1, -1);
-    return normalize(lerp(n, half3(0,1,0), _LightWrap * .2));
+    n = normalize(lerp(n, half3(0,1,0), _LightWrap * .2));
+    if (_CrownNormalBlend > 0)
+        n = normalize(lerp(n, NormalizeNormalPerPixel(input.canopyNormalWS), _CrownNormalBlend));
+    return n;
 }
 half4 OakLeafFragment(OakLeafVaryings input, FRONT_FACE_TYPE facing : FRONT_FACE_SEMANTIC) : SV_Target
 {
@@ -145,10 +153,25 @@ half4 OakLeafFragment(OakLeafVaryings input, FRONT_FACE_TYPE facing : FRONT_FACE
     data.vertexLighting = input.vertexLighting;
     data.bakedGI *= FSForestCrownFill(data.normalWS, 0.0h);
     SurfaceData surface = InitializeTreeSimpleLitSurfaceData(leaf, atlas.a, _Smoothness, _SpecularStrength);
-    // Match the maples' camera-stable, two-sided transmission and shared night lighting.
-    half3 transmissionNormal = NormalizeNormalPerPixel(input.normalWS) * IS_FRONT_VFACE(facing, 1, -1);
-    surface.emission = EvaluateTreeLeafBacklighting(data, surface.albedo, transmissionNormal,
-        _BacklightingEnabled * _BacklightingStrength * (1 - snow), _BacklightingColor.rgb, _StableBacklighting);
+    half transmissionStrength = _BacklightingEnabled * _BacklightingStrength * (1 - snow);
+    UNITY_BRANCH if (_CrownTransmission > .5h && _FSForestDetailLighting.y > 0.0h)
+    {
+        float4 shadowCoord = data.shadowCoord;
+        #if defined(_MAIN_LIGHT_SHADOWS) || defined(_MAIN_LIGHT_SHADOWS_CASCADE)
+            // Step slightly toward the sun to avoid the receiving card shadowing itself.
+            shadowCoord = TransformWorldToShadowCoord(data.positionWS + GetMainLight().direction * .12);
+        #endif
+        Light sun = GetMainLight(shadowCoord);
+        half3 crownNormal = NormalizeNormalPerPixel(input.canopyNormalWS);
+        half transmission = FSForestLeafTransmission(data.viewDirectionWS, crownNormal, sun, FSForestLeafThinness(atlas.rgb));
+        surface.emission = surface.albedo * _BacklightingColor.rgb * sun.color * transmission * transmissionStrength;
+    }
+    else
+    {
+        half3 transmissionNormal = NormalizeNormalPerPixel(input.normalWS) * IS_FRONT_VFACE(facing, 1, -1);
+        surface.emission = EvaluateTreeLeafBacklighting(data, surface.albedo, transmissionNormal,
+            transmissionStrength, _BacklightingColor.rgb, _StableBacklighting);
+    }
     half4 color = ShadeDistantAwareTree(data, surface);
     if (_DistantTreeEnabled < .5 || _DistantTreeBillboard < .5)
         color.rgb = MixFog(color.rgb, input.fogFactor);

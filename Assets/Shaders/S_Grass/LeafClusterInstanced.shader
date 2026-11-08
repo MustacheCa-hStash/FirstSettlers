@@ -10,6 +10,10 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
         [NoScaleOffset] _LeafVariationTex("Baked Scatter Data", 2D) = "black" {}
         _Cutoff("Alpha Cutoff", Range(0,1)) = 0.45
         _AmbientStrength("Minimum Ambient", Range(0,1)) = 0.12
+        _WoodlandShade("Canopy Shade", Range(0,1)) = 0
+        _UpwardNormal("Upward Lighting Normal Blend", Range(0,1)) = 0
+        _DiffuseWrap("Diffuse Wrap", Range(0,.5)) = 0
+        _WoodlandShapes("Authored Shrub Shape Count", Float) = 0
         _FadeStart("Detail Fade Start", Float) = 20
         _FadeEnd("Detail Fade End", Float) = 28
     }
@@ -20,6 +24,7 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+        #include "Assets/Shaders/ForestCanopyLighting.hlsl"
         TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
         TEXTURE2D(_LeafVariationTex); SAMPLER(sampler_LeafVariationTex);
         CBUFFER_START(UnityPerMaterial)
@@ -27,6 +32,7 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
             float4 _LeafVariationTex_TexelSize;
             half4 _BaseColor;
             half _Cutoff, _AmbientStrength, _UseAtlasColor;
+            half _WoodlandShade, _UpwardNormal, _DiffuseWrap, _WoodlandShapes;
             float _FadeStart, _FadeEnd;
             float4 _LeafViewer;
         CBUFFER_END
@@ -63,6 +69,15 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
             UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
             float4 scatter=ForestScatterParams(UNITY_ACCESS_INSTANCED_PROP(LeafProperties,_LeafScatterParams));
             output.leafVisible=1;
+            // One resident GPU batch covers all shapes. Unselected shape
+            // vertices collapse before any texture fetch or rasterization.
+            if (_WoodlandShapes > 1 && abs(input.scatter.x - fmod(max(scatter.x - 1, 0), _WoodlandShapes)) > .5)
+            {
+                output.positionCS=float4(0,0,0,1);
+                output.positionWS=0;output.normalWS=float3(0,1,0);
+                output.uv=0;output.color=0;output.fog=0;output.leafVisible=0;
+                return output;
+            }
             if(scatter.w>.5 && input.scatter.w>.5)
             {
                 float index=(clamp(scatter.x,1,8192)-1)*18+clamp(input.scatter.z,0,8)*2;
@@ -115,9 +130,13 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
             half4 texel = LeafSample(input);
             half3 normal = normalize(input.normalWS) * IS_FRONT_VFACE(face, 1.0h, -1.0h);
+            normal = normalize(lerp(normal, half3(0,1,0), _UpwardNormal));
             Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS));
             half3 ambient = max(SampleSH(normal), _AmbientStrength.xxx);
-            half3 lighting = ambient + mainLight.color * saturate(dot(normal, mainLight.direction)) *
+            half shade = 1;
+            if (_WoodlandShade > 0) shade = lerp(1.0h, FSForestGroundLight(input.positionWS), _WoodlandShade);
+            half direct = saturate((dot(normal, mainLight.direction) + _DiffuseWrap) / (1 + _DiffuseWrap));
+            half3 lighting = ambient * shade + mainLight.color * direct * FSForestGroundSun(shade) *
                 mainLight.distanceAttenuation * mainLight.shadowAttenuation;
             return half4(MixFog(texel.rgb * input.color.rgb * lighting,
                 InitializeInputDataFog(float4(input.positionWS,1),input.fog)), texel.a);

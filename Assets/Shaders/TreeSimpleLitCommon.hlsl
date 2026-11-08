@@ -22,6 +22,7 @@ InputData InitializeTreeSimpleLitInputData(
     inputData.shadowCoord = shadowCoord;
     half scaledAmbientStrength = TreeNightAmbientFloor(ambientStrength);
     inputData.bakedGI = max(SampleSH(inputData.normalWS), scaledAmbientStrength.xxx);
+    inputData.bakedGI = FSForestDirectionalAmbient(positionWS, inputData.normalWS, inputData.bakedGI);
     inputData.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(positionCS);
     inputData.shadowMask = half4(1.0h, 1.0h, 1.0h, 1.0h);
     return inputData;

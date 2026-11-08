@@ -70,6 +70,9 @@ internal static class TerrainMaterialInspectorRules
             case "_LeafLitterTiling": text = "Litter / Mixed Floor World Tiling"; break;
             case "_LeafLitterNormalStrength": text = "Litter / Mixed Floor Normal Strength"; break;
             case "_MossTiling": text = "Moss / Dense Moss World Tiling"; break;
+            case "_ForestFloorScatter": tip = "X bends the forest floor tile. Y mixes dry and damp litter in broad patches. Z controls patch frequency. W at 1 rotates damp litter."; break;
+            case "_GrassGroundSingleSample": tip = "X and Y set the start and end in world units for fading to one color sample. Set X to zero to keep the randomized blend."; break;
+            case "_RockSideTiling": tip = "X is horizontal and Y is vertical, in repeats per world unit. X at zero uses the standard Rock / Cliff Tiling for both axes."; break;
             case "_MossDetailContrast": text = "Moss Texture / Broad Fill Blend"; tip = "0 uses Broad Fill Color, 1 uses the sampled ordinary/dense moss textures. This is a color blend, not a texture contrast exponent."; break;
             case "_RockDetailStrength": text = "Distance Fallback Average Color Strength"; tip = "Blends average albedo into Rock/Cliff fallback colors. Does not tint fully applied near rock textures."; break;
             case "_RockTextureStrength": tip = "At 1, rock/cliff uses near or far texture color with the live world's regional geology tint. Lower values blend toward distance fallback color. Normal strength is independent."; break;

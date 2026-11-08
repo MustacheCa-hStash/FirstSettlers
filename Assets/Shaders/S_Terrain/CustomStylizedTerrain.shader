@@ -13,6 +13,11 @@ Shader "Custom/StylizedTerrainURP"
         _SandTiling("Sand Tiling (Repeats Per World Unit)", Float) = 0.35
         _SandDetailStrength("Sand Albedo Strength", Range(0, 1)) = 0.35
         _SandNormalStrength("Sand Normal Strength", Range(0, 2)) = 0.30
+        [ToggleUI] _SplitSandSurfaces("Separate Shore and Desert Sand", Float) = 0
+        [NoScaleOffset] _DesertSandAlbedo("Desert Sand Albedo", 2D) = "white" {}
+        [NoScaleOffset] _DesertSandNormal("Desert Sand Normal", 2D) = "bump" {}
+        _DesertSandTiling("Desert Sand Tiling (Repeats Per World Unit)", Float) = 0.25
+        _ShoreSandDampness("Waterline Sand Darkening", Range(0, 0.5)) = 0.22
         _MudColor("Mud Color", Color) = (0.42, 0.32, 0.22, 1)
         _DrySurfaceStrength("Desert Sediment Strength", Range(0,1)) = 1
         [NoScaleOffset] _ClayAlbedo("Cracked Clay Albedo", 2D) = "white" {}
@@ -43,6 +48,7 @@ Shader "Custom/StylizedTerrainURP"
         [NoScaleOffset] _RockAlbedo("Rock / Cliff Albedo", 2D) = "white" {}
         [NoScaleOffset] _RockNormal("Rock / Cliff Normal", 2D) = "bump" {}
         _RockTiling("Rock / Cliff Tiling (Repeats Per World Unit)", Float) = 0.12
+        _RockSideTiling("Near Cliff Side Repeats (Horizontal / Vertical)", Vector) = (0, 0, 0, 0)
         _RockTextureStrength("Rock / Cliff Texture Strength", Range(0, 1)) = 1
         _RockDetailStrength("Rock / Cliff Distant Average Color Strength", Range(0, 1)) = 0.5
         _RockAverageAlbedo("Rock / Cliff Average Albedo (Distance Fallback)", Color) = (1,1,1,1)
@@ -82,6 +88,8 @@ Shader "Custom/StylizedTerrainURP"
         _LeafLitterNormalFadeEnd("Litter Normal Fade End", Float) = 45
         _ForestFloorMacroScale("Forest Floor Macro Repeats Per Meter", Float) = 0.025
         _ForestFloorMacroStrength("Forest Floor Macro Tone Strength", Range(0, 0.3)) = 0.12
+        _ForestFloorScatter("Forest Floor Warp / Patch Blend / Frequency / Rotation", Vector) = (0, 0, 0, 0)
+        _ForestFloorMossStrength("Forest Floor Moss Coverage", Range(0, 1)) = 1
         [NoScaleOffset] _BareDirtAlbedo("Bare Dirt Albedo", 2D) = "white" {}
         [NoScaleOffset] _BareDirtNormal("Bare Dirt Normal", 2D) = "bump" {}
         [NoScaleOffset] _BareDirtAO("Bare Dirt AO (Optional)", 2D) = "white" {}
@@ -129,9 +137,11 @@ Shader "Custom/StylizedTerrainURP"
         _GrassGroundScaleFadeStart("Blade Ground Far Scale Blend Start", Float) = 30
         _GrassGroundScaleFadeEnd("Blade Ground Far Scale Blend End", Float) = 100
         _GrassGroundGridScale("Blade Ground Randomized Blend Scale", Float) = 0.65
+        _GrassGroundSingleSample("Blade Ground Far Single Sample Fade (Start / End)", Vector) = (0, 0, 0, 0)
         _GrassGroundDetailStrength("Blade Ground Tone Strength", Range(0, 1)) = 0.65
         _GrassGroundDetailContrast("Blade Ground Tone Contrast", Range(0.5, 3)) = 1.6
         _GrassGroundTint("Blade Ground Average Tint", Color) = (0.90, 0.90, 0.78, 1)
+        [HDR] _ForestGrassGroundTint("Forest Grass Substrate Tint", Color) = (1, 1, 1, 1)
         _GrassGroundDetailFadeStart("Blade Ground Detail Fade Start", Float) = 180
         _GrassGroundDetailFadeEnd("Blade Ground Detail Fade End", Float) = 400
         _GrassGroundNormalFadeStart("Blade Ground Normal Fade Start", Float) = 10
@@ -267,6 +277,8 @@ Shader "Custom/StylizedTerrainURP"
             TEXTURE2D(_DenseMossHeight);
 
             TEXTURE2D(_SandAlbedo);
+            TEXTURE2D(_DesertSandAlbedo);
+            TEXTURE2D(_DesertSandNormal);
             TEXTURE2D(_IceAlbedo);
             TEXTURE2D(_IceNormal);
             TEXTURE2D(_ClayAlbedo);
@@ -320,6 +332,7 @@ Shader "Custom/StylizedTerrainURP"
                 float _SandTiling;
                 float _SandDetailStrength;
                 float _SandNormalStrength;
+                float _SplitSandSurfaces, _DesertSandTiling, _ShoreSandDampness;
                 half4 _MudColor;
                 half4 _ClayColor, _WashColor, _ClayAverageColor, _WashAverageColor;
                 float _DrySurfaceStrength, _ClayTiling, _WashTiling;
@@ -330,6 +343,7 @@ Shader "Custom/StylizedTerrainURP"
                 half4 _RockColor;
                 float _RockDetail;
                 float _RockTiling;
+                float4 _RockSideTiling;
                 float _RockDetailStrength;
                 float _RockTextureStrength;
                 half4 _RockAverageAlbedo;
@@ -371,6 +385,8 @@ Shader "Custom/StylizedTerrainURP"
                 float _LeafLitterNormalFadeEnd;
                 float _ForestFloorMacroScale;
                 float _ForestFloorMacroStrength;
+                float4 _ForestFloorScatter;
+                half _ForestFloorMossStrength;
                 float _LeafLitterAOStrength;
                 float _LeafLitterHeightStrength;
                 float _BareDirtTiling;
@@ -408,9 +424,11 @@ Shader "Custom/StylizedTerrainURP"
                 float _GrassGroundScaleFadeStart;
                 float _GrassGroundScaleFadeEnd;
                 float _GrassGroundGridScale;
+                float4 _GrassGroundSingleSample;
                 float _GrassGroundDetailStrength;
                 float _GrassGroundDetailContrast;
                 half4 _GrassGroundTint;
+                half4 _ForestGrassGroundTint;
                 float _GrassGroundDetailFadeStart;
                 float _GrassGroundDetailFadeEnd;
                 float _GrassGroundNormalFadeStart;
@@ -638,12 +656,13 @@ Shader "Custom/StylizedTerrainURP"
                 float3 dy = positionDy * tiling;
                 // Both side projections keep texture V aligned with world up.
                 // Signed U axes match a right-handed tangent frame on either face.
-                float2 uvX = p.zy * float2(-axisSign.x, 1);
+                float2 side = _RockSideTiling.x > 0 ? max(_RockSideTiling.xy, 0.0001) / tiling : 1.0.xx;
+                float2 uvX = p.zy * float2(-axisSign.x, 1) * side;
                 float2 uvY = p.zx * float2(axisSign.y, 1);
-                float2 uvZ = p.xy * float2(axisSign.z, 1);
-                float2 signX = float2(-axisSign.x, 1);
+                float2 uvZ = p.xy * float2(axisSign.z, 1) * side;
+                float2 signX = float2(-axisSign.x, 1) * side;
                 float2 signY = float2(axisSign.y, 1);
-                float2 signZ = float2(axisSign.z, 1);
+                float2 signZ = float2(axisSign.z, 1) * side;
                 albedo = 0;
                 float3 perturbation = 0;
                 // Explicit gradients are calculated outside divergent branches.
@@ -756,12 +775,34 @@ Shader "Custom/StylizedTerrainURP"
                 perturbation -= baseNormalWS * dot(perturbation, baseNormalWS);
                 detailNormalWS = normalize(baseNormalWS + perturbation * strength);
             }
-            void SampleSandDetail(float3 positionWS, float3 baseNormalWS, out half3 albedo, out float3 detailNormalWS)
+            void SampleSandDetail(float3 positionWS, float2 dx, float2 dy, float3 baseNormalWS,
+                out half3 albedo, out float3 detailNormalWS)
             {
-                float2 uv = positionWS.xz * max(_SandTiling, 0.0001);
-                albedo = SAMPLE_TEXTURE2D(_SandAlbedo, sampler_SandAlbedo, uv).rgb;
-
-                float3 tangentNormal = UnpackNormal(SAMPLE_TEXTURE2D(_SandNormal, sampler_SandAlbedo, uv));
+                float heightAboveWater = positionWS.y - _WorldGlacialParams.y;
+                float band = _WorldGlacialParams.z;
+                bool splitSurfaces = _SplitSandSurfaces > 0.5 && band > 0.0;
+                half inland = splitSurfaces ? smoothstep(band, band * 2.5, heightAboveWater) : 0.0h;
+                albedo = 0;
+                float3 tangentNormal = 0;
+                [branch] if (inland < 1.0h)
+                {
+                    float scale = max(_SandTiling, 0.0001);
+                    float2 uv = positionWS.xz * scale;
+                    half3 shore = SAMPLE_TEXTURE2D_GRAD(_SandAlbedo, sampler_SandAlbedo, uv, dx * scale, dy * scale).rgb;
+                    half damp = splitSurfaces ? 1.0h - smoothstep(0.0, band, heightAboveWater) : 0.0h;
+                    albedo = shore * (1.0h - damp * _ShoreSandDampness) * (1.0h - inland);
+                    tangentNormal = UnpackNormal(SAMPLE_TEXTURE2D_GRAD(_SandNormal, sampler_SandAlbedo, uv,
+                        dx * scale, dy * scale)) * (1.0h - inland);
+                }
+                [branch] if (inland > 0.0h)
+                {
+                    float scale = max(_DesertSandTiling, 0.0001);
+                    float2 uv = positionWS.xz * scale;
+                    albedo += SAMPLE_TEXTURE2D_GRAD(_DesertSandAlbedo, sampler_SandAlbedo, uv,
+                        dx * scale, dy * scale).rgb * inland;
+                    tangentNormal += UnpackNormal(SAMPLE_TEXTURE2D_GRAD(_DesertSandNormal, sampler_SandAlbedo, uv,
+                        dx * scale, dy * scale)) * inland;
+                }
                 detailNormalWS = ApplyDetailNormal(baseNormalWS, tangentNormal, _SandNormalStrength);
             }
 
@@ -869,7 +910,8 @@ Shader "Custom/StylizedTerrainURP"
                 normalWS=normalize(n+perturbation*_ExcavationNormalStrength);albedo*=_ExcavationTint.rgb * geologyTint;
             }
 
-            half4 ShadeTerrainSurface(half3 albedo,float3 normalWS,Varyings IN,FSTerrainSurfaceFrame surface,half terrainVisibility)
+            half4 ShadeTerrainSurface(half3 albedo,float3 normalWS,Varyings IN,FSTerrainSurfaceFrame surface,
+                half terrainVisibility, half woodland)
             {
                 float4 shadowCoord=IN.shadowCoord;
                 #if defined(_MAIN_LIGHT_SHADOWS_CASCADE)
@@ -878,6 +920,10 @@ Shader "Custom/StylizedTerrainURP"
                 shadowCoord=TransformWorldToShadowCoord(surface.positionWS);
                 #endif
                 Light mainLight=GetMainLight(shadowCoord);
+                #if !defined(_TERRAIN_EXCAVATION)
+                    mainLight.shadowAttenuation = FSDistantForestShadow(surface.positionWS,
+                        mainLight.direction.y, mainLight.shadowAttenuation);
+                #endif
                 // The field supplies location/ambient, not the direction of the sun.
                 // Use full geometric roof occlusion here even when day/night art
                 // intentionally weakens outdoor directional shadows.
@@ -889,10 +935,12 @@ Shader "Custom/StylizedTerrainURP"
                 // triplanar/detail normal perturbations used for diffuse shading.
                 half caveAmbient=caveLighting.x;
                 half3 ambient=max(SampleSH(normalWS),half3(_AmbientStrength,_AmbientStrength,_AmbientStrength))*caveAmbient;
-                half3 color=albedo*(diffuse+ambient);
                 #if !defined(_TERRAIN_EXCAVATION)
-                    color *= FSForestGroundLight(surface.positionWS);
+                    half groundShade = FSForestGroundLight(surface.positionWS);
+                    ambient *= FSSceneGroundAmbient(groundShade);
+                    diffuse *= FSSceneGroundSun(groundShade, shadowAttenuation, woodland);
                 #endif
+                half3 color=albedo*(diffuse+ambient);
                 half tintWeight=saturate(1.0h-terrainVisibility)*saturate(_TerrainHorizonParams.z)*saturate(_ReceiveShadows);
                 color*=lerp(half3(1,1,1),_TerrainHorizonTint.rgb,tintWeight);
                 // Stable derivatives and the mesher's 2.5 cm normal-displacement
@@ -914,6 +962,7 @@ Shader "Custom/StylizedTerrainURP"
                 half3 normalWS = baseNormalWS;
                 half3 baseColor = 0;
                 half terrainVisibility = 1;
+                half woodland = 0;
                 #if defined(_TERRAIN_EXCAVATION)
                 float exposure=saturate(IN.exposure);
                 float3 excavationDx=surfaceDx,excavationDy=surfaceDy;
@@ -997,9 +1046,10 @@ Shader "Custom/StylizedTerrainURP"
                 half riverbedWeight = control1.b;
 
                 half darkGrassCoverWeight = saturate(control2.r / coverSupport);
+                woodland = smoothstep(.45h, .9h, darkGrassCoverWeight * grassWeight);
                 half leafLitterWeight = saturate(control2.g / coverSupport);
                 half bareDirtWeight = saturate(control2.b / coverSupport);
-                half mossWeight = control2.a;
+                half mossWeight = control2.a * _ForestFloorMossStrength;
                 half forestVariantWeight = forestCoverVariant;
 
                 float distanceToCamera = surface.distanceToCamera;
@@ -1086,7 +1136,7 @@ Shader "Custom/StylizedTerrainURP"
                 {
                     half3 sandAlbedo;
                     float3 sandNormalWS;
-                    SampleSandDetail(surface.positionWS, baseNormalWS, sandAlbedo, sandNormalWS);
+                    SampleSandDetail(surface.positionWS, surfaceDx.xz, surfaceDy.xz, baseNormalWS, sandAlbedo, sandNormalWS);
                     baseColor += _SandColor.rgb * regionalSandTint * sandWeight * (sandAlbedo - 1.0h) * _SandDetailStrength;
                     weightedNormal += (sandNormalWS - baseNormalWS) * sandWeight;
                 }
@@ -1167,12 +1217,30 @@ Shader "Custom/StylizedTerrainURP"
                     // A zero strength skips the sample, so unassigned maps cost nothing.
                     float3 viewDirectionWS = surface.viewDirectionWS;
                     float2 parallaxDirection = viewDirectionWS.xz / max(abs(viewDirectionWS.y), 0.35);
-                    float2 leafLitterBaseUV = surface.positionWS.xz * _LeafLitterTiling;
-                    if (leafLitterWeight > 0.001h && _LeafLitterHeightStrength > 0.0)
+                    float litterNormalFade = 1.0 - smoothstep(_LeafLitterNormalFadeStart,
+                        max(_LeafLitterNormalFadeEnd, _LeafLitterNormalFadeStart + 0.01), distanceToCamera);
+                    float2 litterWorldUV = surface.positionWS.xz * _LeafLitterTiling;
+                    [branch] if (leafLitterWeight > 0.001h && _ForestFloorScatter.x > 0.0)
+                    {
+                        // Bend the tile in continuous world space. Height, albedo,
+                        // normals and AO stay on the same surface across chunk seams.
+                        float2 p = surface.positionWS.xz * _ForestFloorScatter.z;
+                        float2 flow = sin(float2(p.y + .71 * sin(p.x * .46),
+                                                 p.x - .63 * sin(p.y * .57)));
+                        flow = .72 * flow + .28 * sin(float2(p.x * .67 + p.y * .51,
+                                                            p.x * .42 - p.y * .73));
+                        litterWorldUV += flow * _ForestFloorScatter.x;
+                        float pockets = .50 + .27 * sin(p.x * .40 + sin(p.y * .55)) +
+                                             .23 * sin(p.y * .47 - p.x * .25);
+                        forestVariantWeight = lerp(forestVariantWeight, smoothstep(.27,.80,pockets),
+                                                   saturate(_ForestFloorScatter.y));
+                    }
+                    float2 leafLitterBaseUV = litterWorldUV;
+                    if (leafLitterWeight > 0.001h && _LeafLitterHeightStrength * litterNormalFade > 0.001)
                     {
                         float2 heightUV = leafLitterBaseUV * _LeafLitterHeight_ST.xy + _LeafLitterHeight_ST.zw;
                         half height = SAMPLE_TEXTURE2D(_LeafLitterHeight, sampler_LeafLitterAlbedo, heightUV).r;
-                        leafLitterBaseUV -= parallaxDirection * ((height - 0.5h) * _LeafLitterHeightStrength);
+                        leafLitterBaseUV -= parallaxDirection * ((height - 0.5h) * _LeafLitterHeightStrength * litterNormalFade);
                     }
                     float2 leafLitterUV = leafLitterBaseUV * _LeafLitterAlbedo_ST.xy + _LeafLitterAlbedo_ST.zw;
                     half3 leafLitterTex = SAMPLE_TEXTURE2D(_LeafLitterAlbedo, sampler_LeafLitterAlbedo, leafLitterUV).rgb;
@@ -1183,14 +1251,21 @@ Shader "Custom/StylizedTerrainURP"
                         half ao = SAMPLE_TEXTURE2D(_LeafLitterAO, sampler_LeafLitterAlbedo, aoUV).r;
                         leafLitterColor *= lerp(1.0h, ao, _LeafLitterAOStrength);
                     }
-                    float2 mixedForestUV = surface.positionWS.xz * _LeafLitterTiling;
+                    float2 mixedForestUV = litterWorldUV;
+                    bool rotateDampLitter = _ForestFloorScatter.w > .5;
                     if (leafLitterWeight > 0.001h && forestVariantWeight > 0.001h)
                     {
-                        if (_MixedForestFloorHeightStrength > 0.0)
+                        float2 mixedParallax = parallaxDirection;
+                        if (rotateDampLitter)
+                        {
+                            mixedForestUV = float2(-mixedForestUV.y, mixedForestUV.x) + float2(.31,.73);
+                            mixedParallax = float2(-parallaxDirection.y, parallaxDirection.x);
+                        }
+                        if (_MixedForestFloorHeightStrength * litterNormalFade > 0.001)
                         {
                             float2 heightUV = mixedForestUV * _MixedForestFloorHeight_ST.xy + _MixedForestFloorHeight_ST.zw;
                             half height = SAMPLE_TEXTURE2D(_MixedForestFloorHeight, sampler_LeafLitterAlbedo, heightUV).r;
-                            mixedForestUV -= parallaxDirection * ((height - 0.5h) * _MixedForestFloorHeightStrength);
+                            mixedForestUV -= mixedParallax * ((height - 0.5h) * _MixedForestFloorHeightStrength * litterNormalFade);
                         }
                         float2 albedoUV = mixedForestUV * _MixedForestFloorAlbedo_ST.xy + _MixedForestFloorAlbedo_ST.zw;
                         half3 mixedForestColor = SAMPLE_TEXTURE2D(_MixedForestFloorAlbedo, sampler_LeafLitterAlbedo, albedoUV).rgb * _MixedForestFloorColor.rgb;
@@ -1229,8 +1304,6 @@ Shader "Custom/StylizedTerrainURP"
                     normalWS = ApplyDetailNormal(baseNormalWS, grassTangentNormal, _GrassNormalStrength);
                     #endif
 
-                    float litterNormalFade = 1.0 - smoothstep(_LeafLitterNormalFadeStart,
-                        max(_LeafLitterNormalFadeEnd, _LeafLitterNormalFadeStart + 0.01), distanceToCamera);
                     if (leafLitterWeight > 0.001h && litterNormalFade > 0.001)
                     {
                         float2 leafLitterNormalUV = leafLitterBaseUV * _LeafLitterNormal_ST.xy + _LeafLitterNormal_ST.zw;
@@ -1248,6 +1321,8 @@ Shader "Custom/StylizedTerrainURP"
                         {
                             float2 mixedNormalUV = mixedForestUV * _MixedForestFloorNormal_ST.xy + _MixedForestFloorNormal_ST.zw;
                             float3 mixedNormal = UnpackNormal(SAMPLE_TEXTURE2D(_MixedForestFloorNormal, sampler_LeafLitterAlbedo, mixedNormalUV));
+                            if (rotateDampLitter)
+                                mixedNormal.xy = float2(mixedNormal.y, -mixedNormal.x);
                             float3 mixedNormalWS = ApplyDetailNormal(baseNormalWS, mixedNormal, _LeafLitterNormalStrength * litterNormalFade);
                             normalWS = normalize(lerp(normalWS, mixedNormalWS, forestVariantWeight * leafLitterWeight));
                         }
@@ -1376,6 +1451,11 @@ Shader "Custom/StylizedTerrainURP"
                 }
 
 
+                // The visible green substrate can come from grass, litter or moss. Match it
+                // after compositing so green pockets under sedges share the same correction.
+                half greenDominance = (baseColor.g - baseColor.r) / max(baseColor.g, 0.01h);
+                half forestGreen = smoothstep(.28h, .72h, greenDominance) * darkGrassCoverWeight * grassWeight;
+                baseColor *= lerp(half3(1, 1, 1), _ForestGrassGroundTint.rgb, forestGreen);
                 terrainVisibility = TerrainHorizonVisibility(surface.positionWS, IN.horizonLight);
                 #if defined(_TERRAIN_EXCAVATION)
                 [branch] if(exposure>0)
@@ -1387,7 +1467,7 @@ Shader "Custom/StylizedTerrainURP"
                 }
                 #endif
                 }
-                return ShadeTerrainSurface(baseColor,normalWS,IN,surface,terrainVisibility);
+                return ShadeTerrainSurface(baseColor,normalWS,IN,surface,terrainVisibility,woodland);
             }
             ENDHLSL
         }

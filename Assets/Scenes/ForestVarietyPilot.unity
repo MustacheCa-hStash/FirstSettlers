@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: 85cf0b004bc4a654b9e501efcce47902, type: 2}
+  m_SkyboxMaterial: {fileID: 2100000, guid: e9e5ab2d3b9e5e4418f1d16cd27cfa3a, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -148,6 +148,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d22be17e999bfc4aa5b21883c00834f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DistantFogLayer
+  mode: 1
+  aerialStartDistance: 110
+  aerialExtinction: 0.0007
+  aerialBaseHeight: 15
+  aerialHeightScale: 115
+  aerialSunTint: 0.22
+  aerialStreamedWaterOnly: 1
   startDistance: 600
   distanceFeather: 477.5
   maxDistance: 5000
@@ -163,7 +170,7 @@ MonoBehaviour:
   detailStrength: 0.293
   wind: {x: 5, y: 0, z: 0.7}
   shading: 0.692
-  followDayNightColor: 0
+  followDayNightColor: 1
   fogColor: {r: 0.72156864, g: 0.76862746, b: 0.8, a: 1}
   resolution: 2
   steps: 32
@@ -303,7 +310,7 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
+  m_RenderPostProcessing: 1
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0
@@ -468,12 +475,13 @@ MonoBehaviour:
   sunLight: {fileID: 163550947}
   moonLight: {fileID: 163551947}
   bindAsRenderSettingsSun: 1
-  sunriseAzimuth: 105
-  sunsetAzimuth: 255
-  maxSunAltitude: 62
+  animatedSkybox: {fileID: 2100000, guid: e9e5ab2d3b9e5e4418f1d16cd27cfa3a, type: 2}
+  sunriseAzimuth: 40
+  sunsetAzimuth: 210
+  maxSunAltitude: 42
   nightAltitude: -18
   horizonFadeDegrees: 8
-  maxSunIntensity: 1.35
+  maxSunIntensity: 1.3
   sunColor:
     serializedVersion: 2
     key0: {r: 1, g: 0.47, b: 0.24, a: 1}
@@ -671,18 +679,18 @@ MonoBehaviour:
   updateAmbientLighting: 1
   twilightAmbientBlend: 0.22
   twilightNightFraction: 0.18
-  dayAmbientIntensity: 1.05
+  dayAmbientIntensity: 0.92
   nightAmbientIntensity: 0.26
-  dayAmbientSkyColor: {r: 0.63, g: 0.74, b: 0.92, a: 1}
-  dayAmbientEquatorColor: {r: 0.42, g: 0.47, b: 0.52, a: 1}
-  dayAmbientGroundColor: {r: 0.24, g: 0.22, b: 0.18, a: 1}
+  dayAmbientSkyColor: {r: 0.58, g: 0.67, b: 0.79, a: 1}
+  dayAmbientEquatorColor: {r: 0.43, g: 0.48, b: 0.53, a: 1}
+  dayAmbientGroundColor: {r: 0.23, g: 0.24, b: 0.2, a: 1}
   nightAmbientSkyColor: {r: 0.075, g: 0.085, b: 0.13, a: 1}
   nightAmbientEquatorColor: {r: 0.055, g: 0.062, b: 0.09, a: 1}
   nightAmbientGroundColor: {r: 0.038, g: 0.042, b: 0.055, a: 1}
   updateTreeNightLighting: 1
   midnightTreeAmbientFloorScale: 0.48
   updateFogColor: 1
-  dayFogColor: {r: 0.52, g: 0.66, b: 0.95, a: 1}
+  dayFogColor: {r: 0.57, g: 0.68, b: 0.77, a: 1}
   dawnDuskFogColor: {r: 0.95, g: 0.55, b: 0.32, a: 1}
   nightFogColor: {r: 0.055, g: 0.065, b: 0.1, a: 1}
   updateLinearFogDistances: 1
@@ -820,6 +828,55 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &185350505
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 185350507}
+  - component: {fileID: 185350506}
+  m_Layer: 0
+  m_Name: Pilot Meadow Color Grade
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &185350506
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 185350505}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
+  m_IsGlobal: 1
+  priority: 20
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 11400000, guid: cdad4e7a9aac2ed4dbc7ade590764a4f, type: 2}
+--- !u!4 &185350507
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 185350505}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &398168012
 GameObject:
   m_ObjectHideFlags: 0
@@ -836,7 +893,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &398168013
 Transform:
   m_ObjectHideFlags: 0
@@ -960,7 +1017,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 4
+  worldSeed: 90
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -974,9 +1031,9 @@ MonoBehaviour:
   viewerCamera: {fileID: 81284299}
   chunkParent: {fileID: 1025920260}
   grassSettings:
-    grassPrefab: {fileID: 1247386779206939101, guid: dff49970887de25458a69ed12bb8b632, type: 3}
-    forestGrassPrefab: {fileID: 0}
-    forestBillboardGrassPrefab: {fileID: 0}
+    grassPrefab: {fileID: 6887597201631143399, guid: 7aef0b956003053459607ca27b9acc06, type: 3}
+    forestGrassPrefab: {fileID: 1634587620519577313, guid: 85af04a99c8b5454aae351e34e56a10e, type: 3}
+    forestBillboardGrassPrefab: {fileID: 5031572411753321702, guid: 2fb42c455d369a14aa999758f7e9cd6e, type: 3}
     gpuIndirectRendering: 1
     grassCompactShader: {fileID: 7200000, guid: 96b7aefeee2f40ea87a0c87c4235a78c, type: 3}
     billboardCoverage: 0.45
@@ -1012,10 +1069,10 @@ MonoBehaviour:
     randomizeYaw: 1
     receiveGrassShadows: 1
     seedOffset: 5000
-    forestDarkGrassColor: {r: 0.1, g: 0.28, b: 0.09, a: 1}
-    forestMidGrassColor: {r: 0.16, g: 0.4, b: 0.13, a: 1}
-    forestLightGrassColor: {r: 0.25, g: 0.52, b: 0.19, a: 1}
-    billboardGrassPrefab: {fileID: 7070889263170737803, guid: fcbbf5456e50ad94cb3fb0802d388f74, type: 3}
+    forestDarkGrassColor: {r: 0.13, g: 0.22, b: 0.1, a: 1}
+    forestMidGrassColor: {r: 0.2, g: 0.33, b: 0.15, a: 1}
+    forestLightGrassColor: {r: 0.28, g: 0.43, b: 0.18, a: 1}
+    billboardGrassPrefab: {fileID: 5674864547714122687, guid: df5afa86a0cf493438d39adb16bc8120, type: 3}
     billboardRingRadius: 3
   flowerSettings:
     enableFlowers: 1
@@ -1292,36 +1349,38 @@ MonoBehaviour:
     rockExclusionRadius: 0.75
   leafClusterSettings:
     enabled: 1
+    woodlandKind: 1
     gpuIndirectRendering: 1
     scatterCompactShader: {fileID: 0}
-    prefab: {fileID: 0}
-    distantPrefab: {fileID: 0}
-    matchGrassRenderDistance: 1
+    prefab: {fileID: 8097956411807578242, guid: 824134c6713a26340a89b5a5ef87a1cc, type: 3}
+    distantPrefab: {fileID: 282166771568416223, guid: 09d22416b1cc6934b9baecb47b348cc5, type: 3}
+    matchGrassRenderDistance: 0
     grassRenderDistanceMultiplier: 0.8
-    renderDistance: 22.4
+    renderDistance: 52
     fadeWidth: 8
     prewarmDistance: 8
-    cellSize: 1.5
-    density: 0.38
-    placementMultiplier: 12
+    cellSize: 0.86
+    density: 0.89
+    placementMultiplier: 3.75
     useDistanceDensity: 1
     densityRadius3: 1
     densityRadius6: 0.7
     densityRadius10: 0.4
     densityBeyond10: 0.2
-    lodStart: 18
-    lodEnd: 30
+    lodStart: 13
+    lodEnd: 24
     maxSlope: 32
-    scaleRange: {x: 0.55, y: 1.5}
+    scaleRange: {x: 0.89, y: 1.78}
     seedOffset: 47000
     candidateBudgetPerFrame: 256
     generationBudgetMs: 0.35
   fernSettings:
     enabled: 1
+    woodlandKind: 0
     gpuIndirectRendering: 1
     scatterCompactShader: {fileID: 0}
-    prefab: {fileID: 0}
-    distantPrefab: {fileID: 0}
+    prefab: {fileID: 6619826999670424998, guid: aa7714c4538805f4b82a0b4f4eb656dd, type: 3}
+    distantPrefab: {fileID: 5368971572698085752, guid: 49df7169f6dffb947b92028775f7d215, type: 3}
     matchGrassRenderDistance: 0
     grassRenderDistanceMultiplier: 1
     renderDistance: 65
@@ -1342,12 +1401,67 @@ MonoBehaviour:
     seedOffset: 48000
     candidateBudgetPerFrame: 256
     generationBudgetMs: 0.35
-    coarsePrefab: {fileID: 0}
+    coarsePrefab: {fileID: 1530950483796342028, guid: 62ae66f5a52ed9a4da8a2756f224e6ce, type: 3}
     matchGrassLodDistances: 1
     coarseLodStart: 40
     coarseLodEnd: 55
-    minMoisture: 0.35
-    sizeMultiplier: 2
+    minMoisture: 0.31
+    gradualMossFalloff: 1
+    sizeMultiplier: 1.48
+  woodlandShrubs:
+    enabled: 1
+    woodlandKind: 4
+    gpuIndirectRendering: 1
+    scatterCompactShader: {fileID: 0}
+    prefab: {fileID: 4166103676924304147, guid: fef2123a5784a514497fb9665d9b652b, type: 3}
+    distantPrefab: {fileID: 4934573429186619434, guid: 5275d42ff9387f44485b89c04019da21, type: 3}
+    matchGrassRenderDistance: 0
+    grassRenderDistanceMultiplier: 0.8
+    renderDistance: 83
+    fadeWidth: 8
+    prewarmDistance: 8
+    cellSize: 2.7
+    density: 0.68
+    placementMultiplier: 1
+    useDistanceDensity: 0
+    densityRadius3: 1
+    densityRadius6: 0.7
+    densityRadius10: 0.4
+    densityBeyond10: 0.2
+    lodStart: 23
+    lodEnd: 39
+    maxSlope: 32
+    scaleRange: {x: 0.7, y: 1.36}
+    seedOffset: 49300
+    candidateBudgetPerFrame: 256
+    generationBudgetMs: 0.35
+  woodlandDebris:
+    enabled: 0
+    woodlandKind: 3
+    gpuIndirectRendering: 1
+    scatterCompactShader: {fileID: 0}
+    prefab: {fileID: 5265297470261139952, guid: 0d5dab87cf6cbb7498b8903f41d62754, type: 3}
+    distantPrefab: {fileID: 3098402936855269881, guid: 88ea7e813d8ed184f94501e7cf586cb8, type: 3}
+    matchGrassRenderDistance: 0
+    grassRenderDistanceMultiplier: 0.8
+    renderDistance: 46
+    fadeWidth: 8
+    prewarmDistance: 8
+    cellSize: 4.8
+    density: 0.49
+    placementMultiplier: 1
+    useDistanceDensity: 0
+    densityRadius3: 1
+    densityRadius6: 0.7
+    densityRadius10: 0.4
+    densityBeyond10: 0.2
+    lodStart: 15
+    lodEnd: 27
+    maxSlope: 32
+    scaleRange: {x: 0.56, y: 1.1}
+    seedOffset: 49700
+    candidateBudgetPerFrame: 256
+    generationBudgetMs: 0.35
   treeSettings:
     gameplay:
       enabled: 1
@@ -1360,7 +1474,7 @@ MonoBehaviour:
       maxActivationsPerFrame: 8
       activationBudgetMs: 0.5
       maxPooledProxies: 128
-    distributionProfile: {fileID: 11400000, guid: eaa5a0925889fbd4887da72d4985f205, type: 2}
+    distributionProfile: {fileID: 11400000, guid: c3b415ecf5c599348b13089517c124cf, type: 2}
     mapleTreeDefinition: {fileID: 11400000, guid: 8ed7914582bf44269fe9ef862fe300e7, type: 2}
     sugarMapleTreeDefinition: {fileID: 11400000, guid: ab3c9ca526894949af7cae15c3f04792, type: 2}
     birchAspenTreeDefinition: {fileID: 11400000, guid: 8fc83a5cb2704e4f9e80211574f4432d, type: 2}
@@ -1427,17 +1541,18 @@ MonoBehaviour:
     gameObjectTreeChunkRingRadius: 1
     standingTreeBatchSizeChunks: 4
     enableStandingTreeMeshLods: 0
+    forestAlphaShadowDistance: 30
     standingTreeGpuMode: 2
     standingTreeCompactShader: {fileID: 7200000, guid: bb26dec695a34649929204bf48ee2d5a, type: 3}
     billboardTreeChunkRingRadius: 18
     enableDistantTrees: 1
-    distantTreeDistanceChunks: 15
+    distantTreeDistanceChunks: 40
     distantTreeFadeWidthChunks: 2
-    distantTreeThinningStartChunks: 7
-    distantTreeDensity: 0.16
+    distantTreeThinningStartChunks: 6.5
+    distantTreeDensity: 0.14
     distantTreeDensityAware: 1
     distantTreeCrowdingThreshold: 0.15
-    distantTreeEdgeProtection: 0.65
+    distantTreeEdgeProtection: 0.83
     distantTreeProtectedCount: 2
     distantTreeTransitionSeconds: 0.65
     distantTreeTerrainConform: 1
@@ -1454,6 +1569,7 @@ MonoBehaviour:
     maxTreeRepresentationRebuildsPerFrame: 2
     treeRepresentationRebuildBudgetMsPerFrame: 0.75
     gameObjectBushChunkRingRadius: 3
+    disableBerryBushes: 1
     maxForestRocksPerChunk: 2
     forestRockUniformScaleRange: {x: 0.8, y: 1.25}
     forestRockPitchRange: {x: -15, y: 15}
@@ -1491,8 +1607,20 @@ MonoBehaviour:
     leafPaletteBlend: 0.18
     barkColor: {r: 0.37, g: 0.34, b: 0.3, a: 1}
     barkPaletteBlend: 0.15
-    crownDarkness: 0.52
-    groundDarkness: 0.55
+    crownDarkness: 0.67
+    groundDarkness: 4
+    groundDirectShade: 0
+    groundSunStrength: 3.4
+    openGroundSun: 1.25
+    openGroundAmbient: 1.18
+    directionalSkyFill: 0.85
+    leafTransmission: 3
+    groundContactShadows: 1.1
+    groundContactLength: 0.65
+    groundContactRange: 20
+    previewGroundContactMask: 0
+    distantForestShadows: 0.66
+    distantForestShadowRange: 600
   showTreeExclusionRadiusGizmos: 0
   simulateTreeSeason: 1
   treeSeasonAutumnAmount: 0
@@ -1565,7 +1693,7 @@ MonoBehaviour:
     valleyAndPeakHeights: {x: 0, y: 8}
     maxMeshSpacing: 16
   meshHeightMultiplier: 200
-  terrainMaterial: {fileID: 2100000, guid: 75e8037765088694c9d1b4d066552b07, type: 2}
+  terrainMaterial: {fileID: 2100000, guid: 3fff79e0cc0981e458f2fdecf56b5263, type: 2}
   waterMaterial: {fileID: 2100000, guid: 14ca6caf7c7b1af4395d2aad206230ea, type: 2}
   globalWaterY: 14.4
   waterReflectionResolution: 0.7
@@ -1698,7 +1826,7 @@ Transform:
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.92387956, z: 0, w: -0.38268346}
-  m_LocalPosition: {x: -844.80005, y: 200, z: 576}
+  m_LocalPosition: {x: -844.80005, y: 300, z: 576}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1967,7 +2095,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1967121499}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9e693395bb214f4c9cd5afc60142ed86, type: 3}
   m_Name: 
@@ -2368,3 +2496,4 @@ SceneRoots:
   - {fileID: 1578603182}
   - {fileID: 1971578342}
   - {fileID: 9167400}
+  - {fileID: 185350507}

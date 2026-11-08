@@ -25,19 +25,19 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: bb8c73169f971c947aa83222bf5edd28, type: 3}
+        m_Texture: {fileID: 2800000, guid: 0b89b332c3ed6c14aa02d18055baa57d, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AmbientFloor: 0.56
+    - _AmbientFloor: 0.4
     - _ColorVariation: 0.12
     - _Cutoff: 0.35
     - _DirectLightStrength: 0.62
-    - _HeadAtlasSplit: 0.46
-    - _UpwardLighting: 0.65
+    - _HeadAtlasSplit: 0.5
+    - _UpwardLighting: 0.44
     m_Colors:
-    - _HeadTint: {r: 0.88, g: 0.78, b: 0.72, a: 1}
-    - _LeafTint: {r: 0.82, g: 1, b: 0.76, a: 1}
+    - _HeadTint: {r: 1, g: 1, b: 1, a: 1}
+    - _LeafTint: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

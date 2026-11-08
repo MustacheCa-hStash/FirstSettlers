@@ -8,6 +8,8 @@ public class SunCycleController : MonoBehaviour
     [SerializeField] private Light sunLight;
     [SerializeField] private Light moonLight;
     [SerializeField] private bool bindAsRenderSettingsSun = true;
+    [Tooltip("Optional animated sky. Disable the separate Skybox Cycle Controller when assigning this material.")]
+    [SerializeField] private Material animatedSkybox;
 
     [Header("Sun Arc")]
     [Tooltip("Compass-style azimuth in degrees where 0 is world +Z, 90 is +X, 180 is -Z, and 270 is -X.")]
@@ -78,8 +80,16 @@ public class SunCycleController : MonoBehaviour
 
     private static readonly int TreeNightAmbientFloorDimAmountId = Shader.PropertyToID("_TreeNightAmbientFloorDimAmount");
     private static readonly int TreeNightAmbientFloorScaleAtMidnightId = Shader.PropertyToID("_TreeNightAmbientFloorScaleAtMidnight");
+    private static readonly int GroundDaylightId = Shader.PropertyToID("_FSGroundDaylight");
 
     private float nextDynamicGiUpdateTime;
+    private Material runtimeSky, originalSky, runtimeSkySource;
+    private static readonly int SkyHorizonId = Shader.PropertyToID("_HorizonTint");
+    private static readonly int SkySunId = Shader.PropertyToID("_SkySunDirection");
+    private static readonly int SkyMoonId = Shader.PropertyToID("_SkyMoonDirection");
+    private static readonly int SkySunTintId = Shader.PropertyToID("_SkySunTint");
+    private static readonly int SkyWeatherId = Shader.PropertyToID("_SkyWeather");
+    private static readonly int SkyCloudHoursId = Shader.PropertyToID("_CloudHours");
 
     private void Reset()
     {
@@ -142,6 +152,7 @@ public class SunCycleController : MonoBehaviour
         float directVisibility = GetDirectSunVisibility(snapshot, pose.Altitude);
         float moonVisibility = GetMoonVisibility(snapshot, moonPose.Altitude);
         float ambientBlend = GetAmbientBlend(snapshot);
+        Shader.SetGlobalVector(GroundDaylightId, new Vector4(directVisibility, ambientBlend, 0f, 0f));
 
         sunLight.transform.rotation = Quaternion.LookRotation(-pose.Direction, Vector3.up);
         sunLight.intensity = maxSunIntensity * directVisibility;
@@ -174,6 +185,8 @@ public class SunCycleController : MonoBehaviour
         if (updateFogColor || updateLinearFogDistances)
             ApplyFog(snapshot, ambientBlend);
 
+        ApplyAnimatedSky(snapshot, pose.Direction, moonPose.Direction, directVisibility, moonVisibility);
+
         if (updateDynamicGI && Application.isPlaying && Time.unscaledTime >= nextDynamicGiUpdateTime)
         {
             DynamicGI.UpdateEnvironment();
@@ -183,8 +196,56 @@ public class SunCycleController : MonoBehaviour
 
     private void OnDisable()
     {
+        ReleaseAnimatedSky();
         Shader.SetGlobalFloat(TreeNightAmbientFloorDimAmountId, 0f);
         Shader.SetGlobalFloat(TreeNightAmbientFloorScaleAtMidnightId, 1f);
+        Shader.SetGlobalVector(GroundDaylightId, Vector4.zero);
+    }
+
+    private void ApplyAnimatedSky(GameTimeSnapshot snapshot, Vector3 sunDirection, Vector3 moonDirection,
+        float sunVisibility, float moonVisibility)
+    {
+        if (runtimeSkySource != animatedSkybox)
+        {
+            ReleaseAnimatedSky();
+            if (animatedSkybox == null) return;
+            originalSky = RenderSettings.skybox;
+            runtimeSkySource = animatedSkybox;
+            runtimeSky = new Material(animatedSkybox) { hideFlags = HideFlags.DontSave };
+        }
+        if (runtimeSky == null) return;
+
+        float hoursFromHorizon = snapshot.IsDaylight
+            ? Mathf.Min(snapshot.DaylightProgress, 1f - snapshot.DaylightProgress) * timeManager.DaylightHours
+            : -Mathf.Min(snapshot.NightProgress, 1f - snapshot.NightProgress) * timeManager.NighttimeHours;
+        float day = Smooth01(Mathf.InverseLerp(-.50f, .78f, hoursFromHorizon));
+        float twilight = Smooth01(Mathf.InverseLerp(-.95f, 0f, hoursFromHorizon)) *
+            (1f - Smooth01(Mathf.InverseLerp(0f, 1.1f, hoursFromHorizon)));
+        if (!snapshot.IsDaylight)
+        {
+            // The direct light is off below the horizon. Keep the remaining glow continuous.
+            sunDirection.y *= Smooth01(Mathf.InverseLerp(0f, 1.1f, -hoursFromHorizon));
+            sunDirection.Normalize();
+        }
+        Color horizon = Color.Lerp(nightFogColor, dayFogColor, day);
+        horizon = Color.Lerp(horizon, dawnDuskFogColor, twilight * .37f);
+        RenderSettings.fogColor = horizon;
+        runtimeSky.SetColor(SkyHorizonId, horizon);
+        runtimeSky.SetVector(SkySunId, sunDirection);
+        runtimeSky.SetVector(SkyMoonId, moonDirection);
+        runtimeSky.SetColor(SkySunTintId, sunLight.color);
+        runtimeSky.SetVector(SkyWeatherId, new Vector4(day, twilight, sunVisibility, moonVisibility));
+        runtimeSky.SetFloat(SkyCloudHoursId, (float)(snapshot.TotalGameMinutesExact / 60d));
+        if (RenderSettings.skybox != runtimeSky) RenderSettings.skybox = runtimeSky;
+    }
+
+    private void ReleaseAnimatedSky()
+    {
+        if (runtimeSky == null) return;
+        if (RenderSettings.skybox == runtimeSky) RenderSettings.skybox = originalSky;
+        if (Application.isPlaying) Destroy(runtimeSky); else DestroyImmediate(runtimeSky);
+        runtimeSky = null;
+        runtimeSkySource = null;
     }
 
     private bool ResolveReferences()

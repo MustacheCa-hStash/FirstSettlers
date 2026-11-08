@@ -113,6 +113,9 @@ public class TreeSettings
     [Tooltip("Allow reduced meshes for standing trees. When off, trees use LOD0 up to the same billboard handoff.")]
     public bool enableStandingTreeMeshLods = true;
 
+    [Min(0f), Tooltip("Approximate distance in metres for detailed forest leaf shadows. Trees switch across a narrow band around this distance. Zero uses solid leaf cards in the forest. Grassland and snow-covered trees retain cutout shadows.")]
+    public float forestAlphaShadowDistance;
+
     [Tooltip("Use compute-selected LODs and indirect draws for compatible standing trees. Unsupported shaders and devices use CPU batching.")]
     public StandingTreeGpuMode standingTreeGpuMode;
     public ComputeShader standingTreeCompactShader;
@@ -177,6 +180,8 @@ public class TreeSettings
     [Header("Berry Bush Rendering")]
     [Tooltip("Circular chunk radius for berry bush GameObjects. Bushes do not currently use billboards.")]
     public int gameObjectBushChunkRingRadius = 3;
+    [Tooltip("Skip legacy berry placement, representation and interactions for this world.")]
+    public bool disableBerryBushes;
 
     [Header("Forest Rock Placement")]
     [Tooltip("Maximum planned rock or boulder placements in a forest chunk.")]

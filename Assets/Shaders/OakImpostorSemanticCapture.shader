@@ -5,6 +5,7 @@ Shader "Hidden/TreeImpostor/OakSemanticCapture"
         _BaseMap("Base Map", 2D) = "white" {}
         _BaseColor("Bark Tint", Color) = (1,1,1,1)
         _Cutoff("Cutoff", Float) = .5
+        _CrownNormalBlend("Canopy Normal Blend", Float) = 0
         _AuthoredSummer("Use Authored Summer Albedo", Float) = 0
         _Smoothness("Smoothness", Float) = .08
         _BacklightingStrength("Backlighting Strength", Float) = .72
@@ -33,6 +34,7 @@ Shader "Hidden/TreeImpostor/OakSemanticCapture"
             #pragma vertex vert
             #pragma fragment frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Assets/Shaders/WoodlandCanopyNormals.hlsl"
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST, _CaptureDepthMinMax;
@@ -40,9 +42,9 @@ Shader "Hidden/TreeImpostor/OakSemanticCapture"
                 half _Cutoff, _Smoothness, _BacklightingStrength, _BacklightingEnabled;
                 half _LeafDetailStrength, _LeafGradientContrast, _LeafGradientMidpoint, _ColorVariationStrength;
                 half _VerticalGradientStrength, _ColorHeightMin, _ColorHeightMax, _Brightness;
-                half _CaptureMaterialKind, _CaptureOutput, _AuthoredSummer;
+                half _CaptureMaterialKind, _CaptureOutput, _AuthoredSummer, _CrownNormalBlend;
             CBUFFER_END
-            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; };
+            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; float2 canopyNormal : TEXCOORD1; };
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
@@ -50,6 +52,7 @@ Shader "Hidden/TreeImpostor/OakSemanticCapture"
                 float3 normalWS : TEXCOORD1;
                 float2 uv : TEXCOORD2;
                 float eyeDepth : TEXCOORD3;
+                half3 canopyNormalWS : TEXCOORD4;
             };
             float Hash(float2 p)
             {
@@ -76,6 +79,9 @@ Shader "Hidden/TreeImpostor/OakSemanticCapture"
                 output.positionCS = TransformWorldToHClip(world);
                 output.positionOS = input.positionOS.xyz;
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                output.canopyNormalWS = 0;
+                if (_CaptureMaterialKind < .5h && _CrownNormalBlend > 0)
+                    output.canopyNormalWS = WoodlandCanopyNormalWS(input.canopyNormal);
                 output.uv = TRANSFORM_TEX(input.uv,_BaseMap);
                 output.eyeDepth = -TransformWorldToView(world).z;
                 return output;
@@ -105,7 +111,12 @@ Shader "Hidden/TreeImpostor/OakSemanticCapture"
                     return half4(color,leaf?sample.a:1);
                 }
                 if (_CaptureOutput < 1.5h)
-                    return half4(Oct(normalize(input.normalWS)*IS_FRONT_VFACE(facing,1,-1)),1-_Smoothness,leaf?_BacklightingStrength*_BacklightingEnabled:0);
+                {
+                    half3 normal = normalize(input.normalWS) * IS_FRONT_VFACE(facing,1,-1);
+                    if (leaf && _CrownNormalBlend > 0)
+                        normal = normalize(lerp(normal, normalize(input.canopyNormalWS), _CrownNormalBlend));
+                    return half4(Oct(normal),1-_Smoothness,leaf?_BacklightingStrength*_BacklightingEnabled:0);
+                }
                 if (_CaptureOutput < 2.5h)
                 {
                     half depth = saturate((input.eyeDepth-_CaptureDepthMinMax.x)/max(_CaptureDepthMinMax.y-_CaptureDepthMinMax.x,.0001));

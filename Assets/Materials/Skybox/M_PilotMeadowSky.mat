@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_PilotMeadowSky
+  m_Shader: {fileID: 4800000, guid: 4583849cb4e499f48a6779322dee1e22, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _CloudNoise:
+        m_Texture: {fileID: 11700000, guid: b6737e4938b76134ba8b4997057e3066, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _CloudCoverage: 0.48
+    - _CloudHours: 14
+    - _CloudScale: 0.61
+    - _HighClouds: 0.23
+    m_Colors:
+    - _CloudShade: {r: 0.56999993, g: 0.6399999, b: 0.73, a: 1}
+    - _CloudWhite: {r: 0.95, g: 0.96, b: 0.98499995, a: 1}
+    - _CloudWind: {r: 0.014, g: 0.006, b: 0, a: 0}
+    - _DayZenith: {r: 0.17, g: 0.4, b: 0.67, a: 1}
+    - _HorizonTint: {r: 0.63, g: 0.71, b: 0.78, a: 1}
+    - _NightZenith: {r: 0.028, g: 0.04399997, b: 0.08499997, a: 1}
+    - _SkyMoonDirection: {r: 0, g: 1, b: 0, a: 0}
+    - _SkySunDirection: {r: 0, g: 0.7, b: -0.7, a: 0}
+    - _SkySunTint: {r: 1, g: 0.95, b: 0.88, a: 1}
+    - _SkyWeather: {r: 1, g: 0, b: 1, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

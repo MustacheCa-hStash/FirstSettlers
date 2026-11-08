@@ -69,7 +69,11 @@ half StandingTreeSnow(half fallback)
 }
 half StandingTreeAlphaShadows(half fallback)
 {
+#if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED) && defined(STANDING_TREE_GPU_SUPPORT)
+    return _StandingTreeEnabled > .5 ? GetStandingTreeVisible().source.y : fallback;
+#else
     return _StandingTreeEnabled > .5 ? STANDING_TREE_PROP(_StandingTreeAppearance, appearance).y : fallback;
+#endif
 }
 void ApplyStandingTreeFade(float2 pixel)
 {

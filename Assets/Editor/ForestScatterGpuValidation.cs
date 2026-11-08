@@ -92,8 +92,8 @@ public static class ForestScatterGpuValidation
         fern.matchGrassLodDistances=false;
         Require(ForestScatterPolicy.LodDistances(fern,grass,128,.3f)==new Vector4(22,38,40,55),"Manual fern LOD controls failed.");
         var mesh=AssetDatabase.LoadAssetAtPath<GameObject>(ForestFernPrefabBuilder.CoarsePath).GetComponent<MeshFilter>().sharedMesh;
-        Require(mesh.triangles.Length/3==52 && mesh.vertexCount==156,"Coarse fern geometry budget changed.");
-        Debug.Log("FOREST RINGS PASS: leaf range 92.16, subchunk 3.84; 1/.7/.4/.2 tiers; independent rendering controls; fern grass/manual thresholds; 52-triangle coarse asset.");
+        Require(mesh.triangles.Length/3==24 && mesh.vertexCount==32,"Coarse fern geometry budget changed.");
+        Debug.Log("FOREST RINGS PASS: leaf range 92.16, subchunk 3.84; 1/.7/.4/.2 tiers; independent rendering controls; fern grass/manual thresholds; 24-triangle coarse asset.");
     }
     static void ValidateVariation()
     {

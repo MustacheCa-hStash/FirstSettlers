@@ -1,5 +1,8 @@
 using UnityEngine;
 using Unity.Profiling;
+using UnityEngine.Experimental.Rendering;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 public class WorldManager : MonoBehaviour
 {
@@ -30,6 +33,8 @@ public class WorldManager : MonoBehaviour
     [SerializeField] DandelionSettings dandelionSettings = new DandelionSettings();
     [SerializeField] LeafClusterSettings leafClusterSettings = new LeafClusterSettings();
     [SerializeField] FernSettings fernSettings = new FernSettings();
+    [SerializeField] LeafClusterSettings woodlandShrubs = new() { enabled = false, woodlandKind = WoodlandScatterKind.Shrub };
+    [SerializeField] LeafClusterSettings woodlandDebris = new() { enabled = false, woodlandKind = WoodlandScatterKind.Deadwood };
     [SerializeField] TreeSettings treeSettings;
     [SerializeField, Tooltip("Live palette and soft canopy shade for trees, terrain and grass.")]
     ForestLightingSettings forestLighting = new();
@@ -110,7 +115,12 @@ public class WorldManager : MonoBehaviour
     private static readonly int ForestLeafId = Shader.PropertyToID("_FSForestLeaf");
     private static readonly int ForestBarkId = Shader.PropertyToID("_FSForestBark");
     private static readonly int ForestDarknessId = Shader.PropertyToID("_FSForestDarkness");
-    private Vector4 appliedForestLeaf, appliedForestBark, appliedForestDarkness;
+    private static readonly int OpenGroundLightingId = Shader.PropertyToID("_FSOpenGroundLighting");
+    private static readonly int ForestDetailLightingId = Shader.PropertyToID("_FSForestDetailLighting");
+    private static readonly int DistantForestShadowId = Shader.PropertyToID("_FSDistantForestShadowSettings");
+    private Vector4 appliedForestLeaf, appliedForestBark, appliedForestDarkness, appliedOpenGroundLighting;
+    private Vector4 appliedForestDetailLighting;
+    private Vector4 appliedDistantForestShadows;
     private static readonly int TreeSeasonEnabledId = Shader.PropertyToID("_TreeSeasonSimulationEnabled");
     private static readonly int TreeSeasonAutumnId = Shader.PropertyToID("_TreeSeasonSimulationAutumnAmount");
     private static WorldManager treeSeasonOwner;
@@ -189,6 +199,18 @@ public class WorldManager : MonoBehaviour
     void OnEnable() { ApplyTreeSeasonSimulation(); }
     void OnDisable() { ReleaseTreeSeasonSimulation(); ReleaseForestLighting(); }
 
+    internal static bool TryGetGroundContactSettings(Camera camera, out Vector4 settings)
+    {
+        settings = default;
+        var world = forestLightingOwner;
+        if (world == null || camera != world.viewerCamera || camera.orthographic) return false;
+        var lighting = world.forestLighting;
+        if (lighting.groundContactShadows <= 0f && !lighting.previewGroundContactMask) return false;
+        settings = new Vector4(lighting.groundContactShadows, lighting.groundContactLength,
+            lighting.groundContactRange, lighting.previewGroundContactMask ? 1f : 0f);
+        return true;
+    }
+
     void ApplyForestLighting()
     {
         if (forestLighting == null || !forestLighting.enabled || Trees == null || viewer == null)
@@ -196,21 +218,44 @@ public class WorldManager : MonoBehaviour
             ReleaseForestLighting();
             return;
         }
-        if (forestLighting.groundDarkness > 0f && SystemInfo.SupportsTextureFormat(TextureFormat.R8))
+        bool directional = forestLighting.directionalSkyFill > 0f &&
+            SystemInfo.SupportsTextureFormat(TextureFormat.RGBA32);
+        bool distant = forestLighting.distantForestShadows > 0f &&
+            SystemInfo.IsFormatSupported(GraphicsFormat.R32G32_SFloat, GraphicsFormatUsage.Linear);
+        if ((forestLighting.groundDarkness > 0f || directional || distant) && SystemInfo.SupportsTextureFormat(TextureFormat.R8))
         {
             forestCanopyShade ??= new ForestCanopyShade(Trees, treeSettings);
-            forestCanopyShade.Update(viewer.position);
+            forestCanopyShade.Update(viewer.position, directional);
+        }
+        Vector4 distantSettings = Vector4.zero;
+        Light sun = RenderSettings.sun;
+        if (distant && forestCanopyShade != null && sun != null && sun.type == LightType.Directional &&
+            sun.intensity > .01f && forestCanopyShade.UpdateDistantShadows(viewer.position, -sun.transform.forward))
+        {
+            var pipeline = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+            float shadowDistance = pipeline != null ? pipeline.shadowDistance : 140f;
+            distantSettings = new Vector4(forestLighting.distantForestShadows, shadowDistance,
+                forestLighting.distantForestShadowRange, 0f);
         }
         var leaf = (Vector4)forestLighting.leafColor.linear;
         var bark = (Vector4)forestLighting.barkColor.linear;
         leaf.w = forestLighting.leafPaletteBlend;
         bark.w = forestLighting.barkPaletteBlend;
-        var darkness = new Vector4(forestLighting.crownDarkness, forestCanopyShade != null ? forestLighting.groundDarkness : 0f, 0f, 0f);
-        if (forestLightingOwner == this && leaf == appliedForestLeaf && bark == appliedForestBark && darkness == appliedForestDarkness) return;
+        var darkness = new Vector4(forestLighting.crownDarkness, forestCanopyShade != null ? forestLighting.groundDarkness : 0f,
+            forestLighting.groundDirectShade, Mathf.Clamp(forestLighting.groundSunStrength, .5f, 8.5f) - 1f);
+        var openGround = new Vector4(forestLighting.openGroundSun - 1f, forestLighting.openGroundAmbient - 1f, 0f, 0f);
+        var detail = new Vector4(directional && forestCanopyShade?.HasSkyField == true ? forestLighting.directionalSkyFill : 0f,
+            forestLighting.leafTransmission, 0f, 0f);
+        if (forestLightingOwner == this && leaf == appliedForestLeaf && bark == appliedForestBark &&
+            darkness == appliedForestDarkness && openGround == appliedOpenGroundLighting &&
+            detail == appliedForestDetailLighting && distantSettings == appliedDistantForestShadows) return;
         forestLightingOwner = this;
         Shader.SetGlobalVector(ForestLeafId, appliedForestLeaf = leaf);
         Shader.SetGlobalVector(ForestBarkId, appliedForestBark = bark);
         Shader.SetGlobalVector(ForestDarknessId, appliedForestDarkness = darkness);
+        Shader.SetGlobalVector(OpenGroundLightingId, appliedOpenGroundLighting = openGround);
+        Shader.SetGlobalVector(ForestDetailLightingId, appliedForestDetailLighting = detail);
+        Shader.SetGlobalVector(DistantForestShadowId, appliedDistantForestShadows = distantSettings);
     }
 
     void ReleaseForestLighting()
@@ -222,6 +267,9 @@ public class WorldManager : MonoBehaviour
         Shader.SetGlobalVector(ForestLeafId, Vector4.zero);
         Shader.SetGlobalVector(ForestBarkId, Vector4.zero);
         Shader.SetGlobalVector(ForestDarknessId, Vector4.zero);
+        Shader.SetGlobalVector(OpenGroundLightingId, Vector4.zero);
+        Shader.SetGlobalVector(ForestDetailLightingId, Vector4.zero);
+        Shader.SetGlobalVector(DistantForestShadowId, Vector4.zero);
     }
 
     void Awake()
@@ -254,6 +302,9 @@ public class WorldManager : MonoBehaviour
                 chunkManager != null && chunkManager.HasVisibleWater(planes, mask));
         }
     }
+
+    internal bool MayRenderStreamedWater(Plane[] frustum, int cameraMask)
+        => chunkManager == null || chunkManager.HasVisibleWater(frustum, cameraMask);
 
     private void ConfigureSculptController()
     {
@@ -362,7 +413,9 @@ public class WorldManager : MonoBehaviour
             Butterflies = butterflySettings,
             Bees = beeSettings,
             Leaves = leafClusterSettings,
-            Ferns = fernSettings
+            Ferns = fernSettings,
+            WoodlandShrubs = woodlandShrubs,
+            WoodlandDebris = woodlandDebris
         },
     };
 

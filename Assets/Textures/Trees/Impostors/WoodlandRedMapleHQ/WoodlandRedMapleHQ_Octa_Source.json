@@ -1,7 +1,7 @@
 {
     "prefab": "Assets/Prefabs/WoodlandRedMaple.prefab",
     "prefabGuid": "a06c6b7b1e0bfae489edb2cb2b2d5bdc",
-    "dependencyHash": "6c3ef9beb2bbc018aaa8afe9be846d52",
+    "dependencyHash": "cb23be51c9af1783dbec3dbca901484f",
     "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
     "supersample": 2,
     "voxelResolution": 128,

@@ -52,6 +52,10 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: 64175ed2311f486ab5714761650464c2, type: 2}
+    - target: {fileID: -5754084199372789682, guid: 594dacc2d0c15d04c94e43cb19809958, type: 3}
+      propertyPath: m_Mesh
+      value:
+      objectReference: {fileID: 4300000, guid: 25b95c87e1a86dd4bb9d5be9a2d6ae49, type: 2}
     - target: {fileID: 919132149155446097, guid: 594dacc2d0c15d04c94e43cb19809958, type: 3}
       propertyPath: m_Name
       value: cattail

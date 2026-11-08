@@ -19,8 +19,12 @@ public sealed class TreeDistributionProfile : ScriptableObject
     [Range(1, 3)] public int competitionCohorts = 2;
     [Range(0f, .5f), Tooltip("Share of the forest and meadow grove planting budget assigned to more evenly spaced young trees. Regenerate to apply.")]
     public float youngTreeShare;
+    [Range(.75f, 1f), Tooltip("Competition spacing in dense forest cores. Physical trunk and foliage exclusion use the authored radii.")]
+    public float forestCoreSpacing = 1f;
     [Tooltip("Use beech–oak woodland, sparse meadow trees and cooler conifer stands. Requires the Woodland pilot tree set.")]
     public bool useWoodlandSpeciesMix;
+    [Tooltip("Use a more varied crown mix at woodland edges and in meadow groves.")]
+    public bool variedWoodlandEdges;
     [Min(16), Tooltip("Exceptional per-chunk guard, not a population target. Grassland also respects its existing count guard.")]
     public int maxTreesPerChunk = 64;
 
@@ -39,7 +43,9 @@ public sealed class TreeDistributionProfile : ScriptableObject
             MeadowBackground=Safe(grasslandBackground,.8f,0f,100f), MeadowGrove=Safe(grasslandGrove,26f,0f,200f),
             SnowStand=Safe(snowStand,12f,0f,100f), CandidateCell=Safe(candidateCellSize,4.8f,2f,32f),
             YoungTreeShare=Safe(youngTreeShare,0f,0f,.5f),
+            ForestCoreSpacing=forestCoreSpacing>0 ? Safe(forestCoreSpacing,1f,.75f,1f) : 1f,
             UseWoodlandSpeciesMix=useWoodlandSpeciesMix,
+            VariedWoodlandEdges=variedWoodlandEdges,
             Cohorts=Mathf.Clamp(competitionCohorts,1,3), MaxTrees=Mathf.Clamp(maxTreesPerChunk,16,256)
         };
     }
@@ -50,9 +56,11 @@ public struct TreeDistributionParameters
 {
     public bool Enabled;
     public bool UseWoodlandSpeciesMix;
+    public bool VariedWoodlandEdges;
     public float WorldScale, StandCell, GroveFraction, CandidateCell;
     public Vector2 StandRadius;
     public float ForestBackground, ForestStand, MeadowBackground, MeadowGrove, SnowStand;
     public float YoungTreeShare;
+    public float ForestCoreSpacing;
     public int Cohorts, MaxTrees;
 }

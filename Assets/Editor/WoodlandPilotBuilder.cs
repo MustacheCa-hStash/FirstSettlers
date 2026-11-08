@@ -108,6 +108,7 @@ public static class WoodlandPilotBuilder
         leaf.SetFloat("_Cutoff", .32f);
         leaf.SetFloat("_AmbientStrength", .20f);
         leaf.SetFloat("_LightWrap", .35f);
+        leaf.SetFloat("_CrownNormalBlend", .78f);
         leaf.SetFloat("_BacklightingStrength", .17f);
         leaf.SetFloat("_StableBacklighting", 0);
         leaf.SetFloat("_WindStrength", 0);

@@ -103,8 +103,11 @@ public static class ForestUnderstoryValidation
             var prefab=AssetDatabase.LoadAssetAtPath<GameObject>(path);Check(prefab!=null,"Missing fern prefab.");
             var mesh=prefab.GetComponent<MeshFilter>().sharedMesh;var renderer=prefab.GetComponent<MeshRenderer>();
             Check(mesh!=null && mesh.subMeshCount==1 && mesh.triangles.Length/3<=300,"Fern mesh budget exceeded.");
-            Check(Math.Abs(mesh.bounds.min.y)<.001f && mesh.bounds.size.y>.25f,"Fern is floating at its pivot or lost its arched silhouette.");
+            Check(mesh.bounds.min.y >= -.045f && mesh.bounds.min.y <= .001f && mesh.bounds.size.y > .25f,
+                "Fern is floating, buried too deeply or lost its arched silhouette.");
             Check(renderer.sharedMaterial.enableInstancing && !ShaderUtil.ShaderHasError(renderer.sharedMaterial.shader),"Fern material cannot be instanced.");
+            Check(renderer.sharedMaterial.GetFloat("_UseFrondTexture") > .5f && renderer.sharedMaterial.GetTexture("_FrondTexture") != null,
+                "Fern fallback lost the realistic frond texture.");
             Check(renderer.shadowCastingMode==ShadowCastingMode.Off && prefab.GetComponentsInChildren<Collider>().Length==0,"Ferns added shadow or collider overhead.");
             Check(renderer.sharedMaterial.FindPass("DepthNormals")>=0,"Fern lacks depth-normal support.");
         }

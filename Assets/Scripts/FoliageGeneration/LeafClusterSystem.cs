@@ -65,7 +65,7 @@ public sealed class LeafClusterSystem : IDisposable
     public LeafClusterSystem(LeafClusterSettings settings, int seed, int size, float scale, float heightMultiplier, GrassSettings grassSettings = null)
     {
         this.settings = settings ?? new LeafClusterSettings(); this.seed = seed;
-        string kind=this.settings.IsFern?"Ferns":"LeafClusters";
+        string kind=this.settings.IsFern?"Ferns":this.settings.woodlandKind==WoodlandScatterKind.Litter?"LeafClusters":this.settings.woodlandKind.ToString();
         GenerationMarker=new ProfilerMarker("FS.Streaming."+kind+".Generate");
         DrawMarker=new ProfilerMarker("FS.Streaming."+kind+".Draw");
         this.size = size; this.scale = scale; this.heightMultiplier = heightMultiplier;
@@ -109,7 +109,9 @@ public sealed class LeafClusterSystem : IDisposable
             ChunkRuntime runtime = record?.ActiveRuntime;
             if (runtime == null || !runtime.IsVisible || !runtime.HasTerrainMesh || !record.HasTerrainData) continue;
             // A missing packed map means this chunk contains no forest-floor samples.
-            if (record.WorldFeaturePlan.ForestStructure.FloorEcologyMap == null) continue;
+            if (record.WorldFeaturePlan == null ||
+                (settings.woodlandKind != WoodlandScatterKind.HabitatShrub &&
+                 record.WorldFeaturePlan.ForestStructure.FloorEcologyMap == null)) continue;
             wanted.Add(coord);
             if (!resident.TryGetValue(coord, out var generation) || !generation.Matches(record, settings))
             {
@@ -133,7 +135,8 @@ public sealed class LeafClusterSystem : IDisposable
                 long started = System.Diagnostics.Stopwatch.GetTimestamp();
                 if (work == null)
                 {
-                    work = new LeafClusterGeneration(manager.GetChunkRecord(next), settings, seed, size, scale, heightMultiplier, meshRadius);
+                    float footprint = settings.woodlandKind == WoodlandScatterKind.HabitatShrub ? buildingRadius : meshRadius;
+                    work = new LeafClusterGeneration(manager.GetChunkRecord(next), settings, seed, size, scale, heightMultiplier, footprint);
                     resident[next] = work;
                 }
                 int budget = Mathf.Max(1, settings.candidateBudgetPerFrame);
@@ -250,9 +253,12 @@ public sealed class LeafClusterSystem : IDisposable
             buildingRadius=Mathf.Max(buildingRadius,Mathf.Sqrt(x*x+z*z));
         }
         IncludePlant(mesh,meshLocal);IncludePlant(farMesh,farLocal);IncludePlant(coarseMesh,coarseLocal);
-        if(!settings.IsFern)buildingRadius=buildingRadius*1.5f+.1f;
         // Bound per-leaf spread, heading/size variation and local offsets in the shader.
-        if(!settings.IsFern) meshRadius=meshRadius*1.5f+.1f;
+        if (!settings.IsFern && settings.woodlandKind != WoodlandScatterKind.HabitatShrub)
+        {
+            buildingRadius = buildingRadius*1.5f+.1f;
+            meshRadius = meshRadius*1.5f+.1f;
+        }
     }
 
     private void Submit(int count, Camera camera, int lod)

@@ -2,7 +2,10 @@ Shader "Custom/GrassInstancedTerrainTint"
 {
     Properties
     {
-        [MainTexture] _BaseMap("Blade Silhouette (Alpha Only)", 2D) = "white" {}
+        [MainTexture] _BaseMap("Blade Albedo and Coverage", 2D) = "white" {}
+        [Toggle(_MEADOW_BLADE_ALBEDO)] _MeadowBladeAlbedo("Use Meadow Blade Atlas", Float) = 0
+        _BladeTransmission("Meadow Blade Transmission", Range(0, 0.4)) = 0.16
+        _RootSeatFade("Meadow Root Coverage Fade", Range(0, 0.35)) = 0
 
         [MainColor] _BaseColor("Base Color", Color) = (1, 1, 1, 1)
         _Color("Color", Color) = (1, 1, 1, 1)
@@ -77,6 +80,7 @@ Shader "Custom/GrassInstancedTerrainTint"
             #pragma multi_compile_instancing
             #pragma instancing_options procedural:SetupGrassIndirect
             #pragma shader_feature_local _BILLBOARD_RENDER_FADE_ON
+            #pragma shader_feature_local _MEADOW_BLADE_ALBEDO
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
@@ -100,6 +104,7 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half4 _ForestMidGrassColor;
                 half4 _ForestLightGrassColor;
                 half _Cutoff;
+                half _RootSeatFade;
                 half _AlphaClipThreshold;
                 half _NoiseScale;
                 half _NoiseStrength;
@@ -123,6 +128,8 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half _RenderFadeEnabled;
                 half _RenderFadeProgress;
                 half _FadeDitherPixelSize;
+                half _MeadowBladeAlbedo;
+                half _BladeTransmission;
             CBUFFER_END
 
             UNITY_INSTANCING_BUFFER_START(GrassInstanceProperties)
@@ -224,7 +231,14 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half4 instanceData = GetGrassInstanceData(UNITY_ACCESS_INSTANCED_PROP(GrassInstanceProperties, _GrassInstanceData));
                 half bladeHeight = saturate((IN.positionOS.y - _BladeMinY) / max(_BladeMaxY - _BladeMinY, 0.0001h));
                 float instancePhase = instanceData.y * 6.2831853;
-                float3 positionWS = TransformObjectToWorld(IN.positionOS.xyz);
+                float3 positionOS = IN.positionOS.xyz;
+                #if defined(_MEADOW_BLADE_ALBEDO)
+                // The right tile is the seed-bearing card. Most stems sit within the lower grass.
+                if (IN.uv.x > 0.5)
+                    positionOS.y -= max(positionOS.y, 0.0) * (1.0 - smoothstep(0.55, 0.91, instanceData.z)) * 0.34;
+                instancePhase *= 0.36;
+                #endif
+                float3 positionWS = TransformObjectToWorld(positionOS);
                 positionWS = ApplyGrassWind(positionWS, bladeHeight, instancePhase);
 
                 OUT.positionCS = TransformWorldToHClip(positionWS);
@@ -235,8 +249,7 @@ Shader "Custom/GrassInstancedTerrainTint"
                 #endif
                 OUT.baseUV = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.bladeHeight = bladeHeight;
-                // One flat palette color per tuft. Wind and blade shape must
-                // not introduce noise or painted detail inside a blade.
+                // Keep the broad palette tied to the tuft origin through wind.
                 OUT.instanceXZ = TransformObjectToWorld(float3(0.0, 0.0, 0.0)).xz;
 
                 half3 normalWS = TransformObjectToWorldNormal(IN.normalOS);
@@ -253,6 +266,16 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half4 baseSample = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.baseUV);
                 half cutoff = max(_Cutoff, _AlphaClipThreshold);
                 clip(baseSample.a - cutoff);
+                #if defined(_MEADOW_BLADE_ALBEDO)
+                [branch] if (IN.bladeHeight < _RootSeatFade)
+                {
+                    // Let the baked blades show through at the mesh/ground
+                    // intersection rather than exposing the edge of a card.
+                    half coverage = smoothstep(0.0h, _RootSeatFade, IN.bladeHeight);
+                    half dither = frac(dot(floor(IN.positionCS.xy), float2(.754877666,.569840296)));
+                    clip(coverage - dither - .0001h);
+                }
+                #endif
 
                 half4 instanceData = GetGrassInstanceData(UNITY_ACCESS_INSTANCED_PROP(GrassInstanceProperties, _GrassInstanceData));
                 half forestBlend = saturate(instanceData.x);
@@ -272,12 +295,25 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half3 bladeTone = lerp(_RootTint.rgb, _TipTint.rgb, heightTone);
 
                 half3 normalWS = normalize(IN.normalWS);
-                Light mainLight = GetMainLight(IN.shadowCoord);
-                half shadowAttenuation = lerp(1.0h, mainLight.shadowAttenuation, saturate(_ReceiveShadows));
-                half ndotl = saturate(dot(normalWS, mainLight.direction));
+                float4 shadowCoord = IN.shadowCoord;
+                #if defined(_MAIN_LIGHT_SHADOWS_CASCADE)
+                shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
+                #endif
+                Light mainLight = GetMainLight(shadowCoord);
+                half distantForest = FSDistantForestShadow(IN.positionWS, mainLight.direction.y, mainLight.shadowAttenuation);
+                half shadowAttenuation = lerp(1.0h, distantForest, saturate(_ReceiveShadows));
+                half lightFacing = dot(normalWS, mainLight.direction);
+                half ndotl = saturate(lightFacing);
                 half3 ambient = max(SampleSH(normalWS), _AmbientStrength.xxx);
-                half3 lighting = ambient + mainLight.color * (0.35h + ndotl * 0.65h) * shadowAttenuation;
-                lighting *= FSForestGroundLight(IN.positionWS);
+                half sun = 0.35h + ndotl * 0.65h;
+                #if defined(_MEADOW_BLADE_ALBEDO)
+                sun += saturate(-lightFacing) * _BladeTransmission * heightTone;
+                // Preserve blade colors and layer broad tonal variation over the authored albedo.
+                grassTint = baseSample.rgb * lerp(1.0h, grassTint / max(_MidGrassColor.rgb, 0.02h), 0.36h);
+                #endif
+                half groundShade = FSForestGroundLight(IN.positionWS);
+                half3 lighting = ambient * FSSceneGroundAmbient(groundShade) + mainLight.color * sun *
+                    shadowAttenuation * FSSceneGroundSun(groundShade, shadowAttenuation, forestBlend);
                 lighting+=FSLocalFlameDiffuse(IN.positionWS,normalWS);
 
                 half3 color = grassTint * bladeTone * _BaseColor.rgb * _Color.rgb * lighting;

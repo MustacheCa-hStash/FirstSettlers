@@ -120,6 +120,8 @@ public struct WorldFoliageConfiguration
     public BeeSettings Bees;
     public LeafClusterSettings Leaves;
     public FernSettings Ferns;
+    public LeafClusterSettings WoodlandShrubs;
+    public LeafClusterSettings WoodlandDebris;
     public static WorldFoliageConfiguration Default => new()
     { Grass = new GrassSettings(), Flowers = new FlowerSettings(), LilyPads = new LilyPadSettings(),
       Cattails = new CattailSettings(), Clover = new CloverSettings(), Dandelions = new DandelionSettings(),

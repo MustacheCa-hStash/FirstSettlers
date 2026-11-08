@@ -94,7 +94,7 @@ internal sealed class StandingTreeGpuBatch : IDisposable
     {
         var scale = tree.localScale;
         float maxScale = Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
-        bool alphaShadows = tree.snowCoverage > 0 || TreeSpeciesCatalog.IsGrassland(tree.variant);
+        bool alphaShadows = StandingTreeRenderer.AlwaysUsesAlphaShadows(tree);
         if (!regionBounds.HasValue || lastChunk != chunk)
         {
             var instanceBounds = regionBounds ?? new Bounds(matrix.MultiplyPoint3x4(localBounds.center),
@@ -106,12 +106,13 @@ internal sealed class StandingTreeGpuBatch : IDisposable
         pending.Add(new Source
         {
             ObjectToWorld = matrix, Leaves = (Color)tree.leafTint, Bark = (Color)tree.barkTint,
-            Appearance = new Vector4(tree.snowCoverage, alphaShadows ? 1f : 0f, maxScale, 0),
+            Appearance = new Vector4(tree.snowCoverage, alphaShadows ? 1f : 0f, maxScale,
+                alphaShadows ? 0f : StandingTreeRenderer.AlphaShadowRadiusScaleSquared(tree.id)),
             Fade = new Vector4(handoff, 1, load, 0)
         });
     }
 
-    public int Render(Camera camera, Vector3 eye, float screenHeight, bool orthographic,
+    public int Render(Camera camera, Vector3 eye, float screenHeight, bool orthographic, float forestAlphaShadowDistanceSquared,
         bool castShadows, bool receiveShadows, Vector4[] frustum, bool enableMeshLods)
     {
         int count = pending.Count;
@@ -129,6 +130,7 @@ internal sealed class StandingTreeGpuBatch : IDisposable
         Vector3 center = localBounds.center;
         shader.SetVector("_StandingTreeCenterRadius", new Vector4(center.x, center.y, center.z, localBounds.extents.magnitude));
         shader.SetVector("_StandingTreeEyeHeight", new Vector4(eye.x, eye.y, eye.z, localBounds.size.y * referenceScale * screenHeight));
+        shader.SetFloat("_StandingTreeForestAlphaDistanceSq", forestAlphaShadowDistanceSquared);
         shader.SetInt("_StandingTreeOrthographic", orthographic ? 1 : 0);
         // A camera-frustum reject is only safe when the instance can't cast a shadow.
         shader.SetInt("_StandingTreeCull", frustum != null ? 1 : 0);

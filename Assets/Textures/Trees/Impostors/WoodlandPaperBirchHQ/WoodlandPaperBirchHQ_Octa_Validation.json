@@ -3,7 +3,7 @@
     "inputs": [
         {
             "path": "Assets/Shaders/OakLeafTintCutout.shader",
-            "sha256": "80CB1CEE174AB37AA0D4127FB8AD6573F744CD257B448B3B6E2C7ED93369CB01"
+            "sha256": "81CE85A5C750EE06842E959AA5D3DEF9EAD7134DD384A07056A9E459AC69CB90"
         },
         {
             "path": "Assets/Prefabs/WoodlandPaperBirch.prefab",
@@ -11,15 +11,15 @@
         },
         {
             "path": "Assets/Materials/M_Trees/Woodland/PaperBirch_Leaf.mat",
-            "sha256": "0F6DE0EC5C04E282184D7308AA671B100F5D4EDBE5EFE60683EE39047FE3D968"
+            "sha256": "B859476EC528EC0C2F9BCBB50680F647F091222F8418B78458CEF388668381BC"
         },
         {
             "path": "Assets/Models/Trees/Woodland/PaperBirch.fbx",
-            "sha256": "DCDF56864592EA998BBDC0F0DDCD26A76BC188EE6CAC66655BD74B26649A829B"
+            "sha256": "4E414BE59582459A1F0EE4161751313119537284DF824DCDED42EA51AC195788"
         },
         {
             "path": "Assets/Textures/Trees/Woodland/PaperBirch_Foliage.png",
-            "sha256": "4C9F9FDE31B69031D35D2F5665C57A5D56CD7A5789CE74AF9482AC9787AA94AF"
+            "sha256": "6629909401077DB73045F1E75C150775D23FEE78EDB6915B60BF1CC081307B23"
         },
         {
             "path": "Assets/Scripts/FoliageGeneration/Trees/TreeGameplayAuthoring.cs",
@@ -39,7 +39,7 @@
         },
         {
             "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
-            "sha256": "BC89A29E0CA7A1E73CCAD2ADF148D4EA8AFD40800B6AFEE1D47B7B963928957C"
+            "sha256": "33FABBF2E4CBED11F45B3AB20F0DE71464817982F8C94C4C0E1E3E5114742059"
         },
         {
             "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
@@ -57,11 +57,11 @@
     "outputs": [
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandPaperBirchHQ/WoodlandPaperBirchHQ_Octa_AlbedoCoverage.png",
-            "sha256": "10C9761B26F60BAEBD360950AFF4B4B0814614752AC33E04B1493E376EFFCAC5"
+            "sha256": "D26DA906C7167135EE328AAA0E4472F0BAAF955A97E8EF4D0A68A71C15C8DD05"
         },
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandPaperBirchHQ/WoodlandPaperBirchHQ_Octa_Surface.png",
-            "sha256": "A82119C29B6EC13ED4EE4BCA94167762C7F5167F055DC6CF7D5EAA2DE7C0F72E"
+            "sha256": "EDF99000081F54A374B5C0E40AB9A68180B467B9AD89FB12930E5F7E82B12092"
         },
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandPaperBirchHQ/WoodlandPaperBirchHQ_Octa_Depth.png",
@@ -73,11 +73,11 @@
         },
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandPaperBirchHQ/WoodlandPaperBirchHQ_Octa_Ambient.png",
-            "sha256": "0A6F482869CEC902A77092582DE79273FF73F5772BA6DF42058D65B951ECDF7D"
+            "sha256": "9584142AC8D1833DF3BAA368F4C31C309413F0347A7DF715A82F860D0EE3DF79"
         },
         {
             "path": "Assets/Materials/M_Trees/WoodlandPaperBirchHQ/WoodlandPaperBirchHQ_OctaImpostor_M.mat",
-            "sha256": "B01549301E4C8CE3A6A2392EDC9C9F21D672252AD6A437663D18A77B0B15E506"
+            "sha256": "89430A8CF920A75606B3A5B456FB753C628755F89576BCF4DFA2200D4C642799"
         },
         {
             "path": "Assets/Models/Trees/WoodlandPaperBirchHQ_OctaImpostor_Runtime.mesh",

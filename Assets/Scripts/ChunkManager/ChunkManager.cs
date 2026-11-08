@@ -145,6 +145,7 @@ public class ChunkManager : IChunkLookup
     private readonly DistantTreeManager distantTrees;
     private readonly LeafClusterSystem leafClusters;
     private readonly LeafClusterSystem ferns;
+    private readonly LeafClusterSystem woodlandShrubs, woodlandDebris;
     private readonly WorldFeatureGenerationSettings worldFeatureGenerationSettings;
     private bool disposed;
     private static readonly ProfilerMarker ReleaseDataMarker = new("FS.Streaming.Ownership.ReleaseInactiveChunkData");
@@ -188,6 +189,10 @@ public class ChunkManager : IChunkLookup
         this.meshHeightMultiplier = generation.MeshHeightMultiplier;
         leafClusters = new LeafClusterSystem(foliage.Leaves, generation.Seed, generation.ChunkSize, generation.WorldScale, generation.MeshHeightMultiplier, foliage.Grass);
         ferns = new LeafClusterSystem(foliage.Ferns ?? new FernSettings(), generation.Seed, generation.ChunkSize, generation.WorldScale, generation.MeshHeightMultiplier, foliage.Grass);
+        if (foliage.WoodlandShrubs?.enabled == true)
+            woodlandShrubs = new LeafClusterSystem(foliage.WoodlandShrubs, generation.Seed, generation.ChunkSize, generation.WorldScale, generation.MeshHeightMultiplier, foliage.Grass);
+        if (foliage.WoodlandDebris?.enabled == true)
+            woodlandDebris = new LeafClusterSystem(foliage.WoodlandDebris, generation.Seed, generation.ChunkSize, generation.WorldScale, generation.MeshHeightMultiplier, foliage.Grass);
         terrainHorizonShadows = new TerrainHorizonShadowSystem(generation.ChunkSize, generation.Seed, generation.SampleScale, generation.WorldScale,
             generation.MeshHeightMultiplier, generation.Water, generation.MountainHorizontalScale, generation.Erosion, rendering.HorizonShadows);
         this.urgentVisibleChunkRingRadius = Mathf.Max(0, content.UrgentVisibleChunkRingRadius);
@@ -269,6 +274,8 @@ public class ChunkManager : IChunkLookup
         terrainRequestManager?.Dispose(); // Close admission and all result queues before waiting for workers.
         leafClusters.Dispose();
         ferns.Dispose();
+        woodlandShrubs?.Dispose();
+        woodlandDebris?.Dispose();
         terrainHorizonShadows?.Dispose();
         butterflyManager?.Dispose();
         beeManager?.Dispose();
@@ -305,6 +312,8 @@ public class ChunkManager : IChunkLookup
         using var scope = ReleaseDataMarker.Auto();
         record.InvalidateRequests();
         foliageManager.ForgetChunkData(coord); leafClusters.ForgetChunk(coord); ferns.ForgetChunk(coord);
+        woodlandShrubs?.ForgetChunk(coord);
+        woodlandDebris?.ForgetChunk(coord);
         butterflyManager?.ForgetChunk(coord); beeManager?.ForgetChunk(coord);
         terrainRequestManager.DiscardChunkResults(coord);
         record.Dispose(); chunkRecords.Remove(coord);
@@ -622,6 +631,8 @@ public class ChunkManager : IChunkLookup
             beeManager?.Update(this, viewerCoord, viewerCamera, Time.deltaTime);
             leafClusters.Update(this, orderedActiveCoords, viewer.position, viewerCamera);
             ferns.Update(this, orderedActiveCoords, viewer.position, viewerCamera);
+            woodlandShrubs?.Update(this, orderedActiveCoords, viewer.position, viewerCamera);
+            woodlandDebris?.Update(this, orderedActiveCoords, viewer.position, viewerCamera);
             TerrainGenerationProfiler.Record(TerrainGenerationProfileStage.FoliageTotal, foliageStart);
             lastViewerGlobalSubChunk = viewerGlobalSubChunk;
         }

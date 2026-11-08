@@ -12,6 +12,8 @@ public sealed class FernSettings : LeafClusterSettings
     [Min(0)] public float coarseLodStart = 40f;
     [Min(1)] public float coarseLodEnd = 55f;
     [Range(0,1)] public float minMoisture = 0.35f;
+    [Tooltip("Thin fern colonies through sparse moss and keep dense moss cores clear.")]
+    public bool gradualMossFalloff;
     [Min(.01f), InspectorName("Fern Size Multiplier"), Tooltip("Overall fern size, applied to the random Scale Range. 2 doubles the authored plant.")]
     public float sizeMultiplier = 2f;
     public FernSettings()
@@ -25,5 +27,5 @@ public sealed class FernSettings : LeafClusterSettings
     public override string DefaultPrefabPath => "Foliage/ForestFern_LOD0";
     public override string DefaultDistantPrefabPath => "Foliage/ForestFern_LOD1";
     public override float SizeMultiplier => Mathf.Max(.01f,sizeMultiplier);
-    public override int PlacementSignature => System.HashCode.Combine(base.PlacementSignature,minMoisture,sizeMultiplier);
+    public override int PlacementSignature => System.HashCode.Combine(base.PlacementSignature,minMoisture,sizeMultiplier,gradualMossFalloff);
 }

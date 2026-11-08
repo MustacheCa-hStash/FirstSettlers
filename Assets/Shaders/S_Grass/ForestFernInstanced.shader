@@ -3,6 +3,10 @@ Shader "FirstSettlers/Forest Fern Instanced"
     Properties
     {
         [MainColor] _BaseColor("Fern Tint", Color) = (1,1,1,1)
+        [MainTexture][NoScaleOffset] _FrondTexture("Baked Frond", 2D) = "white" {}
+        [ToggleUI] _UseFrondTexture("Use Baked Frond", Float) = 0
+        _Cutoff("Frond Alpha Cutoff", Range(0,1)) = 0.42
+        _CanopyShade("Canopy Shade", Range(0,1)) = 0
         _WindStrength("Frond Sway", Range(0,0.1)) = 0.016
         [PerRendererData] _LeafInstanceTint("Instance Tint", Vector) = (1,1,1,1)
         _AmbientStrength("Minimum Ambient", Range(0,1)) = 0.12
@@ -17,9 +21,12 @@ Shader "FirstSettlers/Forest Fern Instanced"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
         #include "Assets/Shaders/LocalFlameLighting.hlsl"
+        #include "Assets/Shaders/ForestCanopyLighting.hlsl"
+        TEXTURE2D(_FrondTexture);
+        SAMPLER(sampler_FrondTexture);
         CBUFFER_START(UnityPerMaterial)
             half4 _BaseColor;
-            half _AmbientStrength, _WindStrength;
+            half _AmbientStrength, _WindStrength, _UseFrondTexture, _Cutoff, _CanopyShade;
             float _FadeStart, _FadeEnd;
             float4 _LeafViewer;
         CBUFFER_END
@@ -64,6 +71,12 @@ Shader "FirstSettlers/Forest Fern Instanced"
         half4 LeafSample(Varyings input)
         {
             half4 texel = half4(1,1,1,1);
+            UNITY_BRANCH
+            if (_UseFrondTexture > .5h)
+            {
+                texel = SAMPLE_TEXTURE2D(_FrondTexture, sampler_FrondTexture, input.uv);
+                clip(texel.a - _Cutoff);
+            }
             float2 viewer = _LeafViewer.w > 0.5 ? _LeafViewer.xz : _WorldSpaceCameraPos.xz;
             float fade = 1 - smoothstep(_FadeStart, max(_FadeEnd, _FadeStart + 0.01), distance(input.positionWS.xz, viewer));
             // Screen-space dither removes coverage without an alpha-blended overdraw layer.
@@ -78,7 +91,11 @@ Shader "FirstSettlers/Forest Fern Instanced"
             half3 normal = normalize(input.normalWS) * IS_FRONT_VFACE(face, 1.0h, -1.0h);
             Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS));
             half3 ambient = max(SampleSH(normal), _AmbientStrength.xxx);
-            half3 lighting = ambient + mainLight.color * saturate(dot(normal, mainLight.direction)) *
+            half shade = 1.0h;
+            UNITY_BRANCH
+            if (_CanopyShade > 0.0h)
+                shade = lerp(1.0h, FSForestGroundLight(input.positionWS), _CanopyShade);
+            half3 lighting = ambient * shade + mainLight.color * saturate(dot(normal, mainLight.direction)) * FSForestGroundSun(shade) *
                 mainLight.distanceAttenuation * mainLight.shadowAttenuation;
             lighting+=FSLocalFlameDiffuse(input.positionWS,normal);
             return half4(MixFog(texel.rgb * input.color.rgb * lighting,

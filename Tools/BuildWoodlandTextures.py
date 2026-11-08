@@ -36,6 +36,21 @@ def keyed_specimen(sheet, index):
     return pic.crop(bounds)
 
 
+def woodland_leaf_color(specimen):
+    rgba = np.array(specimen)
+    srgb = rgba[..., :3] / 255.0
+    linear = np.where(srgb <= .04045, srgb / 12.92, ((srgb + .055) / 1.055) ** 2.4)
+    luminance = linear @ np.array((.2126, .7152, .0722))
+    midtone = np.median(luminance[rgba[..., 3] >= 128])
+    # Compress baked lighting within the specimen and keep a cooler, darker summer green.
+    scale = (midtone / np.maximum(luminance, .001)) ** .30
+    linear = (.82 * linear + .18 * luminance[..., None]) * scale[..., None]
+    linear = np.clip(linear * (.56, .65, .74), 0, 1)
+    srgb = np.where(linear <= .0031308, linear * 12.92, 1.055 * linear ** (1 / 2.4) - .055)
+    rgba[..., :3] = np.round(srgb * 255).astype(np.uint8)
+    return Image.fromarray(rgba, "RGBA")
+
+
 def foliage_card(specimen, index, variation):
     rng = random.Random(8291 + index * 63 + variation)
     pic = Image.new("RGBA", (TILE, TILE))
@@ -66,7 +81,7 @@ def foliage_card(specimen, index, variation):
         height = round(TILE*length)
         width = max(3, round(height*specimen.width/specimen.height*stretch))
         leaf = specimen.resize((width,height),Image.Resampling.LANCZOS)
-        bright = ImageEnhance.Brightness(leaf.convert("RGB")).enhance(rng.uniform(.76,1.17))
+        bright = ImageEnhance.Brightness(leaf.convert("RGB")).enhance(rng.uniform(.94,1.06))
         bright.putalpha(leaf.getchannel("A"))
         leaf = bright.rotate(-math.degrees(angle),Image.Resampling.BICUBIC,expand=True)
         x += math.sin(angle)*length*.39
@@ -188,7 +203,7 @@ def main():
     leaves,bark = Image.open(leaf_sheet),Image.open(bark_sheet)
     footprints = {}
     for index,name in enumerate(SPECIES):
-        specimen = keyed_specimen(leaves,index)
+        specimen = woodland_leaf_color(keyed_specimen(leaves,index))
         atlas = Image.new("RGBA",(TILE*2,TILE*2))
         footprints[name] = []
         for variant in range(4):

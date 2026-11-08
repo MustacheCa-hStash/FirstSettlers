@@ -16,6 +16,7 @@ Shader "Hidden/FirstSettlers/DistantFog"
         float4 _FogCamera, _FogDistance, _FogHeight, _FogShape, _FogClear;
         float4 _FogViewForward;
         float4 _FogWind, _FogQuality, _FogColor, _FogTexture_TexelSize;
+        float4 _FogAerial, _FogSunDirection, _FogSunColor;
 
         struct FogRay
         {
@@ -30,9 +31,9 @@ Shader "Hidden/FirstSettlers/DistantFog"
                 return lerp(UNITY_NEAR_CLIP_VALUE, 1, raw);
             #endif
         }
-        FogRay GetRay(float2 uv)
+        FogRay GetRay(float2 uv, bool aerial)
         {
-            FogRay ray;
+            FogRay ray = (FogRay)0;
             float raw = SAMPLE_TEXTURE2D_X_LOD(_FogDepth, sampler_PointClamp, uv, 0).r;
             #if UNITY_REVERSED_Z
                 bool sky = raw <= 0;
@@ -41,15 +42,25 @@ Shader "Hidden/FirstSettlers/DistantFog"
                 bool sky = raw >= 1;
                 float farDepth = 1, nearDepth = UNITY_NEAR_CLIP_VALUE;
             #endif
-            float3 farPoint = ComputeWorldSpacePosition(uv, farDepth, _FogInverseVP);
+            ray.kind = sky ? 1 : 0;
+            float waterEyeDepth = 0;
+            if (aerial && sky)
+            {
+                if (_FogClear.w <= .5) return ray;
+                waterEyeDepth = SAMPLE_TEXTURE2D_X_LOD(_FogWater, sampler_PointClamp, uv, 0).r;
+                if (waterEyeDepth <= 0) return ray;
+            }
             ray.origin = _FogCamera.xyz;
             if (_FogCamera.w > .5) ray.origin = ComputeWorldSpacePosition(uv, nearDepth, _FogInverseVP);
-            ray.direction = normalize(farPoint - ray.origin);
             float3 surface = ComputeWorldSpacePosition(uv, DeviceDepth(raw), _FogInverseVP);
-            ray.distance = sky ? _FogDistance.z : length(surface - ray.origin);
+            float3 delta = surface - ray.origin;
+            ray.distance = sky ? _FogDistance.z : length(delta);
             ray.surfaceY = surface.y;
-            ray.kind = sky ? 1 : 0;
-            float waterEyeDepth = SAMPLE_TEXTURE2D_X_LOD(_FogWater, sampler_PointClamp, uv, 0).r;
+            if (aerial && !sky && ray.distance <= _FogAerial.x) return ray;
+            ray.direction = aerial && !sky ? delta / max(ray.distance, .001) :
+                normalize(ComputeWorldSpacePosition(uv, farDepth, _FogInverseVP) - ray.origin);
+            if (_FogClear.w > .5 && (!aerial || !sky))
+                waterEyeDepth = SAMPLE_TEXTURE2D_X_LOD(_FogWater, sampler_PointClamp, uv, 0).r;
             float forwardDot = dot(ray.direction, _FogViewForward.xyz);
             if (_FogClear.w > .5 && waterEyeDepth > 0 && forwardDot > 0.00001)
             {
@@ -116,13 +127,13 @@ Shader "Hidden/FirstSettlers/DistantFog"
         float4 FragMarch(Varyings input) : SV_Target
         {
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-            return March(GetRay(input.texcoord), input.texcoord);
+            return March(GetRay(input.texcoord, false), input.texcoord);
         }
         float4 FragComposite(Varyings input) : SV_Target
         {
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
             float2 uv = input.texcoord;
-            FogRay ray = GetRay(uv);
+            FogRay ray = GetRay(uv, false);
             float protection = Protection(ray);
             if (ray.distance <= _FogDistance.x || protection <= 0) return float4(0, 0, 0, 1);
             float2 pixel = uv * _FogTexture_TexelSize.zw - .5;
@@ -144,6 +155,26 @@ Shader "Hidden/FirstSettlers/DistantFog"
             fog = weightSum > .0001 ? fog / weightSum : March(ray, uv).rg;
             return float4(_FogColor.rgb * fog.r * protection, lerp(1, fog.g, protection));
         }
+        float4 FragAerial(Varyings input) : SV_Target
+        {
+            UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+            FogRay ray = GetRay(input.texcoord, true);
+            float distance = min(ray.distance, _FogDistance.z) - _FogAerial.x;
+            // The sky already contains the horizon scattering. Water hits are resolved by GetRay.
+            if (ray.kind == 1 || distance <= 0) return float4(0, 0, 0, 1);
+            float y0 = ray.origin.y + ray.direction.y * _FogAerial.x - _FogAerial.z;
+            float y1 = y0 + ray.direction.y * distance;
+            float low = min(y0, y1), high = max(y0, y1);
+            float below = high <= 0 ? 1 : saturate(-low / max(high - low, .001));
+            // Analytic mean of exponential density above the valley, capped below it.
+            float falloff = (max(0, high) - max(0, low)) * _FogAerial.w;
+            float integral = falloff < .001 ? 1 - falloff * .5 : (1 - exp(-falloff)) / falloff;
+            float meanDensity = lerp(exp(-max(0, low) * _FogAerial.w) * integral, 1, below);
+            float transmission = exp(-_FogAerial.y * distance * meanDensity);
+            float towardSun = pow(saturate(dot(ray.direction, _FogSunDirection.xyz)), 5);
+            float3 airColor = lerp(_FogColor.rgb, _FogSunColor.rgb * .75, towardSun * _FogSunColor.a);
+            return float4(airColor * (1 - transmission), transmission);
+        }
         ENDHLSL
 
         Pass
@@ -163,6 +194,16 @@ Shader "Hidden/FirstSettlers/DistantFog"
             #pragma target 4.5
             #pragma vertex Vert
             #pragma fragment FragComposite
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "AerialPerspective"
+            Blend One SrcAlpha, Zero One
+            HLSLPROGRAM
+            #pragma target 4.5
+            #pragma vertex Vert
+            #pragma fragment FragAerial
             ENDHLSL
         }
     }

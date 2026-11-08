@@ -25,6 +25,7 @@ Shader "Custom/TreeHQOctaImpostor"
         _ColorVariationStrength("Source Palette Variation", Range(0,1)) = .62
         _LeafTransmissionColor("Leaf Transmission Tint", Color) = (1,1,1,1)
         [Toggle] _StableLeafTransmission("Stable Two Sided Transmission", Float) = 0
+        [ToggleUI] _CrownTransmission("Directional Crown Transmission", Float) = 0
         _Cutoff("Coverage Cutoff", Range(0,1)) = 0.008
         _CaptureCenterLS("Capture Center Local", Vector) = (0,3,0,0)
         _CaptureRadius("Capture Radius", Float) = 4.3
@@ -100,7 +101,7 @@ Shader "Custom/TreeHQOctaImpostor"
                 half4 _LeafSeasonTint, _SummerLeafColor, _AutumnRedColor, _AutumnCrimsonColor, _AutumnOrangeColor, _AutumnYellowColor, _BarkShadowColor, _BarkHighlightColor, _LeafTransmissionColor;
                 float4 _CaptureCenterLS;
                 half4 _LeafShadowColor;
-                half _LegacyMaplePalette, _ColorVariationStrength, _StableLeafTransmission;
+                half _LegacyMaplePalette, _ColorVariationStrength, _StableLeafTransmission, _CrownTransmission;
                 half _SeasonStrength, _UseSeasonPalette, _TreeTintStrength, _SeasonAutumnAmount, _AutumnVariationStrength, _SeasonPaletteMode, _Cutoff, _CaptureRadius, _FramesPerAxis, _AtlasTileResolution, _AmbientTileResolution, _AtlasPadding;
                 half _DepthParallax, _AOStrength, _SkyStrength, _AmbientFloor, _LeafLightWrap, _FoliageBrightness, _BarkBrightness, _BarkColorRemap, _BarkRemapBlackPoint, _BarkRemapWhitePoint, _TransmissionStrength, _WindStrength, _WindSpeed, _DebugView, _DebugFrameX, _DebugFrameY;
             CBUFFER_END
@@ -354,6 +355,7 @@ Shader "Custom/TreeHQOctaImpostor"
                 // open-sky lighting above that conservative foliage floor.
                 half ambientFloor = TreeNightAmbientFloor(_AmbientFloor);
                 half3 sky = max(SampleSH(bentNormalWS) * ambient.b, ambientFloor.xxx) * _SkyStrength;
+                sky = FSForestDirectionalAmbient(shadedPositionWS, normalWS, sky);
                 half occlusion = 1.0h - ambient.a * _AOStrength;
                 half roughness = surface.b;
                 half surfaceBrightness = lerp(_BarkBrightness, _FoliageBrightness, leafWeight);
@@ -361,16 +363,26 @@ Shader "Custom/TreeHQOctaImpostor"
                 half3 litAlbedo = baseColor * surfaceBrightness;
                 litAlbedo = lerp(FSForestBarkColor(litAlbedo), FSForestLeafColor(litAlbedo), leafWeight);
                 half3 diffuse = litAlbedo * (sky * occlusion * fill + mainLight.color * direct);
-                half backlight = pow(saturate(dot(-normalWS, mainLight.direction)), 3.0h) * surface.a * leafWeight * _TransmissionStrength;
-                diffuse += FSForestLeafColor(baseColor) * mainLight.color * backlight * mainLight.shadowAttenuation * fill;
-                if (_SeasonPaletteMode > 1.5h || _StableLeafTransmission > .5h)
+                half leafTransmission = surface.a * leafWeight * _TransmissionStrength;
+                UNITY_BRANCH if (_CrownTransmission > .5h && _FSForestDetailLighting.y > 0.0h)
+                {
+                    half thinness = FSForestLeafThinness(albedo.rgb) * (1.0h - ambient.a * .72h);
+                    half transmission = FSForestLeafTransmission(GetWorldSpaceNormalizeViewDir(shadedPositionWS), normalWS,
+                        mainLight, thinness);
+                    diffuse += litAlbedo * _LeafTransmissionColor.rgb * mainLight.color * leafTransmission * transmission;
+                }
+                else if (_SeasonPaletteMode > 1.5h || _StableLeafTransmission > .5h)
                 {
                     // Oak captures half-range neutral detail; undo that scale for
                     // transmission too, and match the source's stable two-sided glow.
-                    diffuse -= FSForestLeafColor(baseColor) * mainLight.color * backlight * mainLight.shadowAttenuation * fill;
                     Light transmissionSun = GetMainLight();
                     diffuse += FSForestLeafColor(baseColor * _FoliageBrightness) * fill * _LeafTransmissionColor.rgb * transmissionSun.color *
-                        saturate(abs(dot(normalWS, transmissionSun.direction))) * surface.a * leafWeight * _TransmissionStrength;
+                        saturate(abs(dot(normalWS, transmissionSun.direction))) * leafTransmission;
+                }
+                else
+                {
+                    half backlight = pow(saturate(dot(-normalWS, mainLight.direction)), 3.0h) * leafTransmission;
+                    diffuse += FSForestLeafColor(baseColor) * mainLight.color * backlight * mainLight.shadowAttenuation * fill;
                 }
                 // Use the same scene fog color and distances as terrain/3D
                 // trees. Keep coverage intact so fully fogged trees blend into

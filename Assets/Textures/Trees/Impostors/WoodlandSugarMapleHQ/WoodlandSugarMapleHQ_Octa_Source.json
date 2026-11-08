@@ -1,7 +1,7 @@
 {
     "prefab": "Assets/Prefabs/WoodlandSugarMaple.prefab",
     "prefabGuid": "ee2133cf05902ac498a357121b77eafe",
-    "dependencyHash": "618d2e311903858c76deeb6784218f9b",
+    "dependencyHash": "d12b38a1c78b9a5f824e20bf30129cc4",
     "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
     "supersample": 2,
     "voxelResolution": 128,

@@ -151,17 +151,9 @@ public static class WorldFeaturePlanGenerator
         BuildCanopyDensityMap(plan, chunkCoord, chunkSize, seed);
         UpdateForestUnderstoryFromCanopy(plan, biomeMap, surfaceTypeMap, moistureMap, riverMaskMap);
 
-        AddForestBerryBushes(
-            plan,
-            chunkCoord,
-            chunkSize,
-            seed,
-            biomeMap,
-            surfaceTypeMap,
-            moistureMap,
-            temperatureMap,
-            slopeMap,
-            riverMaskMap);
+        if (!settings.disableBerryBushes)
+            AddForestBerryBushes(plan, chunkCoord, chunkSize, seed, biomeMap, surfaceTypeMap,
+                moistureMap, temperatureMap, slopeMap, riverMaskMap);
 
         BuildOrganicFloorIntentMap(plan, chunkCoord, chunkSize, seed);
         BuildForestFloorEcology(plan, chunkCoord, chunkSize, seed, biomeMap, surfaceTypeMap,

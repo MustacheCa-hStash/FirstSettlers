@@ -15,6 +15,7 @@ public static class TreeGenerationSnapshot
         if (distribution != null) settings.treeDistribution = distribution.Snapshot(worldScale);
 
         settings.treeUniformScaleRange = treeSettings.treeUniformScaleRange;
+        settings.disableBerryBushes = treeSettings.disableBerryBushes;
         // Snapshot Unity assets on the main thread; near/distant workers receive plain values only.
         int capacity = 0;
         foreach (var species in TreeSpeciesCatalog.All) capacity = Mathf.Max(capacity, (int)species.Variant + 1);

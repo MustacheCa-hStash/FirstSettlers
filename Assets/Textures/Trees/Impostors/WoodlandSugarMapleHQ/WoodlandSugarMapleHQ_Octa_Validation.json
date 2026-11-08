@@ -3,15 +3,15 @@
     "inputs": [
         {
             "path": "Assets/Models/Trees/Woodland/SugarMaple.fbx",
-            "sha256": "C64E2D40164471B964B0D353DD14DCD3DF9ADED259D717E9386E3B665E272913"
+            "sha256": "A9770BDAF4621A3500F2A1E569AFA442CC1E0EDC05A137642717CB6DB1B63035"
         },
         {
             "path": "Assets/Materials/M_Trees/Woodland/SugarMaple_Leaf.mat",
-            "sha256": "38083B2F4A30E060876E7BFDEE72DAB3FA4CBF6475E2C49BA4C22A3404633709"
+            "sha256": "35D7F3E3C93046D3F82B4C107CD397F5F15A89BA3D11E37FBB29A73A919A9A9C"
         },
         {
             "path": "Assets/Shaders/OakLeafTintCutout.shader",
-            "sha256": "80CB1CEE174AB37AA0D4127FB8AD6573F744CD257B448B3B6E2C7ED93369CB01"
+            "sha256": "81CE85A5C750EE06842E959AA5D3DEF9EAD7134DD384A07056A9E459AC69CB90"
         },
         {
             "path": "Assets/Prefabs/WoodlandSugarMaple.prefab",
@@ -31,7 +31,7 @@
         },
         {
             "path": "Assets/Textures/Trees/Woodland/SugarMaple_Foliage.png",
-            "sha256": "AEB6EEA15721889927C65323FF77598A9C0E8034C3C3FB2AC33EE0266B764741"
+            "sha256": "950AD0F184309DA95B3720555E2F1D136B5E4E6FD740ACE90079E094BF1ACDEE"
         },
         {
             "path": "Assets/Shaders/OakBarkUnlit.shader",
@@ -39,7 +39,7 @@
         },
         {
             "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
-            "sha256": "BC89A29E0CA7A1E73CCAD2ADF148D4EA8AFD40800B6AFEE1D47B7B963928957C"
+            "sha256": "33FABBF2E4CBED11F45B3AB20F0DE71464817982F8C94C4C0E1E3E5114742059"
         },
         {
             "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
@@ -57,11 +57,11 @@
     "outputs": [
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandSugarMapleHQ/WoodlandSugarMapleHQ_Octa_AlbedoCoverage.png",
-            "sha256": "27114B3FCFC81EE2D8F2DD9C8EE6D406569DA7F9055C48AAE9057509E9D0FE93"
+            "sha256": "BCC21D10A02608F19B06244B0AC00D4E11B3E0CC90DDFA12A6FF78D9EFF0CEBF"
         },
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandSugarMapleHQ/WoodlandSugarMapleHQ_Octa_Surface.png",
-            "sha256": "5C407C4FDFBEDC98D0DC0787B4B016A631D55DDBDD698AE80B47DE9D9E8AFF76"
+            "sha256": "97AF1C8D6E49A550CE498BB143F2F8A3408392AEF52DF58FC95AB20964142903"
         },
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandSugarMapleHQ/WoodlandSugarMapleHQ_Octa_Depth.png",
@@ -73,11 +73,11 @@
         },
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandSugarMapleHQ/WoodlandSugarMapleHQ_Octa_Ambient.png",
-            "sha256": "E6F391B44D0924C18F1B1ECBE6DB66A488C89431950905E6B230815ED40EA536"
+            "sha256": "0922A1E88F7673CE47A572CAA73313F83FBD72E51A32176EAB805C580C579E0B"
         },
         {
             "path": "Assets/Materials/M_Trees/WoodlandSugarMapleHQ/WoodlandSugarMapleHQ_OctaImpostor_M.mat",
-            "sha256": "98DAC589A000940CE2BEFB7BDCD3BCADB3D83EBE54A5F22F58E4DBF628DD05CD"
+            "sha256": "7D0F4E34479C544FA4E70EDFE2E91029D2106ED41049CD5797B32CFC180BFF3C"
         },
         {
             "path": "Assets/Models/Trees/WoodlandSugarMapleHQ_OctaImpostor_Runtime.mesh",

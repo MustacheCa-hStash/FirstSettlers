@@ -183,6 +183,42 @@ public static class DistantFogValidation
             camera.worldToCameraMatrix = camera.worldToCameraMatrix * mirror;
             actual = Capture(camera, target, "mirrored"); Object.DestroyImmediate(actual); actual = null;
 
+            camera.ResetWorldToCameraMatrix();
+            RenderSettings.fogColor = new Color(.6f, .7f, .79f);
+            layer.mode = DistantFogLayer.FogMode.AerialPerspective;
+            layer.aerialBaseHeight = camera.transform.position.y;
+            layer.aerialSunTint = 0;
+            var foreground = Box("Aerial foreground", new Vector3(4, 30, 75), new Vector3(9, 8, 2), unlit);
+            var midRidge = Box("Aerial mid ridge", new Vector3(-48, 30, 300), new Vector3(24, 16, 2), unlit);
+            var farRidge = Box("Aerial far ridge", new Vector3(100, 30, 600), new Vector3(30, 24, 2), unlit);
+            layer.enabled = false;
+            Object.DestroyImmediate(baseline);
+            baseline = Capture(camera, target, "aerial-baseline");
+            layer.enabled = true;
+            actual = Capture(camera, target, "aerial");
+            CheckUnchanged(camera, baseline, actual, foreground.transform.position, "Aerial haze reached the immediate foreground.");
+            CheckUnchanged(camera, baseline, actual, new Vector3(-960, 110, 1800), "Aerial haze was composited over sky.");
+            Color air = RenderSettings.fogColor.linear;
+            foreach (var (ridge, minAlpha, maxAlpha) in new[] { (midRidge, .10f, .15f), (farRidge, .25f, .35f) })
+            {
+                Vector3 point = ridge.transform.position;
+                Color clear = Pixel(camera, baseline, point);
+                Color hazy = Pixel(camera, actual, point);
+                float alpha = (hazy.b - clear.b) / (air.b - clear.b);
+                Require(alpha >= minAlpha && alpha <= maxAlpha, $"Aerial haze at {point.z:F0} m measured {alpha:P1}.");
+                Debug.Log($"AERIAL FOG OPACITY: {point.z:F0} m {alpha:P1}.");
+            }
+            Object.DestroyImmediate(actual);
+            layer.fogWater = false;
+            actual = Capture(camera, target, "aerial-water-mask-disabled");
+            var dryDepth = Pixel(camera, actual, water.transform.position);
+            Object.DestroyImmediate(actual);
+            layer.fogWater = true;
+            actual = Capture(camera, target, "aerial-water");
+            Require(Error(Pixel(camera, actual, water.transform.position), dryDepth) > .005f,
+                "Aerial haze did not pick up displaced water depth.");
+            Debug.Log("AERIAL FOG GPU PASS: clear near field and sky, target opacity at 300/600 m, and water depth.");
+
             var shader = Shader.Find("Hidden/FirstSettlers/DistantFog");
             Require(shader != null && !ShaderUtil.ShaderHasError(shader), "Fog shader has compilation errors");
             Require(!ShaderUtil.ShaderHasError(waterMaterial.shader), "Water shader has compilation errors");

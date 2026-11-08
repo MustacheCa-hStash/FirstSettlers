@@ -7,6 +7,21 @@ using UnityEngine.SceneManagement;
 public sealed class DistantFogLayer : MonoBehaviour
 {
     public enum Resolution { Full = 1, Half = 2, Quarter = 4 }
+    public enum FogMode { VolumetricBank, AerialPerspective }
+
+    public FogMode mode;
+
+    [Header("Aerial perspective")]
+    [Min(0)] public float aerialStartDistance = 110;
+    [Min(0)] public float aerialExtinction = .00070f;
+    public float aerialBaseHeight = 15;
+    [Min(1)] public float aerialHeightScale = 115;
+    [Range(0, 1)] public float aerialSunTint = .22f;
+    [Tooltip("Skip the aerial water mask outside the streamed water frustum. Enable in scenes where the world owns all water meshes.")]
+    public bool aerialStreamedWaterOnly;
+
+    public bool IsAerial => mode == FogMode.AerialPerspective;
+    public bool HasDensity => IsAerial ? aerialExtinction > 0 : density > 0;
 
     [Header("Distance (world units)")]
     [Min(0)] public float startDistance = 600;

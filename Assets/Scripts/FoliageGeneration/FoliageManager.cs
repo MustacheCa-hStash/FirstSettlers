@@ -668,7 +668,10 @@ public class FoliageManager
 
     private void EnsureTreesGenerated(ChunkRecord record) => placement.EnsureTreesGenerated(record);
 
-    private void EnsureBushesGenerated(ChunkRecord record) => placement.EnsureBushesGenerated(record);
+    private void EnsureBushesGenerated(ChunkRecord record)
+    {
+        if (!treeSettings.disableBerryBushes) placement.EnsureBushesGenerated(record);
+    }
 
     private void EnsureRocksGenerated(ChunkRecord record) => placement.EnsureRocksGenerated(record);
 
@@ -950,6 +953,7 @@ public class FoliageManager
 
     private bool IsWithinBushRenderRange(ChunkCoord viewerCoord, ChunkCoord targetCoord)
     {
+        if (treeSettings.disableBerryBushes) return false;
         int ring = GetChunkRadialRing(viewerCoord, targetCoord);
         return ring <= treeSettings.gameObjectBushChunkRingRadius;
     }

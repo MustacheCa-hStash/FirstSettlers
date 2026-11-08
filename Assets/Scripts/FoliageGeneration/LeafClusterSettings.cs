@@ -1,9 +1,12 @@
 using UnityEngine;
 
+public enum WoodlandScatterKind { Litter, Groundcover, Shrub, Deadwood, HabitatShrub }
+
 [System.Serializable]
 public class LeafClusterSettings
 {
     public bool enabled = true;
+    public WoodlandScatterKind woodlandKind;
     [Tooltip("Keep scatter records resident and select visibility/LOD on the GPU. Falls back to CPU instancing when unsupported.")]
     public bool gpuIndirectRendering = true;
     public ComputeShader scatterCompactShader;
@@ -40,7 +43,7 @@ public class LeafClusterSettings
 
     // Placement changes invalidate resident candidates; range/budget changes do not.
     public virtual int PlacementSignature => System.HashCode.Combine(cellSize, density, maxSlope,
-        scaleRange, seedOffset, placementMultiplier);
+        scaleRange, seedOffset, placementMultiplier, woodlandKind);
     public virtual bool IsFern => false;
     public virtual string DefaultPrefabPath => "Foliage/LeafCluster";
     public virtual string DefaultDistantPrefabPath => "Foliage/LeafScatter_LOD1";

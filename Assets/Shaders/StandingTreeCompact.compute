@@ -5,14 +5,14 @@ struct StandingTreeSource
     float4x4 objectToWorld;
     float4 leaves;
     float4 bark;
-    float4 appearance; // snow, alpha shadows, max scale, unused
+    float4 appearance; // snow, always alpha shadows, max scale, shadow radius scale squared
     float4 fade;       // billboard handoff, unused, load fade, unused
 };
 
 struct StandingTreeVisible
 {
     float4 fade;
-    uint4 source; // index into the source and inverse buffers
+    uint4 source; // source/inverse index, alpha shadows, unused, unused
 };
 
 StructuredBuffer<StandingTreeSource> _StandingTreeSources;
@@ -25,10 +25,11 @@ float4 _StandingTreeFirstCommand, _StandingTreeCommandCount;
 float4 _StandingTreeThresholds, _StandingTreeHalfWidths;
 float4 _StandingTreeCenterRadius;
 float4 _StandingTreeEyeHeight; // xyz eye, w screen height factor
+float _StandingTreeForestAlphaDistanceSq;
 uint _StandingTreeOrthographic, _StandingTreeCull;
 float4 _StandingTreePlanes[6];
 
-void AppendTree(uint source, uint level, float4 fade)
+void AppendTree(uint source, uint level, float4 fade, uint alphaShadows)
 {
     uint first = (uint)_StandingTreeFirstCommand[level];
     uint count = (uint)_StandingTreeCommandCount[level];
@@ -37,7 +38,7 @@ void AppendTree(uint source, uint level, float4 fade)
     for (uint i = 1; i < count; ++i)
         InterlockedAdd(_StandingTreeArgs[(first + i) * 5 + 1], 1);
     StandingTreeVisible visible;
-    visible.source = uint4(source, 0, 0, 0);
+    visible.source = uint4(source, alphaShadows, 0, 0);
     visible.fade = fade;
     _StandingTreeVisible[level * _StandingTreeCapacity + destination] = visible;
 }
@@ -65,10 +66,13 @@ void SelectStandingTreeLods(uint id : SV_DispatchThreadID)
     float3 p = transform._m03_m13_m23;
     _StandingTreeInverses[id] = float4x4(float4(x, -dot(x, p)), float4(y, -dot(y, p)),
         float4(z, -dot(z, p)), float4(0, 0, 0, 1));
+    float2 fromEye = p.xz - _StandingTreeEyeHeight.xz;
+    uint alphaShadows = tree.appearance.y > .5 ||
+        dot(fromEye, fromEye) < _StandingTreeForestAlphaDistanceSq * tree.appearance.w ? 1u : 0u;
 
     if (_StandingTreeLevels == 1)
     {
-        AppendTree(id, 0, tree.fade);
+        AppendTree(id, 0, tree.fade, alphaShadows);
         return;
     }
 
@@ -84,10 +88,10 @@ void SelectStandingTreeLods(uint id : SV_DispatchThreadID)
         if (abs(height - threshold) < width)
         {
             float coarse = 1 - saturate((height - (threshold - width)) / (2 * width));
-            AppendTree(id, boundary, float4(max(tree.fade.x, coarse), 1, tree.fade.z, 0));
-            AppendTree(id, boundary + 1, float4(tree.fade.x, coarse, tree.fade.z, 0));
+            AppendTree(id, boundary, float4(max(tree.fade.x, coarse), 1, tree.fade.z, 0), alphaShadows);
+            AppendTree(id, boundary + 1, float4(tree.fade.x, coarse, tree.fade.z, 0), alphaShadows);
             return;
         }
     }
-    AppendTree(id, level, tree.fade);
+    AppendTree(id, level, tree.fade, alphaShadows);
 }

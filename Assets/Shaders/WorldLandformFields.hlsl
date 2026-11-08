@@ -3,7 +3,7 @@
 // Visual counterpart of WorldLandforms.Noise/Desert. Defaults to no tint outside a live world.
 int _WorldLandformSeed;
 float4 _WorldLandformParams; // enabled, sample scale in metres, desert region scale, world scale
-float4 _WorldGlacialParams; // strength/enabled, water world Y, reserved, reserved
+float4 _WorldGlacialParams; // strength/enabled, water world Y, shore band world height, reserved
 
 float FSLandformSigned(int2 cell, int seed)
 {

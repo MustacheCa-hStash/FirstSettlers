@@ -97,11 +97,17 @@ Shader "FirstSettlers/Forest Grass Instanced"
             half root = 1 - smoothstep(0, max(_RootBlendHeight,0.001h), input.bladeHeight);
             half3 albedo = lerp(input.color.rgb, _RootColor.rgb, root);
             half3 normal = normalize(input.normalWS);
-            Light light = GetMainLight(input.shadowCoord);
-            half shadow = lerp(1, light.shadowAttenuation, saturate(_ReceiveShadows));
-            half3 lighting = max(SampleSH(normal), _AmbientStrength.xxx) + light.color *
-                (0.35h + saturate(dot(normal,light.direction)) * 0.65h) * shadow * light.distanceAttenuation;
-            lighting *= FSForestGroundLight(input.positionWS);
+            float4 shadowCoord = input.shadowCoord;
+            #if defined(_MAIN_LIGHT_SHADOWS_CASCADE)
+            shadowCoord = TransformWorldToShadowCoord(input.positionWS);
+            #endif
+            Light light = GetMainLight(shadowCoord);
+            half distantForest = FSDistantForestShadow(input.positionWS, light.direction.y, light.shadowAttenuation);
+            half shadow = lerp(1, distantForest, saturate(_ReceiveShadows));
+            half groundShade = FSForestGroundLight(input.positionWS);
+            half3 lighting = max(SampleSH(normal), _AmbientStrength.xxx) * FSSceneGroundAmbient(groundShade) + light.color *
+                (0.35h + saturate(dot(normal,light.direction)) * 0.65h) * shadow * light.distanceAttenuation *
+                FSSceneGroundSun(groundShade, shadow, 1.0h);
             lighting+=FSLocalFlameDiffuse(input.positionWS,normal);
             return half4(MixFog(albedo * lighting,InitializeInputDataFog(float4(input.positionWS,1),input.fog)),1);
         }

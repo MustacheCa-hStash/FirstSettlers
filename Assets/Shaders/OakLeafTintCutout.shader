@@ -20,8 +20,10 @@ Shader "Custom/OakLeafSimpleLitCutout"
         [Toggle] _AlphaCutoutShadows("Alpha Cutout Shadows", Float) = 1
         _AmbientStrength("Ambient Floor", Range(0, 1)) = 0.30
         _LightWrap("Leaf Light Softness", Range(0, 1)) = 0.55
+        _CrownNormalBlend("Canopy Normal Blend", Range(0, 1)) = 0
         [ToggleUI] _BacklightingEnabled("Leaf Backlighting", Float) = 1
         [ToggleUI] _StableBacklighting("Stable Backlighting", Float) = 1
+        [ToggleUI] _CrownTransmission("Directional Crown Transmission", Float) = 0
         _BacklightingStrength("Backlighting Strength", Range(0, 1)) = 0.72
         _BacklightingColor("Backlighting Tint", Color) = (1, 0.98, 0.92, 1)
         _Smoothness("Smoothness", Range(0, 1)) = 0.08

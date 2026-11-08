@@ -3,19 +3,19 @@
     "inputs": [
         {
             "path": "Assets/Models/Trees/Woodland/QuakingAspen.fbx",
-            "sha256": "A755B9432932BB9C8F90ED83ECED0CD1CEE4A55ED809FFF3EFF14D0313A1C577"
+            "sha256": "A1F264ECA8F05B448E18157ACD045FA0E71D6BF1343C3060CC867F1926287D59"
         },
         {
             "path": "Assets/Materials/M_Trees/Woodland/QuakingAspen_Leaf.mat",
-            "sha256": "9EB28FA9E8231CA7FF5DA682A3DDA0F8177413FD71F58E22470C655FBBDEE496"
+            "sha256": "84EA3EA16AB9E375F541F276067CC1056A34E155A8772A40AD8A9F298834A2F9"
         },
         {
             "path": "Assets/Shaders/OakLeafTintCutout.shader",
-            "sha256": "80CB1CEE174AB37AA0D4127FB8AD6573F744CD257B448B3B6E2C7ED93369CB01"
+            "sha256": "81CE85A5C750EE06842E959AA5D3DEF9EAD7134DD384A07056A9E459AC69CB90"
         },
         {
             "path": "Assets/Textures/Trees/Woodland/QuakingAspen_Foliage.png",
-            "sha256": "C36B8DC29D9F0D290BCCD83620854571E73E49015CD7F4991E79455A01DCB275"
+            "sha256": "3D539790D76AE9F93837358BE213D6B53F243CE0D47448FD6E8ECAD7843DB09A"
         },
         {
             "path": "Assets/Scripts/FoliageGeneration/Trees/TreeGameplayAuthoring.cs",
@@ -39,7 +39,7 @@
         },
         {
             "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
-            "sha256": "BC89A29E0CA7A1E73CCAD2ADF148D4EA8AFD40800B6AFEE1D47B7B963928957C"
+            "sha256": "33FABBF2E4CBED11F45B3AB20F0DE71464817982F8C94C4C0E1E3E5114742059"
         },
         {
             "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
@@ -57,11 +57,11 @@
     "outputs": [
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandQuakingAspenHQ/WoodlandQuakingAspenHQ_Octa_AlbedoCoverage.png",
-            "sha256": "E192A47B0DBDFE40B9F86BF3B90A11206075FF9F17BB9F8A52BC28580C31F23E"
+            "sha256": "E71E963BAF5138E7FD7EA564E6D0085501850D9AB70825DEFA93E3BDAAC64489"
         },
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandQuakingAspenHQ/WoodlandQuakingAspenHQ_Octa_Surface.png",
-            "sha256": "293FCDC8C247E2974A600748AAA88DDFCC5D00AE9100C5AF468E4CCD9B3178F6"
+            "sha256": "5066E94D7E590B3F9FCE1A9DC14DBCE5CA889EE91CE5967A93AF3D17BF96FE7E"
         },
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandQuakingAspenHQ/WoodlandQuakingAspenHQ_Octa_Depth.png",
@@ -73,11 +73,11 @@
         },
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandQuakingAspenHQ/WoodlandQuakingAspenHQ_Octa_Ambient.png",
-            "sha256": "DCFA2EC6FE8C06CFF748C3C27125FEF87DDC200FB56FFD471D95FF751F47DECF"
+            "sha256": "61687C7AB056631DA2C2EEBB9730B2F29D24CDE18A3F22E1BD290D8E55938B99"
         },
         {
             "path": "Assets/Materials/M_Trees/WoodlandQuakingAspenHQ/WoodlandQuakingAspenHQ_OctaImpostor_M.mat",
-            "sha256": "8FB9BBFC5194A5046E77C73C348EA34EB93FF4B466CFD03149B3B8D24D8D9BA7"
+            "sha256": "692A43D41A444FE7C059B650490D5B7AC1E28CF7081CF4C924065F60D3D249AC"
         },
         {
             "path": "Assets/Models/Trees/WoodlandQuakingAspenHQ_OctaImpostor_Runtime.mesh",

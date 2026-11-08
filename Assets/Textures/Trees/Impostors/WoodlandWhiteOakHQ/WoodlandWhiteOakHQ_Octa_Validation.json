@@ -3,11 +3,11 @@
     "inputs": [
         {
             "path": "Assets/Models/Trees/Woodland/WhiteOak.fbx",
-            "sha256": "FE5FBF9609BF91D9CF1FDB6A7BE0EBA8A63A9E73C3608DF39F04E8C1B09CC168"
+            "sha256": "ABCE71532452849178AD602706AA49413E0716ED3035B61CB4A996C29168AB26"
         },
         {
             "path": "Assets/Shaders/OakLeafTintCutout.shader",
-            "sha256": "80CB1CEE174AB37AA0D4127FB8AD6573F744CD257B448B3B6E2C7ED93369CB01"
+            "sha256": "81CE85A5C750EE06842E959AA5D3DEF9EAD7134DD384A07056A9E459AC69CB90"
         },
         {
             "path": "Assets/Textures/Trees/Woodland/WhiteOak_Bark.png",
@@ -19,7 +19,7 @@
         },
         {
             "path": "Assets/Materials/M_Trees/Woodland/WhiteOak_Leaf.mat",
-            "sha256": "A3C8C74978487DEBF54DF9704139B9B393F187632F0FC129C76927DF9BC46669"
+            "sha256": "6DBB597D592B5AB32684685873B04D3680188EBE61460E0BAA4F62B2DAB94E0B"
         },
         {
             "path": "Assets/Scripts/FoliageGeneration/Trees/TreeGameplayAuthoring.cs",
@@ -35,11 +35,11 @@
         },
         {
             "path": "Assets/Textures/Trees/Woodland/WhiteOak_Foliage.png",
-            "sha256": "2FD3A34AA4D43B5A49BE1E40BA139B4E6247182525A4F5A9F41E7CA9F2E468D3"
+            "sha256": "0A5A04E1D78F69D82E874ABCBE8D4D3EF6156147FB18D0AC9716DA0293373764"
         },
         {
             "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
-            "sha256": "BC89A29E0CA7A1E73CCAD2ADF148D4EA8AFD40800B6AFEE1D47B7B963928957C"
+            "sha256": "33FABBF2E4CBED11F45B3AB20F0DE71464817982F8C94C4C0E1E3E5114742059"
         },
         {
             "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
@@ -57,11 +57,11 @@
     "outputs": [
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandWhiteOakHQ/WoodlandWhiteOakHQ_Octa_AlbedoCoverage.png",
-            "sha256": "B0C66E6BD0C74418E88D6A2A6104AD26063B9BB58B3C82D82B46BD7D74CA0788"
+            "sha256": "2652A8073908BDEBA9B1FE4C09763A6C7EDF7A28BB12E3F9E3CB3CE8315EF360"
         },
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandWhiteOakHQ/WoodlandWhiteOakHQ_Octa_Surface.png",
-            "sha256": "CB20D6745A7B74F9C276D315A95F220773C07DCE6BA00FF4B37C08258575B8E4"
+            "sha256": "D8E35979DB5999439CFC6E1ABD6578574BFCAD1844185A4C2E22599B902CA3C5"
         },
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandWhiteOakHQ/WoodlandWhiteOakHQ_Octa_Depth.png",
@@ -73,11 +73,11 @@
         },
         {
             "path": "Assets/Textures/Trees/Impostors/WoodlandWhiteOakHQ/WoodlandWhiteOakHQ_Octa_Ambient.png",
-            "sha256": "65B168542E0721A8C8B47E83640AD6FB98F3EC91BC9A70A2088B280A58B05A6C"
+            "sha256": "F9D213D1552895733C532FEEC16FA6580204267ED80E19483F66DA992F52B89F"
         },
         {
             "path": "Assets/Materials/M_Trees/WoodlandWhiteOakHQ/WoodlandWhiteOakHQ_OctaImpostor_M.mat",
-            "sha256": "317D823DBD55A3E0A5BD87FEF43D4ABFDBEF26F12EC7289FD4692FB392D0B077"
+            "sha256": "0BFADE699ADBE38D966EA998415A048A0A1D15ADC66FCA5A40415D182FA9F82E"
         },
         {
             "path": "Assets/Models/Trees/WoodlandWhiteOakHQ_OctaImpostor_Runtime.mesh",

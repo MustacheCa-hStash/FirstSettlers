@@ -26,8 +26,9 @@ public static class WorldLandformAppearance
         Shader.SetGlobalVector(ParamsId, new Vector4(s.enabled ? 1f : 0f,
             Mathf.Max(1f, generation.SampleScale) * generation.WorldScale,
             s.desertRegionScale, generation.WorldScale));
-        Shader.SetGlobalVector(GlacialId,new Vector4(s.enabled && s.glaciers ? s.glacialStrength : 0f,
-            generation.Water.SurfaceY,0f,0f));
+        float shoreBand = TerrainWaterSettings.ShoreBand * generation.Water.HeightMultiplier * generation.WorldScale;
+        Shader.SetGlobalVector(GlacialId, new Vector4(s.enabled && s.glaciers ? s.glacialStrength : 0f,
+            generation.Water.SurfaceY, shoreBand, 0f));
     }
 
     public static void Release(object world) { if (ReferenceEquals(owner, world)) Reset(); }

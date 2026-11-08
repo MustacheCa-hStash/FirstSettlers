@@ -19,6 +19,7 @@ public struct WorldFeatureGenerationSettings
     public Vector2 grasslandLargeRockUniformScaleRange;
     public Vector2 grasslandRockPitchRange;
     public int maxGrasslandTreesPerChunk;
+    public bool disableBerryBushes;
     public int maxSnowRocksPerChunk, snowRockPrefabCount, snowLargeRockPrefabCount;
     public Vector2 snowRockUniformScaleRange, snowLargeRockUniformScaleRange;
 

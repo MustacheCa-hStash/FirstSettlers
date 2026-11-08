@@ -49,12 +49,16 @@ class Mesh:
         self.faces.append(face)
         self.uv.extend(uv)
 
-    def finish(self, name, material):
+    def finish(self, name, material, canopy_normals=None):
         mesh = bpy.data.meshes.new(name)
         mesh.from_pydata(self.vertices, [], self.faces)
         mesh.update()
         layer = mesh.uv_layers.new(name="UVMap")
         layer.data.foreach_set("uv", [value for uv in self.uv for value in uv])
+        if canopy_normals is not None:
+            layer = mesh.uv_layers.new(name="CanopyNormals")
+            layer.data.foreach_set("uv", [value for loop in mesh.loops
+                                         for value in canopy_normals[loop.vertex_index]])
         for face in mesh.polygons:
             face.use_smooth = True
         mesh.materials.append(material)
@@ -72,6 +76,34 @@ class Tree:
         self.rng = random.Random(917 + 101*index)
         self.footprints = footprints
         self.cards = [0,0,0,0]
+        self.clumps = []
+
+    def canopy_normals(self):
+        def envelope(vertices):
+            low = Vector(tuple(min(p[i] for p in vertices) for i in range(3)))
+            high = Vector(tuple(max(p[i] for p in vertices) for i in range(3)))
+            return (low + high) * .5, (high - low) * .5
+
+        def outward(position, center, radius):
+            delta = position - center
+            return Vector(tuple(delta[i] / max(radius[i], .3) for i in range(3))).normalized()
+
+        vertices = self.foliage.vertices
+        crown_center, crown_radius = envelope(vertices)
+        normals = []
+        for start, end in zip([0] + self.clumps, self.clumps):
+            clump = vertices[start:end]
+            center, radius = envelope(clump)
+            for position in clump:
+                broad = outward(position, crown_center, crown_radius)
+                local = outward(position, center, radius)
+                normal = local.lerp(broad, .35)
+                normal /= sum(abs(component) for component in normal)
+                x, y, z = normal
+                if z < 0:
+                    x, y = (1 - abs(y)) * (1 if x >= 0 else -1), (1 - abs(x)) * (1 if y >= 0 else -1)
+                normals.append((x * .5 + .5, y * .5 + .5))
+        return normals
 
     def tube(self, points, radii, sides, root=False):
         first = len(self.wood.vertices)
@@ -214,6 +246,7 @@ class Tree:
             for j in range(3):
                 axis = horizontal(angle+(j-1)*1.00)+UP*rng.uniform(.32,.87)
                 self.spray(along(points,.72+.115*j),axis,w*.39,w*.33,rng.uniform(-1.0,1.0))
+            self.clumps.append(len(self.foliage.vertices))
         # Small leader foliage closes the top without a spherical cap.
         for i in range(8):
             t = .84 + .019*i
@@ -261,6 +294,7 @@ class Tree:
                     axis = horizontal(angle+(j-1)*.61)+UP*(.31 if pine else .38)
                     size = max(.56,reach*(.35 if pine else .42))
                     self.spray(along(points,.70+j*.12),axis,size,size*.77,rng.uniform(-1.16,1.16))
+                self.clumps.append(len(self.foliage.vertices))
         for j in range(12):
             axis = horizontal(j*GOLDEN_ANGLE) + UP*.8
             size = w*.24*(1-j*.047)
@@ -294,6 +328,7 @@ class Tree:
                         length = h*rng.uniform(.18,.37)
                         self.spray(root,dangle,length,length*rng.uniform(.40,.56),rng.uniform(-1.5,1.5),.12)
                     self.spray(fork,side+UP*.09,size*1.15,size*.88,rng.uniform(-1.0,1.0))
+            self.clumps.append(len(self.foliage.vertices))
         for j in range(12):
             d = horizontal(j*GOLDEN_ANGLE)
             self.spray(along(trunk,.84+j*.009),d-UP*.34,w*.34,w*.24,rng.uniform(-1.3,1.3))
@@ -305,6 +340,7 @@ class Tree:
             self.conifer()
         else:
             self.hardwood()
+        self.clumps.append(len(self.foliage.vertices))
 
 
 def material(name, path, foliage=False, normal=None):
@@ -419,7 +455,7 @@ def build(out, reviews, build_only=False):
         bark = material(name+" Bark",textures/(name+"_Bark.png"),normal=textures/(name+"_BarkNormal.png"))
         leaves = material(name+" Foliage",textures/(name+"_Foliage.png"),foliage=True)
         wood,wood_tris = tree.wood.finish("Bark",bark)
-        foliage,leaf_tris = tree.foliage.finish("Foliage",leaves)
+        foliage,leaf_tris = tree.foliage.finish("Foliage",leaves,tree.canopy_normals())
         bpy.context.view_layer.objects.active = wood
         for obj in (wood,foliage):
             obj.select_set(True)
