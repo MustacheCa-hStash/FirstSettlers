@@ -122,6 +122,8 @@ public sealed class GroundContactShadowRendererFeature : ScriptableRendererFeatu
                 builder.UseTexture(depth);
                 builder.UseTexture(mask);
                 builder.SetRenderAttachment(resources.activeColorTexture, 0, AccessFlags.ReadWrite);
+                // Grass marks the stencil on the opaque attachment as it draws.
+                builder.SetRenderAttachmentDepth(resources.activeDepthTexture, AccessFlags.Read);
                 builder.SetRenderFunc(static (Data data, RasterGraphContext context) => Draw(data, context));
             }
         }

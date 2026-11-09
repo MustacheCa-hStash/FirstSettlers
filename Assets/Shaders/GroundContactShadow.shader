@@ -136,6 +136,12 @@ Shader "Hidden/FirstSettlers/GroundContactShadow"
             Name "Composite"
             Blend SrcAlpha OneMinusSrcAlpha
             ColorMask RGB
+            Stencil
+            {
+                Ref 8
+                ReadMask 8
+                Comp NotEqual
+            }
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Composite

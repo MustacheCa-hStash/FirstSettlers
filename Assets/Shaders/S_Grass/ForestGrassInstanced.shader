@@ -20,7 +20,7 @@ Shader "FirstSettlers/Forest Grass Instanced"
     }
     SubShader
     {
-        Tags { "GrassIndirect"="True" "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry" }
+        Tags { "GrassIndirect"="True" "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="AlphaTest+50" }
         Cull Off ZWrite On ZTest LEqual
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -126,6 +126,15 @@ Shader "FirstSettlers/Forest Grass Instanced"
         Pass
         {
             Name "ForwardLit" Tags { "LightMode"="UniversalForwardOnly" }
+            // Use the same visible-grass stencil bit as GrassInstancedTerrainTint.
+            Stencil
+            {
+                Ref 8
+                WriteMask 8
+                Comp Always
+                Pass Replace
+            }
+
             HLSLPROGRAM
             #pragma target 4.5
             #pragma target 4.5 PROCEDURAL_INSTANCING_ON

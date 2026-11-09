@@ -57,7 +57,7 @@ Shader "Custom/GrassInstancedTerrainTint"
             "GrassIndirect" = "True"
             "RenderType" = "TransparentCutout"
             "RenderPipeline" = "UniversalPipeline"
-            "Queue" = "AlphaTest"
+            "Queue" = "AlphaTest+50"
             "IgnoreProjector" = "True"
         }
 
@@ -71,6 +71,15 @@ Shader "Custom/GrassInstancedTerrainTint"
         {
             Name "ForwardLit"
             Tags { "LightMode" = "UniversalForward" }
+
+            // Draw after other opaques so the contact mask marks only visible grass.
+            Stencil
+            {
+                Ref 8
+                WriteMask 8
+                Comp Always
+                Pass Replace
+            }
 
             HLSLPROGRAM
             #pragma target 4.5
