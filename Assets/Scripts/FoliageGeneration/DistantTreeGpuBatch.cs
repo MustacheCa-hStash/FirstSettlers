@@ -182,6 +182,12 @@ public sealed class DistantTreeGpuBatch : IDisposable
         SubmittedCount += treeCount;
     }
 
+    internal static void ApplyTreeSway(MaterialPropertyBlock properties, Material material, TreeSettings settings)
+    {
+        if (material.shader.name == "Custom/TreeHQOctaImpostor")
+            properties.SetFloat("_WindStrength", settings.TreeSway);
+    }
+
     public static Bounds RenderingBounds(Bounds local, Material material)
     {
         if ((material.shader.name == "Custom/SpruceOctaImpostor" || material.shader.name == "Custom/TreeHQOctaImpostor"))
@@ -191,7 +197,9 @@ public sealed class DistantTreeGpuBatch : IDisposable
             // displacement, rather than bounding the old center-pivot quad.
             Vector3 center = material.GetVector("_CaptureCenterLS");
             float radius = Mathf.Abs(material.GetFloat("_CaptureRadius")) * Mathf.Sqrt(2f) + center.magnitude;
-            return new Bounds(Vector3.zero, Vector3.one * (radius * 2f));
+            float horizontalRadius = material.shader.name == "Custom/TreeHQOctaImpostor"
+                ? radius * (1f + TreeSettings.MaxTreeSway) : radius;
+            return new Bounds(Vector3.zero, new Vector3(horizontalRadius, radius, horizontalRadius) * 2f);
         }
         float horizontal = Mathf.Max(Mathf.Abs(local.min.x), Mathf.Abs(local.max.x),
             Mathf.Abs(local.min.z), Mathf.Abs(local.max.z));
@@ -210,8 +218,9 @@ public sealed class DistantTreeGpuBatch : IDisposable
             // uniform radius, even if an override supplies non-uniform TRS.
             float r = (Mathf.Abs(material.GetFloat("_CaptureRadius")) * Mathf.Sqrt(2f) + captureCenter.magnitude) *
                 ((Vector3)transform.GetColumn(0)).magnitude;
-            // Wind is disabled by the distant manager. Include its world-space
-            // displacement when this helper is used with a standalone material.
+            if (material.shader.name == "Custom/TreeHQOctaImpostor")
+                r *= 1f + TreeSettings.MaxTreeSway;
+            // Standalone impostors can also use the material's local wind.
             float captureRadius = Mathf.Max(Mathf.Abs(material.GetFloat("_CaptureRadius")), 0.0001f);
             float windWeight = 0.5f + captureCenter.magnitude / (2f * captureRadius);
             r += Mathf.Abs(material.GetFloat("_WindStrength")) * windWeight * new Vector3(1f, 0f, 0.35f).magnitude;
@@ -325,6 +334,7 @@ public sealed class DistantTreeGpuBatch : IDisposable
         shader.Dispatch(scatterKernel, groups, 1, 1);
         properties.SetFloat("_DistantTreeEnabled", 1f);
         properties.SetFloat("_DistantTreeBillboard", 1f);
+        ApplyTreeSway(properties, material, settings);
         properties.SetBuffer("_DistantTreeInstances", visibleBuffer);
         Graphics.DrawMeshInstancedIndirect(mesh, 0, material, drawBounds, argsBuffer, 0,
             properties, ShadowCastingMode.Off, false, 0, camera, LightProbeUsage.Off);

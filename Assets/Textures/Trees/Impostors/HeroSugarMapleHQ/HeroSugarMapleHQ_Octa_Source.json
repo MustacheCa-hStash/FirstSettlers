@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/HeroSugarMapleLOD0.prefab",
+    "prefabGuid": "ab0ae1414e8dafa49b7fb259a044e4aa",
+    "dependencyHash": "c18e40b0c3c8cc5d2f6265a4a52db7bf",
+    "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.05999999865889549
+}

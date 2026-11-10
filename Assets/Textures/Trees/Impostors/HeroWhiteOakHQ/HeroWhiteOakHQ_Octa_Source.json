@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/HeroWhiteOakLOD0.prefab",
+    "prefabGuid": "bb833ffada0c3244e880020782271c9e",
+    "dependencyHash": "925abe7c085776f95bf14487454e3b3a",
+    "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.05999999865889549
+}

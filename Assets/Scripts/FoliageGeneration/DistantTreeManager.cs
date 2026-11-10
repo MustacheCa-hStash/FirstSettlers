@@ -598,6 +598,7 @@ public sealed class DistantTreeManager : IDisposable
         RenderStats = stats;
         batch.Properties.SetFloat("_DistantTreeEnabled", 1f);
         batch.Properties.SetFloat("_DistantTreeBillboard", 1f);
+        DistantTreeGpuBatch.ApplyTreeSway(batch.Properties, batch.Material, settings);
         batch.Properties.SetVectorArray("_TreeLeafTint", batch.Tints);
         batch.Properties.SetVectorArray("_DistantTreeFade", batch.Fades);
         Graphics.DrawMeshInstanced(batch.Mesh, 0, batch.Material, batch.Matrices, batch.Count,

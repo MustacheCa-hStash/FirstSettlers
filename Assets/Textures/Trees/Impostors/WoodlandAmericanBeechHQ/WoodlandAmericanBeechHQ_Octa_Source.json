@@ -1,7 +1,7 @@
 {
     "prefab": "Assets/Prefabs/WoodlandAmericanBeech.prefab",
     "prefabGuid": "673ddef278e38c74fb687c6fe92d2fbc",
-    "dependencyHash": "38134f2b245345ab614187cf31faa4e8",
+    "dependencyHash": "67dd3b7f97d6db14d277b34784dc7a9d",
     "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
     "supersample": 2,
     "voxelResolution": 128,

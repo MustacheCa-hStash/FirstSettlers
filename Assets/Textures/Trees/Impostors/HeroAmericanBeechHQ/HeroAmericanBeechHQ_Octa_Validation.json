@@ -1,0 +1,111 @@
+{
+    "configuration": "{\"species\":\"HeroAmericanBeech\",\"sourcePrefab\":\"Assets/Prefabs/HeroAmericanBeechLOD0_Surface.prefab\",\"leafPath\":\"Assets/Materials/M_Trees/HeroAmericanBeechLOD0/Leaf_Surface.mat\",\"barkPath\":\"Assets/Materials/M_Trees/HeroAmericanBeechLOD0/Bark.mat\",\"leafTexture\":\"Assets/Textures/Trees/HeroAmericanBeechLOD0/CrownAlbedoBase.png\",\"barkTexture\":\"Assets/Textures/Trees/HeroAmericanBeech/BarkAlbedo.png\",\"sourceSlot\":\"\",\"variant\":\"BeechTree\",\"shaderName\":\"Hidden/TreeImpostor/OakSemanticCapture\",\"billboardSlots\":[],\"paletteMode\":-1,\"expansion\":0.05999999865889549}",
+    "inputs": [
+        {
+            "path": "Assets/Prefabs/HeroAmericanBeechLOD0_Surface.prefab",
+            "sha256": "872757E8B066A6052F28839716FB15C4458AA210FBD68BB4FBA1FC4ED466404F"
+        },
+        {
+            "path": "Assets/Models/Trees/HeroAmericanBeechLOD0.fbx",
+            "sha256": "77C94B6ED673DB51A64F827B95E21FB846507B803DE91F53228FC820DEA73BC1"
+        },
+        {
+            "path": "Assets/Shaders/OakLeafTintCutout.shader",
+            "sha256": "98146416CC6C59870F956C122010EAE39A8AD4D4E0F2D45801D57B71F4F8E4ED"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroAmericanBeech/BarkNormal.png",
+            "sha256": "B1FA3C2AA8FB4B568E36315E3F74E8E3A9D7AFE6D5520E5F54277F78D92188B1"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroAmericanBeechLOD0/Leaf.mat",
+            "sha256": "DB7A202E79BB7CE918C04C0F9102C5539B6765157D6B2D5CFD616A9DA7A3C7F3"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroAmericanBeechLOD0/CrownAlbedoBase.png",
+            "sha256": "DAF12BE9E20FE400F99EC5E741652FFE5D701F44380B399B9C82441A03F92460"
+        },
+        {
+            "path": "Assets/Prefabs/HeroAmericanBeechLOD0.prefab",
+            "sha256": "6694925037E119BE77764748BD34F540CE09959E0D077F2D74A537739B892D66"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroAmericanBeechLOD0/Bark.mat",
+            "sha256": "572374C075A5BF4BBFB50671183A5C662A7B4EA7A6980EC8EDC8873F5FE85391"
+        },
+        {
+            "path": "Assets/Scripts/FoliageGeneration/Trees/TreeGameplayAuthoring.cs",
+            "sha256": "8BC346EFA8C5C84AC80740666AC5CC348840765480FE0DE053560FB1DC0F3CDD"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroAmericanBeechLOD0/Leaf_Surface.mat",
+            "sha256": "6AAFFE66501E862C1938383A4112BDEB300C65C7C7D5C9BE1A3B5B58DDB29300"
+        },
+        {
+            "path": "Assets/Shaders/OakBarkUnlit.shader",
+            "sha256": "7EB7A6EC500E34AB35E6A6C85842540D88F14EB9028618D79B778D70CF1FC519"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroAmericanBeech/BarkAlbedo.png",
+            "sha256": "3B48871F706573834F6C596B4C5BF2CD7973701A156C2940849CE3A88CFC50D0"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroAmericanBeechLOD0/CrownAlbedo.png",
+            "sha256": "0316E5E1096121F6A32F8B5FBE7557BCA7E4FEEE22DD963C8B9021D8C2AF077F"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroAmericanBeechLOD0/CrownSurface.png",
+            "sha256": "3D10770A5A296F9E20081AB1E2F5EB97D1AE64213C7DB5C3E6E5CBA19F4424D7"
+        },
+        {
+            "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
+            "sha256": "33FABBF2E4CBED11F45B3AB20F0DE71464817982F8C94C4C0E1E3E5114742059"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
+            "sha256": "84B0720B90AAD407CD3C5772FABB6EF3CE108E0232BBC8FDD07B10E7631EE9BD"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAmbientAtlasBakerWindow.cs",
+            "sha256": "D4BC380FD35CCD293B11A6FA75345E545C66FEB3DA58B16E0750DEF105EC1796"
+        },
+        {
+            "path": "Assets/Shaders/TreeHQOctaImpostor.shader",
+            "sha256": "B74862B34C0FE40E6FC16E0E18D38686E96CD1EEEE77E27B5AB234404D385F02"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroAmericanBeechHQ/HeroAmericanBeechHQ_Octa_AlbedoCoverage.png",
+            "sha256": "D866486683013A176C1822C02C35F5B009E74F4BD75BE672C515C903DCD6F933"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroAmericanBeechHQ/HeroAmericanBeechHQ_Octa_Surface.png",
+            "sha256": "735099C598395727C9C663C29BF98C1771282CF4873EA6772FC997AB62AFAEC6"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroAmericanBeechHQ/HeroAmericanBeechHQ_Octa_Depth.png",
+            "sha256": "2B41FCDA584EFDBF51613478C41805C3D2D9690D8508FE4B677384D09C2B9164"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroAmericanBeechHQ/HeroAmericanBeechHQ_Octa_MaterialId.png",
+            "sha256": "BF740BBC9467DC379890692D9335ADD883F0B79B9BB4F8166E2F888B60E0D04B"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroAmericanBeechHQ/HeroAmericanBeechHQ_Octa_Ambient.png",
+            "sha256": "D9394ECC11AAB05078229C6A5A382C352C27FEB73C49CDE076C1AE3D01B8408C"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroAmericanBeechHQ/HeroAmericanBeechHQ_OctaImpostor_M.mat",
+            "sha256": "E8912D1F9F8C369F4C1DD0EE56AA61E9E0FBC3EA039E8FD83FBE992320DDCE9E"
+        },
+        {
+            "path": "Assets/Models/Trees/HeroAmericanBeechHQ_OctaImpostor_Runtime.mesh",
+            "sha256": "794F20F368CA01987F5583B99E8D75DE82A39C06A2704B9C76679A8B477ABC2D"
+        },
+        {
+            "path": "Assets/Prefabs/HeroAmericanBeechHQ_OctaImpostor_Runtime.prefab",
+            "sha256": "3C74E07275B4A706FF8197B2DAF83B50D9F1F083054BCC693D575DC3585C781D"
+        }
+    ]
+}

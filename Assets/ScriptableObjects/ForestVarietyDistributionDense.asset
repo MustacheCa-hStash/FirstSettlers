@@ -17,14 +17,15 @@ MonoBehaviour:
   standRadiusRange: {x: 42, y: 72}
   grasslandGroveFraction: 0.24
   forestBackground: 9
-  forestStand: 116
+  forestStand: 146
   grasslandBackground: 0.65
   grasslandGrove: 19
   snowStand: 12
   candidateCellSize: 4.8
   competitionCohorts: 2
-  youngTreeShare: 0.12
-  forestCoreSpacing: 0.86
+  youngTreeShare: 0.17
+  forestCoreSpacing: 0.78
   useWoodlandSpeciesMix: 1
   variedWoodlandEdges: 1
+  woodlandEdgeInfill: 0.85
   maxTreesPerChunk: 64

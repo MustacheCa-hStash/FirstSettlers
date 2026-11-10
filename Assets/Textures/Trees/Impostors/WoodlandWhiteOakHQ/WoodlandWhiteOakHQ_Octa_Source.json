@@ -1,7 +1,7 @@
 {
     "prefab": "Assets/Prefabs/WoodlandWhiteOak.prefab",
     "prefabGuid": "78fd18c64f4c4df42aea0282fc4a84b2",
-    "dependencyHash": "f28f508a5374f2bc5c8ab7792ff925d8",
+    "dependencyHash": "a7a2a4a2ab96e8eb4f2a94cbebe21caa",
     "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
     "supersample": 2,
     "voxelResolution": 128,

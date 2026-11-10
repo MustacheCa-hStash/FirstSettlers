@@ -4,6 +4,9 @@ Shader "Custom/OakBarkSimpleLit"
     {
         [MainTexture] _BaseMap("Bark Base Color", 2D) = "white" {}
         [MainColor] _BaseColor("Bark Tint", Color) = (1, 1, 1, 1)
+        [Toggle(_BARK_NORMALMAP)] _BarkNormalMap("Use Bark Normal Map", Float) = 0
+        [Normal] _BumpMap("Bark Normal Map", 2D) = "bump" {}
+        _BumpScale("Bark Normal Strength", Range(0, 2)) = 1
         _TreeBarkTint("Per Tree Bark Tint", Color) = (1, 1, 1, 1)
         _Brightness("Brightness", Range(0.25, 2)) = 1
         _ColorVariationStrength("Soft Brightness Variation", Range(0, 0.5)) = 0.025
@@ -35,6 +38,7 @@ Shader "Custom/OakBarkSimpleLit"
             #pragma target 4.5
             #pragma vertex SugarMapleBarkVertex
             #pragma fragment SugarMapleBarkFragment
+            #pragma shader_feature_local _BARK_NORMALMAP
             #pragma multi_compile_instancing
             #pragma instancing_options procedural:SetupStandingTree
             #pragma require compute : PROCEDURAL_INSTANCING_ON
@@ -88,6 +92,7 @@ Shader "Custom/OakBarkSimpleLit"
             #pragma target 4.5
             #pragma vertex SugarMapleBarkVertex
             #pragma fragment SugarMapleBarkNormalsFragment
+            #pragma shader_feature_local _BARK_NORMALMAP
             #pragma multi_compile_instancing
             #pragma instancing_options procedural:SetupStandingTree
             #pragma require compute : PROCEDURAL_INSTANCING_ON

@@ -6,6 +6,8 @@ public class CloverSettings
     public bool enableClover = true;
     public GameObject cloverClumpPrefab;
     public GameObject[] cloverClumpPrefabs;
+    [Tooltip("Optional scene material for the authored clover meshes.")]
+    public Material cloverMaterialOverride;
     [Header("Forest Openings")]
     public bool enableForestClover = true;
     [Range(0,1), Tooltip("Relative colony frequency in forest openings; dense litter/moss floor remains excluded.")]

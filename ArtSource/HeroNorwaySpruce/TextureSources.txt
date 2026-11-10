@@ -1,0 +1,10 @@
+Norway spruce (Picea abies) texture sources.
+
+BarkSource.png was made with the built-in image generation tool.
+Photorealistic seamless-looking diffuse game texture for mature Norway spruce bark (Picea abies). Single square edge-to-edge orthographic macro scan looking straight at roughly 0.95 by 0.95 meters of mature living trunk bark. Very small irregular thin rounded flaking scales, weathered ash-brown and grayed terracotta brown with subtle reddish cinnamon in the protected cracks, some smaller purplish gray plates. Delicate layered edge chips, short sinuous narrow fissures, subtle variation in scale size, quiet low-frequency color. Natural soft organic scaly surface, fine photographic grain and strong surface detail at close range. Neutral even cross-polarized diffuse light, good albedo for relighting, no baked directional lighting or cast shadows. No broad vertical stripes, deep redwood furrows, cartoon polygon pattern, coarse spruce cones, roots, moss carpet, bark silhouette, object boundaries, text, frame, or background. Texture continues past all four edges.
+
+NeedleAlbedo.png is a procedural albedo ramp for individually modeled needles.
+
+Botanical references
+https://dendro.cnre.vt.edu/DENDROLOGY/SYLLABUS/factsheet.cfm?ID=99
+https://research.fs.usda.gov/feis/species-reviews/picabi

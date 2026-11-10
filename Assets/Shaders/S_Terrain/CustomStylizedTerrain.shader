@@ -50,6 +50,7 @@ Shader "Custom/StylizedTerrainURP"
         _RockTiling("Rock / Cliff Tiling (Repeats Per World Unit)", Float) = 0.12
         _RockSideTiling("Near Cliff Side Repeats (Horizontal / Vertical)", Vector) = (0, 0, 0, 0)
         _RockTextureStrength("Rock / Cliff Texture Strength", Range(0, 1)) = 1
+        _RockAlbedoTint("Rock / Cliff Albedo Tint", Color) = (1, 1, 1, 1)
         _RockDetailStrength("Rock / Cliff Distant Average Color Strength", Range(0, 1)) = 0.5
         _RockAverageAlbedo("Rock / Cliff Average Albedo (Distance Fallback)", Color) = (1,1,1,1)
         _RockNormalStrength("Rock Normal Strength", Range(0, 2)) = 0.45
@@ -346,6 +347,7 @@ Shader "Custom/StylizedTerrainURP"
                 float4 _RockSideTiling;
                 float _RockDetailStrength;
                 float _RockTextureStrength;
+                half4 _RockAlbedoTint;
                 half4 _RockAverageAlbedo;
                 float _RockNormalStrength;
                 float _CliffNormalStrength;
@@ -1169,7 +1171,7 @@ Shader "Custom/StylizedTerrainURP"
                     }
                     [branch] if (scaleBlend > 0.0 && _RockTextureStrength > 0.001)
                         rockAlbedo += SampleFarRockColor(surface.positionWS, baseNormalWS, rockPositionDx, rockPositionDy) * scaleBlend;
-                    baseColor += (rockAlbedo * regionalRockTint * rockSurfaceWeight - distantRockColor) * _RockTextureStrength * rockFade;
+                    baseColor += (rockAlbedo * _RockAlbedoTint.rgb * regionalRockTint * rockSurfaceWeight - distantRockColor) * _RockTextureStrength * rockFade;
                 }
                 #endif
 

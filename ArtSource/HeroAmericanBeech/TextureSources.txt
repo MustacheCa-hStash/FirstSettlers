@@ -1,0 +1,12 @@
+American beech texture sources, made with the built-in image generation tool.
+
+BarkSource.png
+Use case: photorealistic-natural. Create one texture source for an American beech (Fagus grandifolia) game tree: a seamless-looking, straight-on, flat, orthographic square macro photograph of the outer surface of a living American beech trunk at about 0.9 m wide. Edge-to-edge texture, smooth silver-gray elephant-skin bark with subtle blue-gray, taupe and muted warm-gray tonal variation, very fine elongated pores and scattered faint horizontal lenticels, a few shallow dark eye-shaped healed branch scars of differing sizes, very sparse diffuse gray lichen flecks, faint vertical surface wrinkles. Fine realistic scale, balanced low contrast with no directional lighting or cast shadows, even cross-polarized diffuse daylight, midtone albedo that looks like bark rather than stone or polished metal. No trunk silhouette, roots, leaves, moss sheets, text, seams, big black fissures, repeating stripes, framing, glare, or obvious highlights.
+
+LeafSource.png
+Use case: photorealistic-natural. Create a game texture source atlas with exactly four separate, intact individual mature American beech leaves (Fagus grandifolia), one in each quadrant of a 2 by 2 layout, on a genuinely transparent background. All leaves aligned vertically, little petiole down and pointed tip up, photographed perfectly face-on and completely flat at the same scale. Leave clear transparent margins around each leaf and no overlap. Botanical form: narrow ovate to elliptic, about 2.1 times as long as wide, fine distinctly saw-toothed edge, 11–14 clearly visible straight diagonal secondary veins on each side that terminate at the marginal teeth, gently tapered pointed tip. Two slightly cool mature olive-green tops, one fresh muted olive-green top, and one mature top with subtle tawny speckling and gently irregular edge. Look like real scanned leaf tissue with delicate vein relief and subdued natural color variation. Even cross-polarized diffuse light, no glossy hotspots, cast shadow, text, grid, branch or twigs, loose leaf fragments, white outline, water drops, or yellow autumn leaf.
+
+Botanical references
+https://gardens.si.edu/collections/explore/object/ofeo-sg_2011-1435A
+https://ask.ifas.ufl.edu/publication/ST243
+https://taes.tennessee.edu/recs/forestry/plants-Americanbeech.htm

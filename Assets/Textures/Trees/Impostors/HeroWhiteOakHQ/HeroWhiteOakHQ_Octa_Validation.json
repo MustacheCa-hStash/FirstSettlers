@@ -1,0 +1,99 @@
+{
+    "configuration": "{\"species\":\"HeroWhiteOak\",\"sourcePrefab\":\"Assets/Prefabs/HeroWhiteOakLOD0.prefab\",\"leafPath\":\"Assets/Materials/M_Trees/HeroWhiteOakLOD0/Leaf.mat\",\"barkPath\":\"Assets/Materials/M_Trees/HeroWhiteOakLOD0/Bark.mat\",\"leafTexture\":\"Assets/Textures/Trees/HeroWhiteOakLOD0/CrownAlbedoBase.png\",\"barkTexture\":\"Assets/Textures/Trees/HeroWhiteOak/BarkAlbedo.png\",\"sourceSlot\":\"\",\"variant\":\"OakTree\",\"shaderName\":\"Hidden/TreeImpostor/OakSemanticCapture\",\"billboardSlots\":[],\"paletteMode\":-1,\"expansion\":0.05999999865889549}",
+    "inputs": [
+        {
+            "path": "Assets/Textures/Trees/HeroWhiteOakLOD0/CrownAlbedoBase.png",
+            "sha256": "8D5563F75C6D975EC13FBC9C1E3731824857CA02BB2C6A54526112CED27C05BA"
+        },
+        {
+            "path": "Assets/Shaders/OakLeafTintCutout.shader",
+            "sha256": "98146416CC6C59870F956C122010EAE39A8AD4D4E0F2D45801D57B71F4F8E4ED"
+        },
+        {
+            "path": "Assets/Models/Trees/HeroWhiteOakLOD0.fbx",
+            "sha256": "83BBBF5B4E9EAA0D8CA58F16E05967A3B05238C3B576FD3D81BFFEDAF8557EE1"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroWhiteOakLOD0/Leaf.mat",
+            "sha256": "086D0FA319AFCD868173082E6BF7969F7B788D511F55057B7703F2842156909A"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroWhiteOakLOD0/CrownSurface.png",
+            "sha256": "5445C7EDA7C7DB47E95B383E5725236A26812E8F9FF322D3DD20376F94007D89"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroWhiteOak/BarkAlbedo.png",
+            "sha256": "4D67575220A9F0522133C5338B8CDF78A3E02D38DF6543F94B22D8F72E7EF85F"
+        },
+        {
+            "path": "Assets/Scripts/FoliageGeneration/Trees/TreeGameplayAuthoring.cs",
+            "sha256": "8BC346EFA8C5C84AC80740666AC5CC348840765480FE0DE053560FB1DC0F3CDD"
+        },
+        {
+            "path": "Assets/Shaders/OakBarkUnlit.shader",
+            "sha256": "7EB7A6EC500E34AB35E6A6C85842540D88F14EB9028618D79B778D70CF1FC519"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroWhiteOak/BarkNormal.png",
+            "sha256": "AE0D01EAE1129FF33E126DF127D079C48E25FE6D1C2BCB14D540521F6C145C01"
+        },
+        {
+            "path": "Assets/Prefabs/HeroWhiteOakLOD0.prefab",
+            "sha256": "37C4461ED58FC1D28ED79F11E9C1B8D0E503D05666A62A9BFD8BE64D1EA33479"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroWhiteOakLOD0/Bark.mat",
+            "sha256": "3E41CFC3F643331591525A663DDBC50E7608C4CC43A5C79C358D13F4580FF94E"
+        },
+        {
+            "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
+            "sha256": "33FABBF2E4CBED11F45B3AB20F0DE71464817982F8C94C4C0E1E3E5114742059"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
+            "sha256": "84B0720B90AAD407CD3C5772FABB6EF3CE108E0232BBC8FDD07B10E7631EE9BD"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAmbientAtlasBakerWindow.cs",
+            "sha256": "D4BC380FD35CCD293B11A6FA75345E545C66FEB3DA58B16E0750DEF105EC1796"
+        },
+        {
+            "path": "Assets/Shaders/TreeHQOctaImpostor.shader",
+            "sha256": "B74862B34C0FE40E6FC16E0E18D38686E96CD1EEEE77E27B5AB234404D385F02"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroWhiteOakHQ/HeroWhiteOakHQ_Octa_AlbedoCoverage.png",
+            "sha256": "3F412E998FBF71F78D12A13C51D657B54B876C14607E0B2C18940E308ACE39D9"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroWhiteOakHQ/HeroWhiteOakHQ_Octa_Surface.png",
+            "sha256": "BFCD8FFC4CF449DD5204FC054E0E7A83EDABF13A3216C4CAAEF4B72B139EED26"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroWhiteOakHQ/HeroWhiteOakHQ_Octa_Depth.png",
+            "sha256": "988EE410AFA0F8E65FB87191367D478414EC36FC17F8D0227C2448C30457214F"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroWhiteOakHQ/HeroWhiteOakHQ_Octa_MaterialId.png",
+            "sha256": "8DD4A305F53ADBD505D65DA347A3D48C5C8C6F8C048A75AED5A54BCE62ABCB82"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroWhiteOakHQ/HeroWhiteOakHQ_Octa_Ambient.png",
+            "sha256": "BFF34668AF46B578FF37B83317AB5C52FE90C024659536071967B110B9E3F0CD"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroWhiteOakHQ/HeroWhiteOakHQ_OctaImpostor_M.mat",
+            "sha256": "512D402FDF11789C37869C1B050C8FD3BC501C1F00A7E88104559B0C14937929"
+        },
+        {
+            "path": "Assets/Models/Trees/HeroWhiteOakHQ_OctaImpostor_Runtime.mesh",
+            "sha256": "0C31823062C501447B6683F02EEDE80112866A5E0527231BDB07162675478EF5"
+        },
+        {
+            "path": "Assets/Prefabs/HeroWhiteOakHQ_OctaImpostor_Runtime.prefab",
+            "sha256": "CBBD2A232949034DD74C50BC75912DB4545AEE67489C4E140DFF93A8CFCC3D6C"
+        }
+    ]
+}

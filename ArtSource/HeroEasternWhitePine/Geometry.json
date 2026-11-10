@@ -1,0 +1,17 @@
+{
+  "needles": 973015,
+  "fascicles": 194603,
+  "needleTriangles": 8757135,
+  "barkTriangles": 251991,
+  "coneTriangles": 8700,
+  "heightMeters": 26.74,
+  "crownSpanXYMeters": [
+    15.01,
+    15.14
+  ],
+  "needleSkyVisibilityMinMeanMax": [
+    0.5063,
+    0.7474,
+    1.0
+  ]
+}

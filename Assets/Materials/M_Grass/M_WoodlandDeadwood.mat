@@ -42,7 +42,7 @@ Material:
     - _UseAtlasColor: 1
     - _WoodlandShade: 1
     m_Colors:
-    - _BaseColor: {r: 0.88, g: 0.83, b: 0.74, a: 1}
+    - _BaseColor: {r: 0.91, g: 0.85, b: 0.77, a: 1}
     - _LeafInstanceTint: {r: 1, g: 1, b: 1, a: 1}
     - _LeafScatterParams: {r: 1, g: 1, b: 1, a: 0}
   m_BuildTextureStacks: []

@@ -1,0 +1,10 @@
+Source textures generated with the built-in image generation tool.
+
+BarkSource.png
+Photorealistic seamless square macro scan albedo of a mature North American quaking aspen (Populus tremuloides) trunk, upper mid-bole. Edge-to-edge orthographic flat texture about 1.25m wide. Smooth dusty pale green-gray to cream-gray bark with subtle chalky powder, sparse short black horizontal lenticels and separated dark eye-shaped healed branch scars, thin warm gray fissures. Mottled areas softly merge. Distinct from paper birch, smooth intact bark with very little peeling and darker olive undertone. Neutral diffuse cross-polarized light, no deep cast shadows, no highlight, no trunk outline, no extraneous items or text.
+
+LeafSource.png
+Photorealistic texture atlas for North American quaking aspen (Populus tremuloides) in summer. Exactly four complete individual leaf specimens in a 2x2 grid on genuine transparent alpha, each entirely centered in its quadrant with generous gutters. Full orthographic straight-down view, tip up and long slender intact pale flattened petiole pointing straight down. Round to broadly ovate almost coin-shaped blades, small abrupt pointed tip, rounded base, delicate shallow finely scalloped margin, visible fine branching veins radiating from base, medium satin subdued green with slightly cool undertone and mild variation. Neutral diffuse cross-polarized capture for albedo, no shadows, highlights, overlap, branches, labels, text or borders.
+
+Botanical reference
+https://research.fs.usda.gov/feis/species-reviews/poptre

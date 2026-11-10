@@ -32,7 +32,7 @@
     "alphaCoverageOfFittedArea": 0.564
   },
   "AmericanBeech": {
-    "heightMeters": 22.1,
+    "heightMeters": 22.2,
     "barkTriangles": 2055,
     "foliageTriangles": 3520,
     "sprays": 440,
@@ -40,7 +40,7 @@
     "alphaCoverageOfFittedArea": 0.477
   },
   "WhiteOak": {
-    "heightMeters": 22.7,
+    "heightMeters": 23.3,
     "barkTriangles": 2055,
     "foliageTriangles": 3520,
     "sprays": 440,

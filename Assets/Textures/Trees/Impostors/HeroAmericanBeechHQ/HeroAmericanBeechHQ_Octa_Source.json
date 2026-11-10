@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/HeroAmericanBeechLOD0_Surface.prefab",
+    "prefabGuid": "36f11753edabe304682a6d7923cf8f04",
+    "dependencyHash": "7dd461fb3ee7a1f95e85d7c8e8ceb59c",
+    "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.05999999865889549
+}

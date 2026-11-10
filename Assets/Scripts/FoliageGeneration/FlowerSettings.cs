@@ -4,6 +4,8 @@ using UnityEngine;
 public class FlowerSettings
 {
     public bool enableFlowers = true;
+    [Tooltip("Suppress other flowers in grassland on generation. Dandelions use their own settings.")]
+    public bool dandelionsOnlyInGrassland;
     public GameObject flowerPrefab;
 
     [Header("Grassland Poppies")]
@@ -139,6 +141,9 @@ public class FlowerSettings
 
     public bool AllowsBiome(BiomeType biome)
     {
+        if (dandelionsOnlyInGrassland && biome == BiomeType.Grassland)
+            return false;
+
         if (allowedBiomes == null || allowedBiomes.Length == 0)
             return true;
 

@@ -1,0 +1,99 @@
+{
+    "configuration": "{\"species\":\"HeroNorwaySpruce\",\"sourcePrefab\":\"Assets/Prefabs/HeroNorwaySpruceLOD0.prefab\",\"leafPath\":\"Assets/Materials/M_Trees/HeroNorwaySpruceLOD0/Leaf.mat\",\"barkPath\":\"Assets/Materials/M_Trees/HeroNorwaySpruceLOD0/Bark.mat\",\"leafTexture\":\"Assets/Textures/Trees/HeroNorwaySpruceLOD0/CrownAlbedoBase.png\",\"barkTexture\":\"Assets/Textures/Trees/HeroNorwaySpruce/BarkAlbedo.png\",\"sourceSlot\":\"\",\"variant\":\"SpruceTree\",\"shaderName\":\"Hidden/TreeImpostor/OakSemanticCapture\",\"billboardSlots\":[],\"paletteMode\":-1,\"expansion\":0.05999999865889549}",
+    "inputs": [
+        {
+            "path": "Assets/Shaders/OakLeafTintCutout.shader",
+            "sha256": "98146416CC6C59870F956C122010EAE39A8AD4D4E0F2D45801D57B71F4F8E4ED"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroNorwaySpruceLOD0/CrownAlbedoBase.png",
+            "sha256": "5C3E00B84F36F1F98FAFD51DD4EAF19D00CC18266C924BA34491F371654F4CD5"
+        },
+        {
+            "path": "Assets/Models/Trees/HeroNorwaySpruceLOD0.fbx",
+            "sha256": "110C7E5AFF6E1AA971AB38FBBF3D7A5571B2C8D3011AD5EDFE8EABAC460EF145"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroNorwaySpruceLOD0/CrownSurface.png",
+            "sha256": "D74D097C4EDEFC951026E54CEA384E5C35990D99AC0B1C47DD4BA011C920AC18"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroNorwaySpruceLOD0/Leaf.mat",
+            "sha256": "888E800BF9A6BA03625EAE97277C8A21C680458640ACD882F6D9A696E7BCF303"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroNorwaySpruce/BarkNormal.png",
+            "sha256": "21E3BC06F9F480390194979D37B65DBEF4669A1EF0AA244FA80BD64280837789"
+        },
+        {
+            "path": "Assets/Scripts/FoliageGeneration/Trees/TreeGameplayAuthoring.cs",
+            "sha256": "8BC346EFA8C5C84AC80740666AC5CC348840765480FE0DE053560FB1DC0F3CDD"
+        },
+        {
+            "path": "Assets/Shaders/OakBarkUnlit.shader",
+            "sha256": "7EB7A6EC500E34AB35E6A6C85842540D88F14EB9028618D79B778D70CF1FC519"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroNorwaySpruce/BarkAlbedo.png",
+            "sha256": "57AEDDB0AA7ACA40A55517A242C6CA863E372445A11E9A9846175FEFA9F204BD"
+        },
+        {
+            "path": "Assets/Prefabs/HeroNorwaySpruceLOD0.prefab",
+            "sha256": "6525FDC07314AF67A675CFD220F6A9B411872A85E72D964CCA8376FF02350E14"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroNorwaySpruceLOD0/Bark.mat",
+            "sha256": "887DCA4BA889D696AE295DEB390FBE2B5B524D8A3F24207C44DC6053FF414714"
+        },
+        {
+            "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
+            "sha256": "33FABBF2E4CBED11F45B3AB20F0DE71464817982F8C94C4C0E1E3E5114742059"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
+            "sha256": "84B0720B90AAD407CD3C5772FABB6EF3CE108E0232BBC8FDD07B10E7631EE9BD"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAmbientAtlasBakerWindow.cs",
+            "sha256": "D4BC380FD35CCD293B11A6FA75345E545C66FEB3DA58B16E0750DEF105EC1796"
+        },
+        {
+            "path": "Assets/Shaders/TreeHQOctaImpostor.shader",
+            "sha256": "B74862B34C0FE40E6FC16E0E18D38686E96CD1EEEE77E27B5AB234404D385F02"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroNorwaySpruceHQ/HeroNorwaySpruceHQ_Octa_AlbedoCoverage.png",
+            "sha256": "061DD0FBA405AFA87AE796267E6B21B41605D6D52FC12A9E4F0D5482320EFED9"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroNorwaySpruceHQ/HeroNorwaySpruceHQ_Octa_Surface.png",
+            "sha256": "BB9B98E1E92433017910605FBBCA1013D12C00FF9E19CFEDCFC06B4E36542898"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroNorwaySpruceHQ/HeroNorwaySpruceHQ_Octa_Depth.png",
+            "sha256": "F6E2DD696468AA8197DAEB146AD50AB9AFF52547E15BF7F4B2989E16C35C8D4A"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroNorwaySpruceHQ/HeroNorwaySpruceHQ_Octa_MaterialId.png",
+            "sha256": "5B3D89F24B875E70D20E8B7B22681FC82C649E33D3382129E61857AE81E95539"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroNorwaySpruceHQ/HeroNorwaySpruceHQ_Octa_Ambient.png",
+            "sha256": "3623532FFFD378A484E1E998A63B082F2778986AAF3B11FB07522D9A3BE483BA"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroNorwaySpruceHQ/HeroNorwaySpruceHQ_OctaImpostor_M.mat",
+            "sha256": "2803F270FF333AB1A993CF0799D2D6211ED8FA1544CB58FEE2EFE31703E7EA27"
+        },
+        {
+            "path": "Assets/Models/Trees/HeroNorwaySpruceHQ_OctaImpostor_Runtime.mesh",
+            "sha256": "A10097C35E0FE5B844C964E65B16BDCB2BC4749D2D8B5B12F9192D7AE3BAECE6"
+        },
+        {
+            "path": "Assets/Prefabs/HeroNorwaySpruceHQ_OctaImpostor_Runtime.prefab",
+            "sha256": "4AE663A60752C6D90D58C5D5FAF52E0A040A2B942C4D5937DA4703210E9CFFFA"
+        }
+    ]
+}

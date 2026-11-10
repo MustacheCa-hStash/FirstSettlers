@@ -1,0 +1,91 @@
+{
+    "configuration": "{\"species\":\"HeroEasternWhitePine\",\"sourcePrefab\":\"Assets/Prefabs/HeroEasternWhitePine.prefab\",\"leafPath\":\"Assets/Materials/M_Trees/HeroEasternWhitePine/Needles.mat\",\"barkPath\":\"Assets/Materials/M_Trees/HeroEasternWhitePine/Bark.mat\",\"leafTexture\":\"Assets/Textures/Trees/HeroEasternWhitePine/NeedleAlbedo.png\",\"barkTexture\":\"Assets/Textures/Trees/HeroEasternWhitePine/BarkAlbedo.png\",\"sourceSlot\":\"\",\"variant\":\"WhitePineTree\",\"shaderName\":\"Hidden/TreeImpostor/OakSemanticCapture\",\"billboardSlots\":[],\"paletteMode\":-1,\"expansion\":0.2199999988079071}",
+    "inputs": [
+        {
+            "path": "Assets/Prefabs/HeroEasternWhitePine.prefab",
+            "sha256": "655EC250868617EE4E06672BFE84F817122CEBD0EC9E1CEFAA42AB4BDC450154"
+        },
+        {
+            "path": "Assets/Shaders/OakLeafTintCutout.shader",
+            "sha256": "98146416CC6C59870F956C122010EAE39A8AD4D4E0F2D45801D57B71F4F8E4ED"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroEasternWhitePine/Bark.mat",
+            "sha256": "89A09D6B4FD31BBCC2004FC740C3C7ECAB55962BBCC2AFA510795EA7CD90299D"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroEasternWhitePine/BarkNormal.png",
+            "sha256": "72F5C9C1C00769F0F53EB8411406F3479DED3F2823C36B5BA77D3E623C39AD57"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroEasternWhitePine/Needles.mat",
+            "sha256": "1E7E353678EF31D0DA9FA12A9BE9C877A9C2CF8847A70195B7F3ADBC38EF3974"
+        },
+        {
+            "path": "Assets/Shaders/OakBarkUnlit.shader",
+            "sha256": "7EB7A6EC500E34AB35E6A6C85842540D88F14EB9028618D79B778D70CF1FC519"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroEasternWhitePine/BarkAlbedo.png",
+            "sha256": "0193313660E9929BE8B785790154AC8975E422721092C9F5DC8A0942630AD62D"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroEasternWhitePine/NeedleAlbedo.png",
+            "sha256": "72419031AE0BA439424210DC6E5CBB9AD6C7F416CBC593C4D859B15EDD946082"
+        },
+        {
+            "path": "Assets/Models/Trees/HeroEasternWhitePine.fbx",
+            "sha256": "AD8DF19D052B8F8ED00DE826D48648509E8DFDA2EB51656183EE47373E9A3248"
+        },
+        {
+            "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
+            "sha256": "33FABBF2E4CBED11F45B3AB20F0DE71464817982F8C94C4C0E1E3E5114742059"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
+            "sha256": "84B0720B90AAD407CD3C5772FABB6EF3CE108E0232BBC8FDD07B10E7631EE9BD"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAmbientAtlasBakerWindow.cs",
+            "sha256": "D4BC380FD35CCD293B11A6FA75345E545C66FEB3DA58B16E0750DEF105EC1796"
+        },
+        {
+            "path": "Assets/Shaders/TreeHQOctaImpostor.shader",
+            "sha256": "56D1F3E181731F104FC2853B3C0E203E1721CDC3556F0431443431896A50B60C"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroEasternWhitePineHQ/HeroEasternWhitePineHQ_Octa_AlbedoCoverage.png",
+            "sha256": "0126C41BEF7E3A99E13CD36A2D0F5AC15A5876C316E3E8AA6C58A982A3C4BBC8"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroEasternWhitePineHQ/HeroEasternWhitePineHQ_Octa_Surface.png",
+            "sha256": "26ED8B557F8121F5926A323967888580D7C858AC2DBECEFC75E9B77A4258B39B"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroEasternWhitePineHQ/HeroEasternWhitePineHQ_Octa_Depth.png",
+            "sha256": "B8190940A5858CD1BA2BA77307374BBBF0925EDA25DF839D6F84CCFD1BDA262A"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroEasternWhitePineHQ/HeroEasternWhitePineHQ_Octa_MaterialId.png",
+            "sha256": "1B7349C3B3D6AA6417A6F8370FAA67C9B2ADB94FB8C1A7E2721863FEAF941D64"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroEasternWhitePineHQ/HeroEasternWhitePineHQ_Octa_Ambient.png",
+            "sha256": "422AFE7E068A683BB4ED9315DACEEA79694E9455CB0B69D7410618226FBC4D1D"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroEasternWhitePineHQ/HeroEasternWhitePineHQ_OctaImpostor_M.mat",
+            "sha256": "E89A9EB408BE94845A0A749ECD5E3CE0084DBE8D9690B04AF7DEEB03C345245C"
+        },
+        {
+            "path": "Assets/Models/Trees/HeroEasternWhitePineHQ_OctaImpostor_Runtime.mesh",
+            "sha256": "AE7889A398FC9654573D1052CC7CA815C68FF1A8E21177CDFF27AA89AE8A35C3"
+        },
+        {
+            "path": "Assets/Prefabs/HeroEasternWhitePineHQ_OctaImpostor_Runtime.prefab",
+            "sha256": "8EFE2EAEC6DAB465DEB23172B051EBD2A9BFC2001367D7DDF0310423D95F651F"
+        }
+    ]
+}

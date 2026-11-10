@@ -103,6 +103,13 @@ public class TreeSettings
     [InspectorName("Tree Color Seed Offset"), Tooltip("Varies tree leaf and bark colors. Tree locations come from the world seed and feature plan, not this offset.")]
     public int seedOffset = 12000;
 
+    public const float MaxTreeSway = .035f;
+
+    [Header("Tree Wind")]
+    [Range(0f, MaxTreeSway), Tooltip("Live wind lean for generated trees and their HQ billboards. Zero disables it. A value of 0.02 gives a 20 m tree up to 0.4 m of crown movement.")]
+    public float treeSway;
+    internal float TreeSway => Mathf.Clamp(treeSway, 0f, MaxTreeSway);
+
     [Header("Instanced Tree Detail Distance")]
     [InspectorName("Mesh Detail Radius (chunk widths)"), Tooltip("Retained serialized setting: meshes remain fully visible through radius + 1 chunk widths and fade to billboards across the following chunk width. Distance is measured per tree in XZ.")]
     public int gameObjectTreeChunkRingRadius = 1;

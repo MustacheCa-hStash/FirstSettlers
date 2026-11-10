@@ -8,6 +8,8 @@ public struct WorldFeatureGenerationSettings
     public Vector2[] treeExclusionRadiusRanges;
     // Zero entries mean no species definition: use the global compatibility fallback.
     public Vector2[] treeUniformScaleRanges;
+    // Crown radius, foliage base and top in prefab root space, measured before dispatch.
+    public Vector3[] woodlandCrownProfiles;
     public int forestRockPrefabCount;
     public int maxForestRocksPerChunk;
     public Vector2 forestRockUniformScaleRange;
@@ -24,6 +26,15 @@ public struct WorldFeatureGenerationSettings
     public Vector2 snowRockUniformScaleRange, snowLargeRockUniformScaleRange;
 
     public static bool IsGrasslandTree(WorldFeatureVariant variant) => TreeSpeciesCatalog.IsGrassland(variant);
+
+    public Vector3 GetWoodlandCrown(WorldFeatureVariant variant)
+    {
+        int index = (int)variant;
+        if (woodlandCrownProfiles != null && (uint)index < (uint)woodlandCrownProfiles.Length &&
+            woodlandCrownProfiles[index].z > 0)
+            return woodlandCrownProfiles[index];
+        return new Vector3(4f, 5f, 17f);
+    }
 
     public Vector2 GetTreeUniformScaleRange(WorldFeatureVariant variant)
     {

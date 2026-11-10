@@ -1018,6 +1018,12 @@ public static partial class FoliageGenerator
                 results.Dispose();
         }
 
+        if (flowerSettings.dandelionsOnlyInGrassland)
+        {
+            foliageData.flowersGenerated = true;
+            yield break;
+        }
+
         if (flowerSettings.tallFlowerPrefab != null)
         {
             GenerateTallFlowerPatches(
@@ -2716,20 +2722,8 @@ public static partial class FoliageGenerator
         const int biomeCount = 9;
         NativeArray<byte> result = new NativeArray<byte>(biomeCount, allocator, NativeArrayOptions.ClearMemory);
 
-        if (flowerSettings.allowedBiomes == null || flowerSettings.allowedBiomes.Length == 0)
-        {
-            for (int i = 0; i < result.Length; i++)
-                result[i] = 1;
-
-            return result;
-        }
-
-        for (int i = 0; i < flowerSettings.allowedBiomes.Length; i++)
-        {
-            int biomeIndex = (int)flowerSettings.allowedBiomes[i];
-            if (biomeIndex >= 0 && biomeIndex < result.Length)
-                result[biomeIndex] = 1;
-        }
+        for (int i = 0; i < result.Length; i++)
+            result[i] = flowerSettings.AllowsBiome((BiomeType)i) ? (byte)1 : (byte)0;
 
         return result;
     }

@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/HeroRedMapleLOD0.prefab",
+    "prefabGuid": "42be1fb9106104c4c93aa92b9d3d35c5",
+    "dependencyHash": "a81e01c9927e394c22a495b43316fcc0",
+    "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.05999999865889549
+}

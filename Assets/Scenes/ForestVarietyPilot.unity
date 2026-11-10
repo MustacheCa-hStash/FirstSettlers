@@ -149,8 +149,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DistantFogLayer
   mode: 1
-  aerialStartDistance: 110
-  aerialExtinction: 0.0007
+  aerialStartDistance: 135
+  aerialExtinction: 0.00055
   aerialBaseHeight: 15
   aerialHeightScale: 115
   aerialSunTint: 0.22
@@ -481,7 +481,7 @@ MonoBehaviour:
   maxSunAltitude: 42
   nightAltitude: -18
   horizonFadeDegrees: 8
-  maxSunIntensity: 1.3
+  maxSunIntensity: 1.42
   sunColor:
     serializedVersion: 2
     key0: {r: 1, g: 0.47, b: 0.24, a: 1}
@@ -679,18 +679,18 @@ MonoBehaviour:
   updateAmbientLighting: 1
   twilightAmbientBlend: 0.22
   twilightNightFraction: 0.18
-  dayAmbientIntensity: 0.92
+  dayAmbientIntensity: 0.89
   nightAmbientIntensity: 0.26
-  dayAmbientSkyColor: {r: 0.58, g: 0.67, b: 0.79, a: 1}
-  dayAmbientEquatorColor: {r: 0.43, g: 0.48, b: 0.53, a: 1}
-  dayAmbientGroundColor: {r: 0.23, g: 0.24, b: 0.2, a: 1}
+  dayAmbientSkyColor: {r: 0.54, g: 0.63, b: 0.75, a: 1}
+  dayAmbientEquatorColor: {r: 0.4, g: 0.44, b: 0.5, a: 1}
+  dayAmbientGroundColor: {r: 0.23, g: 0.218, b: 0.167, a: 1}
   nightAmbientSkyColor: {r: 0.075, g: 0.085, b: 0.13, a: 1}
   nightAmbientEquatorColor: {r: 0.055, g: 0.062, b: 0.09, a: 1}
   nightAmbientGroundColor: {r: 0.038, g: 0.042, b: 0.055, a: 1}
   updateTreeNightLighting: 1
   midnightTreeAmbientFloorScale: 0.48
   updateFogColor: 1
-  dayFogColor: {r: 0.57, g: 0.68, b: 0.77, a: 1}
+  dayFogColor: {r: 0.53, g: 0.643, b: 0.775, a: 1}
   dawnDuskFogColor: {r: 0.95, g: 0.55, b: 0.32, a: 1}
   nightFogColor: {r: 0.055, g: 0.065, b: 0.1, a: 1}
   updateLinearFogDistances: 1
@@ -1017,7 +1017,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9341770e92e23cc4ba24f9b2b63900f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldSeed: 90
+  worldSeed: 2
   viewDistance: 100
   colliderDistance: 5
   enableFarTerrain: 1
@@ -1069,13 +1069,14 @@ MonoBehaviour:
     randomizeYaw: 1
     receiveGrassShadows: 1
     seedOffset: 5000
-    forestDarkGrassColor: {r: 0.13, g: 0.22, b: 0.1, a: 1}
-    forestMidGrassColor: {r: 0.2, g: 0.33, b: 0.15, a: 1}
-    forestLightGrassColor: {r: 0.28, g: 0.43, b: 0.18, a: 1}
+    forestDarkGrassColor: {r: 0.143, g: 0.217, b: 0.092, a: 1}
+    forestMidGrassColor: {r: 0.214, g: 0.313, b: 0.136, a: 1}
+    forestLightGrassColor: {r: 0.303, g: 0.405, b: 0.173, a: 1}
     billboardGrassPrefab: {fileID: 5674864547714122687, guid: df5afa86a0cf493438d39adb16bc8120, type: 3}
     billboardRingRadius: 3
   flowerSettings:
     enableFlowers: 1
+    dandelionsOnlyInGrassland: 1
     flowerPrefab: {fileID: 7417632742218973167, guid: 012753618076f5a44bc43bfe79e09f48, type: 3}
     poppies:
       enabled: 1
@@ -1180,16 +1181,16 @@ MonoBehaviour:
       - {r: 0.75, g: 0.84, b: 1, a: 1}
     - biome: 3
       petalColors:
-      - {r: 0.88, g: 0.72, b: 1, a: 1}
-      - {r: 1, g: 0.82, b: 0.55, a: 1}
+      - {r: 0.72, g: 0.73, b: 0.82, a: 1}
+      - {r: 0.95, g: 0.89, b: 0.67, a: 1}
     - biome: 7
       petalColors:
-      - {r: 0.82, g: 0.88, b: 1, a: 1}
-      - {r: 0.95, g: 0.95, b: 1, a: 1}
+      - {r: 0.77, g: 0.82, b: 0.9, a: 1}
+      - {r: 0.91, g: 0.9, b: 0.86, a: 1}
     - biome: 8
       petalColors:
-      - {r: 0.72, g: 0.82, b: 1, a: 1}
-      - {r: 0.9, g: 0.72, b: 1, a: 1}
+      - {r: 0.69, g: 0.77, b: 0.87, a: 1}
+      - {r: 0.8, g: 0.74, b: 0.85, a: 1}
   butterflySettings:
     enabled: 1
     prefab: {fileID: 4037390523142719375, guid: 93d62a5456bf4e64696d8bc94fb94e99, type: 3}
@@ -1278,7 +1279,7 @@ MonoBehaviour:
     seedOffset: 71000
   cattailSettings:
     enableCattails: 1
-    cattailPrefab: {fileID: 2926862642933225150, guid: 58fc18ff9f860734eb05fd05e30f7ad9, type: 3}
+    cattailPrefab: {fileID: 2926862642933225150, guid: 17084a4732ed4a3cba01c8537408729d, type: 3}
     activeRingRadius: 2
     minWaterwardDistance: 1.25
     waterwardDistance: 3.5
@@ -1300,6 +1301,7 @@ MonoBehaviour:
     - {fileID: 4919398732661662658, guid: 9a12c39052867774bbf56c1fb4c90611, type: 3}
     - {fileID: 1476561564074760266, guid: fccdc0ac73aac02459df082017731679, type: 3}
     - {fileID: 8386551719801728580, guid: dc25647382030b842a5800d8bac51aff, type: 3}
+    cloverMaterialOverride: {fileID: 2100000, guid: 1ccddfe797fc489595cd4bad33898783, type: 2}
     enableForestClover: 1
     forestPatchChance: 0.55
     forestMaxSlope: 22
@@ -1328,7 +1330,7 @@ MonoBehaviour:
     grassFadePadding: 0.7
   dandelionSettings:
     enableDandelions: 1
-    dandelionPrefab: {fileID: 1155896988369609512, guid: f5257473fea74414aad98e80e8510acc, type: 3}
+    dandelionPrefab: {fileID: 1155896988369609512, guid: 357cbfbf98c4411ca760f99af4818f6e, type: 3}
     activeRingRadius: 2
     receiveDandelionShadows: 0
     patchCellSize: 18
@@ -1483,18 +1485,18 @@ MonoBehaviour:
     whitePineTreeDefinition: {fileID: 11400000, guid: 4f9049ed763a4e879326463ff3b4cac9, type: 2}
     oakTreeDefinition: {fileID: 11400000, guid: 38f488f4b3b54476b57a80413f914d29, type: 2}
     willowTreeDefinition: {fileID: 11400000, guid: 5fdc7bacacca4b369ee3428be4fa1296, type: 2}
-    mapleTreePrefab: {fileID: 5967507234403889078, guid: a06c6b7b1e0bfae489edb2cb2b2d5bdc, type: 3}
-    sugarMapleTreePrefab: {fileID: 4066190841387332000, guid: ee2133cf05902ac498a357121b77eafe, type: 3}
-    birchAspenTreePrefab: {fileID: 7696604300545964128, guid: 25c9d94bf0cb91f48ac1c43e62a89b10, type: 3}
-    beechTreePrefab: {fileID: 5538441605449308361, guid: 673ddef278e38c74fb687c6fe92d2fbc, type: 3}
-    spruceTreePrefab: {fileID: 300544673343893465, guid: 14b7b483328594d448114dac4608ccc6, type: 3}
-    whitePineTreePrefab: {fileID: 1251942282284927618, guid: 77e1c93165b863243a0845c5f287ae04, type: 3}
-    oakTreePrefab: {fileID: 2369364233900099206, guid: 78fd18c64f4c4df42aea0282fc4a84b2, type: 3}
+    mapleTreePrefab: {fileID: 8654341920070900827, guid: 42be1fb9106104c4c93aa92b9d3d35c5, type: 3}
+    sugarMapleTreePrefab: {fileID: 3637633189347396525, guid: ab0ae1414e8dafa49b7fb259a044e4aa, type: 3}
+    birchAspenTreePrefab: {fileID: 3623795385513349218, guid: abfee49c0afd3974082cdf5793f89b2a, type: 3}
+    beechTreePrefab: {fileID: 6400800452624308651, guid: 36f11753edabe304682a6d7923cf8f04, type: 3}
+    spruceTreePrefab: {fileID: 8972395177912114967, guid: 08ed61167aa4efd419e88248e307a6ca, type: 3}
+    whitePineTreePrefab: {fileID: 4082799300535079883, guid: 288c35ece6bd16a48be0018e5494e9fd, type: 3}
+    oakTreePrefab: {fileID: 7605440420851175572, guid: bb833ffada0c3244e880020782271c9e, type: 3}
     treeLOD0GameObjectPrefab: {fileID: 300544673343893465, guid: 14b7b483328594d448114dac4608ccc6, type: 3}
-    grasslandMapleTreePrefab: {fileID: 5967507234403889078, guid: a06c6b7b1e0bfae489edb2cb2b2d5bdc, type: 3}
-    grasslandBirchAspenTreePrefab: {fileID: 7157884687879697431, guid: 49030c7472962824085fb57e2daa4aab, type: 3}
-    grasslandWhitePineTreePrefab: {fileID: 1251942282284927618, guid: 77e1c93165b863243a0845c5f287ae04, type: 3}
-    grasslandOakTreePrefab: {fileID: 2369364233900099206, guid: 78fd18c64f4c4df42aea0282fc4a84b2, type: 3}
+    grasslandMapleTreePrefab: {fileID: 8654341920070900827, guid: 42be1fb9106104c4c93aa92b9d3d35c5, type: 3}
+    grasslandBirchAspenTreePrefab: {fileID: 2204317579656302504, guid: 29dc70a6b25fcd84ca5c0c47731fe0da, type: 3}
+    grasslandWhitePineTreePrefab: {fileID: 4082799300535079883, guid: 288c35ece6bd16a48be0018e5494e9fd, type: 3}
+    grasslandOakTreePrefab: {fileID: 7605440420851175572, guid: bb833ffada0c3244e880020782271c9e, type: 3}
     grasslandWillowTreePrefab: {fileID: 0}
     grasslandTreeFallbackPrefab: {fileID: 300544673343893465, guid: 14b7b483328594d448114dac4608ccc6, type: 3}
     blueberryBushPrefab: {fileID: 2095120421312505866, guid: 90b14277c549b58408d186345b97dfbe, type: 3}
@@ -1520,24 +1522,25 @@ MonoBehaviour:
     - {fileID: 3862683304946002644, guid: 599b50f6d53ddc34ca18e1f19ece1234, type: 3}
     - {fileID: 4232927202736571705, guid: f892c41872fd7434ba565ae8e5345b1b, type: 3}
     grasslandLargeRockFallbackPrefab: {fileID: 0}
-    mapleTreeBillboardPrefab: {fileID: 3827616270605823615, guid: f1e3c5c8c4a0329409270891f7795eb5, type: 3}
-    sugarMapleTreeBillboardPrefab: {fileID: 6478135623569240224, guid: 35135750e1fcc2d438d003f1caa382b5, type: 3}
-    birchAspenTreeBillboardPrefab: {fileID: 2048161466494686742, guid: 7ce032ffcebb7bc4aa7de1977caae7eb, type: 3}
-    beechTreeBillboardPrefab: {fileID: 7948431928819656220, guid: b6d9a90a211ac7f47a9beeaa90382a28, type: 3}
-    spruceTreeBillboardPrefab: {fileID: 3472293296640057272, guid: 38fb6f998dd490f449f5eaf183f846d3, type: 3}
-    whitePineTreeBillboardPrefab: {fileID: 7585812106169113129, guid: 98363d240ca75a5488c56fc5a0f49fe1, type: 3}
-    oakTreeBillboardPrefab: {fileID: 6866521235877313884, guid: 7dbabd867edf63a4f8ac7c873a4e7e99, type: 3}
+    mapleTreeBillboardPrefab: {fileID: 5403390066107559689, guid: 1a074da88e7bd004384e10449b1428c2, type: 3}
+    sugarMapleTreeBillboardPrefab: {fileID: 4151817892340858307, guid: bf00ddc22237207459ca61d049c1a99f, type: 3}
+    birchAspenTreeBillboardPrefab: {fileID: 8095032538830232532, guid: 9f804322a559d5443a9f30db181f016d, type: 3}
+    beechTreeBillboardPrefab: {fileID: 7398647304337641260, guid: fee4f04683884594eb5ddf89736a258b, type: 3}
+    spruceTreeBillboardPrefab: {fileID: 4319765325117416995, guid: 8fbd92bc2db828c4282080a798af9b16, type: 3}
+    whitePineTreeBillboardPrefab: {fileID: 3728294527667540951, guid: a40026a50f4a9794ea93f2fd8a6eab6a, type: 3}
+    oakTreeBillboardPrefab: {fileID: 3046306953381579057, guid: d6734174da6cfb844a99a0f3f80de8d5, type: 3}
     treeBillboardPrefab: {fileID: 3472293296640057272, guid: 38fb6f998dd490f449f5eaf183f846d3, type: 3}
-    grasslandMapleTreeBillboardPrefab: {fileID: 3827616270605823615, guid: f1e3c5c8c4a0329409270891f7795eb5, type: 3}
-    grasslandBirchAspenTreeBillboardPrefab: {fileID: 3255616791041966668, guid: ce1a52acf361ef842a6aa5f74ecd55ca, type: 3}
-    grasslandWhitePineTreeBillboardPrefab: {fileID: 7585812106169113129, guid: 98363d240ca75a5488c56fc5a0f49fe1, type: 3}
-    grasslandOakTreeBillboardPrefab: {fileID: 6866521235877313884, guid: 7dbabd867edf63a4f8ac7c873a4e7e99, type: 3}
+    grasslandMapleTreeBillboardPrefab: {fileID: 5403390066107559689, guid: 1a074da88e7bd004384e10449b1428c2, type: 3}
+    grasslandBirchAspenTreeBillboardPrefab: {fileID: 4149274788013609995, guid: b2ca9cd5d307e334c9abeddff7d5b9a9, type: 3}
+    grasslandWhitePineTreeBillboardPrefab: {fileID: 3728294527667540951, guid: a40026a50f4a9794ea93f2fd8a6eab6a, type: 3}
+    grasslandOakTreeBillboardPrefab: {fileID: 3046306953381579057, guid: d6734174da6cfb844a99a0f3f80de8d5, type: 3}
     grasslandWillowTreeBillboardPrefab: {fileID: 0}
     grasslandTreeBillboardFallbackPrefab: {fileID: 3472293296640057272, guid: 38fb6f998dd490f449f5eaf183f846d3, type: 3}
     treeUniformScaleRange: {x: 1.3, y: 1.5}
     grassExclusionRadius: 0.5
     bushGrassExclusionRadius: 0.45
     seedOffset: 12000
+    treeSway: 0.022
     gameObjectTreeChunkRingRadius: 1
     standingTreeBatchSizeChunks: 4
     enableStandingTreeMeshLods: 0
@@ -1603,10 +1606,10 @@ MonoBehaviour:
     receiveTreeShadows: 1
   forestLighting:
     enabled: 1
-    leafColor: {r: 0.34, g: 0.41, b: 0.28, a: 1}
-    leafPaletteBlend: 0.18
-    barkColor: {r: 0.37, g: 0.34, b: 0.3, a: 1}
-    barkPaletteBlend: 0.15
+    leafColor: {r: 0.277, g: 0.35, b: 0.29, a: 1}
+    leafPaletteBlend: 0.37
+    barkColor: {r: 0.428, g: 0.378, b: 0.322, a: 1}
+    barkPaletteBlend: 0.25
     crownDarkness: 0.67
     groundDarkness: 4
     groundDirectShade: 0
@@ -1694,7 +1697,7 @@ MonoBehaviour:
     maxMeshSpacing: 16
   meshHeightMultiplier: 200
   terrainMaterial: {fileID: 2100000, guid: 3fff79e0cc0981e458f2fdecf56b5263, type: 2}
-  waterMaterial: {fileID: 2100000, guid: 14ca6caf7c7b1af4395d2aad206230ea, type: 2}
+  waterMaterial: {fileID: 2100000, guid: c926831afdb0492f96818d85291b6508, type: 2}
   globalWaterY: 14.4
   waterReflectionResolution: 0.7
   waterReflectionUpdatesPerSecond: 30
@@ -1826,7 +1829,7 @@ Transform:
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.92387956, z: 0, w: -0.38268346}
-  m_LocalPosition: {x: -844.80005, y: 300, z: 576}
+  m_LocalPosition: {x: 0, y: 300, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

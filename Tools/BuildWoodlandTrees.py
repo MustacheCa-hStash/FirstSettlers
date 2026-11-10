@@ -240,12 +240,41 @@ class Tree:
                         axis = horizontal(angle+sign*(.31+k*.48)+rng.uniform(-.65,.6))
                         axis += UP*rng.uniform(-.14,.66)
                         size = min(w*.52, (h*.108+w*.13)*rng.uniform(.66,1.08))
-                        self.spray(attachment,axis,size,size*rng.uniform(.70,.96),rng.uniform(-1.2,1.2))
+                        width, roll = size*rng.uniform(.70,.96),rng.uniform(-1.2,1.2)
+                        bend = .09
+                        if oak or beech:
+                            # Use each pair to cover different depths of the crown.
+                            # Keep the foliage on the lowest branches out toward the tips.
+                            low = max(0, 1-i/5)
+                            attachment = along(twig, (.24 if k == 0 else .81) + low*.12)
+                            if k == 0:
+                                attachment += UP*(.16 + low*.38)
+                                axis = axis*.46 + direction*.24 + branch_dir*.32 + UP*.48
+                                roll += sign*.56
+                            else:
+                                axis = axis*.57 + branch_dir*.52 - UP*.30
+                                roll -= sign*.40
+                                width *= 1.14 if oak else 1.09
+                            bend = .15
+                        self.spray(attachment,axis,size,width,roll,bend)
                     tip = twig[-1] if j in (0,2) else along(twig,.74)
-                    self.spray(tip,branch_dir+UP*rng.uniform(.15,.80),w*.29,w*.26,rng.uniform(-1.1,1.1))
+                    tip_axis, roll = branch_dir+UP*rng.uniform(.15,.80),rng.uniform(-1.1,1.1)
+                    if oak or beech:
+                        # Turn some terminal sprays back into the bough to connect
+                        # neighboring forks instead of extending every silhouette.
+                        if (i+j+arm)%3 == 0:
+                            tip_axis = -direction*.52 + branch_dir*.32 + UP*.54
+                        else:
+                            tip_axis += UP*.34
+                        roll += sign*.37
+                    self.spray(tip,tip_axis,w*.29,w*.26,roll,.14 if oak or beech else .09)
             for j in range(3):
                 axis = horizontal(angle+(j-1)*1.00)+UP*rng.uniform(.32,.87)
-                self.spray(along(points,.72+.115*j),axis,w*.39,w*.33,rng.uniform(-1.0,1.0))
+                roll = rng.uniform(-1.0,1.0)
+                if (oak or beech) and j==1:
+                    axis = -direction*.55 + side*.44 + UP*.58
+                    roll += .55
+                self.spray(along(points,.72+.115*j),axis,w*.39,w*.33,roll)
             self.clumps.append(len(self.foliage.vertices))
         # Small leader foliage closes the top without a spherical cap.
         for i in range(8):
@@ -442,13 +471,16 @@ def render(scene,camera,position,target,path):
     bpy.ops.render.render(write_still=True)
 
 
-def build(out, reviews, build_only=False):
+def build(out, reviews, build_only=False, selected=()):
     textures = out/"Textures"
     library = json.loads((textures/"FoliageFootprints.json").read_text())
     for folder in (out/"Blender",out/"FBX",reviews):
         folder.mkdir(parents=True,exist_ok=True)
-    stats = {}
+    stats_path = out/"Geometry.json"
+    stats = json.loads(stats_path.read_text()) if selected and stats_path.exists() else {}
     for index,name in enumerate(FORMS):
+        if selected and name not in selected:
+            continue
         bpy.ops.wm.read_factory_settings(use_empty=True)
         tree = Tree(name,index,library[name])
         tree.build()
@@ -484,7 +516,7 @@ def build(out, reviews, build_only=False):
             if name == "WhiteOak":
                 scene.render.resolution_x,scene.render.resolution_y = 900,560
                 render(scene,camera,(8,-15,7),(0,0,10.3),reviews/"WhiteOak-detail.png")
-    (out/"Geometry.json").write_text(json.dumps(stats,indent=2))
+    stats_path.write_text(json.dumps(stats,indent=2))
 
 
 def grove(out,reviews):
@@ -550,4 +582,4 @@ if __name__ == "__main__":
     if "grove" in args:
         grove(output,reviews)
     else:
-        build(output,reviews,"models" in args)
+        build(output,reviews,"models" in args, [name for name in args[2:] if name in FORMS])

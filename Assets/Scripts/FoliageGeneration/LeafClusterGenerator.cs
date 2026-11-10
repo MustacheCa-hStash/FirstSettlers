@@ -173,6 +173,7 @@ public sealed class LeafClusterGeneration
             (1 - ecology.y * 0.5f) * ForestFloorPolicy.LeafRetention(ecology.z) *
             (1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(settings.maxSlope * 0.4f, settings.maxSlope, slope))) *
             (1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.15f, 0.5f, river)));
+        float gap = 0f;
         if (settings is FernSettings fern)
         {
             if (!fern.gradualMossFalloff && ForestFloorPolicy.MossBlocksVegetation(ecology.z)) return;
@@ -199,7 +200,10 @@ public sealed class LeafClusterGeneration
                 Mathf.Lerp(1f,.60f,canopy) * Mathf.Lerp(1f,.70f,clearing) *
                 Mathf.Lerp(.65f,1f,Mathf.InverseLerp(.31f,.66f,damp));
             float edge = 4f*forest*(1f-forest);
-            keep = settings.density * (Mathf.Lerp(meadow,woodland,forest) + edge * .23f * pockets) *
+            if (biome != BiomeType.Taiga && plan.WoodlandEdge is { } woodlandEdge)
+                gap = woodlandEdge.Gap(world)*woodlandEdge.Strength;
+            keep = settings.density * (Mathf.Lerp(meadow,woodland,forest) + edge * .23f * pockets +
+                gap * Mathf.Lerp(.55f,1.5f,pockets)) *
                 (1f-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.22f,.52f,river)));
         }
         else if (settings.woodlandKind != WoodlandScatterKind.Litter)
@@ -224,6 +228,7 @@ public sealed class LeafClusterGeneration
         float y = SampleTerrain(heights, sample) * heightMultiplier * scale;
         float s = Mathf.Lerp(Mathf.Max(0.1f, Mathf.Min(settings.scaleRange.x, settings.scaleRange.y)),
             Mathf.Max(0.1f, Mathf.Max(settings.scaleRange.x, settings.scaleRange.y)), Unit(rank, 83)) * settings.SizeMultiplier;
+        s *= 1f + gap*.32f;
         Quaternion rotation = Quaternion.FromToRotation(Vector3.up, normal) * Quaternion.Euler(0, Unit(rank, 101) * 360, 0);
         float tone = Mathf.Lerp(0.77f, 0.98f, Unit(rank, 127));
         if (settings.IsFern) tone = Mathf.Lerp(.94f,1.04f,Unit(rank,127));

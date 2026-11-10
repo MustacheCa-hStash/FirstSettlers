@@ -309,38 +309,39 @@ Material:
     m_Colors:
     - _BareDirtColor: {r: 0.2, g: 0.13, b: 0.08, a: 1}
     - _ClayAverageColor: {r: 0.8209056, g: 0.68878615, b: 0.5737168, a: 1}
-    - _ClayColor: {r: 1, g: 1, b: 1, a: 1}
-    - _CliffColor: {r: 0.65, g: 0.64, b: 0.62, a: 1}
-    - _DarkGrassColor: {r: 0.2, g: 0.265, b: 0.11, a: 1}
-    - _DenseMossColor: {r: 0.85, g: 0.9, b: 0.7, a: 1}
+    - _ClayColor: {r: 0.97, g: 0.965, b: 0.96, a: 1}
+    - _CliffColor: {r: 0.64, g: 0.64, b: 0.64, a: 1}
+    - _DarkGrassColor: {r: 0.215, g: 0.257, b: 0.105, a: 1}
+    - _DenseMossColor: {r: 0.81, g: 0.86, b: 0.67, a: 1}
     - _ExcavationTint: {r: 1, g: 1, b: 1, a: 1}
     - _ForestFloorScatter: {r: 0.2, g: 0.67, b: 0.49, a: 1}
-    - _ForestGrassGroundTint: {r: 1.55, g: 0.94, b: 0.95, a: 1}
+    - _ForestGrassGroundTint: {r: 1.52, g: 0.95, b: 0.89, a: 1}
     - _GrassGroundSingleSample: {r: 132, g: 230, b: 0, a: 0}
-    - _GrassGroundTint: {r: 0.89, g: 1.1, b: 0.93, a: 1}
-    - _GroundDarkGrassColor: {r: 0.154, g: 0.239, b: 0.08, a: 1}
-    - _GroundLightGrassColor: {r: 0.298, g: 0.405, b: 0.151, a: 1}
-    - _GroundMidGrassColor: {r: 0.224, g: 0.324, b: 0.114, a: 1}
+    - _GrassGroundTint: {r: 1.02, g: 0.98, b: 0.87, a: 1}
+    - _GroundDarkGrassColor: {r: 0.177, g: 0.225, b: 0.074, a: 1}
+    - _GroundLightGrassColor: {r: 0.315, g: 0.395, b: 0.142, a: 1}
+    - _GroundMidGrassColor: {r: 0.25, g: 0.313, b: 0.107, a: 1}
     - _IceAverageColor: {r: 0.5710561, g: 0.69929224, b: 0.7222605, a: 1}
-    - _IceColor: {r: 0.84, g: 0.92, b: 1, a: 1}
-    - _LeafLitterColor: {r: 1, g: 1.06, b: 1.11, a: 1}
-    - _LightGrassColor: {r: 0.36, g: 0.43, b: 0.185, a: 1}
-    - _MidGrassColor: {r: 0.27, g: 0.34, b: 0.145, a: 1}
-    - _MixedForestFloorColor: {r: 1, g: 1, b: 1, a: 1}
-    - _MossColor: {r: 0.63, g: 0.7, b: 0.48, a: 1}
-    - _MossFillColor: {r: 0.14, g: 0.17, b: 0.065, a: 1}
+    - _IceColor: {r: 0.84, g: 0.91, b: 0.98, a: 1}
+    - _LeafLitterColor: {r: 0.98, g: 1.11, b: 1.05, a: 1}
+    - _LightGrassColor: {r: 0.363, g: 0.421, b: 0.18, a: 1}
+    - _MidGrassColor: {r: 0.28, g: 0.325, b: 0.136, a: 1}
+    - _MixedForestFloorColor: {r: 1.02, g: 1.04, b: 0.97, a: 1}
+    - _MossColor: {r: 0.62, g: 0.68, b: 0.46, a: 1}
+    - _MossFillColor: {r: 0.135, g: 0.156, b: 0.062, a: 1}
     - _MudColor: {r: 0.41999996, g: 0.31999996, b: 0.21999997, a: 1}
     - _RiverbedColor: {r: 0.34999996, g: 0.29999998, b: 0.23999995, a: 1}
+    - _RockAlbedoTint: {r: 0.93, g: 0.96, b: 1, a: 1}
     - _RockAverageAlbedo: {r: 0.5169397, g: 0.5007887, b: 0.480532, a: 1}
-    - _RockColor: {r: 0.65, g: 0.64, b: 0.62, a: 1}
+    - _RockColor: {r: 0.63, g: 0.635, b: 0.64, a: 1}
     - _RockSideTiling: {r: 0.028, g: 0.046, b: 0, a: 0}
-    - _SandColor: {r: 0.98, g: 0.97, b: 0.96, a: 1}
+    - _SandColor: {r: 0.93, g: 0.94, b: 0.93, a: 1}
     - _SnowColor: {r: 0.92, g: 0.94, b: 0.97999996, a: 1}
-    - _SnowTint: {r: 1, g: 1, b: 1, a: 1}
+    - _SnowTint: {r: 0.96, g: 0.98, b: 1, a: 1}
     - _TerrainHorizonParams: {r: 0, g: 0, b: 0, a: 0}
     - _TerrainHorizonTint: {r: 1, g: 1, b: 1, a: 1}
     - _TerrainHorizonUV: {r: 0, g: 0, b: 0, a: 0}
     - _WashAverageColor: {r: 0.75337344, g: 0.619445, b: 0.48503292, a: 1}
-    - _WashColor: {r: 1, g: 1, b: 1, a: 1}
+    - _WashColor: {r: 0.96, g: 0.96, b: 0.96, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

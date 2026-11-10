@@ -245,7 +245,7 @@ public static class WorldFeaturePlanGenerator
         AddSnowRocks(plan, coord, chunkSize, seed, biomes, surfaces, slopes, rivers, settings, Prepare);
         if(settings.treeDistribution.Enabled)
             new LayeredTreeDistribution(seed,settings,treeHabitatSampler ?? MapTreeHabitat(coord,chunkSize,
-                biomes,surfaces,moisture,temperature,slopes,rivers,sampleHeight,sampleMountainMask,waterLevel,sample),waterLevel).Append(plan,coord,chunkSize);
+                biomes,surfaces,moisture,temperature,slopes,rivers,sampleHeight,sampleMountainMask,waterLevel,sample),waterLevel).Append(plan,coord,chunkSize,keepWoodlandEdge:false);
         else
         {
             AddForestTrees(plan, coord, chunkSize, seed, biomes, surfaces, moisture, temperature, slopes, rivers, settings, PrepareTree);

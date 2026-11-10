@@ -1,0 +1,7 @@
+Source textures generated with the built-in image generation tool.
+
+BarkSource.png
+Photorealistic seamless square orthographic macro scan albedo of mature Eastern White Pine (Pinus strobus) lower trunk bark. Entire image fills edge to edge, physical scale about 1.3m. Dark cool gray-brown, irregular stacked thick elongated scaly plates, narrow deeper vertical fissures, gently lifted flaky gray-brown scales with aged rough relief. A few dusty ash patches. Neutral diffuse cross-polarized lighting, no highlights, no directional shading, no moss blanket, no trunk silhouette or other objects or text.
+
+Botanical reference
+https://research.fs.usda.gov/silvics/eastern-white-pine

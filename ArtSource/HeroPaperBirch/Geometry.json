@@ -1,0 +1,15 @@
+{
+  "leaves": 76472,
+  "leafTriangles": 2447104,
+  "barkTriangles": 257386,
+  "heightMeters": 18.44,
+  "crownSpanXYMeters": [
+    11.46,
+    10.24
+  ],
+  "leafSkyVisibilityMinMeanMax": [
+    0.43,
+    0.621,
+    1.0
+  ]
+}

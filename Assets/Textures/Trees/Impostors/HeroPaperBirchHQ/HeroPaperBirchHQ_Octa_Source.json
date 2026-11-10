@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/HeroPaperBirch.prefab",
+    "prefabGuid": "e6fba4505fdaf8e40a54bfb097c931e9",
+    "dependencyHash": "285309d2e0d9cdc837b524d33c3055f5",
+    "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.2199999988079071
+}

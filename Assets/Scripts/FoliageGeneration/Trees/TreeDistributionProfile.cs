@@ -23,8 +23,10 @@ public sealed class TreeDistributionProfile : ScriptableObject
     public float forestCoreSpacing = 1f;
     [Tooltip("Use beech–oak woodland, sparse meadow trees and cooler conifer stands. Requires the Woodland pilot tree set.")]
     public bool useWoodlandSpeciesMix;
-    [Tooltip("Use a more varied crown mix at woodland edges and in meadow groves.")]
+    [Tooltip("Vary species at woodland edges and in meadow groves, and turn fuller oak and beech boughs toward openings.")]
     public bool variedWoodlandEdges;
+    [Range(0f, 1f), Tooltip("Concentrate some existing young trees and woodland shrubs in gaps on the edge of generated stands. Regenerate to apply.")]
+    public float woodlandEdgeInfill;
     [Min(16), Tooltip("Exceptional per-chunk guard, not a population target. Grassland also respects its existing count guard.")]
     public int maxTreesPerChunk = 64;
 
@@ -46,6 +48,7 @@ public sealed class TreeDistributionProfile : ScriptableObject
             ForestCoreSpacing=forestCoreSpacing>0 ? Safe(forestCoreSpacing,1f,.75f,1f) : 1f,
             UseWoodlandSpeciesMix=useWoodlandSpeciesMix,
             VariedWoodlandEdges=variedWoodlandEdges,
+            WoodlandEdgeInfill=Safe(woodlandEdgeInfill,0f,0f,1f),
             Cohorts=Mathf.Clamp(competitionCohorts,1,3), MaxTrees=Mathf.Clamp(maxTreesPerChunk,16,256)
         };
     }
@@ -62,5 +65,6 @@ public struct TreeDistributionParameters
     public float ForestBackground, ForestStand, MeadowBackground, MeadowGrove, SnowStand;
     public float YoungTreeShare;
     public float ForestCoreSpacing;
+    public float WoodlandEdgeInfill;
     public int Cohorts, MaxTrees;
 }

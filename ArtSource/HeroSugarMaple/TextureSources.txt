@@ -1,0 +1,11 @@
+Sugar maple (Acer saccharum) texture sources, generated with the built-in image generation tool.
+
+LeafSource.png
+Photorealistic game foliage texture source for mature North American sugar maple (Acer saccharum) in summer. Exactly four separate complete specimens arranged one in each quadrant of a square 2 by 2 grid on genuinely transparent alpha. All photographed straight-on and flat from above, main lobe straight up and intact light green narrow petiole straight down, comfortably inside their quadrants. Correct sugar maple identification: five pointed palmate lobes, three broader upper lobes and two conspicuous smaller outward-facing lobes near the base; deep, smoothly rounded U-shaped sinuses dividing all five lobes, mostly smooth margins with occasional large shallow secondary points, no serration or tiny teeth. Broad approximately as wide as long before petiole. Delicate real palmate veins with dense fine reticulation, subtle variation in blade shape and age, muted rich natural leafy green to cooler midsummer green with small tonal variation. Neutral diffuse cross-polarized lighting for albedo, no cast shadows or highlights, no water, autumn color, overlap, twig, text, labels, grid lines, watermark, or border.
+
+BarkSource.png
+Photorealistic square game texture source for the mature lower trunk of North American sugar maple (Acer saccharum). Edge-to-edge straight-on orthographic macro scan of about 1.4 meters of living bark, as seamless as possible. Weathered neutral and slightly warm dark gray-brown with lighter ash gray along curled ridges, long irregular vertical thick bark plates with coarse ridged relief and narrow deep charcoal furrows, occasional patches of compressed nearly smooth gray and a few tiny flat gray lichen flecks. Distinct subtle bark-grain detail, natural irregular branching in cracks, no aligned tiled streaks. Neutral diffuse cross-polarized lighting for albedo, preserve separation of organic shades and fine layered surface. No high-contrast sunlight, shiny highlight, strong cast shadow, brown oak-block pattern, redwood-colored streaks, visible trunk edges, roots, foliage, moss sheet, watermark, text or border.
+
+Botanical references
+https://mdc.mo.gov/discover-nature/field-guide/sugar-maple
+https://landscapeplants.oregonstate.edu/plants/acer-saccharum

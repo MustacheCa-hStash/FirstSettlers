@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/HeroEasternWhitePine.prefab",
+    "prefabGuid": "6f5433bffe07de94e9bf93491d0668c9",
+    "dependencyHash": "2b49864e727f6ffc7d379741d184f97a",
+    "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.2199999988079071
+}

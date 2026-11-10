@@ -6,18 +6,26 @@
 #include "Assets/Shaders/TreeSimpleLitCommon.hlsl"
 TEXTURE2D(_BaseMap);
 SAMPLER(sampler_BaseMap);
+#if defined(_BARK_NORMALMAP)
+    TEXTURE2D(_BumpMap);
+    SAMPLER(sampler_BumpMap);
+#endif
 CBUFFER_START(UnityPerMaterial)
     float4 _BaseMap_ST;
     half4 _BaseColor, _TreeBarkTint, _SnowColor;
     half _Brightness, _ColorVariationStrength, _VerticalGradientStrength;
     half _ColorHeightMin, _ColorHeightMax, _AmbientStrength, _Smoothness, _SpecularStrength;
     half _UseVertexColor, _SnowCoverage;
+    half _BumpScale;
 CBUFFER_END
 float3 _LightDirection, _LightPosition;
 struct SugarMapleBarkAttributes
 {
     float4 positionOS : POSITION;
     float3 normalOS : NORMAL;
+    #if defined(_BARK_NORMALMAP)
+        float4 tangentOS : TANGENT;
+    #endif
     float2 uv : TEXCOORD0;
     half4 color : COLOR;
     UNITY_VERTEX_INPUT_INSTANCE_ID
@@ -32,6 +40,9 @@ struct SugarMapleBarkVaryings
     float4 shadowCoord : TEXCOORD4;
     half fogFactor : TEXCOORD5;
     half3 vertexLighting : TEXCOORD6;
+    #if defined(_BARK_NORMALMAP)
+        half4 tangentWS : TEXCOORD7;
+    #endif
     half4 color : COLOR;
     UNITY_VERTEX_INPUT_INSTANCE_ID
     UNITY_VERTEX_OUTPUT_STEREO
@@ -43,11 +54,17 @@ SugarMapleBarkVaryings SugarMapleBarkVertex(SugarMapleBarkAttributes input)
     UNITY_TRANSFER_INSTANCE_ID(input, output);
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
     output.positionOS = input.positionOS.xyz;
-    output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
+    output.positionWS = ApplyStandingTreeSway(TransformObjectToWorld(input.positionOS.xyz));
     output.positionCS = TransformWorldToHClip(output.positionWS);
     output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+    #if defined(_BARK_NORMALMAP)
+        output.tangentWS = half4(TransformObjectToWorldDir(input.tangentOS.xyz),
+                                 input.tangentOS.w * GetOddNegativeScale());
+    #endif
     output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
-    output.shadowCoord = TransformWorldToShadowCoord(output.positionWS);
+    #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
+        output.shadowCoord = TransformWorldToShadowCoord(output.positionWS);
+    #endif
     output.fogFactor = ComputeFogFactor(output.positionCS.z);
     output.vertexLighting = VertexLighting(output.positionWS, output.normalWS);
     output.color = input.color;
@@ -60,11 +77,24 @@ void SugarMapleBarkFade(SugarMapleBarkVaryings input)
         LODFadeCrossFade(input.positionCS);
     #endif
 }
+half3 SugarMapleBarkNormal(SugarMapleBarkVaryings input)
+{
+    #if defined(_BARK_NORMALMAP)
+        half3 normalTS = UnpackNormalScale(SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, input.uv), _BumpScale);
+        half3 bitangent = input.tangentWS.w * cross(input.normalWS, input.tangentWS.xyz);
+        return NormalizeNormalPerPixel(TransformTangentToWorld(normalTS,
+            half3x3(input.tangentWS.xyz, bitangent, input.normalWS)));
+    #else
+        return NormalizeNormalPerPixel(input.normalWS);
+    #endif
+}
 half4 SugarMapleBarkFragment(SugarMapleBarkVaryings input) : SV_Target
 {
     UNITY_SETUP_INSTANCE_ID(input);
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-    #if defined(LOD_FADE_CROSSFADE)
+    #if defined(_BARK_NORMALMAP)
+        SugarMapleBarkFade(input);
+    #elif defined(LOD_FADE_CROSSFADE)
         LODFadeCrossFade(input.positionCS);
     #endif
     // Preserve the painted base color; it is not a high-contrast crack mask.
@@ -74,11 +104,11 @@ half4 SugarMapleBarkFragment(SugarMapleBarkVaryings input) : SV_Target
     bark *= (1 + variation) * lerp(1 - _VerticalGradientStrength, 1 + _VerticalGradientStrength, height);
     bark *= StandingTreeBarkTint(_TreeBarkTint).rgb;
     bark *= lerp(half3(1,1,1), input.color.rgb, _UseVertexColor);
-    half3 normal = NormalizeNormalPerPixel(input.normalWS);
+    half3 normal = SugarMapleBarkNormal(input);
     bark = FSForestBarkColor(bark);
     bark = lerp(bark, _SnowColor.rgb, saturate(StandingTreeSnow(_SnowCoverage) * smoothstep(.2h,.8h,normal.y)));
     InputData data = InitializeTreeSimpleLitInputData(input.positionWS, normal, input.positionCS,
-        input.shadowCoord, _AmbientStrength);
+        ResolveTreeShadowCoord(input.positionWS, input.shadowCoord), _AmbientStrength);
     data.vertexLighting = input.vertexLighting;
     SurfaceData surface = InitializeTreeSimpleLitSurfaceData(bark, 1, _Smoothness, _SpecularStrength);
     half4 color = ShadeDistantAwareTree(data, surface);
@@ -114,7 +144,7 @@ half4 SugarMapleBarkNormalsFragment(SugarMapleBarkVaryings input) : SV_Target
     UNITY_SETUP_INSTANCE_ID(input);
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
     SugarMapleBarkFade(input);
-    half3 normal = NormalizeNormalPerPixel(input.normalWS);
+    half3 normal = SugarMapleBarkNormal(input);
     #if defined(_GBUFFER_NORMALS_OCT)
         float2 packed = saturate(PackNormalOctQuadEncode(normal) * .5 + .5);
         return half4(PackFloat2To888(packed), 0);

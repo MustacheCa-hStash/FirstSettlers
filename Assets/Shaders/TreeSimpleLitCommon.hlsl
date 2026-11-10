@@ -7,6 +7,16 @@
 #include "Assets/Shaders/LocalFlameLighting.hlsl"
 #include "Assets/Shaders/ForestCanopyLighting.hlsl"
 
+float4 ResolveTreeShadowCoord(float3 positionWS, float4 vertexShadowCoord)
+{
+    #if defined(_MAIN_LIGHT_SHADOWS_CASCADE)
+        // Vertices in different cascades can refer to different tiles of the shadow atlas.
+        return TransformWorldToShadowCoord(positionWS);
+    #else
+        return vertexShadowCoord;
+    #endif
+}
+
 InputData InitializeTreeSimpleLitInputData(
     float3 positionWS,
     half3 normalWS,

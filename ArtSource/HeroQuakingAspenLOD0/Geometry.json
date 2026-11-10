@@ -1,0 +1,11 @@
+{
+  "cards": 876,
+  "leafTriangles": 3504,
+  "barkTriangles": 1374,
+  "atlasResolution": 4096,
+  "skyVisibilityMinMeanMax": [
+    0.43,
+    0.6265,
+    0.9566
+  ]
+}

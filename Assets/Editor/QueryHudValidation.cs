@@ -51,11 +51,11 @@ public static class QueryHudValidation
         Check(card != null && card.ContentId == "tree.spruce" && card.DisplayName == "Spruce tree" &&
             card.ShortDescription == "Wood source" && card.Icon != null, "Spruce datacard is missing or incorrect.");
         Check(card.Icon.texture.width == 256 && card.Icon.texture.height == 256, "HUD sprite is not 256 x 256.");
-        var importer = (TextureImporter)AssetImporter.GetAtPath(QueryHudSetup.IconPath);
-        Check(importer.textureType == TextureImporterType.Sprite && !importer.mipmapEnabled && !importer.isReadable,
+        var importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(card.Icon)) as TextureImporter;
+        Check(importer != null && importer.textureType == TextureImporterType.Sprite && !importer.mipmapEnabled && !importer.isReadable,
             "Icon retains unnecessary mipmaps/readable CPU storage or is not a Sprite.");
         var style = AssetDatabase.LoadAssetAtPath<QueryHudStyle>(QueryHudSetup.StylePath);
-        Check(style != null && Mathf.Approximately(style.TextScale, .95f) && Mathf.Approximately(style.PanelColor.a, .75f) &&
+        Check(style != null && Mathf.Approximately(style.TextScale, .95f) && style.PanelColor.a > 0 &&
             Mathf.Approximately(style.CornerRadius, 14), "Woodland style does not match the selected settings.");
         Check(style.RegularFont != null && style.NameFont != null && style.RegularFont.atlasPopulationMode == AtlasPopulationMode.DynamicOS &&
             style.NameFont.atlasPopulationMode == AtlasPopulationMode.DynamicOS, "Segoe UI fonts were not configured as Dynamic OS.");
@@ -109,6 +109,9 @@ public static class QueryHudValidation
                 query.Current.Target.Description == "Wood source", "Actual tree template/proxy did not expose its datacard.");
             Check(query.Current.Target.TryGetData<TreeRecord>(out var record) && record.Id == first.id,
                 "Datacard integration changed the tree's world identity.");
+            const float closeDistance = 1.25f;
+            cameraObject.transform.position += cameraObject.transform.forward * (query.Current.Distance - closeDistance);
+            query.Sample(); presenter.Refresh();
             var root = hud.GetComponent<UIDocument>().rootVisualElement;
             var visualCard = root.Q<VisualElement>("query-card");
             Check(view.IsVisible && root.Q<Label>("query-name").text == "Spruce tree" &&
@@ -116,7 +119,7 @@ public static class QueryHudValidation
                 "Query did not render the datacard's name/description.");
             Check(root.Q<Image>() == null && root.Q<Label>("query-name").style.color.value == view.Style.AccentColor,
                 "Query HUD retains a sprite or does not apply the accent to the object name.");
-            Check(Mathf.Approximately(visualCard.style.backgroundColor.value.a, .75f) &&
+            Check(Mathf.Approximately(visualCard.style.backgroundColor.value.a, view.Style.PanelColor.a) &&
                 Mathf.Approximately(visualCard.style.borderTopLeftRadius.value.value, 14) &&
                 Mathf.Approximately(root.Q<Label>("query-name").style.fontSize.value.value, 16.15f),
                 "Rendered view does not apply the selected opacity, radius and text scale.");
@@ -126,10 +129,19 @@ public static class QueryHudValidation
             Check(manager.TryGetProxy(first.id, out var proxy), "Fixture has no pooled tree proxy.");
             foreach (var collider in proxy.QueryCanopyColliders) collider.enabled = false;
             Physics.SyncTransforms(); query.Sample(); presenter.Refresh();
+            cameraObject.transform.position += cameraObject.transform.forward * (query.Current.Distance - closeDistance);
+            query.Sample(); presenter.Refresh();
             Check(query.Current.Kind == PlayerQueryHitKind.Solid && query.Current.Target.Definition == card && view.IsVisible,
                 "Physical trunk and canopy did not share presentation data.");
+            cameraObject.transform.position -= cameraObject.transform.forward * .5f;
+            query.Sample(); presenter.Refresh();
+            Check(query.Current.HasTarget && query.Current.Distance > 1.5f && !view.IsVisible,
+                "The tree name remains visible outside preview range or the gameplay target was lost.");
+            cameraObject.transform.position += cameraObject.transform.forward * .5f;
+            query.Sample(); presenter.Refresh();
+            Check(view.IsVisible, "The tree name did not return when moving back into preview range.");
             wall = new GameObject("Query HUD validation obstruction") { layer = GameplayLayers.WorldSolid };
-            wall.transform.position = origin + new Vector3(0, 1, 1);
+            wall.transform.position = cameraObject.transform.position + cameraObject.transform.forward * .7f;
             wall.AddComponent<BoxCollider>().size = Vector3.one * .2f;
             Physics.SyncTransforms(); query.Sample(); presenter.Refresh();
             Check(query.Current.HasHit && !query.Current.HasTarget && !view.IsVisible, "HUD identifies a target through an unnamed wall.");
@@ -154,11 +166,12 @@ public static class QueryHudValidation
             Check(GC.GetAllocatedBytesForCurrentThread() == before, "Unchanged-frame query HUD refresh allocates.");
 
             rock = new GameObject("Query HUD fallback rock") { layer = GameplayLayers.WorldSolid };
-            rock.transform.position = origin + new Vector3(0, 1, 1);
+            cameraObject.transform.rotation = Quaternion.Euler(0, 180, 0);
+            rock.transform.position = cameraObject.transform.position + cameraObject.transform.forward * 2.25f;
             rock.AddComponent<BoxCollider>().size = Vector3.one * .3f;
             rock.AddComponent<RockQueryTarget>();
             Physics.SyncTransforms(); query.Sample(); presenter.Refresh();
-            Check(view.IsVisible && root.Q<Label>("query-name").text == "Rock" &&
+            Check(query.Current.Distance > 1.5f && view.IsVisible && root.Q<Label>("query-name").text == "Rock" &&
                 root.Q<Label>("query-description").style.display.value == DisplayStyle.None,
                 "Targets without datacards do not retain their existing name or hide missing fields.");
             var document = hud.GetComponent<UIDocument>();

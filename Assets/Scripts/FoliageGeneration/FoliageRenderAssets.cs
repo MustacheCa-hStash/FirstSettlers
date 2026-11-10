@@ -386,13 +386,13 @@ public sealed class FoliageRenderAssets
         cloverMeshRadius=0;
         for (int i = 0; i < prefabs.Count; i++)
         {
-            cloverRenderData[i] = ResolveCloverRenderData(prefabs[i], $"clover clump prefab {i}");
+            cloverRenderData[i] = ResolveCloverRenderData(prefabs[i], $"clover clump prefab {i}", cloverSettings.cloverMaterialOverride);
             var mesh=cloverRenderData[i].mesh;
             if(mesh!=null)cloverMeshRadius=Mathf.Max(cloverMeshRadius,mesh.bounds.extents.magnitude+mesh.bounds.center.magnitude);
         }
     }
 
-    private CloverRenderData ResolveCloverRenderData(GameObject prefab, string label)
+    private CloverRenderData ResolveCloverRenderData(GameObject prefab, string label, Material materialOverride = null)
     {
         if (prefab == null)
             return new CloverRenderData(null, null);
@@ -412,8 +412,9 @@ public sealed class FoliageRenderAssets
             return new CloverRenderData(null, null);
         }
 
-        meshRenderer.sharedMaterial.enableInstancing = true;
-        return new CloverRenderData(meshFilter.sharedMesh, meshRenderer.sharedMaterial);
+        var material = materialOverride != null ? materialOverride : meshRenderer.sharedMaterial;
+        material.enableInstancing = true;
+        return new CloverRenderData(meshFilter.sharedMesh, material);
     }
 
     private void ResolveDandelionRenderAssets()

@@ -10,6 +10,10 @@
 
 TEXTURE2D(_BaseMap);
 SAMPLER(sampler_BaseMap);
+#if defined(_LEAF_CARD_SURFACE)
+    TEXTURE2D(_LeafCardSurfaceMap);
+    SAMPLER(sampler_LeafCardSurfaceMap);
+#endif
 // One layout shared by every pass keeps material values and SRP batching consistent.
 CBUFFER_START(UnityPerMaterial)
     float4 _BaseMap_ST;
@@ -20,6 +24,7 @@ CBUFFER_START(UnityPerMaterial)
     half _Cutoff, _AlphaCutoutShadows;
     half _AmbientStrength, _LightWrap, _BacklightingEnabled, _StableBacklighting, _BacklightingStrength, _Smoothness, _SpecularStrength;
     half _UseVertexColor, _SnowCoverage, _AuthoredSummer, _CrownNormalBlend, _CrownTransmission;
+    half _LeafCardNormalStrength, _LeafCardOcclusionStrength;
     float4 _WindDirection;
     half _WindStrength, _WindSpeed, _WindFlutterStrength, _WindFlutterSpeed, _WindGustScale;
     half _WindHeightMin, _WindHeightMax;
@@ -30,6 +35,9 @@ struct OakLeafAttributes
 {
     float4 positionOS : POSITION;
     float3 normalOS : NORMAL;
+    #if defined(_LEAF_CARD_SURFACE)
+        float4 tangentOS : TANGENT;
+    #endif
     float2 uv : TEXCOORD0;
     float2 canopyNormal : TEXCOORD1;
     half4 color : COLOR;
@@ -46,6 +54,9 @@ struct OakLeafVaryings
     half fogFactor : TEXCOORD5;
     half3 vertexLighting : TEXCOORD6;
     half3 canopyNormalWS : TEXCOORD7;
+    #if defined(_LEAF_CARD_SURFACE)
+        half4 tangentWS : TEXCOORD8;
+    #endif
     half4 color : COLOR;
     UNITY_VERTEX_INPUT_INSTANCE_ID
     UNITY_VERTEX_OUTPUT_STEREO
@@ -83,13 +94,20 @@ OakLeafVaryings OakLeafVertex(OakLeafAttributes input)
     UNITY_TRANSFER_INSTANCE_ID(input, output);
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
     output.positionOS = input.positionOS.xyz;
-    output.positionWS = OakLeafWind(TransformObjectToWorld(input.positionOS.xyz), input.positionOS.xyz, input.uv);
+    float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
+    output.positionWS = ApplyStandingTreeSway(OakLeafWind(positionWS, input.positionOS.xyz, input.uv));
     output.positionCS = TransformWorldToHClip(output.positionWS);
     output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+    #if defined(_LEAF_CARD_SURFACE)
+        output.tangentWS = half4(TransformObjectToWorldDir(input.tangentOS.xyz),
+                                 input.tangentOS.w * GetOddNegativeScale());
+    #endif
     if (_CrownNormalBlend > 0)
         output.canopyNormalWS = WoodlandCanopyNormalWS(input.canopyNormal);
     output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
-    output.shadowCoord = TransformWorldToShadowCoord(output.positionWS);
+    #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
+        output.shadowCoord = TransformWorldToShadowCoord(output.positionWS);
+    #endif
     output.fogFactor = ComputeFogFactor(output.positionCS.z);
     output.vertexLighting = VertexLighting(output.positionWS, output.normalWS);
     output.color = input.color;
@@ -145,15 +163,34 @@ half4 OakLeafFragment(OakLeafVaryings input, FRONT_FACE_TYPE facing : FRONT_FACE
     }
     leaf *= lerp(half3(1,1,1), input.color.rgb, _UseVertexColor);
     half3 normal = OakLeafNormal(input, facing);
+    #if defined(_LEAF_CARD_SURFACE)
+        half3 card = SAMPLE_TEXTURE2D(_LeafCardSurfaceMap, sampler_LeafCardSurfaceMap, input.uv).rgb;
+        half2 xy = card.rg * 2.0h - 1.0h;
+        half3 cardNormalTS = half3(xy, sqrt(saturate(1.0h - dot(xy, xy))));
+        half3 geometricNormal = NormalizeNormalPerPixel(input.normalWS);
+        half3 tangent = normalize(input.tangentWS.xyz);
+        half3 bitangent = input.tangentWS.w * cross(geometricNormal, tangent);
+        half3 cardNormal = TransformTangentToWorld(cardNormalTS, half3x3(tangent, bitangent, geometricNormal));
+        cardNormal *= IS_FRONT_VFACE(facing, 1, -1);
+        normal = NormalizeNormalPerPixel(lerp(normal, cardNormal, _LeafCardNormalStrength));
+        half cardVisibility = lerp(1.0h, card.b, _LeafCardOcclusionStrength);
+    #endif
     half snow = StandingTreeSnow(_SnowCoverage) * smoothstep(.05h, .7h, normal.y);
     leaf = FSForestLeafColor(leaf);
     leaf = lerp(leaf, _SnowColor.rgb * detail, saturate(snow));
     InputData data = InitializeTreeSimpleLitInputData(input.positionWS, normal, input.positionCS,
-        input.shadowCoord, _AmbientStrength);
+        ResolveTreeShadowCoord(input.positionWS, input.shadowCoord), _AmbientStrength);
     data.vertexLighting = input.vertexLighting;
     data.bakedGI *= FSForestCrownFill(data.normalWS, 0.0h);
+    #if defined(_BAKED_LEAF_AMBIENT)
+    data.bakedGI *= input.color.a;
+    #endif
     SurfaceData surface = InitializeTreeSimpleLitSurfaceData(leaf, atlas.a, _Smoothness, _SpecularStrength);
     half transmissionStrength = _BacklightingEnabled * _BacklightingStrength * (1 - snow);
+    #if defined(_LEAF_CARD_SURFACE)
+        data.bakedGI *= cardVisibility;
+        transmissionStrength *= lerp(1.0h, cardVisibility, .65h);
+    #endif
     UNITY_BRANCH if (_CrownTransmission > .5h && _FSForestDetailLighting.y > 0.0h)
     {
         float4 shadowCoord = data.shadowCoord;
@@ -163,12 +200,18 @@ half4 OakLeafFragment(OakLeafVaryings input, FRONT_FACE_TYPE facing : FRONT_FACE
         #endif
         Light sun = GetMainLight(shadowCoord);
         half3 crownNormal = NormalizeNormalPerPixel(input.canopyNormalWS);
+        #if defined(_LEAF_CARD_SURFACE)
+            crownNormal = NormalizeNormalPerPixel(lerp(crownNormal, cardNormal, _LeafCardNormalStrength * .5h));
+        #endif
         half transmission = FSForestLeafTransmission(data.viewDirectionWS, crownNormal, sun, FSForestLeafThinness(atlas.rgb));
         surface.emission = surface.albedo * _BacklightingColor.rgb * sun.color * transmission * transmissionStrength;
     }
     else
     {
         half3 transmissionNormal = NormalizeNormalPerPixel(input.normalWS) * IS_FRONT_VFACE(facing, 1, -1);
+        #if defined(_LEAF_CARD_SURFACE)
+            transmissionNormal = NormalizeNormalPerPixel(lerp(transmissionNormal, cardNormal, _LeafCardNormalStrength));
+        #endif
         surface.emission = EvaluateTreeLeafBacklighting(data, surface.albedo, transmissionNormal,
             transmissionStrength, _BacklightingColor.rgb, _StableBacklighting);
     }

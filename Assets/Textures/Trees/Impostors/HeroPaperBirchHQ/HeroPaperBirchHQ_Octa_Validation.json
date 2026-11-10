@@ -1,0 +1,91 @@
+{
+    "configuration": "{\"species\":\"HeroPaperBirch\",\"sourcePrefab\":\"Assets/Prefabs/HeroPaperBirch.prefab\",\"leafPath\":\"Assets/Materials/M_Trees/HeroPaperBirch/Needles.mat\",\"barkPath\":\"Assets/Materials/M_Trees/HeroPaperBirch/Bark.mat\",\"leafTexture\":\"Assets/Textures/Trees/HeroPaperBirch/LeafAlbedo.png\",\"barkTexture\":\"Assets/Textures/Trees/HeroPaperBirch/BarkAlbedo.png\",\"sourceSlot\":\"\",\"variant\":\"BirchAspenTree\",\"shaderName\":\"Hidden/TreeImpostor/OakSemanticCapture\",\"billboardSlots\":[],\"paletteMode\":-1,\"expansion\":0.2199999988079071}",
+    "inputs": [
+        {
+            "path": "Assets/Textures/Trees/HeroPaperBirch/BarkAlbedo.png",
+            "sha256": "45F1D54BE6A84D2558B146F9D89DDFE34B2F06A3F382DF2E6AB04FC92519227D"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroPaperBirch/LeafAlbedo.png",
+            "sha256": "B89B39BB82F5B74E7E81F641C79986D03865F35FC0D7AE05CCBB723F923DAC78"
+        },
+        {
+            "path": "Assets/Shaders/OakLeafTintCutout.shader",
+            "sha256": "98146416CC6C59870F956C122010EAE39A8AD4D4E0F2D45801D57B71F4F8E4ED"
+        },
+        {
+            "path": "Assets/Prefabs/HeroPaperBirch.prefab",
+            "sha256": "6FA8A1EFFCAE5385577AE63493A3D062BF4C116B79E2D8B3C53839EA05D59A83"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroPaperBirch/Needles.mat",
+            "sha256": "BC2D14728BFF590DF8741FCD14652DE173F2723FF0B2D86BBFD945930B251D46"
+        },
+        {
+            "path": "Assets/Shaders/OakBarkUnlit.shader",
+            "sha256": "7EB7A6EC500E34AB35E6A6C85842540D88F14EB9028618D79B778D70CF1FC519"
+        },
+        {
+            "path": "Assets/Textures/Trees/HeroPaperBirch/BarkNormal.png",
+            "sha256": "5F8BE134C015E667686B31C88261E0A7FEA2EA000E640D24352E8F39C3BA78FB"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroPaperBirch/Bark.mat",
+            "sha256": "C1760C8C5D75F6C205F23297C189533879C1058EC5A5D05E3071A674D35C041F"
+        },
+        {
+            "path": "Assets/Models/Trees/HeroPaperBirch.fbx",
+            "sha256": "E0867CC6D93A0C1D99E09A1A4C83D7FB9865258561D0B04D99CE9E96114251C5"
+        },
+        {
+            "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
+            "sha256": "33FABBF2E4CBED11F45B3AB20F0DE71464817982F8C94C4C0E1E3E5114742059"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
+            "sha256": "84B0720B90AAD407CD3C5772FABB6EF3CE108E0232BBC8FDD07B10E7631EE9BD"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAmbientAtlasBakerWindow.cs",
+            "sha256": "D4BC380FD35CCD293B11A6FA75345E545C66FEB3DA58B16E0750DEF105EC1796"
+        },
+        {
+            "path": "Assets/Shaders/TreeHQOctaImpostor.shader",
+            "sha256": "56D1F3E181731F104FC2853B3C0E203E1721CDC3556F0431443431896A50B60C"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroPaperBirchHQ/HeroPaperBirchHQ_Octa_AlbedoCoverage.png",
+            "sha256": "1199A99B54885DE432D9B5374C07B124199A02DEC91E914D579892AF4F216B2B"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroPaperBirchHQ/HeroPaperBirchHQ_Octa_Surface.png",
+            "sha256": "8D86B28F131AFE7EE027F884EC65F886409D9F538EE83B88D73AACC4C0B22D3E"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroPaperBirchHQ/HeroPaperBirchHQ_Octa_Depth.png",
+            "sha256": "520133602C5D3A74F6DAE62DFF75CB81A45A7CB13F15CB72BBBDCB2325CE7C62"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroPaperBirchHQ/HeroPaperBirchHQ_Octa_MaterialId.png",
+            "sha256": "38A70D4AFEFC15A295F5EC42543C52F639A26307E2CCCDBA05AF2D2F23994C2E"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/HeroPaperBirchHQ/HeroPaperBirchHQ_Octa_Ambient.png",
+            "sha256": "5B4759B9044DCD7FC7BA158E4E78CEAE89A3DE5F01AE629B83B4FCAD801960E9"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/HeroPaperBirchHQ/HeroPaperBirchHQ_OctaImpostor_M.mat",
+            "sha256": "0A9748198382D3DE266B7277607E03B1E59E0BD5203A9C93A59278F2E4133AB2"
+        },
+        {
+            "path": "Assets/Models/Trees/HeroPaperBirchHQ_OctaImpostor_Runtime.mesh",
+            "sha256": "FB19E5D8C52A318183797F60228CB77105A566C760C4F80A4FE55FE8138AE16A"
+        },
+        {
+            "path": "Assets/Prefabs/HeroPaperBirchHQ_OctaImpostor_Runtime.prefab",
+            "sha256": "66AB9FA1CCB5F42C1A57AADB5855164D30B80531AD634A0FC36AFCD5910C512B"
+        }
+    ]
+}

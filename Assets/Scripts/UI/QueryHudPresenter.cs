@@ -7,6 +7,8 @@ public sealed class QueryHudPresenter : MonoBehaviour
 {
     [SerializeField] private PlayerQuery query;
     [SerializeField] private QueryHudView view;
+    [SerializeField, Min(0f), Tooltip("Maximum tree label distance from the view ray origin to the trunk or canopy hit.")]
+    private float treePreviewDistance = 1.5f;
     private LocalPlayerInput input;
     public PlayerQuery Query => query;
     public QueryHudView View => view;
@@ -19,11 +21,13 @@ public sealed class QueryHudPresenter : MonoBehaviour
     public void Refresh()
     {
         if (view == null || !view.isActiveAndEnabled) return;
-        if (!isActiveAndEnabled || (input != null && !input.WorldInteractionAllowed) || query == null || !query.isActiveAndEnabled || !query.Current.HasTarget)
+        var hit = query != null ? query.Current : default;
+        if (!isActiveAndEnabled || (input != null && !input.WorldInteractionAllowed) || query == null || !query.isActiveAndEnabled ||
+            !hit.HasTarget || (hit.Target.Source is TreeGameplayProxy && hit.Distance > treePreviewDistance))
         {
             view.Hide();
             return;
         }
-        view.Show(new QueryHudData(query.Current.Target));
+        view.Show(new QueryHudData(hit.Target));
     }
 }

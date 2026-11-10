@@ -1,0 +1,11 @@
+Red maple (Acer rubrum) texture sources, generated with the built-in image generation tool.
+
+LeafSource.png
+Photorealistic game foliage atlas for North American red maple, Acer rubrum in summer. Exactly FOUR separate complete real red maple leaves, isolated one per quadrant in a clean 2×2 square arrangement on genuine transparent alpha, each oriented tip straight up and slender red-wine petiole down, ample transparent clearance from the center lines and borders. Flat face-on orthographic macro scan. Correct Acer rubrum morphology, three prominent angular pointed palmate lobes with narrow V-shaped sinuses, finely and irregularly serrated margins all around, optionally two very small basal lobes on two specimens; central lobe a little longer than the two lateral lobes, narrow triangular tips. Blades nearly as wide as long. Muted natural mid-to-dark leaf greens, some cool variation between specimens, natural vein texture with three veins radiating from the stem and delicate secondary branching, small age variation. Neutral even cross-polarized light, diffuse albedo source, no shadows, glare, intense yellow-green, autumn color, wetness, ornamental Japanese maple, text, grid or watermark. Preserve fine edge teeth. No overlap.
+
+BarkSource.png
+Photorealistic game texture of the outer surface of a mature red maple (Acer rubrum) trunk. One perfectly flat orthographic macro photograph square, approximately 1.1 m by 1.1 m, edge-to-edge seamless-looking bark surface. Cool ashy gray with muted charcoal-gray and restrained weathered gray-brown, a mix of tight smooth gray patches and fine thin elongated flaking plates, narrow irregular shallow vertical furrows and fine cross breaks. Older red maple's long narrow fragmented ridges, gently papery edges, subtle gray lichens and faint lenticels. Real photographic microtexture with diffuse neutral cross-polarized daylight for material albedo. No coarse oak-block bark, massive fissures, white birch stripes, strong direction of lighting, cast shadows, specular glare, moss sheet, foliage, trunk outline, background, text, borders or graphic elements.
+
+Botanical references
+https://www.dnr.state.mn.us/trees/red-maple.html
+https://research.fs.usda.gov/feis/species-reviews/acerub

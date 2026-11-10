@@ -16,7 +16,7 @@ public sealed class LayeredTreeDistribution
     {
         public int X,Z,Cohort,State;
         public uint Priority;
-        public bool Eligible;
+        public bool Eligible, Young, EdgeHabitat;
         public float XZx,XZz,Radius,CompetitionRadius,Scale,SnowCoverage;
         public WorldFeatureVariant Variant, EdgeVariant;
     }
@@ -116,6 +116,8 @@ public sealed class LayeredTreeDistribution
         float matureDensity=site.Biome==BiomeType.Snow ? density : density*(1f-share);
         if(rank>=Mathf.Min(1f,(matureDensity+youngDensity)*area))return candidate;
         bool young=rank>=matureDensity*area;
+        candidate.Young = young;
+        candidate.EdgeHabitat = site.Biome is BiomeType.Forest or BiomeType.Grassland;
         if(young)
         {
             float mix=Roll(Hash(x,z,88012));
@@ -220,6 +222,29 @@ public sealed class LayeredTreeDistribution
         return roll<.60f?WorldFeatureVariant.GrasslandMapleTree:WorldFeatureVariant.GrasslandBirchAspenTree;
     }
     private static bool Earlier(Candidate a,Candidate b)=>a.Priority<b.Priority || a.Priority==b.Priority && (a.Z<b.Z || a.Z==b.Z && a.X<b.X);
+
+    private float CrownYaw(Candidate candidate, WorldFeatureVariant variant)
+    {
+        float roll = Roll(Hash(candidate.X, candidate.Z, 88010));
+        bool oak = variant is WorldFeatureVariant.OakTree or WorldFeatureVariant.GrasslandOakTree;
+        if (!settings.UseWoodlandSpeciesMix || !settings.VariedWoodlandEdges ||
+            (!oak && variant != WorldFeatureVariant.BeechTree)) return roll * 360f;
+
+        float x = candidate.XZx, z = candidate.XZz;
+        float cover = stands.Evaluate(x, z).Forest;
+        if (cover < .24f || cover > .86f) return roll * 360f;
+
+        float offset = 12f / settings.WorldScale;
+        var opening = new Vector2(
+            stands.Evaluate(x - offset, z).Forest - stands.Evaluate(x + offset, z).Forest,
+            stands.Evaluate(x, z - offset).Forest - stands.Evaluate(x, z + offset).Forest);
+        if (opening.sqrMagnitude < .01f) return roll * 360f;
+
+        // These angles describe the fuller lower boughs of the Woodland meshes.
+        float fullerSide = oak ? 112.5f : 90f;
+        return Mathf.Atan2(opening.x, opening.y) * Mathf.Rad2Deg - fullerSide + Mathf.Lerp(-40f, 40f, roll);
+    }
+
     private bool Accepted(Candidate candidate)
     {
         if(!candidate.Eligible)return false;
@@ -249,7 +274,7 @@ public sealed class LayeredTreeDistribution
         }
         candidate.State=1;return true;
     }
-    public void Append(WorldFeaturePlan plan,ChunkCoord coord,int chunkSize)
+    public void Append(WorldFeaturePlan plan,ChunkCoord coord,int chunkSize,bool keepWoodlandEdge = true)
     {
         using var marker=GenerationMarker.Auto();
         Stats=default;
@@ -257,6 +282,9 @@ public sealed class LayeredTreeDistribution
         int firstX=Mathf.FloorToInt(minX/cell),firstZ=Mathf.FloorToInt(minZ/cell);
         int lastX=Mathf.FloorToInt(maxX/cell),lastZ=Mathf.FloorToInt(maxZ/cell);
         int stride=lastX-firstX+1,meadowCount=0;
+        bool infill = settings.WoodlandEdgeInfill > 0 && settings.UseWoodlandSpeciesMix;
+        var young = infill ? new List<(int Index, Candidate Source)>() : null;
+        var crowns = infill ? new List<WoodlandEdgeField.Crown>() : null;
         for(int z=firstZ;z<=lastZ;z++)for(int x=firstX;x<=lastX;x++)
         {
             var candidate=Get(x,z);
@@ -276,12 +304,117 @@ public sealed class LayeredTreeDistribution
             // The edge palette changes the representation. Keep the accepted
             // roots, placement IDs and understory exclusion stable.
             var variant = candidate.EdgeVariant == WorldFeatureVariant.None ? candidate.Variant : candidate.EdgeVariant;
+            if (infill && candidate.EdgeHabitat)
+            {
+                if (candidate.Young)
+                {
+                    if (Roll(Hash(x,z,89131)) < settings.WoodlandEdgeInfill*.78f)
+                        young.Add((plan.Placements.Count,candidate));
+                }
+                else AddCrown(crowns,candidate,variant);
+            }
             plan.Placements.Add(new WorldFeaturePlacement(WorldFeatureType.Tree,variant,lx,lz,
-                Quaternion.Euler(0,Roll(Hash(x,z,88010))*360f,0),Vector3.one*candidate.Scale,candidate.Radius,
+                Quaternion.Euler(0,CrownYaw(candidate,variant),0),Vector3.one*candidate.Scale,candidate.Radius,
                 candidate.Radius*1.6f,snowCoverage:candidate.SnowCoverage,
                 treeId:TreeId.Generated(seed,coord,TreePlacementSource.Stand,(z-firstZ)*stride+x-firstX)));
             Stats.Trees++;if(meadow)meadowCount++;
         }
+        if (infill && (keepWoodlandEdge || young.Count > 0))
+        {
+            Vector2 origin = new Vector2(minX,minZ)*settings.WorldScale;
+            float size = chunkSize*settings.WorldScale;
+            AddNeighborCrowns(crowns,origin,size);
+            if (crowns.Count >= 2)
+            {
+                var edge = new WoodlandEdgeField(crowns,seed,settings.WoodlandEdgeInfill);
+                foreach (var (index,source) in young)
+                    MoveYoungTree(plan,index,source,edge,origin,size);
+                if (keepWoodlandEdge) plan.WoodlandEdge = edge;
+            }
+        }
         plan.TreeDistributionStats=Stats;
+    }
+
+    private void AddCrown(List<WoodlandEdgeField.Crown> crowns,Candidate candidate,WorldFeatureVariant variant)
+    {
+        var dimensions = features.GetWoodlandCrown(variant)*candidate.Scale;
+        crowns.Add(new WoodlandEdgeField.Crown(new Vector2(candidate.XZx,candidate.XZz)*settings.WorldScale,
+            Mathf.Clamp(dimensions.x*.85f,1.5f,WoodlandEdgeField.MaxCrownRadius), dimensions.y));
+    }
+
+    private void AddNeighborCrowns(List<WoodlandEdgeField.Crown> crowns,Vector2 origin,float size)
+    {
+        const float halo = WoodlandEdgeField.Neighborhood + WoodlandEdgeField.MaxCrownRadius;
+        float share = settings.YoungTreeShare;
+        float forestUpper = (settings.ForestBackground+settings.ForestStand)*(1f-share) +
+            (settings.ForestBackground+settings.ForestStand*.33f)*share;
+        float area = settings.CandidateCell*settings.CandidateCell/10000f;
+        float upper = Mathf.Max(forestUpper,Mathf.Max(settings.MeadowBackground+settings.MeadowGrove,settings.SnowStand))*area;
+        float spacing = cell * settings.WorldScale;
+        int firstX = Mathf.FloorToInt((origin.x-halo)/spacing), lastX = Mathf.FloorToInt((origin.x+size+halo)/spacing);
+        int firstZ = Mathf.FloorToInt((origin.y-halo)/spacing), lastZ = Mathf.FloorToInt((origin.y+size+halo)/spacing);
+        for (int z=firstZ; z<=lastZ; z++)
+            for (int x=firstX; x<=lastX; x++)
+            {
+                if (Roll(Hash(x,z,88005)) >= upper) continue;
+                float px = (x+.1f+.8f*Roll(Hash(x,z,88001)))*spacing - origin.x;
+                float pz = (z+.1f+.8f*Roll(Hash(x,z,88002)))*spacing - origin.y;
+                if (px>=0 && pz>=0 && px<size && pz<size) continue;
+                float dx = Mathf.Max(0f,Mathf.Max(-px,px-size)), dz = Mathf.Max(0f,Mathf.Max(-pz,pz-size));
+                if (dx*dx+dz*dz >= halo*halo) continue;
+                var candidate = Get(x,z);
+                if (candidate.Young || !candidate.EdgeHabitat || !Accepted(candidate)) continue;
+                var variant = candidate.EdgeVariant == WorldFeatureVariant.None ? candidate.Variant : candidate.EdgeVariant;
+                AddCrown(crowns,candidate,variant);
+            }
+    }
+
+    private void MoveYoungTree(WorldFeaturePlan plan,int index,Candidate source,WoodlandEdgeField edge,Vector2 origin,float size)
+    {
+        var placement = plan.Placements[index];
+        var original = new Vector2(placement.sampleX,placement.sampleZ)*settings.WorldScale;
+        float bestScore = Mathf.Max(.13f,edge.Gap(origin+original)+.065f);
+        Vector2 best = original;
+        TreeHabitatSample bestHabitat = default;
+        float angle = Roll(Hash(source.X,source.Z,89132))*Mathf.PI*2f;
+        // Finite, deterministic proposals. Keep the root in its original chunk
+        // and leave enough room at seams for unshifted trees on either side.
+        for (int i=0; i<24; i++)
+        {
+            float reach = Mathf.Lerp(3f,16f,Mathf.Sqrt((i+.5f)/24f));
+            float heading = angle+i*2.399963f;
+            var point = original + new Vector2(Mathf.Cos(heading),Mathf.Sin(heading))*reach;
+            if (point.x < 3f || point.y < 3f || point.x >= size-3f || point.y >= size-3f) continue;
+            float score = edge.Gap(origin+point);
+            if (score <= bestScore) continue;
+            bool blocked = false;
+            for (int j=0; j<plan.Placements.Count; j++)
+            {
+                if (j==index) continue;
+                var other = plan.Placements[j];
+                var delta = point-new Vector2(other.sampleX,other.sampleZ)*settings.WorldScale;
+                float separation = other.featureType==WorldFeatureType.Tree ? 3f : other.exclusionRadius*settings.WorldScale + 1.2f;
+                if (delta.sqrMagnitude < separation*separation) { blocked=true; break; }
+            }
+            if (blocked) continue;
+            var world = (origin+point)/settings.WorldScale;
+            var site = habitat(world.x,world.y);
+            Stats.HabitatQueries++;
+            if (site.Surface!=SurfaceType.Grass || site.Height<=water || site.River>=.45f || site.Slope>=26f ||
+                site.Biome is not (BiomeType.Forest or BiomeType.Grassland)) continue;
+            bestScore = score;
+            best = point;
+            bestHabitat = site;
+        }
+        if (best==original) return;
+        float mix = Roll(Hash(source.X,source.Z,89133));
+        placement.variant = mix < .68f ? WorldFeatureVariant.BeechTree :
+            mix < .82f && bestHabitat.Moisture>.48f ? WorldFeatureVariant.BirchAspenTree :
+            bestHabitat.Moisture>.57f ? WorldFeatureVariant.SugarMapleTree : WorldFeatureVariant.MapleTree;
+        float top = features.GetWoodlandCrown(placement.variant).z;
+        placement.sampleX = best.x/settings.WorldScale;
+        placement.sampleZ = best.y/settings.WorldScale;
+        placement.scale = Vector3.one*(Mathf.Lerp(4f,7f,Roll(Hash(source.X,source.Z,89134)))/top);
+        plan.Placements[index] = placement;
     }
 }

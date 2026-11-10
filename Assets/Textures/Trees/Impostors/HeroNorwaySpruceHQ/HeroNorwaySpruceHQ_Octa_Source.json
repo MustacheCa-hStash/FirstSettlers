@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/HeroNorwaySpruceLOD0.prefab",
+    "prefabGuid": "08ed61167aa4efd419e88248e307a6ca",
+    "dependencyHash": "9598d4e715953f2344a1135483ddda45",
+    "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 128,
+    "ambientTileResolution": 128,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.05999999865889549
+}

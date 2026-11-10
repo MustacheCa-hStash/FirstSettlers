@@ -1,0 +1,10 @@
+Source textures generated with the built-in image generation tool.
+
+BarkSource.png
+Photorealistic seamless square macro scan albedo for mature North American paper birch (Betula papyrifera). Orthographic flat bark filling the entire image, roughly 1.1m physical width. Ivory and off-white paper with horizontal narrow black/dark gray lenticels irregularly spaced, a few charcoal knots and weathered triangular scars, papery peeling along horizontal strips, subtle tan translucent exposed inner bark under curls. Fine real fiber grain. Broad calm white areas, 10-15% dark accents. Neutral diffuse cross-polarized lighting, no deep cast shadows, no highlight, no perspective, no trunk silhouette, no lichen blanket, no text.
+
+LeafSource.png
+Photorealistic texture atlas for North American Paper Birch (Betula papyrifera) in summer. Exactly four intact individual leaf specimens in a 2x2 grid on genuinely transparent alpha, each centered in its quadrant with generous empty gutters. Full overhead straight-on flattened view, tip up and full slender short petiole down. Blades ovate to triangular-ovate, distinctly long pointed tips, rounded broad base, sharply double-serrated fine margins, fine straight pinnate veins, natural midsummer muted mid-green with modest variability. Neutral diffuse cross-polarized capture for albedo, thin real paper birch blade, no shadows, reflections, overlap, labels, border, or text.
+
+Botanical reference
+https://research.fs.usda.gov/feis/species-reviews/betpap

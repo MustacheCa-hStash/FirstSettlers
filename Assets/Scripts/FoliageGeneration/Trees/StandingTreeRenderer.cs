@@ -19,7 +19,7 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
         public int Count;
         public readonly Matrix4x4[] Matrices = new Matrix4x4[Capacity];
         public readonly Vector4[] Leaves = new Vector4[Capacity], Bark = new Vector4[Capacity],
-            Appearance = new Vector4[Capacity], Fade = new Vector4[Capacity];
+            Appearance = new Vector4[Capacity], Fade = new Vector4[Capacity], Roots = new Vector4[Capacity];
         public readonly MaterialPropertyBlock Properties = new MaterialPropertyBlock();
     }
     private struct Part { public Batch Batch; public Matrix4x4 Local; }
@@ -164,6 +164,8 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
                         meshes.Add(source, mesh);
                     }
                     Bounds transformed = TransformBounds(mesh.bounds, local);
+                    float swayPadding = Mathf.Max(Mathf.Abs(transformed.min.y), Mathf.Abs(transformed.max.y)) * TreeSettings.MaxTreeSway;
+                    transformed.Expand(new Vector3(swayPadding * 2f, 0f, swayPadding * 2f));
                     if (!bounded) { definition.Bounds = transformed; bounded = true; }
                     else definition.Bounds.Encapsulate(transformed);
                     var shared = mr.sharedMaterials;
@@ -402,6 +404,7 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
             if (b.Count == 0 && !touched.Contains(b)) touched.Add(b);
             int index = b.Count++;
             b.Matrices[index] = matrix * part.Local;
+            b.Roots[index] = matrix.GetColumn(3);
             b.Leaves[index] = (Color)tree.leafTint;
             b.Bark[index] = (Color)tree.barkTint;
             b.Appearance[index] = new Vector4(tree.snowCoverage, alphaShadows ? 1f : 0f, 0f, 0f);
@@ -420,6 +423,7 @@ public sealed class StandingTreeRenderer : IDisposable, LocalFlameGeometry.IProv
         b.Properties.SetVectorArray("_StandingTreeBark", b.Bark);
         b.Properties.SetVectorArray("_StandingTreeAppearance", b.Appearance);
         b.Properties.SetVectorArray("_StandingTreeFade", b.Fade);
+        b.Properties.SetVectorArray("_StandingTreeRoot", b.Roots);
         Graphics.DrawMeshInstanced(b.Mesh, b.Submesh, b.Material, b.Matrices, b.Count, b.Properties,
             settings.castTreeShadows ? ShadowCastingMode.On : ShadowCastingMode.Off,
             settings.receiveTreeShadows && b.Trunk, 0, camera, LightProbeUsage.Off);

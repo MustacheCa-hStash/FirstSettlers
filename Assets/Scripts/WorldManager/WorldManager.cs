@@ -125,6 +125,9 @@ public class WorldManager : MonoBehaviour
     private static readonly int TreeSeasonAutumnId = Shader.PropertyToID("_TreeSeasonSimulationAutumnAmount");
     private static WorldManager treeSeasonOwner;
     private float appliedTreeAutumnAmount = -1f;
+    private static readonly int TreeSwayId = Shader.PropertyToID("_FSTreeSway");
+    private static WorldManager treeSwayOwner;
+    private float appliedTreeSway;
     public Transform Viewer => viewer;
     public float GlobalWaterHeight => globalWaterY;
     public TreeRegistry Trees => chunkManager?.Trees;
@@ -196,8 +199,26 @@ public class WorldManager : MonoBehaviour
         Shader.SetGlobalFloat(TreeSeasonAutumnId, 0f);
     }
 
-    void OnEnable() { ApplyTreeSeasonSimulation(); }
-    void OnDisable() { ReleaseTreeSeasonSimulation(); ReleaseForestLighting(); }
+    void OnEnable() { ApplyTreeSeasonSimulation(); ApplyTreeSway(); }
+    void OnDisable()
+    {
+        ReleaseTreeSeasonSimulation();
+        ReleaseForestLighting();
+        if (treeSwayOwner == this)
+        {
+            treeSwayOwner = null;
+            Shader.SetGlobalFloat(TreeSwayId, 0f);
+        }
+    }
+
+    private void ApplyTreeSway()
+    {
+        float sway = treeSettings?.TreeSway ?? 0f;
+        if (treeSwayOwner == this && sway == appliedTreeSway) return;
+        treeSwayOwner = this;
+        appliedTreeSway = sway;
+        Shader.SetGlobalFloat(TreeSwayId, sway);
+    }
 
     internal static bool TryGetGroundContactSettings(Camera camera, out Vector4 settings)
     {
@@ -448,6 +469,7 @@ public class WorldManager : MonoBehaviour
         using (UpdateMarker.Auto())
         {
         ApplyTreeSeasonSimulation();
+        ApplyTreeSway();
         chunkManager.UpdateActiveChunks();
         ApplyForestLighting();
         TerrainGenerationProfiler.LogSummaryIfDue(

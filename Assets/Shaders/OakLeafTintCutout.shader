@@ -19,6 +19,11 @@ Shader "Custom/OakLeafSimpleLitCutout"
         _Cutoff("Alpha Clip Threshold", Range(0, 1)) = 0.5
         [Toggle] _AlphaCutoutShadows("Alpha Cutout Shadows", Float) = 1
         _AmbientStrength("Ambient Floor", Range(0, 1)) = 0.30
+        [Toggle(_BAKED_LEAF_AMBIENT)] _BakedLeafAmbient("Baked Leaf Sky Visibility (Vertex Alpha)", Float) = 0
+        [Toggle(_LEAF_CARD_SURFACE)] _LeafCardSurface("Use Baked Leaf Card Surface", Float) = 0
+        [NoScaleOffset] _LeafCardSurfaceMap("Leaf Card Surface (RG Normal, B Visibility)", 2D) = "white" {}
+        _LeafCardNormalStrength("Leaf Card Normal Strength", Range(0, 1)) = 0.75
+        _LeafCardOcclusionStrength("Leaf Card Occlusion Strength", Range(0, 1)) = 1
         _LightWrap("Leaf Light Softness", Range(0, 1)) = 0.55
         _CrownNormalBlend("Canopy Normal Blend", Range(0, 1)) = 0
         [ToggleUI] _BacklightingEnabled("Leaf Backlighting", Float) = 1
@@ -60,6 +65,8 @@ Shader "Custom/OakLeafSimpleLitCutout"
             #pragma target 4.5
             #pragma vertex OakLeafVertex
             #pragma fragment OakLeafFragment
+            #pragma shader_feature_local_fragment _BAKED_LEAF_AMBIENT
+            #pragma shader_feature_local _LEAF_CARD_SURFACE
             #pragma multi_compile_instancing
             #pragma instancing_options procedural:SetupStandingTree
             #pragma require compute : PROCEDURAL_INSTANCING_ON

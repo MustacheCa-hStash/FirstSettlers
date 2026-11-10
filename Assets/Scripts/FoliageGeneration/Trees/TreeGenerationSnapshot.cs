@@ -21,6 +21,8 @@ public static class TreeGenerationSnapshot
         foreach (var species in TreeSpeciesCatalog.All) capacity = Mathf.Max(capacity, (int)species.Variant + 1);
         var radiusRanges = new Vector2[capacity];
         var scaleRanges = new Vector2[radiusRanges.Length];
+        if (settings.treeDistribution.WoodlandEdgeInfill > 0)
+            settings.woodlandCrownProfiles = new Vector3[capacity];
         foreach (var species in TreeSpeciesCatalog.All)
         {
             var variant = species.Variant;
@@ -47,6 +49,8 @@ public static class TreeGenerationSnapshot
                 range = meters / settings.treeDistribution.WorldScale;
             }
             radiusRanges[(int)variant] = range;
+            if (settings.woodlandCrownProfiles != null)
+                settings.woodlandCrownProfiles[(int)variant] = MeasureCrown(species.NearPrefab(treeSettings));
         }
         settings.treeExclusionRadiusRanges = radiusRanges;
         settings.treeUniformScaleRanges = scaleRanges;
@@ -73,5 +77,27 @@ public static class TreeGenerationSnapshot
         settings.snowLargeRockUniformScaleRange = treeSettings.snowLargeRockUniformScaleRange;
 
         return settings;
+    }
+
+    private static Vector3 MeasureCrown(GameObject prefab)
+    {
+        if (prefab == null) return default;
+        bool found = false;
+        Bounds crown = default;
+        foreach (var renderer in prefab.GetComponentsInChildren<MeshRenderer>())
+        {
+            if (renderer.name != "Foliage" || !renderer.TryGetComponent<MeshFilter>(out var filter) ||
+                filter.sharedMesh == null) continue;
+            var local = filter.sharedMesh.bounds;
+            var toRoot = prefab.transform.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+            for (int corner = 0; corner < 8; corner++)
+            {
+                var sign = new Vector3((corner&1)==0 ? -1 : 1, (corner&2)==0 ? -1 : 1, (corner&4)==0 ? -1 : 1);
+                var point = toRoot.MultiplyPoint3x4(local.center + Vector3.Scale(local.extents, sign));
+                if (found) crown.Encapsulate(point);
+                else { crown = new Bounds(point, Vector3.zero); found = true; }
+            }
+        }
+        return found ? new Vector3(Mathf.Max(crown.extents.x, crown.extents.z), Mathf.Max(0f, crown.min.y), crown.max.y) : default;
     }
 }
