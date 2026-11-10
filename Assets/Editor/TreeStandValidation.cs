@@ -47,9 +47,90 @@ public static class TreeStandValidation
             ValidateRegion(settings,biome);
         ValidatePipeline(settings);
         ValidateEcotone(settings);
+        ValidatePackedWoodland(authored);
         ValidateHabitatGates(settings);
         ValidateWorldSampler(settings);
         Debug.Log("TREE_STANDS_PASS: authored radii, world-space stands, negative coordinates, exact ownership, cross-chunk spacing, order independence, dominant palettes, scale independence, density contrast, full/sparse/worker agreement and water/biome gates.");
+    }
+    private static void ValidatePackedWoodland(TreeSettings authored)
+    {
+        authored.distributionProfile = AssetDatabase.LoadAssetAtPath<TreeDistributionProfile>(
+            "Assets/ScriptableObjects/ForestVarietyDistributionDense.asset");
+        Check(authored.distributionProfile != null, "Packed pilot profile missing.");
+        var settings = TreeGenerationSnapshot.Create(authored, .3f);
+        Check(settings.treeDistribution.PackedWoodland, "Packed pilot profile is disabled.");
+        var withoutInfill = settings;
+        withoutInfill.treeDistribution.WoodlandEdgeInfill = 0f;
+        var previous = settings;
+        previous.treeDistribution.PackedWoodland = false;
+        previous.treeDistribution.ForestBackground = 9f;
+        previous.treeDistribution.ForestStand = 146f;
+        previous.treeDistribution.YoungTreeShare = .17f;
+        previous.treeDistribution.ForestCoreSpacing = .78f;
+        previous.treeDistribution.WoodlandEdgeInfill = .85f;
+        previous.treeDistribution.MaxTrees = 64;
+        TreeHabitatSample Sample(float x, float z) =>
+            Flat(x < 0 ? BiomeType.Forest : BiomeType.Grassland);
+        WorldFeaturePlan Generate(ChunkCoord coord, WorldFeatureGenerationSettings profile, bool keepEdge)
+        {
+            var plan = new WorldFeaturePlan(3, 3);
+            new LayeredTreeDistribution(Seed, profile, Sample, .24f).Append(plan, coord, Size, keepEdge);
+            return plan;
+        }
+
+        var trees = new List<(Vector2 Position, float Radius)>();
+        int edgeTrees = 0, meadowEdgeTrees = 0, forestTrees = 0, previousForestTrees = 0;
+        float shortestEdge = float.PositiveInfinity, tallestEdge = 0f;
+        var edgeForms = new HashSet<WorldFeatureVariant>();
+        for (int z = -4; z < 4; z++)
+        for (int x = -2; x < 2; x++)
+        {
+            var coord = new ChunkCoord(x, z);
+            var packed = Generate(coord, settings, true);
+            var sparse = Generate(coord, settings, false);
+            var original = Generate(coord, withoutInfill, false);
+            if (x < 0) previousForestTrees += Generate(coord, previous, false).Placements.Count;
+            Check(packed.Placements.Count == sparse.Placements.Count, "Packed edge count differs in sparse generation.");
+            for (int i = 0; i < packed.Placements.Count; i++)
+            {
+                var tree = packed.Placements[i];
+                var distant = sparse.Placements[i];
+                Check(tree.treeId.Equals(distant.treeId) &&
+                    tree.sampleX == distant.sampleX && tree.sampleZ == distant.sampleZ &&
+                    tree.variant == distant.variant && tree.scale == distant.scale,
+                    "Packed infill disagrees between near and sparse tree generation.");
+                if (tree.treeId.Source == TreePlacementSource.WoodlandEdge)
+                {
+                    edgeTrees++;
+                    if (x >= 0) meadowEdgeTrees++;
+                    float height = settings.GetWoodlandCrown(tree.variant).z * tree.scale.x;
+                    Check(height >= 2.99f && height <= 13.01f, "Edge tree missed the intended height range.");
+                    shortestEdge = Mathf.Min(shortestEdge, height);
+                    tallestEdge = Mathf.Max(tallestEdge, height);
+                    edgeForms.Add(tree.variant);
+                }
+                else
+                {
+                    var unmoved = original.Placements[i];
+                    Check(tree.treeId == unmoved.treeId && tree.sampleX == unmoved.sampleX &&
+                        tree.sampleZ == unmoved.sampleZ, "Edge infill moved a stand tree.");
+                }
+                if (x < 0) forestTrees++;
+                trees.Add((new Vector2(x * Size + tree.sampleX, z * Size + tree.sampleZ), tree.exclusionRadius));
+            }
+        }
+        Check(meadowEdgeTrees > 0, "The packed fixture did not add dedicated meadow-side edge trees.");
+        Check(shortestEdge < 4f && tallestEdge > 9f && edgeForms.Count >= 4 &&
+            edgeForms.Contains(WorldFeatureVariant.WoodlandEdgeBeech), "The edge lost its height or form variation.");
+        Check(forestTrees > previousForestTrees, "The packed fixture did not increase forest density.");
+        for (int i = 0; i < trees.Count; i++)
+        for (int j = 0; j < i; j++)
+        {
+            float separation = trees[i].Radius + trees[j].Radius;
+            Check((trees[i].Position - trees[j].Position).sqrMagnitude + .01f >= separation * separation,
+                "Packed woodland exclusions overlap within or across chunks.");
+        }
+        Debug.Log($"PACKED_WOODLAND_PASS: {previousForestTrees} -> {forestTrees} forest-side trees, {edgeTrees} dedicated edge trees ({meadowEdgeTrees} on the meadow side); spacing and near/sparse parity verified.");
     }
     private static void ValidateRegion(WorldFeatureGenerationSettings settings,BiomeType biome)
     {

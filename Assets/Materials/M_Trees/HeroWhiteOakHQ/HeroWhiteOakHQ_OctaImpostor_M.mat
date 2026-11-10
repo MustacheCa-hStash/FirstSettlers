@@ -80,7 +80,7 @@ Material:
     - _WindStrength: 0
     m_Colors:
     - _BarkColorMatch: {r: 1.322, g: 1.6174, b: 1.5152, a: 0}
-    - _FoliageColorMatch: {r: 0.931, g: 1.195, b: 1.379, a: 0.21}
+    - _FoliageColorMatch: {r: 0.86, g: 0.91, b: 1.05, a: 0.21}
     - _AutumnCrimsonColor: {r: 0.47999996, g: 0.025, b: 0.04, a: 1}
     - _AutumnOrangeColor: {r: 1, g: 0.24999997, b: 0.054999977, a: 1}
     - _AutumnRedColor: {r: 0.88, g: 0.059999965, b: 0.035, a: 1}

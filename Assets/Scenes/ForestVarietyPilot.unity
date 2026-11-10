@@ -1415,15 +1415,15 @@ MonoBehaviour:
     woodlandKind: 4
     gpuIndirectRendering: 1
     scatterCompactShader: {fileID: 0}
-    prefab: {fileID: 4166103676924304147, guid: fef2123a5784a514497fb9665d9b652b, type: 3}
-    distantPrefab: {fileID: 4934573429186619434, guid: 5275d42ff9387f44485b89c04019da21, type: 3}
+    prefab: {fileID: 1806557501824917914, guid: 90aa8053ea3ff3d48875bfa18392c1f6, type: 3}
+    distantPrefab: {fileID: 8950614227059338847, guid: 2891b0a6deb9da04a833ffdaf9abc202, type: 3}
     matchGrassRenderDistance: 0
     grassRenderDistanceMultiplier: 0.8
     renderDistance: 83
     fadeWidth: 8
     prewarmDistance: 8
-    cellSize: 2.7
-    density: 0.68
+    cellSize: 2
+    density: 0.95
     placementMultiplier: 1
     useDistanceDensity: 0
     densityRadius3: 1
@@ -1433,7 +1433,7 @@ MonoBehaviour:
     lodStart: 23
     lodEnd: 39
     maxSlope: 32
-    scaleRange: {x: 0.7, y: 1.36}
+    scaleRange: {x: 0.65, y: 1.45}
     seedOffset: 49300
     candidateBudgetPerFrame: 256
     generationBudgetMs: 0.35
@@ -1489,6 +1489,7 @@ MonoBehaviour:
     sugarMapleTreePrefab: {fileID: 3637633189347396525, guid: ab0ae1414e8dafa49b7fb259a044e4aa, type: 3}
     birchAspenTreePrefab: {fileID: 3623795385513349218, guid: abfee49c0afd3974082cdf5793f89b2a, type: 3}
     beechTreePrefab: {fileID: 6400800452624308651, guid: 36f11753edabe304682a6d7923cf8f04, type: 3}
+    woodlandEdgeBeechPrefab: {fileID: 8219077581130945549, guid: a910abb28a5fd1c4ebd41ff84969e872, type: 3}
     spruceTreePrefab: {fileID: 8972395177912114967, guid: 08ed61167aa4efd419e88248e307a6ca, type: 3}
     whitePineTreePrefab: {fileID: 4082799300535079883, guid: 288c35ece6bd16a48be0018e5494e9fd, type: 3}
     oakTreePrefab: {fileID: 7605440420851175572, guid: bb833ffada0c3244e880020782271c9e, type: 3}
@@ -1829,7 +1830,7 @@ Transform:
   m_GameObject: {fileID: 1578603178}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.92387956, z: 0, w: -0.38268346}
-  m_LocalPosition: {x: 0, y: 300, z: 0}
+  m_LocalPosition: {x: 791, y: 300, z: 1201}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

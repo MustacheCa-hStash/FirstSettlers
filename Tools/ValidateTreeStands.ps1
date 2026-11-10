@@ -6,6 +6,7 @@ $standProject=& "$standRoot/Tools/ValidateRocks.ps1" -PrepareOnly -Exclusions
 New-Item -ItemType Directory -Path "$standProject/Assets/Resources/Foliage","$standProject/Assets/ScriptableObjects" -Force | Out-Null
 Copy-Item -LiteralPath "$standRoot/Assets/Resources/Foliage/TreeDistribution.asset","$standRoot/Assets/Resources/Foliage/TreeDistribution.asset.meta" -Destination "$standProject/Assets/Resources/Foliage" -Force
 Copy-Item -LiteralPath "$standRoot/Assets/ScriptableObjects/WorldObjects" -Destination "$standProject/Assets/ScriptableObjects" -Recurse -Force
+Copy-Item -LiteralPath "$standRoot/Assets/ScriptableObjects/ForestVarietyDistributionDense.asset","$standRoot/Assets/ScriptableObjects/ForestVarietyDistributionDense.asset.meta" -Destination "$standProject/Assets/ScriptableObjects" -Force
 Copy-Item -LiteralPath "$standRoot/Assets/Editor/TreeStandValidation.cs","$standRoot/Assets/Editor/TreeStandValidation.cs.meta" -Destination "$standProject/Assets/Editor" -Force
 foreach($standValidator in 'TreeRegistryValidation','DistantTreeValidation','TreeGameplayValidation'){
     Copy-Item -LiteralPath "$standRoot/Assets/Editor/$standValidator.cs","$standRoot/Assets/Editor/$standValidator.cs.meta" -Destination "$standProject/Assets/Editor" -Force

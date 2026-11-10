@@ -95,6 +95,7 @@ public static class ForestVarietyWorldStudy
     public static void BaselineBatch() => StartCapture("baseline");
     public static void FormsBatch() => StartCapture("forms");
     public static void FullerBatch() => StartCapture("fuller");
+    public static void PackedBatch() => StartCapture("packed");
 
     static void StartCapture(string mode)
     {

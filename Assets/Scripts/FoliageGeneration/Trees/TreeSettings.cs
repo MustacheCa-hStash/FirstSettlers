@@ -24,6 +24,7 @@ public class TreeSettings
     public GameObject sugarMapleTreePrefab;
     public GameObject birchAspenTreePrefab;
     public GameObject beechTreePrefab;
+    public GameObject woodlandEdgeBeechPrefab;
     public GameObject spruceTreePrefab;
     public GameObject whitePineTreePrefab;
     public GameObject oakTreePrefab;

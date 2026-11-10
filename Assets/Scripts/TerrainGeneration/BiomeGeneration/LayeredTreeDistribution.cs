@@ -11,6 +11,8 @@ public struct TreeDistributionStats
 /// <summary>World-lattice candidates and finite priority cohorts: deterministic without loaded neighbours or recursive chunk generation.</summary>
 public sealed class LayeredTreeDistribution
 {
+    private const float PackedMatureRadius = 3.8f;
+    private const float PackedYoungRadius = 1.25f;
     private static readonly ProfilerMarker GenerationMarker=new("FS.Trees.GenerateStands");
     private sealed class Candidate
     {
@@ -50,7 +52,7 @@ public sealed class LayeredTreeDistribution
         float rank=Roll(Hash(x,z,88005)),area=settings.CandidateCell*settings.CandidateCell/10000f;
         float share=settings.YoungTreeShare;
         float forestMature=settings.ForestBackground+settings.ForestStand*stand.Forest;
-        float forestYoung=(settings.ForestBackground+settings.ForestStand*.33f)*share;
+        float forestYoung=ForestYoungDensity;
         float upper=Mathf.Max(forestMature*(1f-share)+forestYoung,
             Mathf.Max(settings.MeadowBackground+settings.MeadowGrove,settings.SnowStand));
         if(rank>=Mathf.Min(1f,upper*area))return candidate; // No erosion/climate sample for most lattice cells.
@@ -82,8 +84,9 @@ public sealed class LayeredTreeDistribution
             {
                 if(site.River>=.64f)return candidate;
                 float riverWeight=1f-Mathf.SmoothStep(0f,1f,Mathf.InverseLerp(.52f,.64f,site.River));
-                density=forestMature*(1f-stand.Clearing)*slope*riverWeight;
-                youngDensity=forestYoung*(1f-stand.Clearing)*slope*riverWeight;
+                float clearing = settings.PackedWoodland && !taiga ? 1f : 1f-stand.Clearing;
+                density=forestMature*clearing*slope*riverWeight;
+                youngDensity=forestYoung*clearing*slope*riverWeight;
                 float speciesRoll=Roll(Hash(x,z,88007));
                 candidate.Variant=settings.UseWoodlandSpeciesMix ? WoodlandForest(site,stand,speciesRoll,0f) :
                     taiga?WorldFeatureVariant.SpruceTree:ForestSpecies(stand.Palette,speciesRoll);
@@ -94,7 +97,7 @@ public sealed class LayeredTreeDistribution
                 {
                     float edge = Mathf.Max(1f-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.54f,.94f,forest)),
                         .65f*(1f-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.38f,.83f,stand.Forest))));
-                    candidate.EdgeVariant=WoodlandForest(site,stand,speciesRoll,edge);
+                    candidate.EdgeVariant=WoodlandForest(site,stand,speciesRoll,edge,settings.PackedWoodland);
                     if (site.Biome==BiomeType.Grassland && candidate.EdgeVariant==WorldFeatureVariant.WhitePineTree)
                         candidate.EdgeVariant=WorldFeatureVariant.MapleTree;
                 }
@@ -132,7 +135,9 @@ public sealed class LayeredTreeDistribution
             candidate.EdgeVariant=meadow && settings.UseWoodlandSpeciesMix && settings.VariedWoodlandEdges
                 ? WoodlandMeadow(mix,riparian,true,true) : WorldFeatureVariant.None;
         }
-        candidate.Radius=features.GetTreeExclusionRadius(candidate.Variant,Roll(Hash(x,z,88008)));
+        var spacingVariant = settings.PackedWoodland && candidate.EdgeVariant != WorldFeatureVariant.None
+            ? candidate.EdgeVariant : candidate.Variant;
+        candidate.Radius=features.GetTreeExclusionRadius(spacingVariant,Roll(Hash(x,z,88008)));
         var range=features.GetTreeUniformScaleRange(candidate.Variant);
         candidate.Scale=Mathf.Lerp(range.x,range.y,Mathf.Clamp01(stand.Age*.6f+Roll(Hash(x,z,88009))*.4f));
         if(young)
@@ -140,6 +145,11 @@ public sealed class LayeredTreeDistribution
             candidate.Scale*=Mathf.Lerp(.23f,.38f,Roll(Hash(x,z,88013)));
             candidate.Radius=Mathf.Min(candidate.Radius,3f/settings.WorldScale);
         }
+        if (settings.PackedWoodland && candidate.EdgeHabitat &&
+            !TreeSpeciesCatalog.IsGrassland(spacingVariant) &&
+            spacingVariant is not (WorldFeatureVariant.SpruceTree or WorldFeatureVariant.WhitePineTree))
+            candidate.Radius = Mathf.Min(candidate.Radius,
+                (young ? PackedYoungRadius : PackedMatureRadius) / settings.WorldScale);
         candidate.CompetitionRadius=candidate.Radius;
         if (site.Biome==BiomeType.Forest && !TreeSpeciesCatalog.IsGrassland(candidate.Variant) &&
             settings.ForestCoreSpacing>0 && settings.ForestCoreSpacing<1)
@@ -151,7 +161,10 @@ public sealed class LayeredTreeDistribution
         return candidate;
     }
 
-    static WorldFeatureVariant WoodlandForest(TreeHabitatSample site, TreeStandField.Sample stand, float roll, float edge)
+    private float ForestYoungDensity =>
+        (settings.ForestBackground+settings.ForestStand*(settings.PackedWoodland ? .68f : .33f))*settings.YoungTreeShare;
+
+    static WorldFeatureVariant WoodlandForest(TreeHabitatSample site, TreeStandField.Sample stand, float roll, float edge, bool packed = false)
     {
         if(site.Biome==BiomeType.Taiga)
             return roll<.79f ? WorldFeatureVariant.SpruceTree :
@@ -172,8 +185,8 @@ public sealed class LayeredTreeDistribution
         // drier ground and beech stronger in the cooler, mesic interiors.
         float dryWarm=Mathf.Clamp01((site.Temperature-site.Moisture)*1.6f+.40f);
         float oak=Mathf.Lerp(.18f,.46f,dryWarm)*Mathf.Lerp(.70f,1.35f,Roll(stand.Palette))*Mathf.Lerp(1f,.54f,edge);
-        float pioneer=Mathf.Lerp(Mathf.Lerp(.10f,.025f,stand.Forest),.17f,edge);
-        float sugarMaple = Mathf.Lerp(.10f,.22f,edge);
+        float pioneer=Mathf.Lerp(Mathf.Lerp(.10f,.025f,stand.Forest),packed ? .04f : .17f,edge);
+        float sugarMaple = Mathf.Lerp(.10f,packed ? .30f : .22f,edge);
         if(roll<oak)return WorldFeatureVariant.OakTree;
         if(roll<oak+pioneer)return WorldFeatureVariant.BirchAspenTree;
         if(roll<oak+pioneer+sugarMaple)return WorldFeatureVariant.SugarMapleTree;
@@ -301,14 +314,13 @@ public sealed class LayeredTreeDistribution
             bool meadow=TreeSpeciesCatalog.IsGrassland(candidate.Variant);
             if(Stats.Trees>=settings.MaxTrees || meadow && meadowCount>=features.maxGrasslandTreesPerChunk)
             {Stats.Capped++;continue;}
-            // The edge palette changes the representation. Keep the accepted
-            // roots, placement IDs and understory exclusion stable.
+            // Publish the edge variant used for display.
             var variant = candidate.EdgeVariant == WorldFeatureVariant.None ? candidate.Variant : candidate.EdgeVariant;
             if (infill && candidate.EdgeHabitat)
             {
                 if (candidate.Young)
                 {
-                    if (Roll(Hash(x,z,89131)) < settings.WoodlandEdgeInfill*.78f)
+                    if (!settings.PackedWoodland && Roll(Hash(x,z,89131)) < settings.WoodlandEdgeInfill*.78f)
                         young.Add((plan.Placements.Count,candidate));
                 }
                 else AddCrown(crowns,candidate,variant);
@@ -319,14 +331,15 @@ public sealed class LayeredTreeDistribution
                 treeId:TreeId.Generated(seed,coord,TreePlacementSource.Stand,(z-firstZ)*stride+x-firstX)));
             Stats.Trees++;if(meadow)meadowCount++;
         }
-        if (infill && (keepWoodlandEdge || young.Count > 0))
+        if (infill && (settings.PackedWoodland || keepWoodlandEdge || young.Count > 0))
         {
             Vector2 origin = new Vector2(minX,minZ)*settings.WorldScale;
             float size = chunkSize*settings.WorldScale;
             AddNeighborCrowns(crowns,origin,size);
             if (crowns.Count >= 2)
             {
-                var edge = new WoodlandEdgeField(crowns,seed,settings.WoodlandEdgeInfill);
+                var edge = new WoodlandEdgeField(crowns,seed,settings.WoodlandEdgeInfill,settings.PackedWoodland);
+                if (settings.PackedWoodland) AddEdgeTrees(plan, coord, edge, origin, size);
                 foreach (var (index,source) in young)
                     MoveYoungTree(plan,index,source,edge,origin,size);
                 if (keepWoodlandEdge) plan.WoodlandEdge = edge;
@@ -347,7 +360,7 @@ public sealed class LayeredTreeDistribution
         const float halo = WoodlandEdgeField.Neighborhood + WoodlandEdgeField.MaxCrownRadius;
         float share = settings.YoungTreeShare;
         float forestUpper = (settings.ForestBackground+settings.ForestStand)*(1f-share) +
-            (settings.ForestBackground+settings.ForestStand*.33f)*share;
+            ForestYoungDensity;
         float area = settings.CandidateCell*settings.CandidateCell/10000f;
         float upper = Mathf.Max(forestUpper,Mathf.Max(settings.MeadowBackground+settings.MeadowGrove,settings.SnowStand))*area;
         float spacing = cell * settings.WorldScale;
@@ -377,8 +390,6 @@ public sealed class LayeredTreeDistribution
         Vector2 best = original;
         TreeHabitatSample bestHabitat = default;
         float angle = Roll(Hash(source.X,source.Z,89132))*Mathf.PI*2f;
-        // Finite, deterministic proposals. Keep the root in its original chunk
-        // and leave enough room at seams for unshifted trees on either side.
         for (int i=0; i<24; i++)
         {
             float reach = Mathf.Lerp(3f,16f,Mathf.Sqrt((i+.5f)/24f));
@@ -416,5 +427,78 @@ public sealed class LayeredTreeDistribution
         placement.sampleZ = best.y/settings.WorldScale;
         placement.scale = Vector3.one*(Mathf.Lerp(4f,7f,Roll(Hash(source.X,source.Z,89134)))/top);
         plan.Placements[index] = placement;
+    }
+
+    private void AddEdgeTrees(WorldFeaturePlan plan, ChunkCoord coord, WoodlandEdgeField edge, Vector2 origin, float size)
+    {
+        // Bounded jitter on a world grid keeps edge-tree roots at least 1.2 m apart,
+        // including across seams, while allowing their crowns to overlap.
+        const float spacing = 3f, rootRadius = .55f;
+        float scale = settings.WorldScale;
+        int firstX = Mathf.FloorToInt(origin.x / spacing), firstZ = Mathf.FloorToInt(origin.y / spacing);
+        int lastX = Mathf.FloorToInt((origin.x + size) / spacing), lastZ = Mathf.FloorToInt((origin.y + size) / spacing);
+        int stride = lastX - firstX + 1;
+        for (int z = firstZ; z <= lastZ; z++)
+        for (int x = firstX; x <= lastX; x++)
+        {
+            var point = new Vector2(x + .2f + .6f * Roll(Hash(x,z,89201)),
+                                    z + .2f + .6f * Roll(Hash(x,z,89202))) * spacing;
+            var local = point - origin;
+            if (local.x < 0f || local.y < 0f || local.x >= size || local.y >= size) continue;
+            float group = edge.Group(point);
+            float cover = edge.Gap(point, treeBand: true) * edge.Strength;
+            if (cover < .08f) continue;
+            var sample = point / scale;
+            var site = habitat(sample.x, sample.y);
+            Stats.HabitatQueries++;
+            if (site.Surface != SurfaceType.Grass || site.Height <= water || site.River >= .45f ||
+                site.Slope >= TerrainSlopePolicy.ForestMaxDegrees ||
+                site.Biome is not (BiomeType.Forest or BiomeType.Grassland)) continue;
+            // Shrubs carry the screen between tree clumps. Adjacent cells share
+            // the same broad patches, but draw their heights independently.
+            float edgeDensity = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(.32f, .67f, group)) *
+                (site.Biome == BiomeType.Grassland ? 5.5f : 2.5f);
+            if (Roll(Hash(x,z,89203)) > Mathf.Clamp01(cover * edgeDensity)) continue;
+            if (OverlapsStandTree(sample, rootRadius / scale)) continue;
+            var root = local / scale;
+            bool overlapsBoulder = false;
+            foreach (var rock in plan.Placements)
+            {
+                if (rock.featureType != WorldFeatureType.Boulder) continue;
+                float separation = rock.exclusionRadius + rootRadius / scale;
+                if ((root - new Vector2(rock.sampleX, rock.sampleZ)).sqrMagnitude >= separation * separation) continue;
+                overlapsBoulder = true;
+                break;
+            }
+            if (overlapsBoulder) continue;
+            float mix = Roll(Hash(x,z,89204));
+            float age = Roll(Hash(x,z,89205));
+            var variant = mix < .60f ? WorldFeatureVariant.WoodlandEdgeBeech :
+                mix < .79f ? WorldFeatureVariant.MapleTree :
+                mix < .91f ? WorldFeatureVariant.SugarMapleTree :
+                age > .72f ? WorldFeatureVariant.OakTree : WorldFeatureVariant.BirchAspenTree;
+            float height = Mathf.Lerp(3f, 10f, age);
+            if (age > .9f && group > .58f) height += 3f;
+            plan.Placements.Add(new WorldFeaturePlacement(WorldFeatureType.Tree, variant, root.x, root.y,
+                Quaternion.Euler(0f, 360f * Roll(Hash(x,z,89206)), 0f),
+                Vector3.one * (height / features.GetWoodlandCrown(variant).z), rootRadius / scale, 1.6f * rootRadius / scale,
+                treeId: TreeId.Generated(seed, coord, TreePlacementSource.WoodlandEdge, (z-firstZ)*stride+x-firstX)));
+            Stats.Trees++;
+        }
+    }
+
+    private bool OverlapsStandTree(Vector2 point, float radius)
+    {
+        float reach = radius + maxRadius;
+        for (int z=Mathf.FloorToInt((point.y-reach)/cell); z<=Mathf.FloorToInt((point.y+reach)/cell); z++)
+        for (int x=Mathf.FloorToInt((point.x-reach)/cell); x<=Mathf.FloorToInt((point.x+reach)/cell); x++)
+        {
+            var other = Get(x,z);
+            if (!other.Eligible) continue;
+            var offset = point-new Vector2(other.XZx,other.XZz);
+            float separation = radius+other.Radius;
+            if (offset.sqrMagnitude < separation*separation && Accepted(other)) return true;
+        }
+        return false;
     }
 }

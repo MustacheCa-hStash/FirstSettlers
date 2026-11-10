@@ -1,0 +1,32 @@
+# Sky and lighting plan for ForestVarietyPilot
+
+Status — discussion and handoff only. Start with the saved pilot as the baseline and agree on the first implementation pass before editing it.
+
+## Visual reference
+
+Toni Macaroni’s *Custom Engine Forest Showcase* is the primary reference. Use the open meadow and forest edge to judge clear daytime air, sunlit grass, and the dark mass of the canopy. Use the interior shots to judge how cool fill reveals shaded bark and foliage while brighter sun patches land on the floor. Use the forested hills and distant ridges to judge how gradually detail and contrast fall off. Toni’s description mentions screen-space and voxel GI. The screenshots establish the visual target. They leave individual cloud, fog, exposure, and transmission settings open to interpretation. [Toni’s showcase](https://www.youtube.com/watch?v=uR5EvBWxN14)
+
+The current pilot forest view has useful canopy contrast, but some shrubs and grass clumps stand out as lime-yellow accents. The meadow view has a muted foreground, a prominent peach sun disk, and several smooth, similarly rounded clouds. The midground and snow ridge share a cool gray-blue veil, which compresses the apparent distance between them. These are observations from the submitted frames. The exact game time and exposure state for the frames were unspecified.
+
+## Where the current settings live
+
+| Area | Entry point and saved baseline |
+| --- | --- |
+| Day sky | `Assets/Materials/Skybox/M_PilotMeadowSky.mat` and `Assets/Shaders/MeadowDaySky.shader`. The shader already has moving cumulus and high cloud layers and sun-dependent shading. The pilot material has cloud coverage 0.59, scale 0.61, and high cloud strength 0.12. |
+| Direct sun and ambient | `Assets/Scripts/TimeSystem/SunCycleController.cs`. The saved pilot enables ambient updates, uses daytime ambient intensity 0.89, and has separate sky, equator, and ground colors. The scene's directional light value is a serialized baseline. Sample the controller's live output at each capture time. |
+| Exposure | `Assets/Settings/PilotMeadowGrade.asset` enables tonemapping and +0.15 post exposure. Capture a neutral-grade control when diagnosing exposure or color. |
+| Aerial perspective | `Distant Fog Layer` in `Assets/Scenes/ForestVarietyPilot.unity` uses Aerial Perspective mode. Saved aerial start is 135 world units, extinction 0.00055, base height 15, and height scale 115. Standard Unity fog is saved off. The separate volumetric-bank distances belong to the other mode. See `DISTANT_FOG.md` and the live renderer for routing and water behavior. |
+| Forest lighting | `WorldManager` forest lighting settings and `Assets/Shaders/ForestCanopyLighting.hlsl`. Directional sky fill is 0.85, leaf transmission 3, crown darkness 0.67, ground darkness 4, ground direct shade 0, ground sun strength 3.4, open-ground sun 1.25, and open-ground ambient 1.18. Contact shadows and distant forest shadows are already enabled. |
+
+## Proposed sequence
+
+1. **Build a repeatable daylight comparison.** Freeze seed, game time, camera poses, FOV, resolution, quality level, and exposure. Capture an open meadow facing a forest edge, an interior looking across a sun patch, and a high or lakeside view with successive ridges. Capture toward and away from the sun at the same time of day. Record the live sun, ambient, fog, and grade settings with the images. Use Toni’s corresponding shots as qualitative references, since their camera and weather parameters are unknown.
+2. **Tune clear daylight and the sky together.** Start with the existing procedural sky. Give cumulus a wider range of sizes and silhouettes, smaller edge breakup, readable shaded undersides, and bright sun-facing rims. Keep more open blue between cloud groups and soften the broad peach or gray halo around the sun in clear daytime. Take the sun disk, cloud shading, and directional light from the same sun direction. Test a modest increase in effective direct daylight and a less amber midday sun at fixed exposure. Use cool directional sky fill to keep shaded bark readable, with the canopy mask limiting fill deeper in the forest. Check grass, sand, water, and pale rock together so a brighter meadow does not blow out snow or give shrubs a fluorescent look. Adjust the grade after the daylight relationships work.
+3. **Put the haze farther into the landscape.** In a fixed-camera A/B, adjust aerial start and extinction separately, then height falloff and horizon tint. Start with a later onset and weaker extinction than the saved pilot. Judge the effect by three layers in the same frame. The nearby forest edge should retain its greens and shadow contrast, the next ridge should still show landform detail, and the farthest ridge should recede toward the horizon color. Check water and shorelines for seams, and verify that nearby mesh trees, billboards, and terrain receive consistent aerial perspective across their transitions.
+4. **Refine the interior once exterior daylight is agreed.** Use the existing directional sky fill, leaf transmission, and ground-light controls for separate A/Bs. Keep transmission most visible on sun-facing canopy edges when viewed toward the light. Compare sunlit floor patches with adjacent shade and read the shaded bark texture at the same exposure. If clumps still glow in shade, check grass and understory lighting response before changing their textures. If distant stands still float above bright ground, inspect projected forest shadow coverage and its blend with realtime shadows. Check the grass contact-shadow exclusion during the walking replay.
+
+## Review and scope
+
+- Deliver matched before-and-after stills and a short walk from meadow into canopy. Hold time and exposure fixed for each pair. Include a sunset and night smoke check so daytime adjustments can be evaluated alongside the existing cycle.
+- Record GPU and CPU frame time for the same route and resolution, including the fog pass where available. Compare against the pilot baseline on the same machine. Use those measurements to decide whether cloud shading warrants a limited volumetric test after the procedural pass.
+- Keep this round focused on sky, daylight, aerial perspective, and forest lighting response. Tree model, billboard, and distribution work is a separate pass. Weather transitions and shafts remain deferred. Consider a larger indirect-lighting prototype if the daylight and canopy adjustments still leave a visible gap in interior bounce.

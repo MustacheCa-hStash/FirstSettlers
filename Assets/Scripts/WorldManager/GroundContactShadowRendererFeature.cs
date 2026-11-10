@@ -48,16 +48,23 @@ public sealed class GroundContactShadowRendererFeature : ScriptableRendererFeatu
         readonly Material material;
         readonly CopyDepthPass copy;
         static readonly MaterialPropertyBlock Properties = new();
+        static readonly ShaderTagId ReceiverTag = new("GroundContactReceiver");
+        static readonly ProfilingSampler ReceiverSampler = new("FS.Contact.Receivers");
         static readonly ProfilingSampler TraceSampler = new("FS.Contact.Trace");
         static readonly ProfilingSampler CompositeSampler = new("FS.Contact.Composite");
 
         sealed class Data
         {
             public Material material;
-            public TextureHandle depth, mask;
+            public TextureHandle depth, mask, receivers;
             public Matrix4x4 vp, inverseVP;
             public Vector4 settings, sun, camera, forward, texel;
             public int index;
+        }
+
+        sealed class ReceiverData
+        {
+            public RendererListHandle list;
         }
 
         public ContactPass(Material material, Shader depthShader)
@@ -86,6 +93,29 @@ public sealed class GroundContactShadowRendererFeature : ScriptableRendererFeatu
             });
             // The completed opaque attachment includes indirect grass omitted by a depth prepass.
             copy.Render(graph, frameData, depth, resources.activeDepthTexture, false, "FS.Contact.OpaqueDepth");
+            var opaqueDepthInfo = graph.GetRenderTargetInfo(resources.activeDepthTexture);
+            var receivers = graph.CreateTexture(new TextureDesc(opaqueDepthInfo.width, opaqueDepthInfo.height)
+            {
+                name = "Ground Contact Visible Terrain",
+                colorFormat = GraphicsFormat.R8_UNorm,
+                msaaSamples = (MSAASamples)opaqueDepthInfo.msaaSamples,
+                clearBuffer = true,
+                clearColor = Color.clear,
+                filterMode = FilterMode.Point
+            });
+            using (var builder = graph.AddRasterRenderPass<ReceiverData>("FS.Contact.Receivers", out var data, ReceiverSampler))
+            {
+                var rendering = frameData.Get<UniversalRenderingData>();
+                var lights = frameData.Get<UniversalLightData>();
+                var drawing = RenderingUtils.CreateDrawingSettings(ReceiverTag, rendering, camera, lights, SortingCriteria.CommonOpaque);
+                var filtering = new FilteringSettings(RenderQueueRange.opaque);
+                data.list = graph.CreateRendererList(new RendererListParams(rendering.cullResults, drawing, filtering));
+                builder.UseRendererList(data.list);
+                builder.SetRenderAttachment(receivers, 0, AccessFlags.Write);
+                // Only terrain at the completed opaque depth can receive the effect.
+                builder.SetRenderAttachmentDepth(resources.activeDepthTexture, AccessFlags.Read);
+                builder.SetRenderFunc(static (ReceiverData data, RasterGraphContext context) => context.cmd.DrawRendererList(data.list));
+            }
             var mask = graph.CreateTexture(new TextureDesc(width, height)
             {
                 name = "Ground Contact Shadow and Depth",
@@ -100,6 +130,7 @@ public sealed class GroundContactShadowRendererFeature : ScriptableRendererFeatu
             {
                 data.material = material;
                 data.depth = depth;
+                data.receivers = receivers;
                 data.vp = vp;
                 data.inverseVP = vp.inverse;
                 data.settings = Settings;
@@ -107,6 +138,7 @@ public sealed class GroundContactShadowRendererFeature : ScriptableRendererFeatu
                 data.camera = cameraToWorld.GetColumn(3);
                 data.forward = -cameraToWorld.GetColumn(2);
                 builder.UseTexture(depth);
+                builder.UseTexture(receivers);
                 builder.UseTexture(resources.mainShadowsTexture);
                 builder.SetRenderAttachment(mask, 0, AccessFlags.Write);
                 builder.SetRenderFunc(static (Data data, RasterGraphContext context) => Draw(data, context));
@@ -116,14 +148,14 @@ public sealed class GroundContactShadowRendererFeature : ScriptableRendererFeatu
                 data.material = material;
                 data.depth = depth;
                 data.mask = mask;
+                data.receivers = receivers;
                 data.settings = Settings;
                 data.texel = new Vector4(1f / width, 1f / height, width, height);
                 data.index = 1;
                 builder.UseTexture(depth);
                 builder.UseTexture(mask);
+                builder.UseTexture(receivers);
                 builder.SetRenderAttachment(resources.activeColorTexture, 0, AccessFlags.ReadWrite);
-                // Grass marks the stencil on the opaque attachment as it draws.
-                builder.SetRenderAttachmentDepth(resources.activeDepthTexture, AccessFlags.Read);
                 builder.SetRenderFunc(static (Data data, RasterGraphContext context) => Draw(data, context));
             }
         }
@@ -133,6 +165,7 @@ public sealed class GroundContactShadowRendererFeature : ScriptableRendererFeatu
             Properties.Clear();
             Properties.SetVector("_BlitScaleBias", new Vector4(1, 1, 0, 0));
             Properties.SetTexture("_ContactDepth", ((RTHandle)data.depth).rt);
+            Properties.SetTexture("_ContactReceivers", ((RTHandle)data.receivers).rt);
             Properties.SetVector("_ContactSettings", data.settings);
             if (data.index == 0)
             {

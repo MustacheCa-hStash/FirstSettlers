@@ -9,6 +9,7 @@ Shader "Hidden/FirstSettlers/GroundContactShadow"
         #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
         TEXTURE2D_X_FLOAT(_ContactDepth);
+        TEXTURE2D_X(_ContactReceivers);
         TEXTURE2D_X(_ContactMask);
         float4x4 _ContactVP, _ContactInverseVP;
         float4 _ContactCamera, _ContactForward, _ContactSun, _ContactSettings, _ContactTexel;
@@ -49,7 +50,8 @@ Shader "Hidden/FirstSettlers/GroundContactShadow"
             n *= n.y < 0 ? -1 : 1;
             float3 normal = n * rsqrt(max(dot(n,n), 1e-12));
             float range = _ContactSettings.z;
-            if (IsSky(raw) || eye >= range || normal.y < .40 ||
+            if (SAMPLE_TEXTURE2D_X_LOD(_ContactReceivers, sampler_PointClamp, uv, 0).r <= 0 ||
+                IsSky(raw) || eye >= range || normal.y < .40 ||
                 max(dot(dx,dx),dot(dy,dy)) > .18) return float2(0, min(eye, range + 1));
 
             half visibility = 1;
@@ -96,6 +98,8 @@ Shader "Hidden/FirstSettlers/GroundContactShadow"
         {
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
             float2 uv = input.texcoord;
+            half receiver = SAMPLE_TEXTURE2D_X_LOD(_ContactReceivers, sampler_PointClamp, uv, 0).r;
+            if (receiver <= 0) return 0;
             float raw = RawDepth(uv);
             float eye = LinearEyeDepth(raw, _ZBufferParams);
             if (IsSky(raw) || eye >= _ContactSettings.z) return 0;
@@ -114,7 +118,7 @@ Shader "Hidden/FirstSettlers/GroundContactShadow"
                 sum += field.x * weight;
                 total += weight;
             }
-            half contact = sum / max(.25h,total);
+            half contact = receiver * sum / max(.25h,total);
             if (_ContactSettings.w > .5)
                 return half4(.035h,.85h,1.0h,saturate(contact * 3.0h));
             return half4(0,0,0,saturate(_ContactSettings.x * contact));
@@ -136,12 +140,6 @@ Shader "Hidden/FirstSettlers/GroundContactShadow"
             Name "Composite"
             Blend SrcAlpha OneMinusSrcAlpha
             ColorMask RGB
-            Stencil
-            {
-                Ref 8
-                ReadMask 8
-                Comp NotEqual
-            }
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Composite

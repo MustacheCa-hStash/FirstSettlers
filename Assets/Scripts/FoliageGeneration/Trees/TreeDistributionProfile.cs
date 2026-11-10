@@ -27,6 +27,8 @@ public sealed class TreeDistributionProfile : ScriptableObject
     public bool variedWoodlandEdges;
     [Range(0f, 1f), Tooltip("Concentrate some existing young trees and woodland shrubs in gaps on the edge of generated stands. Regenerate to apply.")]
     public float woodlandEdgeInfill;
+    [Tooltip("Fill woodland clearings, use tighter broadleaf spacing, and favor continuous low cover at stand edges.")]
+    public bool packedWoodland;
     [Min(16), Tooltip("Exceptional per-chunk guard, not a population target. Grassland also respects its existing count guard.")]
     public int maxTreesPerChunk = 64;
 
@@ -49,6 +51,7 @@ public sealed class TreeDistributionProfile : ScriptableObject
             UseWoodlandSpeciesMix=useWoodlandSpeciesMix,
             VariedWoodlandEdges=variedWoodlandEdges,
             WoodlandEdgeInfill=Safe(woodlandEdgeInfill,0f,0f,1f),
+            PackedWoodland=useWoodlandSpeciesMix && packedWoodland,
             Cohorts=Mathf.Clamp(competitionCohorts,1,3), MaxTrees=Mathf.Clamp(maxTreesPerChunk,16,256)
         };
     }
@@ -60,6 +63,7 @@ public struct TreeDistributionParameters
     public bool Enabled;
     public bool UseWoodlandSpeciesMix;
     public bool VariedWoodlandEdges;
+    public bool PackedWoodland;
     public float WorldScale, StandCell, GroveFraction, CandidateCell;
     public Vector2 StandRadius;
     public float ForestBackground, ForestStand, MeadowBackground, MeadowGrove, SnowStand;

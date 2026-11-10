@@ -16,16 +16,17 @@ MonoBehaviour:
   standCellSize: 96
   standRadiusRange: {x: 42, y: 72}
   grasslandGroveFraction: 0.24
-  forestBackground: 9
-  forestStand: 146
+  forestBackground: 36
+  forestStand: 260
   grasslandBackground: 0.65
   grasslandGrove: 19
   snowStand: 12
   candidateCellSize: 4.8
   competitionCohorts: 2
-  youngTreeShare: 0.17
-  forestCoreSpacing: 0.78
+  youngTreeShare: 0.3
+  forestCoreSpacing: 1
   useWoodlandSpeciesMix: 1
   variedWoodlandEdges: 1
-  woodlandEdgeInfill: 0.85
-  maxTreesPerChunk: 64
+  woodlandEdgeInfill: 1
+  packedWoodland: 1
+  maxTreesPerChunk: 128

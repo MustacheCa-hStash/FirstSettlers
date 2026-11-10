@@ -1475,6 +1475,26 @@ Shader "Custom/StylizedTerrainURP"
         }
         Pass
         {
+            Name "GroundContactReceiver"
+            Tags { "LightMode" = "GroundContactReceiver" }
+            ZWrite Off
+            ZTest Equal
+            ColorMask R
+            HLSLPROGRAM
+            #pragma vertex ReceiverVert
+            #pragma fragment ReceiverFrag
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            float4 ReceiverVert(float4 positionOS : POSITION) : SV_POSITION
+            {
+                return GetVertexPositionInputs(positionOS.xyz).positionCS;
+            }
+
+            half4 ReceiverFrag() : SV_Target { return half4(1, 0, 0, 0); }
+            ENDHLSL
+        }
+        Pass
+        {
             Name "ShadowCaster"
             Tags { "LightMode"="ShadowCaster" }
             ZWrite On
