@@ -127,13 +127,15 @@ public static class TreeHQImpostorBaker
                 AssetDatabase.CreateAsset(new Material(Shader.Find("Custom/TreeHQOctaImpostor")) { name=Current.species+"HQ_OctaImpostor_M", enableInstancing=true }, MaterialPath);
             Require(TreeImpostorAtlasCaptureWindow.CaptureTreeHQ(setup,Current.species,Current.shaderName,Current.expansion,atlasSize), "Tree HQ semantic capture failed.");
             Debug.Log("TREE HQ: semantic capture complete; starting ambient visibility.");
-            Require(TreeImpostorAmbientAtlasBakerWindow.BakeTreeHQ(setup,Current.species), "SpruceHQ ambient bake failed.");
+            Require(TreeImpostorAmbientAtlasBakerWindow.BakeTreeHQ(setup, Current.species,
+                Current.AmbientTileResolution, Current.AmbientVolumeResolution), "Tree HQ ambient bake failed.");
             CreateOrUpdate();
             // Retain bake inputs and settings as provenance alongside the generated atlases.
             File.WriteAllText(AtlasFolder + "/"+Prefix+"_Source.json", JsonUtility.ToJson(new BakeSource {
                 prefab=AssetDatabase.GetAssetPath(source), prefabGuid=AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(source)),
                 dependencyHash=AssetDatabase.GetAssetDependencyHash(AssetDatabase.GetAssetPath(source)).ToString(),
-                supersample=2, voxelResolution=128, ambientTileResolution=128, aoRays=8, skyRays=12, raySteps=16,
+                supersample=2, voxelResolution=Current.AmbientVolumeResolution,
+                ambientTileResolution=Current.AmbientTileResolution, aoRays=8, skyRays=12, raySteps=16,
                 coverageExpansion=2, colorBleedPixels=2, coverageExpansionStrength=Current.expansion,
                 albedoEncoding=Current.paletteMode<0?"sRGB authored evergreen RGB; linear alpha":"sRGB half-range neutral detail; linear alpha" }, true));
             AssetDatabase.Refresh(); AssetDatabase.SaveAssets();
@@ -187,7 +189,8 @@ public static class TreeHQImpostorBaker
         }
         material.SetVector("_CaptureCenterLS",center); material.SetFloat("_CaptureRadius",meta.captureRadius);
         material.SetFloat("_FramesPerAxis",meta.framesPerAxis); material.SetFloat("_AtlasTileResolution",meta.tileResolution);
-        material.SetFloat("_AtlasPadding",meta.paddingPixels); material.SetFloat("_AmbientTileResolution",128);
+        material.SetFloat("_AtlasPadding",meta.paddingPixels);
+        material.SetFloat("_AmbientTileResolution",Current.AmbientTileResolution);
         material.SetFloat("_DepthParallax",.45f); material.SetFloat("_AOStrength",.4f); material.SetFloat("_SkyStrength",1);
         material.SetFloat("_FoliageBrightness",Current.paletteMode<0?1:2); material.SetFloat("_BarkBrightness",1); material.SetFloat("_BarkColorRemap",0);
         material.SetFloat("_Cutoff",CoverageCutoff); material.SetFloat("_TransmissionStrength",1);
@@ -244,7 +247,8 @@ public static class TreeHQImpostorBaker
         {
             string path=AtlasFolder+"/"+Prefix+"_"+map+".png";
             var importer=(TextureImporter)AssetImporter.GetAtPath(path);
-            importer.maxTextureSize=map=="Ambient"?2048:Mathf.NextPowerOfTwo(atlasSize);
+            int ambientSize = metadata.framesPerAxis * (Current.AmbientTileResolution + 2 * metadata.paddingPixels);
+            importer.maxTextureSize=map=="Ambient"?Mathf.NextPowerOfTwo(ambientSize):Mathf.NextPowerOfTwo(atlasSize);
             importer.npotScale=TextureImporterNPOTScale.None;
             importer.filterMode=FilterMode.Trilinear; importer.anisoLevel=4;
             importer.wrapMode=TextureWrapMode.Clamp; importer.isReadable=false;
@@ -273,5 +277,8 @@ public static class TreeHQImpostorBaker
     public string[] billboardSlots;
     public int paletteMode;
     public float expansion;
+    public int ambientTileResolution, ambientVolumeResolution;
+    public int AmbientTileResolution => ambientTileResolution > 0 ? ambientTileResolution : 128;
+    public int AmbientVolumeResolution => ambientVolumeResolution > 0 ? ambientVolumeResolution : 128;
 }
 [Serializable] public sealed class TreeHQSpecs {public TreeHQSpec[] species;}

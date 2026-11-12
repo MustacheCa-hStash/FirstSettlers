@@ -1,0 +1,17 @@
+{
+  "prefab": "Assets/WoodlandEdgeCaptureMasters/MultistemEdgeBeechV2/MultistemEdgeBeechV2.prefab",
+  "prefabGuid": "0b5da1fef5127e04e8ec24a5fc340665",
+  "dependencyHash": "402562d190fbc0e58a9cf6a61c03e44a",
+  "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
+  "supersample": 2,
+  "voxelResolution": 128,
+  "ambientTileResolution": 128,
+  "aoRays": 8,
+  "skyRays": 12,
+  "raySteps": 16,
+  "coverageExpansion": 2,
+  "colorBleedPixels": 2,
+  "coverageExpansionStrength": 0.23999999463558197,
+  "approvedBlenderMaster": "ArtSource/WoodlandEdgeHighPoly/MultistemEdgeBeechV2.blend",
+  "approvedBlenderMasterSha256": "CA50778B9884DCC7CF69E6543D30FDC0A160AF01CC4B116224C24BAB2F4904CD"
+}

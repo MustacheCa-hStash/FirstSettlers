@@ -54,7 +54,13 @@ public static class TreeSpeciesCatalog
         new(WorldFeatureVariant.GrasslandOakTree, "Oak Tree", true, s=>s.grasslandOakTreePrefab, s=>s.grasslandOakTreeBillboardPrefab, s=>s.oakTreeDefinition),
         new(WorldFeatureVariant.GrasslandWillowTree, "Willow Tree", true, s=>s.grasslandWillowTreePrefab, s=>s.grasslandWillowTreeBillboardPrefab, s=>s.willowTreeDefinition),
         new(WorldFeatureVariant.WoodlandEdgeBeech, "Beech Tree", false,
-            s=>s.woodlandEdgeBeechPrefab ?? s.beechTreePrefab, s=>s.beechTreeBillboardPrefab, s=>s.beechTreeDefinition)
+            s=>s.woodlandEdgeBeechPrefab ?? s.beechTreePrefab,
+            s=>s.woodlandEdgeBeechBillboardPrefab ?? s.beechTreeBillboardPrefab, s=>s.beechTreeDefinition),
+        new(WorldFeatureVariant.WoodlandEdgeOak, "Oak Tree", false,
+            s=>s.woodlandEdgeOakPrefab ?? s.oakTreePrefab,
+            s=>s.woodlandEdgeOakBillboardPrefab ?? s.oakTreeBillboardPrefab, s=>s.oakTreeDefinition),
+        new(WorldFeatureVariant.WoodlandEdgeHazel, "Hazel Thicket", false,
+            s=>s.woodlandEdgeHazelPrefab, s=>s.woodlandEdgeHazelBillboardPrefab, s=>null)
     };
     public static IReadOnlyList<Species> All { get; } = Array.AsReadOnly(entries);
     private static readonly Species[] byVariant = BuildIndex();

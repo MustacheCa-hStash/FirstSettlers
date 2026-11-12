@@ -26,6 +26,10 @@ public sealed class ForestLightingSettings
     public float directionalSkyFill;
     [Range(0f, 3f), Tooltip("Strength of sunlight-dependent transmission on the prototype oak and beech materials. Zero restores their previous leaf lighting.")]
     public float leafTransmission;
+    [Range(0f, 1f), Tooltip("Extra daylight ambient reduction on the floor where placed crowns enclose the sky.")]
+    public float enclosedGroundAmbientShade;
+    [Range(0f, 1f), Tooltip("Extra daylight ambient reduction on sheltered crown undersides and interiors.")]
+    public float enclosedCrownAmbientShade;
     [Range(0f, 3f), Tooltip("Strength of the short screen-space sun shadows around grass, stones and roots. Higher values are useful for judging coverage. Zero disables the pass unless Preview Ground Contact Mask is on.")]
     public float groundContactShadows;
     [Range(.15f, 3f), Tooltip("Maximum length of a ground contact shadow ray, in metres.")]

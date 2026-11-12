@@ -13,6 +13,10 @@ public static class TreeGenerationSnapshot
         var distribution = treeSettings.distributionProfile != null ? treeSettings.distributionProfile :
             Resources.Load<TreeDistributionProfile>("Foliage/TreeDistribution");
         if (distribution != null) settings.treeDistribution = distribution.Snapshot(worldScale);
+        settings.hasWoodlandEdgeForms = treeSettings.woodlandEdgeBeechPrefab != null &&
+            treeSettings.woodlandEdgeOakPrefab != null && treeSettings.woodlandEdgeHazelPrefab != null &&
+            treeSettings.woodlandEdgeBeechBillboardPrefab != null &&
+            treeSettings.woodlandEdgeOakBillboardPrefab != null && treeSettings.woodlandEdgeHazelBillboardPrefab != null;
 
         settings.treeUniformScaleRange = treeSettings.treeUniformScaleRange;
         settings.disableBerryBushes = treeSettings.disableBerryBushes;

@@ -1,0 +1,1 @@
+EDGE COLOR LowBranchedWhiteOak: leaf 47.1 % -> 0.0 %; bark 10.9 % -> 0.0 % mean relative linear RGB error

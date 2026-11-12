@@ -34,6 +34,8 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _BarkDistanceTiling: 0.4
+    - _BarkCanopyShelter: 0.72
     - _AmbientStrength: 0.12
     - _BarkNormalMap: 1
     - _Brightness: 1
@@ -41,9 +43,9 @@ Material:
     - _ColorHeightMax: 7
     - _ColorHeightMin: 0
     - _ColorVariationStrength: 0
-    - _Smoothness: 0.31
+    - _Smoothness: 0.14
     - _SnowCoverage: 0
-    - _SpecularStrength: 0.035
+    - _SpecularStrength: 0.012
     - _UseVertexColor: 0
     - _VerticalGradientStrength: 0
     m_Colors:

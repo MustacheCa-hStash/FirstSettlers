@@ -273,8 +273,9 @@ def bake(work, source=SOURCE, fans_per_branch=FANS_PER_BRANCH, coverage_weighted
                 triangle_normals[triangle_normals[:,:,2].mean(axis=1) < 0] *= -1
                 # A weak, direction-independent value variation carries leaf
                 # layering inside each card without baking sunlight.
+                leaf_tone = data["leaf_tone"][indices] if "leaf_tone" in data else .84 + .15*data["sky"][indices]
                 rgba, surface, depth, leaf_id = raster(
-                    coords, uv, triangle_normals, tex, .84 + .15*data["sky"][indices], tile_size*2, triangles_per_leaf)
+                    coords, uv, triangle_normals, tex, leaf_tone, tile_size*2, triangles_per_leaf)
                 base_tile = np.array(Image.fromarray(rgba).resize((tile_size, tile_size), Image.Resampling.BOX))
                 texel_size = (upper-lower)/(2*extent)
                 offsets = np.rint(taps/texel_size).astype(np.int32)

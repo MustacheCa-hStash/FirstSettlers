@@ -1,0 +1,1 @@
+EDGE COLOR HazelThicket: leaf 63.0 % -> 0.0 %; bark 21.0 % -> 0.0 % mean relative linear RGB error

@@ -6,6 +6,8 @@ Shader "Hidden/TreeImpostor/OakSemanticCapture"
         _BaseColor("Bark Tint", Color) = (1,1,1,1)
         _Cutoff("Cutoff", Float) = .5
         _CrownNormalBlend("Canopy Normal Blend", Float) = 0
+        _LeafCardSurfaceMap("Leaf Card Surface", 2D) = "white" {}
+        _LeafCardNormalStrength("Leaf Card Normal Strength", Float) = 0
         _AuthoredSummer("Use Authored Summer Albedo", Float) = 0
         _Smoothness("Smoothness", Float) = .08
         _BacklightingStrength("Backlighting Strength", Float) = .72
@@ -36,6 +38,7 @@ Shader "Hidden/TreeImpostor/OakSemanticCapture"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Assets/Shaders/WoodlandCanopyNormals.hlsl"
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
+            TEXTURE2D(_LeafCardSurfaceMap); SAMPLER(sampler_LeafCardSurfaceMap);
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST, _CaptureDepthMinMax;
                 half4 _BaseColor;
@@ -43,8 +46,9 @@ Shader "Hidden/TreeImpostor/OakSemanticCapture"
                 half _LeafDetailStrength, _LeafGradientContrast, _LeafGradientMidpoint, _ColorVariationStrength;
                 half _VerticalGradientStrength, _ColorHeightMin, _ColorHeightMax, _Brightness;
                 half _CaptureMaterialKind, _CaptureOutput, _AuthoredSummer, _CrownNormalBlend;
+                half _LeafCardNormalStrength;
             CBUFFER_END
-            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; float2 canopyNormal : TEXCOORD1; };
+            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float4 tangentOS : TANGENT; float2 uv : TEXCOORD0; float2 canopyNormal : TEXCOORD1; };
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
@@ -53,6 +57,7 @@ Shader "Hidden/TreeImpostor/OakSemanticCapture"
                 float2 uv : TEXCOORD2;
                 float eyeDepth : TEXCOORD3;
                 half3 canopyNormalWS : TEXCOORD4;
+                half4 tangentWS : TEXCOORD5;
             };
             float Hash(float2 p)
             {
@@ -79,6 +84,8 @@ Shader "Hidden/TreeImpostor/OakSemanticCapture"
                 output.positionCS = TransformWorldToHClip(world);
                 output.positionOS = input.positionOS.xyz;
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                output.tangentWS = half4(TransformObjectToWorldDir(input.tangentOS.xyz, false),
+                    input.tangentOS.w * GetOddNegativeScale());
                 output.canopyNormalWS = 0;
                 if (_CaptureMaterialKind < .5h && _CrownNormalBlend > 0)
                     output.canopyNormalWS = WoodlandCanopyNormalWS(input.canopyNormal);
@@ -112,9 +119,19 @@ Shader "Hidden/TreeImpostor/OakSemanticCapture"
                 }
                 if (_CaptureOutput < 1.5h)
                 {
-                    half3 normal = normalize(input.normalWS) * IS_FRONT_VFACE(facing,1,-1);
+                    half face = IS_FRONT_VFACE(facing,1,-1);
+                    half3 geometricNormal = normalize(input.normalWS);
+                    half3 normal = geometricNormal * face;
                     if (leaf && _CrownNormalBlend > 0)
                         normal = normalize(lerp(normal, normalize(input.canopyNormalWS), _CrownNormalBlend));
+                    if (leaf && _LeafCardNormalStrength > 0)
+                    {
+                        half2 xy = SAMPLE_TEXTURE2D(_LeafCardSurfaceMap, sampler_LeafCardSurfaceMap, input.uv).rg * 2 - 1;
+                        half3 tangent = normalize(input.tangentWS.xyz);
+                        half3 bitangent = input.tangentWS.w * cross(geometricNormal, tangent);
+                        half3 cardNormal = xy.x * tangent + xy.y * bitangent + sqrt(saturate(1 - dot(xy, xy))) * geometricNormal;
+                        normal = normalize(lerp(normal, cardNormal * face, _LeafCardNormalStrength));
+                    }
                     return half4(Oct(normal),1-_Smoothness,leaf?_BacklightingStrength*_BacklightingEnabled:0);
                 }
                 if (_CaptureOutput < 2.5h)

@@ -142,6 +142,10 @@ Shader "Custom/StylizedTerrainURP"
         _GrassGroundDetailStrength("Blade Ground Tone Strength", Range(0, 1)) = 0.65
         _GrassGroundDetailContrast("Blade Ground Tone Contrast", Range(0.5, 3)) = 1.6
         _GrassGroundTint("Blade Ground Average Tint", Color) = (0.90, 0.90, 0.78, 1)
+        _MeadowTurfTint("Meadow Turf Tint", Color) = (1, 1, 1, 1)
+        [NoScaleOffset] _NearMeadowAlbedo("Near Meadow Turf Albedo", 2D) = "white" {}
+        [NoScaleOffset] _NearMeadowRelief("Near Meadow Turf Normal and AO", 2D) = "white" {}
+        [HideInInspector] _UseNearMeadowTurf("Use Near Meadow Turf", Float) = 0
         [HDR] _ForestGrassGroundTint("Forest Grass Substrate Tint", Color) = (1, 1, 1, 1)
         _GrassGroundDetailFadeStart("Blade Ground Detail Fade Start", Float) = 180
         _GrassGroundDetailFadeEnd("Blade Ground Detail Fade End", Float) = 400
@@ -246,6 +250,9 @@ Shader "Custom/StylizedTerrainURP"
 
             TEXTURE2D(_GrassSurfaceMap);
             SAMPLER(sampler_GrassSurfaceMap);
+            TEXTURE2D(_NearMeadowAlbedo);
+            TEXTURE2D(_NearMeadowRelief);
+            SAMPLER(sampler_NearMeadowAlbedo);
 
             TEXTURE2D(_LeafLitterAlbedo);
             SAMPLER(sampler_LeafLitterAlbedo);
@@ -430,6 +437,8 @@ Shader "Custom/StylizedTerrainURP"
                 float _GrassGroundDetailStrength;
                 float _GrassGroundDetailContrast;
                 half4 _GrassGroundTint;
+                half4 _MeadowTurfTint;
+                half _UseNearMeadowTurf;
                 half4 _ForestGrassGroundTint;
                 float _GrassGroundDetailFadeStart;
                 float _GrassGroundDetailFadeEnd;
@@ -1178,10 +1187,12 @@ Shader "Custom/StylizedTerrainURP"
                 if (grassWeight > 0.001h)
                 {
                     #if defined(_GRASS_BLADE_GROUND)
-                    half grassVariation;
+                    half grassVariation = 1.0h;
                     float remainingGrass = (1.0 - leafLitterWeight) * (1.0 - bareDirtWeight) * (1.0 - mossWeight);
-                    SampleGrassGround(surface.positionWS, baseNormalWS, distanceToCamera, remainingGrass,
-                        grassGroundDx, grassGroundDy, grassVariation, normalWS);
+                    half nearTurfWeight = saturate(_UseNearMeadowTurf * (1.0h - darkGrassCoverWeight));
+                    [branch] if (nearTurfWeight < .999h)
+                        SampleGrassGround(surface.positionWS, baseNormalWS, distanceToCamera, remainingGrass,
+                            grassGroundDx, grassGroundDy, grassVariation, normalWS);
                     #else
                     float2 grassUVNear = surface.positionWS.xz * _GrassTilingNear;
                     float2 grassUVFar = surface.positionWS.xz * _GrassTilingFar;
@@ -1213,6 +1224,16 @@ Shader "Custom/StylizedTerrainURP"
                     // Keep the clutter-matching average tone at every distance,
                     // including after the blade surface map has faded away.
                     grassColor *= _GrassGroundTint.rgb;
+                    grassColor *= lerp(_MeadowTurfTint.rgb, half3(1, 1, 1), darkGrassCoverWeight);
+                    [branch] if (nearTurfWeight * remainingGrass > .001h)
+                    {
+                        half3 turfColor;
+                        float3 turfNormal;
+                        SampleNearMeadowTurf(surface.positionWS, baseNormalWS, distanceToCamera,
+                            grassGroundDx, grassGroundDy, turfColor, turfNormal);
+                        grassColor = lerp(grassColor, turfColor, nearTurfWeight);
+                        normalWS = normalize(lerp(normalWS, turfNormal, nearTurfWeight));
+                    }
                     #endif
 
                     // One height sample offsets detail UVs for shallow forest-floor relief.

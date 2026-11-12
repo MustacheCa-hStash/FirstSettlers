@@ -51,7 +51,9 @@ public static class TreeHQImpostorValidation
         {
             string path=TreeHQImpostorBaker.AtlasFolder+"/"+TreeHQImpostorBaker.Prefix+"_"+map+".png";
             var texture=AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-            int expected=map=="Ambient"?1088:frames*stride;
+            int expected = map == "Ambient"
+                ? frames * (TreeHQImpostorBaker.Current.AmbientTileResolution + 2 * padding)
+                : frames * stride;
             Require(texture&&texture.width==expected&&texture.height==expected,"Atlas was resized: "+map);
             var importer=(TextureImporter)AssetImporter.GetAtPath(path);
             Require(importer.npotScale==TextureImporterNPOTScale.None&&importer.filterMode==FilterMode.Trilinear&&

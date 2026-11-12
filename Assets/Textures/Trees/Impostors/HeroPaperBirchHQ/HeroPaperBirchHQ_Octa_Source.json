@@ -1,7 +1,7 @@
 {
-    "prefab": "Assets/Prefabs/HeroPaperBirch.prefab",
-    "prefabGuid": "e6fba4505fdaf8e40a54bfb097c931e9",
-    "dependencyHash": "285309d2e0d9cdc837b524d33c3055f5",
+    "prefab": "Assets/Prefabs/HeroPaperBirchLOD0.prefab",
+    "prefabGuid": "abfee49c0afd3974082cdf5793f89b2a",
+    "dependencyHash": "6984f0553d19ec9f9443d11c7f945363",
     "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
     "supersample": 2,
     "voxelResolution": 128,
@@ -11,5 +11,5 @@
     "raySteps": 16,
     "coverageExpansion": 2,
     "colorBleedPixels": 2,
-    "coverageExpansionStrength": 0.2199999988079071
+    "coverageExpansionStrength": 0.4000000059604645
 }

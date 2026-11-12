@@ -8,7 +8,8 @@ public enum TreePlacementSource
     Grassland = 2,
     Snow = 3,
     Stand = 4, // World-lattice distribution; owner chunk is only storage/identity partitioning.
-    WoodlandEdge = 5
+    WoodlandEdge = 5,
+    WoodlandEdgeThicket = 6
 }
 
 /// <summary>A generated placement's identity, independent of list order, height, appearance and GameObjects.</summary>
@@ -25,11 +26,11 @@ public struct TreeId : IEquatable<TreeId>
     public ChunkCoord Chunk => new ChunkCoord(chunkX, chunkZ);
     public TreePlacementSource Source => source;
     public int CandidateCell => candidateCell;
-    public bool IsValid => source >= TreePlacementSource.Forest && source <= TreePlacementSource.WoodlandEdge && candidateCell >= 0;
+    public bool IsValid => source >= TreePlacementSource.Forest && source <= TreePlacementSource.WoodlandEdgeThicket && candidateCell >= 0;
 
     public static TreeId Generated(int seed, ChunkCoord chunk, TreePlacementSource source, int candidateCell)
     {
-        if (source < TreePlacementSource.Forest || source > TreePlacementSource.WoodlandEdge)
+        if (source < TreePlacementSource.Forest || source > TreePlacementSource.WoodlandEdgeThicket)
             throw new ArgumentOutOfRangeException(nameof(source));
         if (candidateCell < 0) throw new ArgumentOutOfRangeException(nameof(candidateCell));
         return new TreeId { worldSeed = seed, chunkX = chunk.x, chunkZ = chunk.z,

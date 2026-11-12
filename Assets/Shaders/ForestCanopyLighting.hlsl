@@ -141,10 +141,29 @@ half FSForestGroundSun(half groundShade)
     return lerp(1.0h, groundShade, saturate(_FSForestDarkness.z)) * localSun;
 }
 
+half FSForestEnclosure(half groundShade)
+{
+    return 1.0h - smoothstep(.025h, .36h, groundShade);
+}
+
+half FSForestCrownAmbient(float3 positionWS, half3 crownNormalWS, half interior)
+{
+    half strength = _FSForestDetailLighting.w * _FSGroundDaylight.y;
+    UNITY_BRANCH if (strength <= 0.0h) return 1.0h;
+    half underside = 1.0h - smoothstep(-.65h, .30h, crownNormalWS.y);
+    half sheltered = max(underside, smoothstep(.4h, .9h, interior) * (1.0h - saturate(crownNormalWS.y)));
+    return 1.0h - strength * FSForestEnclosure(FSForestGroundLight(positionWS)) * sheltered;
+}
+
+half FSForestGroundAmbient(half groundShade)
+{
+    return groundShade * (1.0h - _FSForestDetailLighting.z * _FSGroundDaylight.y * FSForestEnclosure(groundShade));
+}
+
 half FSSceneGroundAmbient(half groundShade)
 {
     half skyAccess = smoothstep(.55h, .98h, groundShade);
-    return groundShade * (1.0h + _FSOpenGroundLighting.y * _FSGroundDaylight.y * skyAccess);
+    return FSForestGroundAmbient(groundShade) * (1.0h + _FSOpenGroundLighting.y * _FSGroundDaylight.y * skyAccess);
 }
 
 half FSSceneGroundSun(half groundShade, half shadow, half woodland)

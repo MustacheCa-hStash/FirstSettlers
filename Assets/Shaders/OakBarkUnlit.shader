@@ -14,6 +14,8 @@ Shader "Custom/OakBarkSimpleLit"
         _ColorHeightMin("Gradient Height Min", Float) = 0
         _ColorHeightMax("Gradient Height Max", Float) = 7
         _AmbientStrength("Ambient Floor", Range(0, 1)) = 0.24
+        _BarkDistanceTiling("Distant Bark UV Multiplier", Range(0, 1)) = 0
+        _BarkCanopyShelter("Bark Canopy Shelter", Range(0, 1)) = 0
         _Smoothness("Smoothness", Range(0, 1)) = 0.1
         _SpecularStrength("Specular Strength", Range(0, 1)) = 0.025
         [Toggle] _UseVertexColor("Multiply Vertex Color", Float) = 0

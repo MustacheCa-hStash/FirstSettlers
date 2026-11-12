@@ -149,7 +149,8 @@ public sealed class TreeGameplayManager : IDisposable
         nearby.Clear(); candidates.Clear(); nextCandidate = 0;
         registry.CollectOriginsInRadiusXZ(focus, ScanRadius, nearby);
         foreach (var record in nearby)
-            if (record.State == TreeState.Standing && !active.ContainsKey(record.Id))
+            if (record.State == TreeState.Standing && record.Placement.variant != WorldFeatureVariant.WoodlandEdgeHazel &&
+                !active.ContainsKey(record.Id))
                 candidates.Add(new Candidate { Id = record.Id, DistanceSquared = DistanceSquared(record.WorldPosition, focus) });
         candidates.Sort();
         lastScanPosition = focus;

@@ -30,13 +30,14 @@ public sealed class WoodlandEdgeField
         Strength = strength;
     }
 
-    public float Gap(Vector2 point, bool treeBand = false)
+    public float Gap(Vector2 point, bool treeBand = false, bool thicketBand = false)
     {
         float support = 0f, edge = 0f, lowCover = 0f;
         Vector2 interior = Vector2.zero;
         float patch = TreeStandField.Noise(point.x, point.y, .065f, seed + 89120);
         float width = packed
-            ? treeBand ? Mathf.Lerp(4f, 20f, Group(point)) : Mathf.Lerp(10f, 16f, patch)
+            ? thicketBand ? Mathf.Lerp(12f, Neighborhood, patch) :
+              treeBand ? Mathf.Lerp(4f, 20f, Group(point)) : Mathf.Lerp(10f, 16f, patch)
             : Mathf.Lerp(8f, 16f, patch);
         foreach (var crown in crowns)
         {
@@ -50,8 +51,9 @@ public sealed class WoodlandEdgeField
             interior += offset * (weight / Mathf.Max(distance, .5f));
             // Nearby upper crowns establish the edge. Low boughs and overlap
             // reduce demand for additional plants at the same point.
+            float innerEdge = thicketBand ? -crown.Radius * .45f : -1f;
             edge = Mathf.Max(edge, (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(1f, width, dripline))) *
-                Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(-crown.Radius, -1f, dripline)));
+                Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(-crown.Radius, innerEdge, dripline)));
             float lowBoughs = 1f - Mathf.InverseLerp(2f, 6f, crown.Bottom);
             lowCover = Mathf.Max(lowCover, lowBoughs * (1f - Mathf.InverseLerp(-1.5f, 1.5f, dripline)));
         }
@@ -63,7 +65,7 @@ public sealed class WoodlandEdgeField
             // thin line on a slope rather than a deep stand.
             backing = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(.85f, 1.8f, support));
             openness = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(.20f, .65f, interior.magnitude / Mathf.Max(.001f, support)));
-            return edge * backing * openness * (1f - lowCover * .35f) * Mathf.Lerp(.80f, 1f, patch);
+            return edge * backing * openness * (1f - lowCover * (thicketBand ? .12f : .35f)) * Mathf.Lerp(.80f, 1f, patch);
         }
         return edge * backing * openness * (1f - lowCover * .88f) * Mathf.Lerp(.35f, 1f, patch);
     }

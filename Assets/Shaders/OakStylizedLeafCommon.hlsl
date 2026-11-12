@@ -182,6 +182,7 @@ half4 OakLeafFragment(OakLeafVaryings input, FRONT_FACE_TYPE facing : FRONT_FACE
         ResolveTreeShadowCoord(input.positionWS, input.shadowCoord), _AmbientStrength);
     data.vertexLighting = input.vertexLighting;
     data.bakedGI *= FSForestCrownFill(data.normalWS, 0.0h);
+    data.bakedGI *= FSForestCrownAmbient(data.positionWS, NormalizeNormalPerPixel(input.canopyNormalWS), 0.0h);
     #if defined(_BAKED_LEAF_AMBIENT)
     data.bakedGI *= input.color.a;
     #endif

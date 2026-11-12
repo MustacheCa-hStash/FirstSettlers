@@ -95,7 +95,7 @@ Shader "FirstSettlers/Forest Fern Instanced"
             UNITY_BRANCH
             if (_CanopyShade > 0.0h)
                 shade = lerp(1.0h, FSForestGroundLight(input.positionWS), _CanopyShade);
-            half3 lighting = ambient * shade + mainLight.color * saturate(dot(normal, mainLight.direction)) * FSForestGroundSun(shade) *
+            half3 lighting = ambient * FSForestGroundAmbient(shade) + mainLight.color * saturate(dot(normal, mainLight.direction)) * FSForestGroundSun(shade) *
                 mainLight.distanceAttenuation * mainLight.shadowAttenuation;
             lighting+=FSLocalFlameDiffuse(input.positionWS,normal);
             return half4(MixFog(texel.rgb * input.color.rgb * lighting,

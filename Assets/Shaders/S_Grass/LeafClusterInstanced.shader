@@ -136,7 +136,7 @@ Shader "FirstSettlers/Leaf Cluster Instanced"
             half shade = 1;
             if (_WoodlandShade > 0) shade = lerp(1.0h, FSForestGroundLight(input.positionWS), _WoodlandShade);
             half direct = saturate((dot(normal, mainLight.direction) + _DiffuseWrap) / (1 + _DiffuseWrap));
-            half3 lighting = ambient * shade + mainLight.color * direct * FSForestGroundSun(shade) *
+            half3 lighting = ambient * FSForestGroundAmbient(shade) + mainLight.color * direct * FSForestGroundSun(shade) *
                 mainLight.distanceAttenuation * mainLight.shadowAttenuation;
             return half4(MixFog(texel.rgb * input.color.rgb * lighting,
                 InitializeInputDataFog(float4(input.positionWS,1),input.fog)), texel.a);

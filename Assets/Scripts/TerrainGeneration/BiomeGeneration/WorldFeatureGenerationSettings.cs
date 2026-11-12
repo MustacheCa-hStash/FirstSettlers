@@ -3,6 +3,7 @@ using UnityEngine;
 public struct WorldFeatureGenerationSettings
 {
     public TreeDistributionParameters treeDistribution;
+    public bool hasWoodlandEdgeForms;
     public Vector2 treeUniformScaleRange;
     // Main-thread datacard snapshot indexed by WorldFeatureVariant. Never mutated after dispatch.
     public Vector2[] treeExclusionRadiusRanges;

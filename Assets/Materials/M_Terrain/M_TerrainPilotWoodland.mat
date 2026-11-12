@@ -99,7 +99,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _GrassSurfaceMap:
-        m_Texture: {fileID: 2800000, guid: 6f729d9bc178d44439315bbc2af2cce3, type: 3}
+        m_Texture: {fileID: 2800000, guid: 3002c13d94cfdc64695201a62aea3bca, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _IceAlbedo:
@@ -152,6 +152,14 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _MossNormal:
         m_Texture: {fileID: 2800000, guid: e513d752c23d94e49b039c1bcf0ab391, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NearMeadowAlbedo:
+        m_Texture: {fileID: 2800000, guid: 31e432169e4fb984eb739ea16ab4883f, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NearMeadowRelief:
+        m_Texture: {fileID: 2800000, guid: dee3a8624453ea84a893c1062599f432, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _RockAlbedo:
@@ -234,20 +242,20 @@ Material:
     - _GrassBladeGround: 1
     - _GrassDetailContrast: 2.14
     - _GrassDetailStrength: 0.35
-    - _GrassGroundDetailContrast: 2.6
+    - _GrassGroundDetailContrast: 1.85
     - _GrassGroundDetailFadeEnd: 1180
     - _GrassGroundDetailFadeStart: 520
     - _GrassGroundDetailStrength: 1
-    - _GrassGroundFarTiling: 1.59
+    - _GrassGroundFarTiling: 0.23
     - _GrassGroundGridScale: 0.65
-    - _GrassGroundHeightDepth: 0.007
+    - _GrassGroundHeightDepth: 0.003
     - _GrassGroundHeightFadeEnd: 12
     - _GrassGroundHeightFadeStart: 4
     - _GrassGroundNormalFadeEnd: 30
     - _GrassGroundNormalFadeStart: 10
     - _GrassGroundScaleFadeEnd: 107
     - _GrassGroundScaleFadeStart: 38
-    - _GrassGroundTiling: 0.36363637
+    - _GrassGroundTiling: 0.375
     - _GrassNormalStrength: 0.33
     - _GrassTilingFar: 0.15
     - _GrassTilingFarDistance: 300
@@ -304,6 +312,7 @@ Material:
     - _SnowTriplanarStart: 0.35
     - _SplitSandSurfaces: 1
     - _SurfaceBlendSharpness: 1
+    - _UseNearMeadowTurf: 0
     - _WashNormalStrength: 0.22
     - _WashTiling: 0.8
     m_Colors:
@@ -311,21 +320,22 @@ Material:
     - _ClayAverageColor: {r: 0.8209056, g: 0.68878615, b: 0.5737168, a: 1}
     - _ClayColor: {r: 0.97, g: 0.965, b: 0.96, a: 1}
     - _CliffColor: {r: 0.64, g: 0.64, b: 0.64, a: 1}
-    - _DarkGrassColor: {r: 0.215, g: 0.257, b: 0.105, a: 1}
+    - _DarkGrassColor: {r: 0.176, g: 0.237, b: 0.105, a: 1}
     - _DenseMossColor: {r: 0.81, g: 0.86, b: 0.67, a: 1}
     - _ExcavationTint: {r: 1, g: 1, b: 1, a: 1}
     - _ForestFloorScatter: {r: 0.2, g: 0.67, b: 0.49, a: 1}
     - _ForestGrassGroundTint: {r: 1.52, g: 0.95, b: 0.89, a: 1}
     - _GrassGroundSingleSample: {r: 132, g: 230, b: 0, a: 0}
-    - _GrassGroundTint: {r: 1.02, g: 0.98, b: 0.87, a: 1}
-    - _GroundDarkGrassColor: {r: 0.177, g: 0.225, b: 0.074, a: 1}
-    - _GroundLightGrassColor: {r: 0.315, g: 0.395, b: 0.142, a: 1}
-    - _GroundMidGrassColor: {r: 0.25, g: 0.313, b: 0.107, a: 1}
+    - _GrassGroundTint: {r: 0.92, g: 0.98, b: 0.96, a: 1}
+    - _MeadowTurfTint: {r: 1.28, g: 1.18, b: 0.74, a: 1}
+    - _GroundDarkGrassColor: {r: 0.149, g: 0.209, b: 0.074, a: 1}
+    - _GroundLightGrassColor: {r: 0.262, g: 0.364, b: 0.142, a: 1}
+    - _GroundMidGrassColor: {r: 0.207, g: 0.289, b: 0.107, a: 1}
     - _IceAverageColor: {r: 0.5710561, g: 0.69929224, b: 0.7222605, a: 1}
     - _IceColor: {r: 0.84, g: 0.91, b: 0.98, a: 1}
     - _LeafLitterColor: {r: 0.98, g: 1.11, b: 1.05, a: 1}
-    - _LightGrassColor: {r: 0.363, g: 0.421, b: 0.18, a: 1}
-    - _MidGrassColor: {r: 0.28, g: 0.325, b: 0.136, a: 1}
+    - _LightGrassColor: {r: 0.301, g: 0.388, b: 0.18, a: 1}
+    - _MidGrassColor: {r: 0.230, g: 0.300, b: 0.136, a: 1}
     - _MixedForestFloorColor: {r: 1.02, g: 1.04, b: 0.97, a: 1}
     - _MossColor: {r: 0.62, g: 0.68, b: 0.46, a: 1}
     - _MossFillColor: {r: 0.135, g: 0.156, b: 0.062, a: 1}

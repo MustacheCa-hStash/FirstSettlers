@@ -23,6 +23,60 @@ public static class WoodlandEdgeAuthoring
         catch (Exception error) { Debug.LogException(error); EditorApplication.Exit(1); }
     }
 
+    public static void BuildPilotTreePrefabsBatch()
+    {
+        try
+        {
+            BuildPilotTreePrefab("LowBranchedWhiteOak", .52f, 3.7f);
+            BuildPilotTreePrefab("MultistemEdgeBeechV2", .28f, 1.6f);
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(0);
+        }
+        catch (Exception error) { Debug.LogException(error); EditorApplication.Exit(1); }
+    }
+
+    private static void BuildPilotTreePrefab(string name, float trunkRadius, float trunkHeight)
+    {
+        string modelName = name + "LOD0";
+        var model = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Models/Trees/WoodlandEdgeLOD0/{name}/{modelName}.fbx");
+        if (!model) throw new InvalidOperationException("Missing woodland edge model " + modelName);
+        var root = new GameObject(modelName);
+        try
+        {
+            var visual = (GameObject)PrefabUtility.InstantiatePrefab(model);
+            visual.transform.SetParent(root.transform, false);
+            var foliage = Array.Find(visual.GetComponentsInChildren<MeshRenderer>(), renderer => renderer.name == "Foliage");
+            if (!foliage || !foliage.sharedMaterial.IsKeywordEnabled("_LEAF_CARD_SURFACE"))
+                throw new InvalidOperationException("Missing Option 2 foliage on " + modelName);
+
+            var trunk = root.AddComponent<CapsuleCollider>();
+            trunk.radius = trunkRadius;
+            trunk.height = trunkHeight;
+            trunk.center = Vector3.up * (trunkHeight * .5f);
+            var canopy = new GameObject("Canopy query");
+            canopy.transform.SetParent(root.transform, false);
+            var query = canopy.AddComponent<BoxCollider>();
+            query.center = foliage.bounds.center;
+            query.size = foliage.bounds.size * .75f;
+            query.isTrigger = true;
+            var authoring = new SerializedObject(root.AddComponent<TreeGameplayAuthoring>());
+            Assign("physicalTrunkColliders", trunk);
+            Assign("queryCanopyColliders", query);
+            authoring.ApplyModifiedPropertiesWithoutUndo();
+            if (!PrefabUtility.SaveAsPrefabAsset(root, Prefabs + modelName + ".prefab"))
+                throw new InvalidOperationException("Could not save " + modelName);
+            Debug.Log("WOODLAND_EDGE_GAMEPLAY_PREFAB_PASS " + modelName);
+
+            void Assign(string field, Collider collider)
+            {
+                var slots = authoring.FindProperty(field);
+                slots.arraySize = 1;
+                slots.GetArrayElementAtIndex(0).objectReferenceValue = collider;
+            }
+        }
+        finally { Object.DestroyImmediate(root); }
+    }
+
     public static void Verify()
     {
         MeshRenderer Foliage(string name) => Array.Find(LoadPrefab(name).GetComponentsInChildren<MeshRenderer>(),

@@ -12,6 +12,7 @@ SAMPLER(sampler_BaseMap);
 #endif
 CBUFFER_START(UnityPerMaterial)
     float4 _BaseMap_ST;
+    half _BarkDistanceTiling, _BarkCanopyShelter;
     half4 _BaseColor, _TreeBarkTint, _SnowColor;
     half _Brightness, _ColorVariationStrength, _VerticalGradientStrength;
     half _ColorHeightMin, _ColorHeightMax, _AmbientStrength, _Smoothness, _SpecularStrength;
@@ -88,6 +89,26 @@ half3 SugarMapleBarkNormal(SugarMapleBarkVaryings input)
         return NormalizeNormalPerPixel(input.normalWS);
     #endif
 }
+half3 SampleBarkAlbedo(float2 uv, float3 positionWS)
+{
+    float2 uvDx = ddx(uv);
+    float2 uvDy = ddy(uv);
+    half blend = _BarkDistanceTiling > 0.0h
+        ? smoothstep(8.0, 24.0, distance(positionWS, _WorldSpaceCameraPos))
+        : 0.0h;
+
+    UNITY_BRANCH if (blend <= 0.0h)
+        return SAMPLE_TEXTURE2D_GRAD(_BaseMap, sampler_BaseMap, uv, uvDx, uvDy).rgb;
+
+    float scale = _BarkDistanceTiling;
+    float2 coarseUV = (uv - _BaseMap_ST.zw) * scale + _BaseMap_ST.zw;
+    half3 coarse = SAMPLE_TEXTURE2D_GRAD(_BaseMap, sampler_BaseMap, coarseUV, uvDx * scale, uvDy * scale).rgb;
+    UNITY_BRANCH if (blend >= 1.0h)
+        return coarse;
+
+    half3 fine = SAMPLE_TEXTURE2D_GRAD(_BaseMap, sampler_BaseMap, uv, uvDx, uvDy).rgb;
+    return lerp(fine, coarse, blend);
+}
 half4 SugarMapleBarkFragment(SugarMapleBarkVaryings input) : SV_Target
 {
     UNITY_SETUP_INSTANCE_ID(input);
@@ -98,7 +119,7 @@ half4 SugarMapleBarkFragment(SugarMapleBarkVaryings input) : SV_Target
         LODFadeCrossFade(input.positionCS);
     #endif
     // Preserve the painted base color; it is not a high-contrast crack mask.
-    half3 bark = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv).rgb * _BaseColor.rgb * _Brightness;
+    half3 bark = SampleBarkAlbedo(input.uv, input.positionWS) * _BaseColor.rgb * _Brightness;
     half variation = sin(dot(input.positionOS, float3(.61, .27, .48))) * _ColorVariationStrength;
     half height = saturate((input.positionOS.y - _ColorHeightMin) / max(_ColorHeightMax - _ColorHeightMin, .0001));
     bark *= (1 + variation) * lerp(1 - _VerticalGradientStrength, 1 + _VerticalGradientStrength, height);
@@ -109,6 +130,9 @@ half4 SugarMapleBarkFragment(SugarMapleBarkVaryings input) : SV_Target
     bark = lerp(bark, _SnowColor.rgb, saturate(StandingTreeSnow(_SnowCoverage) * smoothstep(.2h,.8h,normal.y)));
     InputData data = InitializeTreeSimpleLitInputData(input.positionWS, normal, input.positionCS,
         ResolveTreeShadowCoord(input.positionWS, input.shadowCoord), _AmbientStrength);
+    UNITY_BRANCH if (_BarkCanopyShelter > 0.0h)
+        data.bakedGI *= lerp(1.0h, FSForestCrownAmbient(input.positionWS,
+            NormalizeNormalPerPixel(input.normalWS), 1.0h), _BarkCanopyShelter);
     data.vertexLighting = input.vertexLighting;
     SurfaceData surface = InitializeTreeSimpleLitSurfaceData(bark, 1, _Smoothness, _SpecularStrength);
     half4 color = ShadeDistantAwareTree(data, surface);

@@ -1,10 +1,6 @@
 {
-    "configuration": "{\"species\":\"HeroQuakingAspen\",\"sourcePrefab\":\"Assets/Prefabs/HeroQuakingAspen.prefab\",\"leafPath\":\"Assets/Materials/M_Trees/HeroQuakingAspen/Needles.mat\",\"barkPath\":\"Assets/Materials/M_Trees/HeroQuakingAspen/Bark.mat\",\"leafTexture\":\"Assets/Textures/Trees/HeroQuakingAspen/LeafAlbedo.png\",\"barkTexture\":\"Assets/Textures/Trees/HeroQuakingAspen/BarkAlbedo.png\",\"sourceSlot\":\"\",\"variant\":\"GrasslandBirchAspenTree\",\"shaderName\":\"Hidden/TreeImpostor/OakSemanticCapture\",\"billboardSlots\":[],\"paletteMode\":-1,\"expansion\":0.2199999988079071}",
+    "configuration": "{\"species\":\"HeroQuakingAspen\",\"sourcePrefab\":\"Assets/Prefabs/HeroQuakingAspenLOD0.prefab\",\"leafPath\":\"Assets/Materials/M_Trees/HeroQuakingAspenLOD0/Leaf.mat\",\"barkPath\":\"Assets/Materials/M_Trees/HeroQuakingAspenLOD0/Bark.mat\",\"leafTexture\":\"Assets/Textures/Trees/HeroQuakingAspenLOD0/CrownAlbedoBase.png\",\"barkTexture\":\"Assets/Textures/Trees/HeroQuakingAspen/BarkAlbedo.png\",\"sourceSlot\":\"\",\"variant\":\"GrasslandBirchAspenTree\",\"shaderName\":\"Hidden/TreeImpostor/OakSemanticCapture\",\"billboardSlots\":[],\"paletteMode\":-1,\"expansion\":0.4000000059604645}",
     "inputs": [
-        {
-            "path": "Assets/Textures/Trees/HeroQuakingAspen/LeafAlbedo.png",
-            "sha256": "88E83CF88323B5E5AE5A4078FF82E44C61A4ECC4019F72DC49CB62DE54E42D4F"
-        },
         {
             "path": "Assets/Textures/Trees/HeroQuakingAspen/BarkAlbedo.png",
             "sha256": "37B9ED58062DBC042B5D25D5780A41980DA4BB3606FF96FCB0AE6B09C5042B35"
@@ -14,28 +10,40 @@
             "sha256": "98146416CC6C59870F956C122010EAE39A8AD4D4E0F2D45801D57B71F4F8E4ED"
         },
         {
-            "path": "Assets/Materials/M_Trees/HeroQuakingAspen/Needles.mat",
-            "sha256": "47FC93611A44EE3AF0921B0931054D22D9217B1CE7B2809FB784C3E766F6C199"
+            "path": "Assets/Materials/M_Trees/HeroQuakingAspenLOD0/Leaf.mat",
+            "sha256": "F5683912D41E7DDAE49309FB8E8C49627BB3F7E6AFC9C4F7D073338020FFF393"
         },
         {
-            "path": "Assets/Materials/M_Trees/HeroQuakingAspen/Bark.mat",
-            "sha256": "658D40E3FCDB3ADF6FFCBB4DFE3D8EB8F8515F36367EB14A74BB19DC74E1CA16"
+            "path": "Assets/Materials/M_Trees/HeroQuakingAspenLOD0/Bark.mat",
+            "sha256": "82C0A05E7B761133DACB53222E5B776C5B91AC255508AA66E01E93B36D07AEA1"
         },
         {
-            "path": "Assets/Models/Trees/HeroQuakingAspen.fbx",
-            "sha256": "3E8664C5497DE77746CEA4C3CED1ED4A3D19A67DDE7D981707B8EB40875A0742"
+            "path": "Assets/Textures/Trees/HeroQuakingAspenLOD0/CrownAlbedoBase.png",
+            "sha256": "86A3E38850087F0756F8C2A2459FDA079C41796D85E01C474D80FA101EE45D21"
         },
         {
-            "path": "Assets/Prefabs/HeroQuakingAspen.prefab",
-            "sha256": "4A16589F47277D8E4BD1E12C4F9428FE3DC5D9A0494E0CAC96CD8E0D2D76DC8F"
+            "path": "Assets/Scripts/FoliageGeneration/Trees/TreeGameplayAuthoring.cs",
+            "sha256": "8BC346EFA8C5C84AC80740666AC5CC348840765480FE0DE053560FB1DC0F3CDD"
         },
         {
             "path": "Assets/Shaders/OakBarkUnlit.shader",
             "sha256": "7EB7A6EC500E34AB35E6A6C85842540D88F14EB9028618D79B778D70CF1FC519"
         },
         {
+            "path": "Assets/Textures/Trees/HeroQuakingAspenLOD0/CrownSurface.png",
+            "sha256": "0158826B1C5BA2F5778F49F63102B0F9BB10B3052730FB9BD192EBDA83AF33DF"
+        },
+        {
+            "path": "Assets/Models/Trees/HeroQuakingAspenLOD0.fbx",
+            "sha256": "29AA093405F61C57705D1ED0EB2A5418E2EC0E40874FE07F852729B87CD3CDEA"
+        },
+        {
             "path": "Assets/Textures/Trees/HeroQuakingAspen/BarkNormal.png",
             "sha256": "DEE609E2585C6EC49835C91256B7B38EF0EAA095BDE035F09DED0F62B603F694"
+        },
+        {
+            "path": "Assets/Prefabs/HeroQuakingAspenLOD0.prefab",
+            "sha256": "CEE879C4E6F2496BC2460B3617D862F87133DD6C1CE514384408139A53676671"
         },
         {
             "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
@@ -51,37 +59,37 @@
         },
         {
             "path": "Assets/Shaders/TreeHQOctaImpostor.shader",
-            "sha256": "56D1F3E181731F104FC2853B3C0E203E1721CDC3556F0431443431896A50B60C"
+            "sha256": "3A9B391E01E5FD1D8F6C8DBEDA902339B7A68944E65C6A3BEC1428DC3A43A0A9"
         }
     ],
     "outputs": [
         {
             "path": "Assets/Textures/Trees/Impostors/HeroQuakingAspenHQ/HeroQuakingAspenHQ_Octa_AlbedoCoverage.png",
-            "sha256": "67B9190AA17FA3632499AE5051148C4FB59F22251F2DE44B1A17BB63A2E738B6"
+            "sha256": "3BF0A705C411E63AC1E224D6BA473CD05228FCBE6A3C6D4C98C3F1A1CC51CE85"
         },
         {
             "path": "Assets/Textures/Trees/Impostors/HeroQuakingAspenHQ/HeroQuakingAspenHQ_Octa_Surface.png",
-            "sha256": "48DED1966161B3D733B6DF2018B9A67474105FC1B3C6FFE1C7A6CED03CABD8F7"
+            "sha256": "1C0A9A1AA703BF4DD7D96A4D79861CC2A8B4DFC174EAF783C8250AEC4B73BCC5"
         },
         {
             "path": "Assets/Textures/Trees/Impostors/HeroQuakingAspenHQ/HeroQuakingAspenHQ_Octa_Depth.png",
-            "sha256": "6C8E62AB0F1A2275C7CD9065C8261CC42BF2071984AC5F7F00A49CCA269E9B28"
+            "sha256": "D9B870902D8C0A1F1EB19828C9445D9F1596736468A7EE039A729FA76700A179"
         },
         {
             "path": "Assets/Textures/Trees/Impostors/HeroQuakingAspenHQ/HeroQuakingAspenHQ_Octa_MaterialId.png",
-            "sha256": "1C246EC3938BC38A46B419CDC50208F7DAE870F2B6181AAD65D61DAA0F8C40AA"
+            "sha256": "9A3C77B1592071067200FC8C473C0BEB3674B932D1139062A0526121D19EFC2F"
         },
         {
             "path": "Assets/Textures/Trees/Impostors/HeroQuakingAspenHQ/HeroQuakingAspenHQ_Octa_Ambient.png",
-            "sha256": "22D3CA671B5934B530546120A7BFDCE4DAB5F70F82B1C5E0A5D65A9DEF2B52D0"
+            "sha256": "80F2439A3041BD36C44EBC83C3FB826343AA93BE8B507753BE47FF966E8E3B70"
         },
         {
             "path": "Assets/Materials/M_Trees/HeroQuakingAspenHQ/HeroQuakingAspenHQ_OctaImpostor_M.mat",
-            "sha256": "DD3C43E93C7CC87FF9D1D61462172DBA6D0AD7AED0E833522AA15F15C69DA7BE"
+            "sha256": "E61104105A6E12DBCA488E557DE6A662F74E7A03BC08DE788A1B013CB9BDDD53"
         },
         {
             "path": "Assets/Models/Trees/HeroQuakingAspenHQ_OctaImpostor_Runtime.mesh",
-            "sha256": "B1EC99DB972403EFD8F80CD244253823BCBB357EFEBED71E34AC27A7C50C7ABA"
+            "sha256": "9C84E59027BBDD4DE5A8445D9146A49C18C49B911F370257EB6DE9ABE8234428"
         },
         {
             "path": "Assets/Prefabs/HeroQuakingAspenHQ_OctaImpostor_Runtime.prefab",

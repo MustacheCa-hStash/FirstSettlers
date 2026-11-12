@@ -4,6 +4,8 @@ Shader "Custom/GrassInstancedTerrainTint"
     {
         [MainTexture] _BaseMap("Blade Albedo and Coverage", 2D) = "white" {}
         [Toggle(_MEADOW_BLADE_ALBEDO)] _MeadowBladeAlbedo("Use Meadow Blade Atlas", Float) = 0
+        _MeadowSeedStemCompression("Meadow Seed Stem Compression", Range(0,1)) = 1
+        [Toggle(_MEADOW_MESH_VARIANTS)] _MeadowMeshVariants("Use Meadow Mesh Variants", Float) = 0
         _BladeTransmission("Meadow Blade Transmission", Range(0, 0.4)) = 0.16
         _RootSeatFade("Meadow Root Coverage Fade", Range(0, 0.35)) = 0
 
@@ -90,6 +92,7 @@ Shader "Custom/GrassInstancedTerrainTint"
             #pragma instancing_options procedural:SetupGrassIndirect
             #pragma shader_feature_local _BILLBOARD_RENDER_FADE_ON
             #pragma shader_feature_local _MEADOW_BLADE_ALBEDO
+            #pragma shader_feature_local _MEADOW_MESH_VARIANTS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
@@ -138,6 +141,7 @@ Shader "Custom/GrassInstancedTerrainTint"
                 half _RenderFadeProgress;
                 half _FadeDitherPixelSize;
                 half _MeadowBladeAlbedo;
+                half _MeadowSeedStemCompression;
                 half _BladeTransmission;
             CBUFFER_END
 
@@ -150,6 +154,13 @@ Shader "Custom/GrassInstancedTerrainTint"
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 float2 uv : TEXCOORD0;
+                #if defined(_MEADOW_MESH_VARIANTS)
+                float4 variant1Position : TEXCOORD1;
+                float4 variant1Normal : TEXCOORD2;
+                float4 variant2Position : TEXCOORD3;
+                float4 variant2Normal : TEXCOORD4;
+                float tallBlade : TEXCOORD5;
+                #endif
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -237,20 +248,39 @@ Shader "Custom/GrassInstancedTerrainTint"
                 UNITY_SETUP_INSTANCE_ID(IN);
                 UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
 
-                half4 instanceData = GetGrassInstanceData(UNITY_ACCESS_INSTANCED_PROP(GrassInstanceProperties, _GrassInstanceData));
+                float4 instanceData = GetGrassInstanceData(UNITY_ACCESS_INSTANCED_PROP(GrassInstanceProperties, _GrassInstanceData));
+                #if defined(_MEADOW_MESH_VARIANTS)
+                // Both representations read the same per-placement phase.
+                // Keep the variant stable through distance selection and streaming.
+                float variant = floor(frac(instanceData.y * 7.0) * 3.0);
+                if (variant > .5)
+                {
+                    float4 position = variant < 1.5 ? IN.variant1Position : IN.variant2Position;
+                    float4 normal = variant < 1.5 ? IN.variant1Normal : IN.variant2Normal;
+                    IN.positionOS.xyz = position.xyz;
+                    IN.normalOS = normal.xyz;
+                    IN.uv = float2(position.w, normal.w);
+                }
+                #endif
                 half bladeHeight = saturate((IN.positionOS.y - _BladeMinY) / max(_BladeMaxY - _BladeMinY, 0.0001h));
                 float instancePhase = instanceData.y * 6.2831853;
                 float3 positionOS = IN.positionOS.xyz;
                 #if defined(_MEADOW_BLADE_ALBEDO)
                 // The right tile is the seed-bearing card. Most stems sit within the lower grass.
                 if (IN.uv.x > 0.5)
-                    positionOS.y -= max(positionOS.y, 0.0) * (1.0 - smoothstep(0.55, 0.91, instanceData.z)) * 0.34;
+                    positionOS.y -= max(positionOS.y, 0.0) * (1.0 - smoothstep(0.55, 0.91, instanceData.z)) * 0.34 *
+                        _MeadowSeedStemCompression;
                 instancePhase *= 0.36;
                 #endif
                 float3 positionWS = TransformObjectToWorld(positionOS);
                 positionWS = ApplyGrassWind(positionWS, bladeHeight, instancePhase);
 
                 OUT.positionCS = TransformWorldToHClip(positionWS);
+                #if defined(_MEADOW_MESH_VARIANTS)
+                // Collapse whole accent blades when this placement is short.
+                if (IN.tallBlade > .5 && frac(instanceData.y * 19.0) >= .25)
+                    OUT.positionCS = float4(0, 0, 0, 1);
+                #endif
                 OUT.positionWS = positionWS;
                 OUT.shadowCoord = TransformWorldToShadowCoord(positionWS);
                 #if defined(_BILLBOARD_RENDER_FADE_ON)

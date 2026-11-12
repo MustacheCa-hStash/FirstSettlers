@@ -1,0 +1,99 @@
+{
+    "configuration": "{\"species\":\"LowBranchedWhiteOak\",\"sourcePrefab\":\"Assets/Prefabs/LowBranchedWhiteOakLOD0.prefab\",\"leafPath\":\"Assets/Models/Trees/WoodlandEdgeLOD0/LowBranchedWhiteOak/Leaf.mat\",\"barkPath\":\"Assets/Models/Trees/WoodlandEdgeLOD0/LowBranchedWhiteOak/Bark.mat\",\"leafTexture\":\"Assets/Models/Trees/WoodlandEdgeLOD0/LowBranchedWhiteOak/CrownAlbedoBase.png\",\"barkTexture\":\"Assets/Models/Trees/WoodlandEdgeLOD0/LowBranchedWhiteOak/BarkAlbedo.png\",\"sourceSlot\":\"\",\"variant\":\"OakTree\",\"shaderName\":\"Hidden/TreeImpostor/OakSemanticCapture\",\"billboardSlots\":[],\"paletteMode\":-1,\"expansion\":0.23999999463558198,\"ambientTileResolution\":256,\"ambientVolumeResolution\":160}",
+    "inputs": [
+        {
+            "path": "Assets/Models/Trees/WoodlandEdgeLOD0/LowBranchedWhiteOak/CrownAlbedoBase.png",
+            "sha256": "D3333A515C321C64AD26946ED6CD221F053FB37DD92390868E11C33E2CCB7376"
+        },
+        {
+            "path": "Assets/Models/Trees/WoodlandEdgeLOD0/LowBranchedWhiteOak/LowBranchedWhiteOakLOD0.fbx",
+            "sha256": "E8619D5640795231CABBB26F0EA35DC2B2258464030F437135D966DA67E9589E"
+        },
+        {
+            "path": "Assets/Models/Trees/WoodlandEdgeLOD0/LowBranchedWhiteOak/BarkAlbedo.png",
+            "sha256": "762319AFA688AF17D271F081CE9AECE754A796D20A41545564F769BD9A5B9EA6"
+        },
+        {
+            "path": "Assets/Shaders/OakLeafTintCutout.shader",
+            "sha256": "98146416CC6C59870F956C122010EAE39A8AD4D4E0F2D45801D57B71F4F8E4ED"
+        },
+        {
+            "path": "Assets/Models/Trees/WoodlandEdgeLOD0/LowBranchedWhiteOak/Bark.mat",
+            "sha256": "2DCE2A3E569CA4072FC28279FF9534627DF86CA87646777F1CB4E3BAE3F9BD31"
+        },
+        {
+            "path": "Assets/Prefabs/LowBranchedWhiteOakLOD0.prefab",
+            "sha256": "661D8F4B774C9A2A4F083330526B3709BE562FC5932BDAE9C76B3A1A5F21E1E6"
+        },
+        {
+            "path": "Assets/Scripts/FoliageGeneration/Trees/TreeGameplayAuthoring.cs",
+            "sha256": "8BC346EFA8C5C84AC80740666AC5CC348840765480FE0DE053560FB1DC0F3CDD"
+        },
+        {
+            "path": "Assets/Shaders/OakBarkUnlit.shader",
+            "sha256": "7EB7A6EC500E34AB35E6A6C85842540D88F14EB9028618D79B778D70CF1FC519"
+        },
+        {
+            "path": "Assets/Models/Trees/WoodlandEdgeLOD0/LowBranchedWhiteOak/CrownSurface.png",
+            "sha256": "B5F3B5C55709E90B17FE8BAB63AC2CEB318BA5421284ED00A22D15F846B9FC9B"
+        },
+        {
+            "path": "Assets/Models/Trees/WoodlandEdgeLOD0/LowBranchedWhiteOak/Leaf.mat",
+            "sha256": "276BD9AB6373AC89908DFF531E6462D65AF1733071BE59BEC9F75E9CD3C45EFD"
+        },
+        {
+            "path": "Assets/Models/Trees/WoodlandEdgeLOD0/LowBranchedWhiteOak/BarkNormal.png",
+            "sha256": "F894A5B1CBDE7160D18093159DBACCED43FE6F355DEDF58B01C7325182FF9BD0"
+        },
+        {
+            "path": "Assets/Shaders/OakImpostorSemanticCapture.shader",
+            "sha256": "53B96CD7B35A1F28966A89615C5E40EDF81CF0E30A1993089406926E8831F5B5"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAtlasCaptureWindow.cs",
+            "sha256": "84B0720B90AAD407CD3C5772FABB6EF3CE108E0232BBC8FDD07B10E7631EE9BD"
+        },
+        {
+            "path": "Assets/Editor/TreeImpostorAmbientAtlasBakerWindow.cs",
+            "sha256": "02D7E17485358DB37536837CEAFAB4843B2D6C7B8BE03FF4B1906A2C63E8B619"
+        },
+        {
+            "path": "Assets/Shaders/TreeHQOctaImpostor.shader",
+            "sha256": "1927768D9B4AD0FB53496FF28EA20AFD1F35D386F411F0E794A98279D50A2554"
+        }
+    ],
+    "outputs": [
+        {
+            "path": "Assets/Textures/Trees/Impostors/LowBranchedWhiteOakHQ/LowBranchedWhiteOakHQ_Octa_AlbedoCoverage.png",
+            "sha256": "0013F431B9ADA335F538F21B80A9267733B78A046A7CCDCA4B4EA20565EA9BF7"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/LowBranchedWhiteOakHQ/LowBranchedWhiteOakHQ_Octa_Surface.png",
+            "sha256": "D7FDDF045852E89241237E0C69DFC3B3E6768E104478A0D37C1513098609A683"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/LowBranchedWhiteOakHQ/LowBranchedWhiteOakHQ_Octa_Depth.png",
+            "sha256": "24DADC78478348E150B69693672955444C1C2769A35E20130D77131B850B652C"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/LowBranchedWhiteOakHQ/LowBranchedWhiteOakHQ_Octa_MaterialId.png",
+            "sha256": "C71481C19A3F1663AD92B006F98854754A7A3633CEF01A6B3FF863A0DAA21508"
+        },
+        {
+            "path": "Assets/Textures/Trees/Impostors/LowBranchedWhiteOakHQ/LowBranchedWhiteOakHQ_Octa_Ambient.png",
+            "sha256": "E28CC5D023B9DFBFD0481154D7F6E91F4071E71E1E216D2B226CDB569D0FC5FC"
+        },
+        {
+            "path": "Assets/Materials/M_Trees/LowBranchedWhiteOakHQ/LowBranchedWhiteOakHQ_OctaImpostor_M.mat",
+            "sha256": "D28078B55F63C0E2D7F8C8472FBDAE549EFB33D9A23D0FCBC27428E7D77D34C9"
+        },
+        {
+            "path": "Assets/Models/Trees/LowBranchedWhiteOakHQ_OctaImpostor_Runtime.mesh",
+            "sha256": "D4A666C1FD716E7E6F908082ACCEF7BE7DE188B8F5042744C1B8D15EDEDDF8EF"
+        },
+        {
+            "path": "Assets/Prefabs/LowBranchedWhiteOakHQ_OctaImpostor_Runtime.prefab",
+            "sha256": "6C50E735F799FB4FC10C692C990FA409040648C9D1A007005297810EB4B62C1F"
+        }
+    ]
+}

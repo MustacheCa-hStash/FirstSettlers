@@ -1,0 +1,17 @@
+{
+  "prefab": "Assets/WoodlandEdgeCaptureMasters/HazelThicket/HazelThicket.prefab",
+  "prefabGuid": "6bb9cd9724fa60743a90d192ec6a2824",
+  "dependencyHash": "75f8e593787b243d86bdc5966492cdad",
+  "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
+  "supersample": 2,
+  "voxelResolution": 128,
+  "ambientTileResolution": 128,
+  "aoRays": 8,
+  "skyRays": 12,
+  "raySteps": 16,
+  "coverageExpansion": 2,
+  "colorBleedPixels": 2,
+  "coverageExpansionStrength": 0.23999999463558197,
+  "approvedBlenderMaster": "ArtSource/WoodlandEdgeHighPoly/HazelThicket.blend",
+  "approvedBlenderMasterSha256": "ABEF2497874ADA9AD4B4CFFB84E1100F268C5ECE39760A4ADF0FB23F76F008B3"
+}

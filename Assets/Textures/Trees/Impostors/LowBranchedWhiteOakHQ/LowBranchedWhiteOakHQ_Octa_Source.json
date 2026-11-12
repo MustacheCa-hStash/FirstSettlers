@@ -1,0 +1,15 @@
+{
+    "prefab": "Assets/Prefabs/LowBranchedWhiteOakLOD0.prefab",
+    "prefabGuid": "3461e606c612725448f67b4e709d6e85",
+    "dependencyHash": "c68014c818b500b1f84df754642ff103",
+    "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
+    "supersample": 2,
+    "voxelResolution": 160,
+    "ambientTileResolution": 256,
+    "aoRays": 8,
+    "skyRays": 12,
+    "raySteps": 16,
+    "coverageExpansion": 2,
+    "colorBleedPixels": 2,
+    "coverageExpansionStrength": 0.23999999463558198
+}

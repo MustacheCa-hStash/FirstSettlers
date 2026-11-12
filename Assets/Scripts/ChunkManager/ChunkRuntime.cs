@@ -79,6 +79,10 @@ public class ChunkRuntime
         terrainMeshRenderer = root.AddComponent<MeshRenderer>();
 
         runtimeTerrainMaterial = new Material(terrainMaterial);
+        if (runtimeTerrainMaterial.HasProperty("_UseNearMeadowTurf") &&
+            runtimeTerrainMaterial.GetTexture("_NearMeadowAlbedo") &&
+            runtimeTerrainMaterial.GetTexture("_NearMeadowRelief"))
+            runtimeTerrainMaterial.SetFloat("_UseNearMeadowTurf", 1);
         ForestFloorMaterialOptions.DisableMissingMaps(runtimeTerrainMaterial);
         terrainMeshRenderer.material = runtimeTerrainMaterial;
         terrainMeshRenderer.shadowCastingMode = ShadowCastingMode.Off;

@@ -339,7 +339,12 @@ public sealed class LayeredTreeDistribution
             if (crowns.Count >= 2)
             {
                 var edge = new WoodlandEdgeField(crowns,seed,settings.WoodlandEdgeInfill,settings.PackedWoodland);
-                if (settings.PackedWoodland) AddEdgeTrees(plan, coord, edge, origin, size);
+                if (settings.PackedWoodland)
+                {
+                    AddEdgePlants(plan, coord, edge, origin, size, thickets: false);
+                    if (features.hasWoodlandEdgeForms)
+                        AddEdgePlants(plan, coord, edge, origin, size, thickets: true);
+                }
                 foreach (var (index,source) in young)
                     MoveYoungTree(plan,index,source,edge,origin,size);
                 if (keepWoodlandEdge) plan.WoodlandEdge = edge;
@@ -429,65 +434,109 @@ public sealed class LayeredTreeDistribution
         plan.Placements[index] = placement;
     }
 
-    private void AddEdgeTrees(WorldFeaturePlan plan, ChunkCoord coord, WoodlandEdgeField edge, Vector2 origin, float size)
+    private const float EdgeSpacing = 3f;
+    private const float EdgeRootRadius = .55f;
+
+    private Vector2 EdgeTreePoint(int x, int z) =>
+        new Vector2(x + .2f + .6f * Roll(Hash(x,z,89201)),
+                    z + .2f + .6f * Roll(Hash(x,z,89202))) * EdgeSpacing;
+
+    private void AddEdgePlants(WorldFeaturePlan plan, ChunkCoord coord, WoodlandEdgeField edge, Vector2 origin, float size,
+        bool thickets)
     {
         // Bounded jitter on a world grid keeps edge-tree roots at least 1.2 m apart,
         // including across seams, while allowing their crowns to overlap.
-        const float spacing = 3f, rootRadius = .55f;
         float scale = settings.WorldScale;
-        int firstX = Mathf.FloorToInt(origin.x / spacing), firstZ = Mathf.FloorToInt(origin.y / spacing);
-        int lastX = Mathf.FloorToInt((origin.x + size) / spacing), lastZ = Mathf.FloorToInt((origin.y + size) / spacing);
+        float phase = thickets ? .5f : 0f;
+        int firstX = Mathf.FloorToInt(origin.x / EdgeSpacing - phase), firstZ = Mathf.FloorToInt(origin.y / EdgeSpacing - phase);
+        int lastX = Mathf.FloorToInt((origin.x + size) / EdgeSpacing - phase), lastZ = Mathf.FloorToInt((origin.y + size) / EdgeSpacing - phase);
         int stride = lastX - firstX + 1;
         for (int z = firstZ; z <= lastZ; z++)
         for (int x = firstX; x <= lastX; x++)
         {
-            var point = new Vector2(x + .2f + .6f * Roll(Hash(x,z,89201)),
-                                    z + .2f + .6f * Roll(Hash(x,z,89202))) * spacing;
+            var point = thickets
+                ? new Vector2(x + .88f + .24f * Roll(Hash(x,z,89311)), z + .88f + .24f * Roll(Hash(x,z,89312))) * EdgeSpacing
+                : EdgeTreePoint(x, z);
             var local = point - origin;
             if (local.x < 0f || local.y < 0f || local.x >= size || local.y >= size) continue;
             float group = edge.Group(point);
-            float cover = edge.Gap(point, treeBand: true) * edge.Strength;
-            if (cover < .08f) continue;
+            float cover = thickets ? edge.Gap(point, thicketBand: true) : edge.Gap(point, treeBand: true);
+            if (!thickets && features.hasWoodlandEdgeForms)
+                cover = Mathf.Max(cover, edge.Gap(point) * .70f);
+            cover *= edge.Strength;
+            float mix = Roll(Hash(x,z,89204));
+            float age = Roll(Hash(x,z,89205));
+            if (cover < (thickets ? .045f : .08f)) continue;
             var sample = point / scale;
             var site = habitat(sample.x, sample.y);
             Stats.HabitatQueries++;
             if (site.Surface != SurfaceType.Grass || site.Height <= water || site.River >= .45f ||
                 site.Slope >= TerrainSlopePolicy.ForestMaxDegrees ||
                 site.Biome is not (BiomeType.Forest or BiomeType.Grassland)) continue;
-            // Shrubs carry the screen between tree clumps. Adjacent cells share
-            // the same broad patches, but draw their heights independently.
-            float edgeDensity = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(.32f, .67f, group)) *
-                (site.Biome == BiomeType.Grassland ? 5.5f : 2.5f);
-            if (Roll(Hash(x,z,89203)) > Mathf.Clamp01(cover * edgeDensity)) continue;
-            if (OverlapsStandTree(sample, rootRadius / scale)) continue;
+            float cluster = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(.32f, .67f, group));
+            if (features.hasWoodlandEdgeForms) cluster = Mathf.Lerp(.38f, 1f, cluster);
+            bool meadow = site.Biome == BiomeType.Grassland;
+            float forestTreeDensity = features.hasWoodlandEdgeForms ? 1.5f : 2.5f;
+            float edgeDensity = thickets ? (meadow ? 3.8f : .90f) : cluster * (meadow ? 5.5f : forestTreeDensity);
+            if (Roll(Hash(x,z,thickets ? 89313 : 89203)) > Mathf.Clamp01(cover * edgeDensity)) continue;
+            if (OverlapsStandTree(sample, EdgeRootRadius / scale, thickets ? .44f : 1f)) continue;
+            if (thickets && OverlapsEdgeTreeRoot(point, x, z)) continue;
             var root = local / scale;
             bool overlapsBoulder = false;
             foreach (var rock in plan.Placements)
             {
                 if (rock.featureType != WorldFeatureType.Boulder) continue;
-                float separation = rock.exclusionRadius + rootRadius / scale;
+                float separation = rock.exclusionRadius + EdgeRootRadius / scale;
                 if ((root - new Vector2(rock.sampleX, rock.sampleZ)).sqrMagnitude >= separation * separation) continue;
                 overlapsBoulder = true;
                 break;
             }
             if (overlapsBoulder) continue;
-            float mix = Roll(Hash(x,z,89204));
-            float age = Roll(Hash(x,z,89205));
             var variant = mix < .60f ? WorldFeatureVariant.WoodlandEdgeBeech :
                 mix < .79f ? WorldFeatureVariant.MapleTree :
                 mix < .91f ? WorldFeatureVariant.SugarMapleTree :
                 age > .72f ? WorldFeatureVariant.OakTree : WorldFeatureVariant.BirchAspenTree;
             float height = Mathf.Lerp(3f, 10f, age);
             if (age > .9f && group > .58f) height += 3f;
+            if (features.hasWoodlandEdgeForms)
+            {
+                if (thickets)
+                {
+                    variant = WorldFeatureVariant.WoodlandEdgeHazel;
+                    height = Mathf.Lerp(1.7f, 3.0f, age) * 1.15f;
+                }
+                else if (group > .53f && cover > .19f && age > .73f)
+                {
+                    variant = WorldFeatureVariant.WoodlandEdgeOak;
+                    height = Mathf.Lerp(10f, 16f, Mathf.InverseLerp(.73f, 1f, age));
+                }
+                else if (mix < .90f)
+                {
+                    variant = WorldFeatureVariant.WoodlandEdgeBeech;
+                    height = Mathf.Lerp(4.6f, 8.2f, age);
+                }
+            }
             plan.Placements.Add(new WorldFeaturePlacement(WorldFeatureType.Tree, variant, root.x, root.y,
                 Quaternion.Euler(0f, 360f * Roll(Hash(x,z,89206)), 0f),
-                Vector3.one * (height / features.GetWoodlandCrown(variant).z), rootRadius / scale, 1.6f * rootRadius / scale,
-                treeId: TreeId.Generated(seed, coord, TreePlacementSource.WoodlandEdge, (z-firstZ)*stride+x-firstX)));
+                Vector3.one * (height / features.GetWoodlandCrown(variant).z), EdgeRootRadius / scale, 1.6f * EdgeRootRadius / scale,
+                treeId: TreeId.Generated(seed, coord, thickets ? TreePlacementSource.WoodlandEdgeThicket : TreePlacementSource.WoodlandEdge,
+                    (z-firstZ)*stride+x-firstX)));
             Stats.Trees++;
         }
     }
 
-    private bool OverlapsStandTree(Vector2 point, float radius)
+    private bool OverlapsEdgeTreeRoot(Vector2 point, int cellX, int cellZ)
+    {
+        // Reserve space around the potential tree roots, even if their owning
+        // chunks have not generated. Crown overlap is intentional.
+        const float clearance = 2f * EdgeRootRadius;
+        for (int z = cellZ; z <= cellZ + 1; z++)
+        for (int x = cellX; x <= cellX + 1; x++)
+            if ((EdgeTreePoint(x, z) - point).sqrMagnitude < clearance * clearance) return true;
+        return false;
+    }
+
+    private bool OverlapsStandTree(Vector2 point, float radius, float standSpacing)
     {
         float reach = radius + maxRadius;
         for (int z=Mathf.FloorToInt((point.y-reach)/cell); z<=Mathf.FloorToInt((point.y+reach)/cell); z++)
@@ -496,7 +545,7 @@ public sealed class LayeredTreeDistribution
             var other = Get(x,z);
             if (!other.Eligible) continue;
             var offset = point-new Vector2(other.XZx,other.XZz);
-            float separation = radius+other.Radius;
+            float separation = radius + other.Radius * standSpacing;
             if (offset.sqrMagnitude < separation*separation && Accepted(other)) return true;
         }
         return false;

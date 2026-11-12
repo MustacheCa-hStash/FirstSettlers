@@ -48,16 +48,18 @@ public static class TreeStandValidation
         ValidatePipeline(settings);
         ValidateEcotone(settings);
         ValidatePackedWoodland(authored);
+        ValidatePackedWoodland(authored, true);
         ValidateHabitatGates(settings);
         ValidateWorldSampler(settings);
         Debug.Log("TREE_STANDS_PASS: authored radii, world-space stands, negative coordinates, exact ownership, cross-chunk spacing, order independence, dominant palettes, scale independence, density contrast, full/sparse/worker agreement and water/biome gates.");
     }
-    private static void ValidatePackedWoodland(TreeSettings authored)
+    private static void ValidatePackedWoodland(TreeSettings authored, bool edgeAssets = false)
     {
         authored.distributionProfile = AssetDatabase.LoadAssetAtPath<TreeDistributionProfile>(
             "Assets/ScriptableObjects/ForestVarietyDistributionDense.asset");
         Check(authored.distributionProfile != null, "Packed pilot profile missing.");
         var settings = TreeGenerationSnapshot.Create(authored, .3f);
+        settings.hasWoodlandEdgeForms = edgeAssets;
         Check(settings.treeDistribution.PackedWoodland, "Packed pilot profile is disabled.");
         var withoutInfill = settings;
         withoutInfill.treeDistribution.WoodlandEdgeInfill = 0f;
@@ -78,7 +80,8 @@ public static class TreeStandValidation
             return plan;
         }
 
-        var trees = new List<(Vector2 Position, float Radius)>();
+        var trees = new List<(Vector2 Position, float Radius, WorldFeatureVariant Variant, TreePlacementSource Source)>();
+        var counts = new Dictionary<WorldFeatureVariant, int>();
         int edgeTrees = 0, meadowEdgeTrees = 0, forestTrees = 0, previousForestTrees = 0;
         float shortestEdge = float.PositiveInfinity, tallestEdge = 0f;
         var edgeForms = new HashSet<WorldFeatureVariant>();
@@ -99,15 +102,20 @@ public static class TreeStandValidation
                     tree.sampleX == distant.sampleX && tree.sampleZ == distant.sampleZ &&
                     tree.variant == distant.variant && tree.scale == distant.scale,
                     "Packed infill disagrees between near and sparse tree generation.");
-                if (tree.treeId.Source == TreePlacementSource.WoodlandEdge)
+                if (tree.treeId.Source is TreePlacementSource.WoodlandEdge or TreePlacementSource.WoodlandEdgeThicket)
                 {
                     edgeTrees++;
                     if (x >= 0) meadowEdgeTrees++;
                     float height = settings.GetWoodlandCrown(tree.variant).z * tree.scale.x;
-                    Check(height >= 2.99f && height <= 13.01f, "Edge tree missed the intended height range.");
+                    if (tree.treeId.Source == TreePlacementSource.WoodlandEdgeThicket)
+                        Check(tree.variant == WorldFeatureVariant.WoodlandEdgeHazel && height >= 1.95f && height <= 3.46f,
+                            "Thicket lattice emitted a different form or missed the larger hazel height range.");
+                    Check(height >= (edgeAssets ? 1.69f : 2.99f) && height <= (edgeAssets ? 16.01f : 13.01f),
+                        "Edge tree missed the intended height range.");
                     shortestEdge = Mathf.Min(shortestEdge, height);
                     tallestEdge = Mathf.Max(tallestEdge, height);
                     edgeForms.Add(tree.variant);
+                    counts[tree.variant] = counts.GetValueOrDefault(tree.variant) + 1;
                 }
                 else
                 {
@@ -116,21 +124,45 @@ public static class TreeStandValidation
                         tree.sampleZ == unmoved.sampleZ, "Edge infill moved a stand tree.");
                 }
                 if (x < 0) forestTrees++;
-                trees.Add((new Vector2(x * Size + tree.sampleX, z * Size + tree.sampleZ), tree.exclusionRadius));
+                trees.Add((new Vector2(x * Size + tree.sampleX, z * Size + tree.sampleZ), tree.exclusionRadius,
+                    tree.variant, tree.treeId.Source));
             }
         }
         Check(meadowEdgeTrees > 0, "The packed fixture did not add dedicated meadow-side edge trees.");
         Check(shortestEdge < 4f && tallestEdge > 9f && edgeForms.Count >= 4 &&
             edgeForms.Contains(WorldFeatureVariant.WoodlandEdgeBeech), "The edge lost its height or form variation.");
         Check(forestTrees > previousForestTrees, "The packed fixture did not increase forest density.");
+        if (edgeAssets)
+        {
+            Check(edgeForms.Contains(WorldFeatureVariant.WoodlandEdgeOak) && edgeForms.Contains(WorldFeatureVariant.WoodlandEdgeHazel),
+                "Packed woodland did not generate the new oak and thicket.");
+            float reachSquared = Mathf.Pow(5f / settings.treeDistribution.WorldScale, 2f);
+            var lowTrees = trees.Where(t => t.Source == TreePlacementSource.WoodlandEdge &&
+                t.Variant is WorldFeatureVariant.WoodlandEdgeOak or WorldFeatureVariant.WoodlandEdgeBeech).ToArray();
+            var thickets = trees.Where(t => t.Source == TreePlacementSource.WoodlandEdgeThicket).ToArray();
+            Check(lowTrees.Any(t => thickets.Any(h => h.Position.x > t.Position.x &&
+                      (h.Position - t.Position).sqrMagnitude < reachSquared)) &&
+                  lowTrees.Any(t => thickets.Any(h => h.Position.x < t.Position.x &&
+                      (h.Position - t.Position).sqrMagnitude < reachSquared)),
+                "Thickets did not layer on both sides of low edge trees in the forest/meadow fixture.");
+        }
         for (int i = 0; i < trees.Count; i++)
         for (int j = 0; j < i; j++)
         {
-            float separation = trees[i].Radius + trees[j].Radius;
+            var a = trees[i];
+            var b = trees[j];
+            float separation = a.Radius + b.Radius;
+            if (a.Variant == WorldFeatureVariant.WoodlandEdgeHazel && b.Source == TreePlacementSource.Stand)
+                separation = a.Radius + b.Radius * .44f;
+            if (b.Variant == WorldFeatureVariant.WoodlandEdgeHazel && a.Source == TreePlacementSource.Stand)
+                separation = b.Radius + a.Radius * .44f;
             Check((trees[i].Position - trees[j].Position).sqrMagnitude + .01f >= separation * separation,
                 "Packed woodland exclusions overlap within or across chunks.");
         }
         Debug.Log($"PACKED_WOODLAND_PASS: {previousForestTrees} -> {forestTrees} forest-side trees, {edgeTrees} dedicated edge trees ({meadowEdgeTrees} on the meadow side); spacing and near/sparse parity verified.");
+        if (edgeAssets)
+            Debug.Log($"WOODLAND_EDGE_FORMS_GENERATION_PASS: {counts[WorldFeatureVariant.WoodlandEdgeOak]} oak, " +
+                $"{counts[WorldFeatureVariant.WoodlandEdgeBeech]} beech, {counts[WorldFeatureVariant.WoodlandEdgeHazel]} hazel.");
     }
     private static void ValidateRegion(WorldFeatureGenerationSettings settings,BiomeType biome)
     {

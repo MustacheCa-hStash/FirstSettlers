@@ -311,7 +311,7 @@ MonoBehaviour:
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
   m_RenderPostProcessing: 1
-  m_Antialiasing: 0
+  m_Antialiasing: 2
   m_AntialiasingQuality: 2
   m_StopNaN: 0
   m_Dithering: 0
@@ -481,12 +481,12 @@ MonoBehaviour:
   maxSunAltitude: 42
   nightAltitude: -18
   horizonFadeDegrees: 8
-  maxSunIntensity: 1.42
+  maxSunIntensity: 1.6
   sunColor:
     serializedVersion: 2
     key0: {r: 1, g: 0.47, b: 0.24, a: 1}
     key1: {r: 1, g: 0.76, b: 0.45, a: 1}
-    key2: {r: 1, g: 0.96, b: 0.84, a: 0}
+    key2: {r: 1, g: 0.975, b: 0.91, a: 0}
     key3: {r: 1, g: 0.7, b: 0.36, a: 0}
     key4: {r: 1, g: 0.38, b: 0.18, a: 0}
     key5: {r: 0, g: 0, b: 0, a: 0}
@@ -679,9 +679,9 @@ MonoBehaviour:
   updateAmbientLighting: 1
   twilightAmbientBlend: 0.22
   twilightNightFraction: 0.18
-  dayAmbientIntensity: 0.89
+  dayAmbientIntensity: 0.93
   nightAmbientIntensity: 0.26
-  dayAmbientSkyColor: {r: 0.54, g: 0.63, b: 0.75, a: 1}
+  dayAmbientSkyColor: {r: 0.56, g: 0.65, b: 0.77, a: 1}
   dayAmbientEquatorColor: {r: 0.4, g: 0.44, b: 0.5, a: 1}
   dayAmbientGroundColor: {r: 0.23, g: 0.218, b: 0.167, a: 1}
   nightAmbientSkyColor: {r: 0.075, g: 0.085, b: 0.13, a: 1}
@@ -1031,7 +1031,7 @@ MonoBehaviour:
   viewerCamera: {fileID: 81284299}
   chunkParent: {fileID: 1025920260}
   grassSettings:
-    grassPrefab: {fileID: 6887597201631143399, guid: 7aef0b956003053459607ca27b9acc06, type: 3}
+    grassPrefab: {fileID: 3589130598834452593, guid: cd3af5981b208d646bdd71c3cb3ed1bd, type: 3}
     forestGrassPrefab: {fileID: 1634587620519577313, guid: 85af04a99c8b5454aae351e34e56a10e, type: 3}
     forestBillboardGrassPrefab: {fileID: 5031572411753321702, guid: 2fb42c455d369a14aa999758f7e9cd6e, type: 3}
     gpuIndirectRendering: 1
@@ -1072,7 +1072,7 @@ MonoBehaviour:
     forestDarkGrassColor: {r: 0.143, g: 0.217, b: 0.092, a: 1}
     forestMidGrassColor: {r: 0.214, g: 0.313, b: 0.136, a: 1}
     forestLightGrassColor: {r: 0.303, g: 0.405, b: 0.173, a: 1}
-    billboardGrassPrefab: {fileID: 5674864547714122687, guid: df5afa86a0cf493438d39adb16bc8120, type: 3}
+    billboardGrassPrefab: {fileID: 238927536269708921, guid: b6c216e1e8b04ec458f7475df82d6fd1, type: 3}
     billboardRingRadius: 3
   flowerSettings:
     enableFlowers: 1
@@ -1295,7 +1295,7 @@ MonoBehaviour:
     seedOffset: 83000
     uniformScaleRange: {x: 0.82, y: 1.18}
   cloverSettings:
-    enableClover: 1
+    enableClover: 0
     cloverClumpPrefab: {fileID: 2522059427205176057, guid: 34276995c6e0cb44b90eb27277ebdff7, type: 3}
     cloverClumpPrefabs:
     - {fileID: 4919398732661662658, guid: 9a12c39052867774bbf56c1fb4c90611, type: 3}
@@ -1352,6 +1352,7 @@ MonoBehaviour:
   leafClusterSettings:
     enabled: 1
     woodlandKind: 1
+    allowGrasslandHabitatShrubs: 1
     gpuIndirectRendering: 1
     scatterCompactShader: {fileID: 0}
     prefab: {fileID: 8097956411807578242, guid: 824134c6713a26340a89b5a5ef87a1cc, type: 3}
@@ -1379,6 +1380,7 @@ MonoBehaviour:
   fernSettings:
     enabled: 1
     woodlandKind: 0
+    allowGrasslandHabitatShrubs: 1
     gpuIndirectRendering: 1
     scatterCompactShader: {fileID: 0}
     prefab: {fileID: 6619826999670424998, guid: aa7714c4538805f4b82a0b4f4eb656dd, type: 3}
@@ -1413,6 +1415,7 @@ MonoBehaviour:
   woodlandShrubs:
     enabled: 1
     woodlandKind: 4
+    allowGrasslandHabitatShrubs: 0
     gpuIndirectRendering: 1
     scatterCompactShader: {fileID: 0}
     prefab: {fileID: 1806557501824917914, guid: 90aa8053ea3ff3d48875bfa18392c1f6, type: 3}
@@ -1440,6 +1443,7 @@ MonoBehaviour:
   woodlandDebris:
     enabled: 0
     woodlandKind: 3
+    allowGrasslandHabitatShrubs: 1
     gpuIndirectRendering: 1
     scatterCompactShader: {fileID: 0}
     prefab: {fileID: 5265297470261139952, guid: 0d5dab87cf6cbb7498b8903f41d62754, type: 3}
@@ -1489,7 +1493,12 @@ MonoBehaviour:
     sugarMapleTreePrefab: {fileID: 3637633189347396525, guid: ab0ae1414e8dafa49b7fb259a044e4aa, type: 3}
     birchAspenTreePrefab: {fileID: 3623795385513349218, guid: abfee49c0afd3974082cdf5793f89b2a, type: 3}
     beechTreePrefab: {fileID: 6400800452624308651, guid: 36f11753edabe304682a6d7923cf8f04, type: 3}
-    woodlandEdgeBeechPrefab: {fileID: 8219077581130945549, guid: a910abb28a5fd1c4ebd41ff84969e872, type: 3}
+    woodlandEdgeBeechPrefab: {fileID: 8110663181519121739, guid: 81f6e420e8bb7b24aba1e0df363b6ec6, type: 3}
+    woodlandEdgeOakPrefab: {fileID: 8199734762879459746, guid: 3461e606c612725448f67b4e709d6e85, type: 3}
+    woodlandEdgeHazelPrefab: {fileID: 919132149155446097, guid: 1a231f75154f8b045b271c0677dd63d0, type: 3}
+    woodlandEdgeBeechBillboardPrefab: {fileID: 2935548384290239160, guid: 7935f43986b209e4c88f08de4b4d60f7, type: 3}
+    woodlandEdgeOakBillboardPrefab: {fileID: 1594453557732102835, guid: febdde3d749028e48a3475a7eeded00e, type: 3}
+    woodlandEdgeHazelBillboardPrefab: {fileID: 8098457247309953966, guid: 2208dff4a08fc0e43b5472418264b57a, type: 3}
     spruceTreePrefab: {fileID: 8972395177912114967, guid: 08ed61167aa4efd419e88248e307a6ca, type: 3}
     whitePineTreePrefab: {fileID: 4082799300535079883, guid: 288c35ece6bd16a48be0018e5494e9fd, type: 3}
     oakTreePrefab: {fileID: 7605440420851175572, guid: bb833ffada0c3244e880020782271c9e, type: 3}
@@ -1613,12 +1622,14 @@ MonoBehaviour:
     barkPaletteBlend: 0.25
     crownDarkness: 0.67
     groundDarkness: 4
-    groundDirectShade: 0
-    groundSunStrength: 3.4
-    openGroundSun: 1.25
-    openGroundAmbient: 1.18
-    directionalSkyFill: 0.85
-    leafTransmission: 3
+    groundDirectShade: 0.52
+    groundSunStrength: 2.55
+    openGroundSun: 1.18
+    openGroundAmbient: 1.1
+    directionalSkyFill: 0.72
+    leafTransmission: 2.3
+    enclosedGroundAmbientShade: 0.96
+    enclosedCrownAmbientShade: 0.97
     groundContactShadows: 1.1
     groundContactLength: 0.65
     groundContactRange: 20

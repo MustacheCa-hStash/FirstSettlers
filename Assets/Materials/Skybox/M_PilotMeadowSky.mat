@@ -23,20 +23,24 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _CloudAtlas:
+        m_Texture: {fileID: 2800000, guid: 0cc84191c19b4a09b7a326169b7b8549, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _CloudNoise:
         m_Texture: {fileID: 11700000, guid: b6737e4938b76134ba8b4997057e3066, type: 2}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _CloudCoverage: 0.59
+    - _CloudCoverage: 0.75
     - _CloudHours: 14
-    - _CloudScale: 0.61
-    - _HighClouds: 0.12
+    - _CloudScale: 0.43
+    - _HighClouds: 0.045
     m_Colors:
-    - _CloudShade: {r: 0.54, g: 0.61, b: 0.7, a: 1}
-    - _CloudWhite: {r: 0.96, g: 0.96, b: 0.955, a: 1}
-    - _CloudWind: {r: 0.014, g: 0.006, b: 0, a: 0}
+    - _CloudShade: {r: 0.43, g: 0.49, b: 0.60, a: 1}
+    - _CloudWhite: {r: 0.97, g: 0.98, b: 1, a: 1}
+    - _CloudWind: {r: 0.028, g: 0.012, b: 0, a: 0}
     - _DayZenith: {r: 0.08, g: 0.286, b: 0.565, a: 1}
     - _HorizonTint: {r: 0.63, g: 0.71, b: 0.78, a: 1}
     - _NightZenith: {r: 0.028, g: 0.04399997, b: 0.08499997, a: 1}

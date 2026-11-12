@@ -266,7 +266,7 @@ public class WorldManager : MonoBehaviour
             forestLighting.groundDirectShade, Mathf.Clamp(forestLighting.groundSunStrength, .5f, 8.5f) - 1f);
         var openGround = new Vector4(forestLighting.openGroundSun - 1f, forestLighting.openGroundAmbient - 1f, 0f, 0f);
         var detail = new Vector4(directional && forestCanopyShade?.HasSkyField == true ? forestLighting.directionalSkyFill : 0f,
-            forestLighting.leafTransmission, 0f, 0f);
+            forestLighting.leafTransmission, forestLighting.enclosedGroundAmbientShade, forestLighting.enclosedCrownAmbientShade);
         if (forestLightingOwner == this && leaf == appliedForestLeaf && bark == appliedForestBark &&
             darkness == appliedForestDarkness && openGround == appliedOpenGroundLighting &&
             detail == appliedForestDetailLighting && distantSettings == appliedDistantForestShadows) return;

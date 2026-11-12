@@ -36,6 +36,7 @@ Shader "Custom/TreeHQOctaImpostor"
         _DepthParallax("Depth Parallax", Range(0,1)) = 0.45
         _AOStrength("Ambient Occlusion Strength", Range(0,1)) = 0.65
         _SkyStrength("Sky Visibility Strength", Range(0,2)) = 1
+        _LeafShelterStrength("Leaf Shelter Strength", Range(0,1)) = 0
         _AmbientFloor("Minimum Ambient Light", Range(0,1)) = 0.429
         _LeafLightWrap("Leaf Sun Wrap", Range(0,1)) = 0.55
         _FoliageBrightness("Foliage Brightness", Range(0.25,2)) = 1.25
@@ -105,6 +106,7 @@ Shader "Custom/TreeHQOctaImpostor"
                 float4 _CaptureCenterLS;
                 half4 _LeafShadowColor;
                 half4 _FoliageColorMatch, _BarkColorMatch;
+                half _LeafShelterStrength;
                 half _LeafCoverageCutoff;
                 half _LegacyMaplePalette, _ColorVariationStrength, _StableLeafTransmission, _CrownTransmission;
                 half _SeasonStrength, _UseSeasonPalette, _TreeTintStrength, _SeasonAutumnAmount, _AutumnVariationStrength, _SeasonPaletteMode, _Cutoff, _CaptureRadius, _FramesPerAxis, _AtlasTileResolution, _AmbientTileResolution, _AtlasPadding;
@@ -376,6 +378,7 @@ Shader "Custom/TreeHQOctaImpostor"
                 half ambientFloor = TreeNightAmbientFloor(_AmbientFloor);
                 half3 sky = max(SampleSH(bentNormalWS) * ambient.b, ambientFloor.xxx) * _SkyStrength;
                 sky = FSForestDirectionalAmbient(shadedPositionWS, normalWS, sky);
+                sky *= lerp(1.0h, FSForestCrownAmbient(shadedPositionWS, normalWS, ambient.a), leafWeight);
                 half occlusion = 1.0h - ambient.a * _AOStrength;
                 half roughness = surface.b;
                 half surfaceBrightness = lerp(_BarkBrightness, _FoliageBrightness, leafWeight);
@@ -408,6 +411,15 @@ Shader "Custom/TreeHQOctaImpostor"
                 // trees. Keep coverage intact so fully fogged trees blend into
                 // the fog rather than revealing unfogged objects behind them.
                 float fogFactor = InitializeInputDataFog(float4(input.positionWS, 1.0), 0.0);
+                // The billboard cannot cast the crown's internal shadows.
+                // Keep exposed foliage bright and attenuate enclosed foliage
+                // using both long-range sky visibility and local occlusion.
+                half exposure = ambient.b * (1.0h - ambient.a * .65h);
+                // Only the most enclosed pockets approach black. Keep a
+                // continuous brightness gradient across the rest of the crown.
+                half shelterLight = lerp(.04h, 1.0h, exposure * exposure)
+                    * lerp(.20h, 1.0h, smoothstep(.48h, .69h, exposure));
+                diffuse *= lerp(1.0h, shelterLight, leafWeight * _LeafShelterStrength);
                 diffuse *= lerp(_BarkColorMatch.rgb, _FoliageColorMatch.rgb, leafWeight);
                 return half4(MixFog(saturate(diffuse), fogFactor), albedo.a);
             }

@@ -1,0 +1,1 @@
+EDGE COLOR MultistemEdgeBeechV2: leaf 61.4 % -> 0.0 %; bark 15.2 % -> 0.0 % mean relative linear RGB error

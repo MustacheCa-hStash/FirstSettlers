@@ -1,7 +1,7 @@
 {
-    "prefab": "Assets/Prefabs/HeroQuakingAspen.prefab",
-    "prefabGuid": "6337e38cbc215ca4face1a2a2730b8ed",
-    "dependencyHash": "b296a4c439db08340a08c1f3a7bd607b",
+    "prefab": "Assets/Prefabs/HeroQuakingAspenLOD0.prefab",
+    "prefabGuid": "29dc70a6b25fcd84ca5c0c47731fe0da",
+    "dependencyHash": "91f6328c3a75f5f7710b45d19b55877b",
     "albedoEncoding": "sRGB authored evergreen RGB; linear alpha",
     "supersample": 2,
     "voxelResolution": 128,
@@ -11,5 +11,5 @@
     "raySteps": 16,
     "coverageExpansion": 2,
     "colorBleedPixels": 2,
-    "coverageExpansionStrength": 0.2199999988079071
+    "coverageExpansionStrength": 0.4000000059604645
 }

@@ -22,5 +22,7 @@ public enum WorldFeatureVariant
     GrasslandLargeBoulder,
     SnowBoulder,
     SnowLargeBoulder,
-    WoodlandEdgeBeech
+    WoodlandEdgeBeech,
+    WoodlandEdgeOak,
+    WoodlandEdgeHazel
 }

@@ -98,11 +98,11 @@ Material:
     - _AlphaClip: 1
     - _AlphaClipThreshold: 0.4
     - _AlphaToMask: 1
-    - _AmbientStrength: 0.28
+    - _AmbientStrength: 0.25
     - _BaseUpwardBlend: 0.671
     - _BladeMaxY: 0.76
     - _BladeMinY: -0.035
-    - _BladeTransmission: 0.16
+    - _BladeTransmission: 0.12
     - _Blend: 0
     - _BlendModePreserveSpecular: 0
     - _BlendSharpness: 0.61
@@ -151,7 +151,7 @@ Material:
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0.69, g: 0.78, b: 0.68, a: 1}
+    - _BaseColor: {r: 0.59, g: 0.73, b: 0.68, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _DarkGrassColor: {r: 0.15413615, g: 0.37106913, b: 0.13885917, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
@@ -164,7 +164,7 @@ Material:
     - _MidGrassColor: {r: 0.21138844, g: 0.42138356, b: 0.1788892, a: 1}
     - _RootTint: {r: 0.69, g: 0.72, b: 0.52, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _TipTint: {r: 1.02, g: 1, b: 0.93, a: 1}
+    - _TipTint: {r: 0.94, g: 0.98, b: 0.96, a: 1}
     - _WindDirection: {r: 1, g: 0, b: 0.35, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

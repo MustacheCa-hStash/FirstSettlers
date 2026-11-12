@@ -161,6 +161,7 @@ public sealed class LeafClusterGeneration
         bool habitatShrub = settings.woodlandKind == WoodlandScatterKind.HabitatShrub;
         if (surfaces[x,z] != SurfaceType.Grass) return;
         if (habitatShrub ? biome is not (BiomeType.Grassland or BiomeType.Forest or BiomeType.Taiga) : forest <= 0f) return;
+        if (habitatShrub && biome == BiomeType.Grassland && !settings.allowGrasslandHabitatShrubs) return;
         float slope = Sample(slopes, sample);
         if (slope >= Mathf.Max(0.01f, settings.maxSlope)) return;
         Vector3 normal = TerrainNormal(sample);

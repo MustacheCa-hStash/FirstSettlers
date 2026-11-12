@@ -30,13 +30,11 @@ half4 GrassGroundTile(float2 uv, float2 vertex, float2 dx, float2 dy, float2 par
     return surface;
 }
 
-half4 GrassGroundLattice(float2 uv, float2 dx, float2 dy, float2 parallax, bool useHeight)
+void GrassGroundLatticeCoordinates(float2 uv, out float2 a, out float2 b, out float2 c, out float3 weights)
 {
     float2 skew = mul(float2x2(1.0, 0.0, -0.57735027, 1.15470054), uv * _GrassGroundGridScale);
     float2 cell = floor(skew);
     float2 f = frac(skew);
-    float2 a, b, c;
-    float3 weights;
     if (f.x + f.y < 1.0)
     {
         a = cell; b = cell + float2(1, 0); c = cell + float2(0, 1);
@@ -50,9 +48,50 @@ half4 GrassGroundLattice(float2 uv, float2 dx, float2 dy, float2 parallax, bool 
     // Smooth blends with zero derivative when a tile leaves the triangle.
     weights = weights * weights * weights;
     weights /= max(dot(weights, 1.0.xxx), 0.00001);
+}
+
+half4 GrassGroundLattice(float2 uv, float2 dx, float2 dy, float2 parallax, bool useHeight)
+{
+    float2 a,b,c;
+    float3 weights;
+    GrassGroundLatticeCoordinates(uv,a,b,c,weights);
     return GrassGroundTile(uv, a, dx, dy, parallax, useHeight) * weights.x
          + GrassGroundTile(uv, b, dx, dy, parallax, useHeight) * weights.y
          + GrassGroundTile(uv, c, dx, dy, parallax, useHeight) * weights.z;
+}
+
+void NearMeadowTurfTile(float2 uv, float2 vertex, float2 dx, float2 dy, half weight,
+    inout half3 color, inout float2 normalXZ)
+{
+    int turns = (int)(Hash21(vertex + 41.73) * 4.0);
+    float2 offset = float2(Hash21(vertex + 19.37), Hash21(vertex + 83.11));
+    float2 tileUV = GrassGroundRotate(uv, turns) + offset;
+    float2 tileDx = GrassGroundRotate(dx, turns), tileDy = GrassGroundRotate(dy, turns);
+    half3 albedo = SAMPLE_TEXTURE2D_GRAD(_NearMeadowAlbedo, sampler_NearMeadowAlbedo, tileUV, tileDx, tileDy).rgb;
+    half4 relief = SAMPLE_TEXTURE2D_GRAD(_NearMeadowRelief, sampler_NearMeadowAlbedo, tileUV, tileDx, tileDy);
+    color += albedo * lerp(.35h, 1.0h, relief.a) * weight;
+    normalXZ += GrassGroundRotate(relief.rg * 2 - 1, turns == 0 ? 0 : 4 - turns) * weight;
+}
+
+void SampleNearMeadowTurf(float3 positionWS, float3 baseNormalWS, float distanceToCamera,
+    float2 dx, float2 dy, out half3 color, out float3 normalWS)
+{
+    float2 uv = positionWS.xz * _GrassGroundTiling;
+    dx *= _GrassGroundTiling;
+    dy *= _GrassGroundTiling;
+    float2 a,b,c;
+    float3 weights;
+    GrassGroundLatticeCoordinates(uv,a,b,c,weights);
+    color = 0;
+    float2 normalXZ = 0;
+    NearMeadowTurfTile(uv,a,dx,dy,weights.x,color,normalXZ);
+    NearMeadowTurfTile(uv,b,dx,dy,weights.y,color,normalXZ);
+    NearMeadowTurfTile(uv,c,dx,dy,weights.z,color,normalXZ);
+    float normalFade = 1.0 - smoothstep(_GrassGroundNormalFadeStart,
+        max(_GrassGroundNormalFadeEnd,_GrassGroundNormalFadeStart + .01),distanceToCamera);
+    float3 perturbation = float3(normalXZ.x,0,normalXZ.y);
+    perturbation -= baseNormalWS * dot(perturbation,baseNormalWS);
+    normalWS = normalize(baseNormalWS + perturbation * (_GrassNormalStrength * normalFade));
 }
 
 void SampleGrassGround(float3 positionWS, float3 baseNormalWS, float cameraDistance, float grassAmount,

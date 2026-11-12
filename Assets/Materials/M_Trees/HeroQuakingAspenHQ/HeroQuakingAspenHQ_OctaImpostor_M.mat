@@ -12,8 +12,7 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords:
-  - _STABLELEAFTRANSMISSION_ON
+  m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -56,7 +55,7 @@ Material:
     - _BarkColorRemap: 0
     - _BarkRemapBlackPoint: 0.08
     - _BarkRemapWhitePoint: 0.9
-    - _CaptureRadius: 12.096446
+    - _CaptureRadius: 12.160945
     - _ColorVariationStrength: 0.62
     - _CrownTransmission: 1
     - _Cutoff: 0.012
@@ -66,7 +65,8 @@ Material:
     - _DepthParallax: 0.45
     - _FoliageBrightness: 1
     - _FramesPerAxis: 8
-    - _LeafLightWrap: 0.41
+    - _LeafCoverageCutoff: 0
+    - _LeafLightWrap: 0.28
     - _LegacyMaplePalette: 0
     - _SeasonAutumnAmount: 1
     - _SeasonPaletteMode: 0
@@ -79,17 +79,18 @@ Material:
     - _WindSpeed: 1.15
     - _WindStrength: 0
     m_Colors:
-    - _FoliageColorMatch: {r: 0.644, g: 0.714, b: 0.964, a: 0.22}
     - _AutumnCrimsonColor: {r: 0.47999996, g: 0.025, b: 0.04, a: 1}
     - _AutumnOrangeColor: {r: 1, g: 0.24999997, b: 0.054999977, a: 1}
     - _AutumnRedColor: {r: 0.88, g: 0.059999965, b: 0.035, a: 1}
     - _AutumnYellowColor: {r: 0.88, g: 0.61, b: 0.11999995, a: 1}
+    - _BarkColorMatch: {r: 0.91018575, g: 0.955324, b: 1.027171, a: 1}
     - _BarkHighlightColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
     - _BarkShadowColor: {r: 0.14999998, g: 0.14999998, b: 0.14999998, a: 1}
-    - _CaptureCenterLS: {r: -0.33081627, g: 9.278107, b: -0.040004253, a: 0}
+    - _CaptureCenterLS: {r: -0.33617115, g: 9.27849, b: -0.06556463, a: 0}
+    - _FoliageColorMatch: {r: 1.377598, g: 1.3356522, b: 1.1051294, a: 0.22}
     - _LeafSeasonTint: {r: 1, g: 1, b: 1, a: 1}
     - _LeafShadowColor: {r: 0.15999997, g: 0.018, b: 0.018, a: 1}
-    - _LeafTransmissionColor: {r: 0.9, g: 1, b: 0.83, a: 1}
+    - _LeafTransmissionColor: {r: 1, g: 1, b: 1, a: 1}
     - _SummerLeafColor: {r: 0.17999998, g: 0.41999996, b: 0.11999995, a: 1}
     - _TreeLeafTint: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
